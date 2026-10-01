@@ -28,4 +28,4 @@ Provide more detailed task statistics, such as time usage and event distribution
 
 ## License
 
-MIT
+GPL 3.0+
