@@ -1,0 +1,932 @@
+@import './src/timeblock-category-manager.css';
+
+/* Sets all the text color to red! */
+body {
+    color: green;
+}
+
+/* 整个周表页面 */
+.week-schedule {
+    display: flex;
+    flex-direction: row;
+    height: 100%;
+}
+
+/* 工具栏 */
+.schedule-toolbar {
+    flex-shrink: 0;
+    width: 250px;
+    background: #fafafa;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    overflow-y: auto;
+    padding: 10px; /* 建议加回来 */
+    margin-left: 20px;
+}
+
+/* 网格背景 */
+.schedule-grid {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+
+/* 表头行（时间轴头部 + 星期表头） */
+.grid-header-row {
+    display: flex;
+    flex-shrink: 0;
+}
+
+/* 主体行（时间轴 + 日期列） */
+.grid-body-row {
+    flex: 1;
+    display: flex;
+    overflow-y: auto;
+    overflow-x: auto;
+}
+
+/* 时间轴 */
+.time-column {
+    flex-shrink: 0;
+    width: 50px;
+    box-sizing: border-box;
+}
+
+/* 表头容器 */
+.day-headers {
+    display: flex;
+    flex-shrink: 0;
+    flex: 1;
+    padding-left: 50px;
+}
+
+/* 表头 */
+.day-header {
+    flex: 1;
+    text-align: center;
+    font-weight: bold;
+    border-bottom: 1px solid var(--background-modifier-border);
+}
+
+/* 事件层：表头/模板行可点击添加全天事件 */
+.week-schedule .day-header,
+.week-schedule .day-template-cell {
+    cursor: pointer;
+}
+
+.day-bodies {
+    flex: 1;
+    display: flex;
+}
+
+/* 单个日期列 */
+.day-column {
+    flex: 1;
+    position: relative;
+    /* border-right: 1px solid var(--background-modifier-border); */
+}
+
+/* 左上角空白 */
+.time-cell {
+    height: 80px; /* 与 .hour-cell.two-hour 严格一致 */
+    box-sizing: border-box;
+    padding: 0 4px; /* 调整内边距 */
+    color: var(--text-muted);
+    border-right: 1px solid var(--background-modifier-border);
+    border-bottom: 1px solid var(--background-modifier-border);
+    /* 关键：让文字贴在格子顶部，与右侧网格线对齐 */
+    display: flex;
+    align-items: flex-start; 
+    line-height: 1;
+    padding-top: 2px; /* 微调文字与横线的距离 */
+}
+
+.hour-cell.two-hour {
+    height: 80px; 
+    box-sizing: border-box;   /* 保证边算在80px内。 */
+    border-right: 1px solid var(--background-modifier-border);
+    border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.range-block {
+    z-index: 2;
+    border-radius: 4px;
+    margin: 0 2px;
+    pointer-events: none;
+}
+
+/* 红线 */
+.current-time-line {
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: red;
+    z-index: 10;
+    pointer-events: none;
+}
+
+.day-column {
+    position: relative;
+}
+
+/* 层级选择器 */
+.layer-bar {
+    /* position: absolute; */
+    z-index: 999;
+}
+
+.layer-bar select {
+    padding: 2px 6px;
+    border-radius: 4px;
+}
+
+
+/* ======================== 模板面板 ==== */
+/* ===== 模板面板 ===== */
+.template-panel {
+    margin-top: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    border: 1px solid #999;
+    border-radius: 6px;
+    padding: 8px;
+}
+
+/* 标题 */
+.template-title {
+    font-size: 12px;
+    font-weight: bold;
+    color: var(--text-muted);
+    margin-bottom: 4px;
+}
+
+/* 模板列表 */
+.template-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+/* 单个模板项 */
+.template-item {
+    padding: 6px 8px;
+    border-radius: 4px;
+    border: 1px solid var(--background-modifier-border);
+    cursor: pointer;
+    transition: background 0.15s;
+}
+.template-item:hover {
+    background: var(--background-modifier-hover);
+}
+
+/* 模板名称 */
+.template-name {
+    font-size: 13px;
+    font-weight: bold;
+}
+
+/* 模板描述 */
+.template-desc {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-top: 2px;
+}
+
+/* 操作按钮区 */
+.template-actions {
+    /* margin-top: 8px; */
+    display: flex;
+    gap: 6px;
+}
+
+.template-actions button {
+    flex: 1;
+    padding: 4px 6px;
+    font-size: 12px;
+    border-radius: 4px;
+    border: none;
+    background: var(--interactive-accent);
+    color: var(--text-on-accent);
+    cursor: pointer;
+}
+.template-actions button:hover {
+    opacity: 0.9;
+}
+
+/* ===== 模板行（日属性）===== */
+.day-template-row {
+    display: flex;
+    padding-left:50px;
+    flex-shrink: 0;
+    height: 24px;
+    border-bottom: 1px solid var(--background-modifier-border);
+}
+
+/* ===== 全天事件行 ===== */
+.all-day-row {
+    display: flex;
+    flex-shrink: 0;
+    min-height: 28px;
+    border-bottom: 1px solid var(--background-modifier-border);
+}
+
+/* 左侧占位（与时间轴对齐） */
+.all-day-corner {
+    flex-shrink: 0;
+    width: 50px;
+    box-sizing: border-box;
+    border-right: 1px solid var(--background-modifier-border);
+}
+
+/* 7 天格子容器 */
+.all-day-cells {
+    flex: 1;
+    display: flex;
+}
+
+/* 单个全天格子 */
+.all-day-cell {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 2px;
+    border-right: 1px solid var(--background-modifier-border);
+    min-height: 24px;
+}
+
+.all-day-cell:last-child {
+    border-right: none;
+}
+
+/* 全天事件条目 */
+.all-day-chip {
+    position: relative;
+    font-size: 11px;
+    padding: 1px 4px;
+    border-radius: 3px;
+    background: var(--background-secondary);
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+/* 删除按钮 */
+.all-day-chip-del {
+    position: absolute;
+    top: 0;
+    right: 2px;
+    font-size: 12px;
+    font-weight: bold;
+    color: var(--text-muted);
+    cursor: pointer;
+    opacity: 0;
+}
+
+.all-day-chip:hover .all-day-chip-del {
+    opacity: 1;
+}
+
+.all-day-chip-del:hover {
+    color: var(--text-error);
+}
+
+
+/* 7 天模板单元格容器 */
+.day-templates {
+    flex: 1;
+    display: flex;
+}
+
+/* 单个模板单元格 */
+.day-template-cell {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    color: var(--text-muted);
+    border-right: 1px solid var(--background-modifier-border);
+}
+
+/* 最后一个单元格去掉右边框 */
+.day-template-cell:last-child {
+    border-right: none;
+}
+
+
+.template-title-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 4px;
+}
+
+.template-add-btn {
+    font-size: 16px;
+    line-height: 1;
+    padding: 0 6px;
+    border-radius: 4px;
+    border: 1px solid var(--background-modifier-border);
+    background: var(--interactive-normal);
+    cursor: pointer;
+}
+
+.template-add-btn:hover {
+    background: var(--interactive-hover);
+}
+
+.template-panel {
+    display: flex;
+    flex-direction: column;
+}
+
+.template-title-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 6px;
+}
+
+.template-add-btn {
+    font-size: 16px;
+    line-height: 1;
+    padding: 0 6px;
+    border-radius: 4px;
+    border: 1px solid var(--background-modifier-border);
+    background: var(--interactive-normal);
+    cursor: pointer;
+}
+
+.template-list {
+    flex: 1;
+    overflow-y: auto;
+}
+
+.template-item {
+    padding: 4px 6px;
+    border-radius: 4px;
+    cursor: pointer;
+    margin-bottom: 2px;
+}
+
+.template-item:hover {
+    background: var(--background-modifier-hover);
+}
+
+.template-item.is-selected {
+    background: var(--interactive-accent);
+    color: var(--text-on-accent);
+}
+
+.template-action-bar {
+    display: flex;
+    gap: 6px;
+    margin-top: 8px;
+    padding-top: 6px;
+    border-top: 1px solid var(--background-modifier-border);
+}
+
+.template-action-btn {
+    flex: 1;
+    font-size: 12px;
+    padding: 3px 0;
+    border-radius: 4px;
+    border: 1px solid var(--background-modifier-border);
+    background: var(--interactive-normal);
+    cursor: pointer;
+}
+
+.template-action-btn:hover {
+    background: var(--interactive-hover);
+}
+
+.template-action-btn.danger:hover {
+    background: var(--background-modifier-error);
+    color: var(--text-on-accent);
+}
+
+/* 应用模板的弹窗样式 */
+
+.apply-day-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin: 12px 0;
+}
+
+.apply-day-btn {
+    flex: 1;
+    min-width: 48px;
+    padding: 6px 4px;
+    border-radius: 16px;
+    border: 1px solid var(--background-modifier-border);
+    background: var(--interactive-normal);
+    cursor: pointer;
+    font-size: 13px;
+    text-align: center;
+    transition: background 0.1s, color 0.1s;
+}
+
+.apply-day-btn:hover {
+    background: var(--interactive-hover);
+}
+
+.apply-day-btn.is-selected {
+    background: var(--interactive-accent);
+    color: var(--text-on-accent);
+    border-color: var(--interactive-accent);
+}
+
+.apply-quick-row {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 8px;
+}
+
+.apply-quick-row .template-action-btn {
+    flex: 1;
+    font-size: 12px;
+    padding: 3px 0;
+}
+
+/* ======================================================================== 图例 ==== */
+/* ================================================================================================*/
+
+/* 图例整体 */
+.range-legend {
+    margin-top: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    border: 1px solid #999;
+    padding: 6px;
+    position: relative;
+}
+
+/* 图例标题 */
+.legend-title {
+    font-size: 12px;
+    font-weight: bold;
+    color: var(--text-muted);
+    margin-bottom: 4px;
+}
+
+/* 色块 */
+.legend-color {
+    width: 14px;
+    height: 14px;
+    border-radius: 3px;
+    flex-shrink: 0;
+}
+
+
+/* 图例 hover */
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    cursor: pointer;
+    padding: 2px 4px;
+    border-radius: 4px;
+}
+.legend-item:hover {
+    background: var(--background-modifier-hover);
+}
+
+/* 图例选中态 */
+.legend-item.is-selected {
+    background: var(--interactive-accent);
+    color: var(--text-on-accent);
+}
+
+.legend-exit {
+    font-size: 11px;
+    color: var(--text-muted);
+    cursor: pointer;
+    margin-top: 4px;
+    padding: 2px 4px;
+}
+.legend-exit:hover {
+    color: var(--text-error);
+}
+
+/* 图例容器相对定位（已有则跳过） */
+.timeblock-category-legend {
+    position: relative;
+}
+
+/* 齿轮按钮 */
+.category-gear-btn {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    font-size: 14px;
+    transition: opacity 0.2s;
+}
+
+.range-delete-btn {
+    position: absolute;
+    top: 0px;
+    right: 0px;
+    padding: 0 4px 4px 4px;
+    cursor: pointer;
+    font-size: 16px;
+    font-weight: bold;
+    color: var(--text-on-accent);
+    display: none;
+    background: #666;
+}
+
+
+/* Hover 时显示删除按钮 */
+.range-block:hover .range-delete-btn {
+    display: block;
+}
+
+.range-delete-btn:hover {
+    opacity: 1;
+    /* transform: scale(1.2); */
+}
+
+/* ===== TimeBlock Category Config Modal ===== */
+.tbcat-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+}
+.tbcat-add-btn {
+    font-size: 18px;
+    line-height: 1;
+    padding: 2px 10px;
+}
+.tbcat-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 12px;
+}
+.tbcat-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.tbcat-color {
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    border: none;
+    background: none;
+}
+.tbcat-name {
+    flex: 1;
+}
+.tbcat-del-btn {
+    color: var(--text-error);
+}
+.tbcat-empty {
+    color: var(--text-muted);
+    font-size: 0.85em;
+}
+
+/* ===== 收集盒面板 ===== */
+.inbox-panel {
+    margin-top: 12px;
+    padding: 8px 12px;
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 6px;
+    background: var(--background-secondary);
+    max-height: 220px;
+    display: flex;
+    flex-direction: column;
+}
+
+.inbox-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+    flex-shrink: 0;
+}
+
+.inbox-title {
+    font-weight: 600;
+    font-size: 13px;
+    color: var(--text-normal);
+}
+
+.inbox-add-btn {
+    width: 24px;
+    height: 24px;
+    border-radius: 4px;
+    border: 1px solid var(--background-modifier-border);
+    background: var(--interactive-accent);
+    color: var(--text-on-accent);
+    font-size: 16px;
+    line-height: 1;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+}
+
+.inbox-add-btn:hover {
+    background: var(--interactive-accent-hover);
+}
+
+.inbox-list {
+    overflow-y: auto;
+    flex: 1;
+}
+
+.inbox-item {
+    padding: 6px 8px;
+    margin-bottom: 4px;
+    border-radius: 4px;
+    background: var(--background-primary);
+    border: 1px solid var(--background-modifier-border);
+    cursor: default;
+}
+
+.inbox-item:hover {
+    background: var(--background-modifier-hover);
+}
+
+.inbox-item-title {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-normal);
+    margin-bottom: 2px;
+    word-break: break-word;
+}
+
+.inbox-item-desc {
+    font-size: 11px;
+    color: var(--text-muted);
+    line-height: 1.4;
+    word-break: break-word;
+}
+
+.inbox-empty {
+    font-size: 12px;
+    color: var(--text-muted);
+    text-align: center;
+    padding: 20px 0;
+    font-style: italic;
+}
+
+/* ===== 收集盒选中状态 ===== */
+.inbox-item {
+    cursor: pointer;
+    transition: background 0.1s, border-color 0.1s;
+}
+
+.inbox-item.selected {
+    background: var(--interactive-accent);
+    color: var(--text-on-accent);
+    border-color: var(--interactive-accent-hover);
+}
+
+.inbox-item.selected .inbox-item-title {
+    color: var(--text-on-accent);
+}
+
+.inbox-item.selected .inbox-item-desc {
+    color: var(--text-on-accent-muted, var(--text-on-accent));
+    opacity: 0.8;
+}
+
+/* ===== 底部工具栏 ===== */
+.inbox-toolbar {
+    display: flex;
+    flex-wrap: wrap;  
+    gap: 4px;
+    padding: 6px 8px;
+    border-top: 1px solid var(--background-modifier-border);
+    background: var(--background-primary);
+    border-radius: 0 0 6px 6px;
+    flex-shrink: 0;
+}
+
+.inbox-toolbar.hidden {
+    display: none;
+}
+
+.inbox-toolbar-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    padding: 4px 8px;
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 4px;
+    background: var(--background-secondary);
+    cursor: pointer;
+    font-size: 11px;
+    color: var(--text-muted);
+    flex: 0 0 auto;
+    min-width: fit-content;
+    transition: background 0.1s, color 0.1s;
+}
+
+.inbox-toolbar-btn:hover {
+    background: var(--interactive-accent);
+    color: var(--text-on-accent);
+    border-color: var(--interactive-accent-hover);
+}
+
+.inbox-toolbar-icon {
+    font-size: 14px;
+    line-height: 1;
+}
+
+.inbox-toolbar-label {
+    font-size: 10px;
+    white-space: nowrap;
+}
+
+/* 分类按钮工具 */
+.inbox-category-dot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    margin-right: 6px;
+    vertical-align: middle;
+}
+
+
+/* 事件层 */
+.event-card {
+    position: relative;
+}
+
+.event-delete-btn {
+    position: absolute;
+    top: 1px;
+    right: 3px;
+    width: 16px;
+    height: 16px;
+    line-height: 14px;
+    text-align: center;
+    font-size: 16px;
+    font-weight: bold;
+    color: var(--text-on-accent);
+    background-color: #888;
+    cursor: pointer;
+    opacity: 0;
+    border-radius: 50%;
+    z-index: 2;
+}
+
+.event-card:hover .event-delete-btn {
+    opacity: 1;
+}
+
+/* 执行层：未确认标识（纯状态展示） */
+.event-confirm-mark {
+    position: absolute;
+    top: 1px;
+    right: 3px;
+    width: 16px;
+    height: 16px;
+    line-height: 16px;
+    text-align: center;
+    font-size: 12px;
+    font-weight: bold;
+    color: #ffffff;
+    background-color: #d5ba0e;
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 2;
+}
+
+/* ===== 执行信息面板 ===== */
+.exec-info-actual {
+    font-size: 13px;
+    color: var(--text-accent);
+    margin-bottom: 8px;
+}
+
+.exec-info-count {
+    font-size: 13px;
+    color: var(--text-muted);
+    margin-bottom: 12px;
+}
+
+.exec-info-subtitle {
+    font-size: 12px;
+    font-weight: bold;
+    color: var(--text-muted);
+    margin-bottom: 6px;
+}
+
+.exec-info-records {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-bottom: 12px;
+    max-height: 160px;
+    overflow-y: auto;
+}
+
+.exec-info-record {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 8px;
+    border-radius: 4px;
+    background: var(--background-secondary);
+    font-size: 12px;
+}
+
+.exec-info-record-time {
+    color: var(--text-muted);
+    flex-shrink: 0;
+}
+
+.exec-info-record-note {
+    color: var(--text-normal);
+    word-break: break-word;
+}
+
+.exec-info-empty {
+    font-size: 12px;
+    color: var(--text-muted);
+    font-style: italic;
+    padding: 8px 0;
+}
+
+.all-day-corner{
+    text-align: center;
+}
+
+/* 变更执行选择区 */
+.exec-change-panel {
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px solid var(--background-modifier-border);
+}
+
+.exec-change-list {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-bottom: 8px;
+    max-height: 160px;
+    overflow-y: auto;
+}
+
+.exec-change-item {
+    padding: 6px 8px;
+    border-radius: 4px;
+    border: 1px solid var(--background-modifier-border);
+    background: var(--background-secondary);
+    font-size: 12px;
+    cursor: pointer;
+}
+
+.exec-change-item:hover {
+    background: var(--background-modifier-hover);
+}
+
+.exec-change-item.is-selected {
+    background: var(--interactive-accent);
+    color: var(--text-on-accent);
+    border-color: var(--interactive-accent);
+}
+
+/* 手动添加新任务行 */
+.exec-change-add-row {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 8px;
+}
+
+.exec-change-add-input {
+    flex: 1;
+}
+
+.exec-change-add-btn {
+    flex-shrink: 0;
+    font-size: 12px;
+    padding: 4px 10px;
+    border-radius: 4px;
+    border: 1px solid var(--background-modifier-border);
+    background: var(--interactive-normal);
+    cursor: pointer;
+}
+
+.exec-change-add-btn:hover {
+    background: var(--interactive-hover);
+}
+
+

@@ -1,0 +1,109 @@
+// 中文文案
+export const zh = {
+    // 通用
+    'common.cancel': '取消',
+    'common.confirm': '确认',
+    'common.save': '保存',
+    'common.delete': '删除',
+    'common.select': '选择',
+    'common.clear': '清除',
+    'common.add': '添加',
+    'common.apply': '应用',
+
+    // 星期
+    'week.monday': '周一',
+    'week.tuesday': '周二',
+    'week.wednesday': '周三',
+    'week.thursday': '周四',
+    'week.friday': '周五',
+    'week.saturday': '周六',
+    'week.sunday': '周日',
+
+    // 视图
+    'view.title': '周日程',
+    'view.layer': '层级：',
+    'view.layer.timeRange': '时间区块层',
+    'view.layer.event': '事件区块层',
+    'view.layer.execution': '执行层',
+
+    // 全天事件
+    'allday.label': '全天',
+    'allday.needSelect': '请先在收集盒中选中一个任务',
+    'allday.added': '已添加全天事件"{title}"',
+
+    // 事件层
+    'event.scheduled': '已排入"{title}"',
+    'event.edit': '编辑事件',
+    'event.create': '新建事件',
+    'event.title': '标题',
+    'event.titlePlaceholder': '事件名称',
+    'event.startTime': '开始时间',
+    'event.endTime': '结束时间',
+    'event.category': '分类',
+    'event.noCategory': '不分类',
+    'event.titleRequired': '标题不能为空',
+
+    // 时间区块
+    'range.title': '时间区块',
+    'range.startTime': '开始时间',
+    'range.endTime': '结束时间',
+    'range.category': '分类',
+
+    // 分类
+    'category.legend': '时间区块图例',
+    'category.config': '分类配置',
+    'category.new': '新分类',
+    'category.empty': '暂无分类，点右上角 + 新增',
+    'category.namePlaceholder': '分类名称',
+
+    // 模板
+    'template.title': '日模板',
+    'template.selectFirst': '请先选择模板',
+    'template.notFound': '模板不存在',
+    'template.create': '新增日模板',
+    'template.name': '模板名称',
+    'template.namePlaceholder': '如：深度工作',
+    'template.copyFrom': '复制自',
+    'template.nameRequired': '请输入模板名称',
+    'template.unnamed': '未命名模板',
+    'template.applyTo': '应用「{name}」到哪些天？',
+    'template.selectAll': '全选',
+    'template.clearAll': '清空',
+    'template.selectAtLeastOne': '请至少选择一天',
+    'template.deleteTitle': '删除模板',
+    'template.deleteConfirm': '确定删除模板「{name}」？\n 已应用到网格的时间区块不受影响。',
+
+    // 收集盒
+    'inbox.addTitle': '添加到收集盒',
+    'inbox.name': '名称',
+    'inbox.namePlaceholder': '一句话概括',
+    'inbox.desc': '描述',
+    'inbox.descPlaceholder': '补充说明（可选）',
+    'inbox.nameRequired': '名称不能为空',
+    'inbox.setCategory': '设置分类',
+    'inbox.delete': '删除',
+    'inbox.deleteConfirm': '确定删除任务「{title}」？',
+    'inbox.empty': '收集盒为空，点击 + 添加',
+    'inbox.selectCategory': '选择分类',
+    'inbox.noCategory': '不分类',
+    'inbox.title': '📥 收集盒',
+
+    // 执行层
+    'exec.actual': '实际执行：{title}',
+    'exec.count': '执行次数：{count}',
+    'exec.records': '任务记录',
+    'exec.noRecords': '暂无执行记录',
+    'exec.note': '备注',
+    'exec.notePlaceholder': '补充说明（可选）',
+    'exec.confirm': '确认执行',
+    'exec.change': '变更执行',
+    'exec.actualTask': '实际执行的任务',
+    'exec.noTasks': '暂无任务',
+    'exec.newTaskPlaceholder': '新任务名称',
+    'exec.addTask': '添加新任务',
+    'exec.taskNameRequired': '请输入任务名称',
+    'exec.confirmChange': '确认变更',
+    'exec.selectOrAdd': '请选择或添加任务',
+};
+
+export type I18nMessages = typeof zh;
