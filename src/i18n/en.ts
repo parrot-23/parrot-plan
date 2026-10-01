@@ -28,6 +28,19 @@ export const en: I18nMessages = {
     'view.layer.event': 'Event Layer',
     'view.layer.execution': 'Execution Layer',
 
+    // Command and ribbon
+    'command.open': 'Open week schedule panel',
+    'ribbon.open': 'Open week schedule',
+
+    // Default categories
+    'defaultCategory.work': 'Work',
+    'defaultCategory.rest': 'Rest',
+    'defaultCategory.play': 'Play',
+
+    // Settings
+    'settings.title': 'Parrot Plan Settings',
+    'settings.about': 'A weekly schedule planner: time block planning, event scheduling, and execution tracking.',
+
     // All-day events
     'allday.label': 'All day',
     'allday.needSelect': 'Please select a task in the inbox first',

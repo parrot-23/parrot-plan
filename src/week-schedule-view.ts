@@ -671,7 +671,6 @@ export class WeekScheduleView extends ItemView {
             async (action, item) => {
                 // 占位：后续实现各按钮功能
                 new Notice(`[placeholder] ${action}: ${item.title}`);
-                console.log('action:', action, 'item:', item);
             },
             async (item) => {              // onUpdate 回调
                 await this.save();

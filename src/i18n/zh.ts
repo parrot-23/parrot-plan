@@ -26,6 +26,19 @@ export const zh = {
     'view.layer.event': '事件区块层',
     'view.layer.execution': '执行层',
 
+    // 命令与功能区
+    'command.open': '打开周日程面板',
+    'ribbon.open': '打开周日程',
+
+    // 默认分类
+    'defaultCategory.work': '工作',
+    'defaultCategory.rest': '休息',
+    'defaultCategory.play': '娱乐',
+
+    // 设置页
+    'settings.title': 'Parrot Plan 设置',
+    'settings.about': '一个周日程规划插件：时间区块规划、事件排布与执行追踪。',
+
     // 全天事件
     'allday.label': '全天',
     'allday.needSelect': '请先在收集盒中选中一个任务',
