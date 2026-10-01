@@ -102,13 +102,28 @@
     box-sizing: border-box;   /* 保证边算在80px内。 */
     border-right: 1px solid var(--background-modifier-border);
     border-bottom: 1px solid var(--background-modifier-border);
+    pointer-events: none;     /* 背景格子不拦截点击，让列统一处理 */
 }
 
 .range-block {
+    position: absolute;
+    left: 0;
+    right: 0;
     z-index: 2;
     border-radius: 4px;
     margin: 0 2px;
     pointer-events: none;
+}
+
+/* 时间区块层：色块可点击 */
+.range-block-fill {
+    pointer-events: auto;
+}
+
+/* 只读时间区块背景（事件层 / 执行层） */
+.range-bg {
+    pointer-events: none;
+    z-index: 0;
 }
 
 /* 红线 */
@@ -759,7 +774,25 @@
 
 /* 事件层 */
 .event-card {
-    position: relative;
+    position: absolute;
+    left: 8px;
+    right: 2px;
+    border-radius: 4px;
+    padding: 2px 4px;
+    font-size: 11px;
+    overflow: hidden;
+}
+
+/* 可点击的事件卡片 */
+.event-card-clickable {
+    cursor: pointer;
+}
+
+/* 执行层：未经过的时间点（灰色） */
+.event-card-pending {
+    border-top: 5px solid #bbbbbb;
+    background-color: #eeeeee88;
+    color: #999999;
 }
 
 .event-delete-btn {
@@ -920,6 +953,33 @@
 
 .exec-change-add-btn:hover {
     background: var(--interactive-hover);
+}
+
+/* ===== 通用工具类 ===== */
+.hidden {
+    display: none;
+}
+
+/* 收集盒工具栏：禁用态 */
+.inbox-toolbar-btn.is-disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+/* 分类选择弹窗：大号色点 */
+.inbox-category-dot-lg {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    margin-right: 8px;
+    vertical-align: middle;
+}
+
+/* 分类选择弹窗：当前选中项 */
+.setting-item.is-selected {
+    background: var(--interactive-accent);
+    color: var(--text-on-accent);
 }
 
 

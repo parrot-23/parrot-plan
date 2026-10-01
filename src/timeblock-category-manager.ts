@@ -37,7 +37,7 @@ export function renderTimeBlockCategoryLegend(
         const row = legend.createDiv({ cls: 'legend-item' });
         if (cat.id === selectedId) row.addClass('is-selected');
         const swatch = row.createDiv({ cls: `legend-color` });
-        swatch.style.backgroundColor = cat.color ?? '#888888';
+        swatch.setCssProps({ 'background-color': cat.color ?? '#888888' });
         row.createSpan({ text: cat.label });
         row.onclick = () => onSelect?.(cat.id);
     }

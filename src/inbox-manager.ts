@@ -144,7 +144,7 @@ export function renderInboxPanel(
                     onRefresh();
                 }).open();
             } else if (onAction) {
-                onAction(action.id, item);
+                void onAction(action.id, item);
             }
         };
     }
@@ -155,8 +155,7 @@ export function renderInboxPanel(
         const buttons = toolbar.querySelectorAll('.inbox-toolbar-btn');
         for (const btn of Array.from(buttons)) {
             (btn as HTMLButtonElement).disabled = !hasSelection;
-            (btn as HTMLButtonElement).style.opacity = hasSelection ? '1' : '0.4';
-            (btn as HTMLButtonElement).style.cursor = hasSelection ? 'pointer' : 'not-allowed';
+            btn.toggleClass('is-disabled', !hasSelection);
         }
     }
 
@@ -196,7 +195,7 @@ export function renderInboxPanel(
                 const cat = categoryData.categories.find(c => c.id === item.categoryId);
                 if (cat) {
                     const dot = itemEl.createSpan({ cls: 'inbox-category-dot' });
-                    dot.style.cssText = `display:inline-block;width:8px;height:8px;border-radius:50%;background:${cat.color};margin-right:6px;vertical-align:middle;`;
+                    dot.setCssProps({ 'background': cat.color });
                     const titleEl = itemEl.querySelector('.inbox-item-title') as HTMLElement;
                     if (titleEl) titleEl.prepend(dot);
                 }
@@ -313,8 +312,8 @@ class CategorySelectModal extends Modal {
         for (const cat of this.categories.categories) {
             const setting = new Setting(contentEl).setName(cat.label);
 
-            const dot = setting.nameEl.createSpan();
-            dot.style.cssText = `display:inline-block;width:12px;height:12px;border-radius:50%;background:${cat.color};margin-right:8px;vertical-align:middle;`;
+            const dot = setting.nameEl.createSpan({ cls: 'inbox-category-dot-lg' });
+            dot.setCssProps({ 'background': cat.color });
 
             setting.addButton(btn => btn
                 .setButtonText(t('common.select'))
@@ -325,8 +324,7 @@ class CategorySelectModal extends Modal {
             );
 
             if (cat.id === this.currentCategoryId) {
-                setting.settingEl.style.background = 'var(--interactive-accent)';
-                setting.settingEl.style.color = 'var(--text-on-accent)';
+                setting.settingEl.addClass('is-selected');
             }
         }
     }

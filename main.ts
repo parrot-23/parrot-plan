@@ -1,11 +1,11 @@
-import { App, Plugin, PluginSettingTab } from 'obsidian';
+import { App, Plugin, PluginSettingTab, type SettingDefinitionItem } from 'obsidian';
 
 import type { WeekRangeData } from './src/timeblock-data';
 import type { TimeBlockCategoryData } from './src/timeblock-category-manager';
 import type { DayTemplateData } from './src/template-manager';
 
 import { DEFAULT_WEEK_RANGE } from './src/timeblock-data';
-import { VIEW_TYPE_WEEK, WeekScheduleView } from './src/week-schedule-view';
+import { VIEW_TYPE_WEEK, WeekScheduleView, type EventBlock, type ExecutionRecord } from './src/week-schedule-view';
 import { DEFAULT_INBOX_DATA, type InboxData } from './src/inbox-manager';
 import { initI18n, t } from './src/i18n';
 
@@ -16,7 +16,9 @@ export default class ParrotPlanPlugin extends Plugin {
         initI18n();
 
         // 读取数据
-        let savedData = await this.loadData();
+        const rawData: unknown = await this.loadData();
+        let savedData: Record<string, unknown> =
+            rawData && typeof rawData === 'object' ? rawData as Record<string, unknown> : {};
 
         const defaultCategories: TimeBlockCategoryData = {
             categories: [
@@ -26,7 +28,7 @@ export default class ParrotPlanPlugin extends Plugin {
             ],
         };
 
-        if (!savedData || savedData.version !== 1 || !Array.isArray(savedData.days)) {
+        if (savedData.version !== 1 || !Array.isArray(savedData.days)) {
             savedData = {
                 version: 1,
                 days: DEFAULT_WEEK_RANGE.days,
@@ -38,17 +40,17 @@ export default class ParrotPlanPlugin extends Plugin {
             };
         }
 
-        const initialData = savedData as WeekRangeData;
-        const initialTemplateData: DayTemplateData = savedData.dayTemplateData ?? { dayTemplates: [], dayProperties: [] };
-        const initialCategoryData: TimeBlockCategoryData = savedData.timeBlockCategoryData ?? defaultCategories;
-        const initialInboxData: InboxData = savedData.inboxData ?? DEFAULT_INBOX_DATA;
+        const initialData = savedData as unknown as WeekRangeData;
+        const initialTemplateData = (savedData.dayTemplateData ?? { dayTemplates: [], dayProperties: [] }) as DayTemplateData;
+        const initialCategoryData = (savedData.timeBlockCategoryData ?? defaultCategories) as TimeBlockCategoryData;
+        const initialInboxData = (savedData.inboxData ?? DEFAULT_INBOX_DATA) as InboxData;
 
         // 注册视图
         this.registerView(
             VIEW_TYPE_WEEK,
             (leaf) => new WeekScheduleView(leaf, this, initialData, initialTemplateData, initialCategoryData,
-                savedData.events ?? [],
-                savedData.executions ?? [],
+                (savedData.events ?? []) as EventBlock[],
+                (savedData.executions ?? []) as ExecutionRecord[],
                 initialInboxData,
             )
         );
@@ -61,7 +63,7 @@ export default class ParrotPlanPlugin extends Plugin {
                 leaf = workspace.getLeaf(false)!;
                 await leaf.setViewState({ type: VIEW_TYPE_WEEK });
             }
-            workspace.revealLeaf(leaf);
+            await workspace.revealLeaf(leaf);
         });
 
         // 命令面板
@@ -75,7 +77,7 @@ export default class ParrotPlanPlugin extends Plugin {
                     leaf = workspace.getRightLeaf(false)!;
                     await leaf.setViewState({ type: VIEW_TYPE_WEEK });
                 }
-                workspace.revealLeaf(leaf);
+                await workspace.revealLeaf(leaf);
             }
         });
 
@@ -84,6 +86,7 @@ export default class ParrotPlanPlugin extends Plugin {
     }
 
     async onunload() {
+        // 只保存数据，不 detach leaf（否则会打乱用户布局）
         const leaves = this.app.workspace.getLeavesOfType(VIEW_TYPE_WEEK);
         for (const leaf of leaves) {
             if (leaf.view instanceof WeekScheduleView) {
@@ -91,13 +94,24 @@ export default class ParrotPlanPlugin extends Plugin {
                 await view.save();
             }
         }
-
-        this.app.workspace.detachLeavesOfType(VIEW_TYPE_WEEK);
     }
 }
 
 
 class ParrotPlanSettingTab extends PluginSettingTab {
+    getSettingDefinitions(): SettingDefinitionItem[] {
+        return [
+            {
+                name: t('settings.title'),
+                desc: t('settings.about'),
+                render: (setting) => {
+                    setting.setName(t('settings.title'));
+                    setting.setDesc(t('settings.about'));
+                },
+            },
+        ];
+    }
+
     display(): void {
         this.containerEl.empty();
         this.containerEl.createEl('h2', { text: t('settings.title') });

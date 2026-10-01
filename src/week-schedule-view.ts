@@ -17,7 +17,7 @@ export const VIEW_TYPE_WEEK = 'week-schedule-view';
 // 定义层级。
 type EditLayer = 'time-range' | 'event' | 'execution';
 
-interface EventBlock {
+export interface EventBlock {
     id: string;
     day: number;
     start: number;
@@ -32,7 +32,7 @@ interface EventBlock {
     notePath?: string;
 }
 
-interface ExecutionRecord {
+export interface ExecutionRecord {
     id: string;
     eventId?: string;
     /** 来源收集盒任务 id（与事件一致，便于按任务聚合） */
@@ -145,11 +145,10 @@ export class WeekScheduleView extends ItemView {
         // ===== 公共背景网格（7列 + 每列12个半小时格子）=====
         for (let d = 1; d <= 7; d++) {
             const col = bodyRowInner.createDiv({ cls: 'day-column' });
-            col.style.position = 'relative';
 
             for (let h = 0; h < 24; h += 2) {
-                const cell = col.createDiv({ cls: 'hour-cell two-hour' });
-                cell.style.pointerEvents = 'none'; // 背景格子不拦截点击，让列统一处理
+                // 背景格子不拦截点击，让列统一处理
+                col.createDiv({ cls: 'hour-cell two-hour' });
             }
         }
 
@@ -199,7 +198,7 @@ export class WeekScheduleView extends ItemView {
                     const id = `r_${Date.now()}`;
                     dayData.ranges.push({ id, start, end, sort });
                     await this.save();
-                    this.onOpen();
+                    await this.onOpen();
                 }, this.timeBlockCategoryData, undefined, this.selectedCategoryId).open();
             };
 
@@ -207,20 +206,18 @@ export class WeekScheduleView extends ItemView {
             const dayData = this.rangeData.days.find(day => day.day === d);
             const dayRanges = dayData?.ranges ?? [];
             for (const range of dayRanges) {
-                const block = col.createDiv({ cls: 'range-block' });
+                const block = col.createDiv({ cls: 'range-block range-block-fill' });
                 const cat = this.timeBlockCategoryData.categories.find(c => c.id === range.sort);
                 const rawColor = cat?.color ?? '#888888';
-                block.style.borderLeft = `8px solid ${rawColor}`;
-                block.style.backgroundColor = this.hexToTransparent(rawColor, 0.1);
 
                 const top = (range.start / 120) * 80;
                 const height = ((range.end - range.start) / 120) * 80;
-                block.style.position = 'absolute';
-                block.style.top = `${top}px`;
-                block.style.height = `${height}px`;
-                block.style.left = '0px';
-                block.style.right = '0px';
-                block.style.pointerEvents = 'auto';
+                block.setCssProps({
+                    'border-left': `8px solid ${rawColor}`,
+                    'background-color': this.hexToTransparent(rawColor, 0.1),
+                    'top': `${top}px`,
+                    'height': `${height}px`,
+                });
 
                 block.onclick = (e) => {
                     e.stopPropagation();
@@ -230,7 +227,7 @@ export class WeekScheduleView extends ItemView {
                         range.end = end;
                         range.sort = sort;
                         await this.save();
-                        this.onOpen();
+                        await this.onOpen();
                     }, this.timeBlockCategoryData, range).open();
                 };
 
@@ -241,7 +238,7 @@ export class WeekScheduleView extends ItemView {
                     if (this.activeLayer !== 'time-range') return;
                     dayData!.ranges = dayData!.ranges.filter(r => r.id !== range.id);
                     await this.save();
-                    this.onOpen();
+                    await this.onOpen();
                 };
             }
         }
@@ -265,7 +262,7 @@ export class WeekScheduleView extends ItemView {
                 const cat = ev.categoryId
                     ? this.timeBlockCategoryData.categories.find(c => c.id === ev.categoryId)
                     : undefined;
-                chip.style.borderLeft = `4px solid ${cat?.color ?? '#888888'}`;
+                chip.setCssProps({ 'border-left': `4px solid ${cat?.color ?? '#888888'}` });
                 chip.setText(ev.title);
 
                 // 事件层：可删除
@@ -276,7 +273,7 @@ export class WeekScheduleView extends ItemView {
                         e.stopPropagation();
                         this.events = this.events.filter(x => x.id !== ev.id);
                         await this.save();
-                        this.onOpen();
+                        await this.onOpen();
                     };
                 }
             }
@@ -310,7 +307,7 @@ export class WeekScheduleView extends ItemView {
             completed: false,
         });
         await this.save();
-        this.onOpen();
+        await this.onOpen();
         new Notice(t('allday.added', { title: selectedInboxItem.title }));
     }
 
@@ -328,18 +325,14 @@ export class WeekScheduleView extends ItemView {
                 const cat = this.timeBlockCategoryData.categories.find(c => c.id === range.sort);
                 const rawColor = cat?.color ?? '#888888';
                 const afColor = this.hexToTransparent(rawColor, 0.5);
-                bgBlock.style.borderLeft = `8px solid ${afColor}`;
-                // bgBlock.style.backgroundColor = this.hexToTransparent(rawColor, 0.01);
 
                 const top = (range.start / 120) * 80;
                 const height = ((range.end - range.start) / 120) * 80;
-                bgBlock.style.position = 'absolute';
-                bgBlock.style.top = `${top}px`;
-                bgBlock.style.height = `${height}px`;
-                bgBlock.style.left = '0px';
-                bgBlock.style.right = '0px';
-                bgBlock.style.pointerEvents = 'none'; // 关键：不拦截点击
-                bgBlock.style.zIndex = '0';
+                bgBlock.setCssProps({
+                    'border-left': `8px solid ${afColor}`,
+                    'top': `${top}px`,
+                    'height': `${height}px`,
+                });
             }
 
             // 点击空白 → 新建事件（后续接弹窗）
@@ -368,7 +361,7 @@ export class WeekScheduleView extends ItemView {
                         completed: false,
                     });
                     await this.save();
-                    this.onOpen();
+                    await this.onOpen();
                     new Notice(t('event.scheduled', { title: selectedInboxItem.title }));
                     return;
                 }
@@ -386,7 +379,7 @@ export class WeekScheduleView extends ItemView {
                             completed: false,
                         });
                         await this.save();
-                        this.onOpen();
+                        await this.onOpen();
                     }
                 ).open();
             };
@@ -400,9 +393,11 @@ export class WeekScheduleView extends ItemView {
                     : undefined;
 
                 const rawColor = cat?.color ?? '#888888';
-                card.style.borderTop = `5px solid ${rawColor}`;
-                card.style.backgroundColor = '#eeeeee88';
-                card.style.cursor = 'pointer';
+                card.addClass('event-card-clickable');
+                card.setCssProps({
+                    'border-top': `5px solid ${rawColor}`,
+                    'background-color': '#eeeeee88',
+                });
 
                 // ===== 右上角 × 删除按钮 =====
                 const delBtn = card.createDiv({ cls: 'event-delete-btn' });
@@ -411,7 +406,7 @@ export class WeekScheduleView extends ItemView {
                     e.stopPropagation();
                     this.events = this.events.filter(e => e.id !== ev.id);
                     await this.save();
-                    this.onOpen();
+                    await this.onOpen();
                 };
 
                 card.onclick = (e) => {
@@ -423,7 +418,7 @@ export class WeekScheduleView extends ItemView {
                             ev.end = end;
                             ev.categoryId = categoryId;
                             await this.save();
-                            this.onOpen();
+                            await this.onOpen();
                         }, ev
                     ).open();
                 };
@@ -434,15 +429,10 @@ export class WeekScheduleView extends ItemView {
     // ===== 公共：事件卡片（仅定位 + 基础外观）=====
     private createEventCard(col: HTMLElement, ev: EventBlock, title?: string): HTMLElement {
         const card = col.createDiv({ cls: 'event-card' });
-        card.style.position = 'absolute';
-        card.style.top = `${(ev.start / 120) * 80}px`;
-        card.style.height = `${((ev.end - ev.start) / 120) * 80}px`;
-        card.style.left = '8px';
-        card.style.right = '2px';
-        card.style.borderRadius = '4px';
-        card.style.padding = '2px 4px';
-        card.style.fontSize = '11px';
-        card.style.overflow = 'hidden';
+        card.setCssProps({
+            'top': `${(ev.start / 120) * 80}px`,
+            'height': `${((ev.end - ev.start) / 120) * 80}px`,
+        });
         card.setText(title ?? ev.title);
         return card;
     }
@@ -465,15 +455,11 @@ export class WeekScheduleView extends ItemView {
                 const cat = this.timeBlockCategoryData.categories.find(c => c.id === range.sort);
                 const rawColor = cat?.color ?? '#888888';
                 const afColor = this.hexToTransparent(rawColor, 0.5);
-                bgBlock.style.borderLeft = `8px solid ${afColor}`;
-
-                bgBlock.style.position = 'absolute';
-                bgBlock.style.top = `${(range.start / 120) * 80}px`;
-                bgBlock.style.height = `${((range.end - range.start) / 120) * 80}px`;
-                bgBlock.style.left = '0px';
-                bgBlock.style.right = '0px';
-                bgBlock.style.pointerEvents = 'none';
-                bgBlock.style.zIndex = '0';
+                bgBlock.setCssProps({
+                    'border-left': `8px solid ${afColor}`,
+                    'top': `${(range.start / 120) * 80}px`,
+                    'height': `${((range.end - range.start) / 120) * 80}px`,
+                });
             }
 
             // 事件卡片（只读展示，排除全天事件）
@@ -498,12 +484,12 @@ export class WeekScheduleView extends ItemView {
                         ? this.timeBlockCategoryData.categories.find(c => c.id === displayCategoryId)
                         : undefined;
                     const rawColor = cat?.color ?? '#888888';
-                    card.style.borderTop = `5px solid ${rawColor}`;
-                    card.style.backgroundColor = this.hexToTransparent(rawColor, 0.15);
+                    card.setCssProps({
+                        'border-top': `5px solid ${rawColor}`,
+                        'background-color': this.hexToTransparent(rawColor, 0.15),
+                    });
                 } else {
-                    card.style.borderTop = '5px solid #bbbbbb';
-                    card.style.backgroundColor = '#eeeeee88';
-                    card.style.color = '#999999';
+                    card.addClass('event-card-pending');
                 }
 
                 // 当天已过的时间点：未处理则显示 ! 标识（纯状态展示，处理走信息面板）
@@ -515,7 +501,7 @@ export class WeekScheduleView extends ItemView {
                 }
 
                 // 点击卡片 → 打开信息面板
-                card.style.cursor = 'pointer';
+                card.addClass('event-card-clickable');
                 card.onclick = (e) => {
                     e.stopPropagation();
                     // 任务记录：同一来源任务（inboxId）在所有时间点的执行记录
@@ -568,7 +554,7 @@ export class WeekScheduleView extends ItemView {
                                 });
                             }
                             await this.save();
-                            this.onOpen();
+                            await this.onOpen();
                         }
                     ).open();
                 };
@@ -589,7 +575,7 @@ export class WeekScheduleView extends ItemView {
         if (!col) return;
 
         const line = col.createDiv({ cls: 'current-time-line' });
-        line.style.top = `${(totalMinutes / 120) * 80}px`;
+        line.setCssProps({ 'top': `${(totalMinutes / 120) * 80}px` });
 
         // 滚动到红线位置（居中显示）
         const scrollContainer = bodyRowInner.closest('.grid-body-row') as HTMLElement | null;
@@ -614,7 +600,7 @@ export class WeekScheduleView extends ItemView {
         select.value = this.activeLayer;
         select.onchange = () => {
             this.activeLayer = select.value as EditLayer;
-            this.onOpen();
+            void this.onOpen();
         };
 
         // 图例
@@ -624,19 +610,19 @@ export class WeekScheduleView extends ItemView {
             legendContainer,
             this.timeBlockCategoryData,
             () => {
-                this.onOpen();
+                void this.onOpen();
             },
             this.selectedCategoryId,
             (id) => {
                 // 点击图例选中/取消选中分类
                 this.selectedCategoryId = this.selectedCategoryId === id ? undefined : id;
-                this.onOpen();
+                void this.onOpen();
             }
         );
 
         // 模板
         const templateContainer = toolbar.createDiv({ cls: 'template-container' });
-        renderTemplatePanel(this.app, templateContainer, this, (templateId, targetDays) => {
+        renderTemplatePanel(this.app, templateContainer, this, async (templateId, targetDays) => {
             const tpl = this.dayTemplateData.dayTemplates.find(t => t.id === templateId);
             if (!tpl) { new Notice(t('template.notFound')); return; }
             for (const day of targetDays) {
@@ -650,7 +636,8 @@ export class WeekScheduleView extends ItemView {
                 if (prop) { prop.templateId = templateId; }
                 else { this.dayTemplateData.dayProperties.push({ day, templateId }); }
             }
-            this.save().then(() => this.onOpen());
+            await this.save();
+            await this.onOpen();
         });
 
         // 收集盒面板
@@ -666,7 +653,7 @@ export class WeekScheduleView extends ItemView {
             },
             () => {
                 // onRefresh 回调
-                this.onOpen();
+                void this.onOpen();
             },
             async (action, item) => {
                 // 占位：后续实现各按钮功能
@@ -959,8 +946,7 @@ class ExecutionInfoModal extends Modal {
                 .onChange(val => this.note = val));
 
         // 变更执行选择区（默认隐藏）
-        this.changePanelEl = contentEl.createDiv({ cls: 'exec-change-panel' });
-        this.changePanelEl.style.display = 'none';
+        this.changePanelEl = contentEl.createDiv({ cls: 'exec-change-panel hidden' });
         this.renderChangePanel();
 
         // 操作按钮
@@ -977,8 +963,8 @@ class ExecutionInfoModal extends Modal {
                 .setButtonText(t('exec.change'))
                 .onClick(() => {
                     // 隐藏原事件信息，只显示变更选择区
-                    this.infoPanelEl.style.display = 'none';
-                    this.changePanelEl.style.display = 'block';
+                    this.infoPanelEl.addClass('hidden');
+                    this.changePanelEl.removeClass('hidden');
                 }));
         }
         btnSetting.addButton(btn => btn

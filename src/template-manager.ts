@@ -9,7 +9,7 @@ export interface TemplateViewContext {
     rangeData: WeekRangeData;
     dayTemplateData: DayTemplateData;
     save(): Promise<void>;
-    onOpen(): void;
+    onOpen(): Promise<void>;
 }
 
 /** 日模板 */
@@ -68,7 +68,7 @@ export function renderTemplatePanel(
     app: App,
     container: HTMLElement,
     ctx: TemplateViewContext,
-    onApply: (templateId: string, targetDays: number[]) => void
+    onApply: (templateId: string, targetDays: number[]) => void | Promise<void>
 ) {
     const panel = container.createDiv({ cls: 'template-panel' });
 
@@ -81,9 +81,9 @@ export function renderTemplatePanel(
     });
     addBtn.onclick = () => {
         new TemplateCreateModal(app, ctx, () => {
-            selectedTemplateId = null; // ✅ 新增后清空选中
-            // ✅ 刷新面板
-            ctx.onOpen();
+            selectedTemplateId = null; // 新增后清空选中
+            // 刷新面板
+            void ctx.onOpen();
         }).open();
     };
 
@@ -145,7 +145,7 @@ export function renderTemplatePanel(
             return;
         }
 
-        new ConfirmDeleteModal(app, tpl.name, () => {
+        new ConfirmDeleteModal(app, tpl.name, async () => {
             // 1. 从 dayTemplates 移除
             ctx.dayTemplateData.dayTemplates = ctx.dayTemplateData.dayTemplates.filter(
                 t => t.id !== selectedTemplateId
@@ -160,9 +160,8 @@ export function renderTemplatePanel(
             selectedTemplateId = null;
 
             // 4. 保存 + 刷新
-            ctx.save().then(() => {
-                ctx.onOpen();
-            });
+            await ctx.save();
+            await ctx.onOpen();
         }).open();
     };
 
@@ -365,9 +364,9 @@ export class ApplyTemplateModal extends Modal {
  */
 export class ConfirmDeleteModal extends Modal {
     private templateName: string;
-    private onConfirm: () => void;
+    private onConfirm: () => void | Promise<void>;
 
-    constructor(app: App, templateName: string, onConfirm: () => void) {
+    constructor(app: App, templateName: string, onConfirm: () => void | Promise<void>) {
         super(app);
         this.templateName = templateName;
         this.onConfirm = onConfirm;

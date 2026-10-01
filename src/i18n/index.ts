@@ -12,7 +12,7 @@ function detectLang(): Lang {
         const lang = localStorage.getItem('language');
         if (lang === 'zh' || lang === 'zh-cn' || lang === 'zh-CN') return 'zh';
         if (lang === 'en' || lang === 'en-US' || lang === 'en-us') return 'en';
-    } catch (e) {
+    } catch {
         // 忽略，使用默认英文
     }
     return 'en';
