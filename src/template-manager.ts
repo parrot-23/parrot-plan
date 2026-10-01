@@ -73,7 +73,7 @@ export function renderTemplatePanel(
     const panel = container.createDiv({ cls: 'template-panel' });
 
     const titleRow = panel.createDiv({ cls: 'template-title-row' });
-    titleRow.createEl('div', { text: t('template.title'), cls: 'template-title' });
+    titleRow.createDiv({ text: t('template.title'), cls: 'template-title' });
 
     const addBtn = titleRow.createEl('button', {
         text: '+',
@@ -259,13 +259,13 @@ export class TemplateCreateModal extends Modal {
 export class ApplyTemplateModal extends Modal {
     private ctx: TemplateViewContext;
     private templateId: string;
-    private onApply: (templateId: string, targetDays: number[]) => void;
+    private onApply: (templateId: string, targetDays: number[]) => void | Promise<void>;
 
     constructor(
         app: App,
         ctx: TemplateViewContext,
         templateId: string,
-        onApply: (templateId: string, targetDays: number[]) => void
+        onApply: (templateId: string, targetDays: number[]) => void | Promise<void>
     ) {
         super(app);
         this.ctx = ctx;
@@ -387,7 +387,7 @@ export class ConfirmDeleteModal extends Modal {
                 .setWarning()
                 .setCta()
                 .onClick(() => {
-                    this.onConfirm();
+                    void this.onConfirm();
                     this.close();
                 })
             )

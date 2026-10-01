@@ -1,8 +1,8 @@
 {
   "id": "parrot-plan",
   "name": "Parrot Plan",
-  "version": "1.0.1",
-  "minAppVersion": "1.6.0",
+  "version": "1.0.2",
+  "minAppVersion": "1.7.2",
   "description": "A weekly schedule planner with time blocks, event planning, and execution tracking.",
   "author": "parrot-23",
   "isDesktopOnly": true

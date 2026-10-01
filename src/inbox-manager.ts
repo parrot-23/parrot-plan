@@ -127,10 +127,12 @@ export function renderInboxPanel(
 
             if (action.id === 'set-category') {
                 // 弹窗选分类
-                new CategorySelectModal(app, categoryData, item.categoryId, async (catId) => {
+                new CategorySelectModal(app, categoryData, item.categoryId, (catId) => {
                     item.categoryId = catId || undefined;
-                    if (onUpdate) await onUpdate(item);
-                    renderList();
+                    void (async () => {
+                        if (onUpdate) await onUpdate(item);
+                        renderList();
+                    })();
                 }).open();
             } else if (action.id === 'delete') {
                 // 从收集盒移除（不再显示，但数据保留，可查历史）
@@ -195,7 +197,7 @@ export function renderInboxPanel(
                 const cat = categoryData.categories.find(c => c.id === item.categoryId);
                 if (cat) {
                     const dot = itemEl.createSpan({ cls: 'inbox-category-dot' });
-                    dot.setCssProps({ 'background': cat.color });
+                    dot.setCssProps({ '--dot-color': cat.color });
                     const titleEl = itemEl.querySelector('.inbox-item-title') as HTMLElement;
                     if (titleEl) titleEl.prepend(dot);
                 }
@@ -226,13 +228,15 @@ export function renderInboxPanel(
 
     const addBtn = header.createEl('button', { cls: 'inbox-add-btn', text: '+' });
     addBtn.onclick = () => {
-        new InboxAddModal(app, async (item) => {
+        new InboxAddModal(app, (item) => {
             inboxData.items.unshift(item);
-            await onAdd(item);
-            selectedId = null;  // 添加后清除选中
-            renderList();
-            updateToolbar();
-            onRefresh();
+            void (async () => {
+                await onAdd(item);
+                selectedId = null;  // 添加后清除选中
+                renderList();
+                updateToolbar();
+                onRefresh();
+            })();
         }).open();
     };
 
@@ -313,7 +317,7 @@ class CategorySelectModal extends Modal {
             const setting = new Setting(contentEl).setName(cat.label);
 
             const dot = setting.nameEl.createSpan({ cls: 'inbox-category-dot-lg' });
-            dot.setCssProps({ 'background': cat.color });
+            dot.setCssProps({ '--dot-color': cat.color });
 
             setting.addButton(btn => btn
                 .setButtonText(t('common.select'))

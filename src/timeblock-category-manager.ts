@@ -22,7 +22,7 @@ export function renderTimeBlockCategoryLegend(
     onSelect?: (id: string) => void,
 ): void {
     const legend = container.createDiv({ cls: 'range-legend' });
-    legend.createEl('div', { text: t('category.legend'), cls: 'legend-title' });
+    legend.createDiv({ text: t('category.legend'), cls: 'legend-title' });
 
     // 齿轮按钮
     const gearBtn = legend.createDiv({ cls: 'category-gear-btn' });
@@ -37,7 +37,7 @@ export function renderTimeBlockCategoryLegend(
         const row = legend.createDiv({ cls: 'legend-item' });
         if (cat.id === selectedId) row.addClass('is-selected');
         const swatch = row.createDiv({ cls: `legend-color` });
-        swatch.setCssProps({ 'background-color': cat.color ?? '#888888' });
+        swatch.setCssProps({ '--swatch-color': cat.color ?? '#888888' });
         row.createSpan({ text: cat.label });
         row.onclick = () => onSelect?.(cat.id);
     }
@@ -107,7 +107,7 @@ export class CategoryConfigModal extends Modal {
         this.listEl.empty();
 
         if (this.draft.length === 0) {
-            this.listEl.createEl('div', {
+            this.listEl.createDiv({
                 text: t('category.empty'),
                 cls: 'tbcat-empty',
             });
@@ -121,7 +121,7 @@ export class CategoryConfigModal extends Modal {
             const color = row.createEl('input', {
                 type: 'color',
                 cls: 'tbcat-color',
-            }) as HTMLInputElement;
+            });
             color.value = cat.color ?? '#888888';
             color.addEventListener('input', () => {
                 cat.color = color.value;
@@ -132,7 +132,7 @@ export class CategoryConfigModal extends Modal {
                 type: 'text',
                 placeholder: t('category.namePlaceholder'),
                 cls: 'tbcat-name',
-            }) as HTMLInputElement;
+            });
             name.value = cat.label;
             name.addEventListener('input', () => {
                 cat.label = name.value;

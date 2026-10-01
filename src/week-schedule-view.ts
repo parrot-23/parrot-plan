@@ -123,7 +123,7 @@ export class WeekScheduleView extends ItemView {
             (day) => {
                 // 事件层：点击模板行单元格添加全天事件
                 if (this.activeLayer === 'event') {
-                    this.addAllDayEvent(day);
+                    void this.addAllDayEvent(day);
                 }
             }
         );
@@ -189,7 +189,7 @@ export class WeekScheduleView extends ItemView {
                 const rect = col.getBoundingClientRect();
                 const y = e.clientY - rect.top;
                 const startMinutes = Math.floor((y / 80) * 120 / 30) * 30;
-                new RangeEditModal(this.app, startMinutes, async (start, end, sort) => {
+                new RangeEditModal(this.app, startMinutes, (start, end, sort) => {
                     let dayData = this.rangeData.days.find(day => day.day === d);
                     if (!dayData) {
                         dayData = { day: d, ranges: [] };
@@ -197,8 +197,10 @@ export class WeekScheduleView extends ItemView {
                     }
                     const id = `r_${Date.now()}`;
                     dayData.ranges.push({ id, start, end, sort });
-                    await this.save();
-                    await this.onOpen();
+                    void (async () => {
+                        await this.save();
+                        await this.onOpen();
+                    })();
                 }, this.timeBlockCategoryData, undefined, this.selectedCategoryId).open();
             };
 
@@ -213,21 +215,23 @@ export class WeekScheduleView extends ItemView {
                 const top = (range.start / 120) * 80;
                 const height = ((range.end - range.start) / 120) * 80;
                 block.setCssProps({
-                    'border-left': `8px solid ${rawColor}`,
-                    'background-color': this.hexToTransparent(rawColor, 0.1),
-                    'top': `${top}px`,
-                    'height': `${height}px`,
+                    '--range-color': rawColor,
+                    '--range-bg': this.hexToTransparent(rawColor, 0.1),
+                    '--range-top': `${top}px`,
+                    '--range-height': `${height}px`,
                 });
 
                 block.onclick = (e) => {
                     e.stopPropagation();
                     if (this.activeLayer !== 'time-range') return;
-                    new RangeEditModal(this.app, 0, async (start, end, sort) => {
+                    new RangeEditModal(this.app, 0, (start, end, sort) => {
                         range.start = start;
                         range.end = end;
                         range.sort = sort;
-                        await this.save();
-                        await this.onOpen();
+                        void (async () => {
+                            await this.save();
+                            await this.onOpen();
+                        })();
                     }, this.timeBlockCategoryData, range).open();
                 };
 
@@ -262,7 +266,7 @@ export class WeekScheduleView extends ItemView {
                 const cat = ev.categoryId
                     ? this.timeBlockCategoryData.categories.find(c => c.id === ev.categoryId)
                     : undefined;
-                chip.setCssProps({ 'border-left': `4px solid ${cat?.color ?? '#888888'}` });
+                chip.setCssProps({ '--chip-color': cat?.color ?? '#888888' });
                 chip.setText(ev.title);
 
                 // 事件层：可删除
@@ -282,7 +286,7 @@ export class WeekScheduleView extends ItemView {
             if (this.activeLayer === 'event') {
                 cell.onclick = (e) => {
                     if ((e.target as HTMLElement).closest('.all-day-chip-del')) return;
-                    this.addAllDayEvent(d);
+                    void this.addAllDayEvent(d);
                 };
             }
         }
@@ -329,9 +333,9 @@ export class WeekScheduleView extends ItemView {
                 const top = (range.start / 120) * 80;
                 const height = ((range.end - range.start) / 120) * 80;
                 bgBlock.setCssProps({
-                    'border-left': `8px solid ${afColor}`,
-                    'top': `${top}px`,
-                    'height': `${height}px`,
+                    '--range-color': afColor,
+                    '--range-top': `${top}px`,
+                    '--range-height': `${height}px`,
                 });
             }
 
@@ -368,7 +372,7 @@ export class WeekScheduleView extends ItemView {
 
                 // ===== 原有逻辑：弹窗新建 =====
                 new EventEditModal(this.app, startMinutes, endMinutes, this.timeBlockCategoryData,
-                    async (title, start, end, categoryId) => {
+                    (title, start, end, categoryId) => {
                         this.events.push({
                             id: `ev_${Date.now()}`,
                             day: d,
@@ -378,8 +382,10 @@ export class WeekScheduleView extends ItemView {
                             categoryId,
                             completed: false,
                         });
-                        await this.save();
-                        await this.onOpen();
+                        void (async () => {
+                            await this.save();
+                            await this.onOpen();
+                        })();
                     }
                 ).open();
             };
@@ -395,8 +401,8 @@ export class WeekScheduleView extends ItemView {
                 const rawColor = cat?.color ?? '#888888';
                 card.addClass('event-card-clickable');
                 card.setCssProps({
-                    'border-top': `5px solid ${rawColor}`,
-                    'background-color': '#eeeeee88',
+                    '--card-color': rawColor,
+                    '--card-bg': '#eeeeee88',
                 });
 
                 // ===== 右上角 × 删除按钮 =====
@@ -412,13 +418,15 @@ export class WeekScheduleView extends ItemView {
                 card.onclick = (e) => {
                     e.stopPropagation();
                     new EventEditModal(this.app, ev.start, ev.end, this.timeBlockCategoryData,
-                        async (title, start, end, categoryId) => {
+                        (title, start, end, categoryId) => {
                             ev.title = title;
                             ev.start = start;
                             ev.end = end;
                             ev.categoryId = categoryId;
-                            await this.save();
-                            await this.onOpen();
+                            void (async () => {
+                                await this.save();
+                                await this.onOpen();
+                            })();
                         }, ev
                     ).open();
                 };
@@ -430,8 +438,8 @@ export class WeekScheduleView extends ItemView {
     private createEventCard(col: HTMLElement, ev: EventBlock, title?: string): HTMLElement {
         const card = col.createDiv({ cls: 'event-card' });
         card.setCssProps({
-            'top': `${(ev.start / 120) * 80}px`,
-            'height': `${((ev.end - ev.start) / 120) * 80}px`,
+            '--card-top': `${(ev.start / 120) * 80}px`,
+            '--card-height': `${((ev.end - ev.start) / 120) * 80}px`,
         });
         card.setText(title ?? ev.title);
         return card;
@@ -456,9 +464,9 @@ export class WeekScheduleView extends ItemView {
                 const rawColor = cat?.color ?? '#888888';
                 const afColor = this.hexToTransparent(rawColor, 0.5);
                 bgBlock.setCssProps({
-                    'border-left': `8px solid ${afColor}`,
-                    'top': `${(range.start / 120) * 80}px`,
-                    'height': `${((range.end - range.start) / 120) * 80}px`,
+                    '--range-color': afColor,
+                    '--range-top': `${(range.start / 120) * 80}px`,
+                    '--range-height': `${((range.end - range.start) / 120) * 80}px`,
                 });
             }
 
@@ -485,8 +493,8 @@ export class WeekScheduleView extends ItemView {
                         : undefined;
                     const rawColor = cat?.color ?? '#888888';
                     card.setCssProps({
-                        'border-top': `5px solid ${rawColor}`,
-                        'background-color': this.hexToTransparent(rawColor, 0.15),
+                        '--card-color': rawColor,
+                        '--card-bg': this.hexToTransparent(rawColor, 0.15),
                     });
                 } else {
                     card.addClass('event-card-pending');
@@ -575,10 +583,10 @@ export class WeekScheduleView extends ItemView {
         if (!col) return;
 
         const line = col.createDiv({ cls: 'current-time-line' });
-        line.setCssProps({ 'top': `${(totalMinutes / 120) * 80}px` });
+        line.setCssProps({ '--line-top': `${(totalMinutes / 120) * 80}px` });
 
         // 滚动到红线位置（居中显示）
-        const scrollContainer = bodyRowInner.closest('.grid-body-row') as HTMLElement | null;
+        const scrollContainer = bodyRowInner.closest('.grid-body-row');
         if (scrollContainer) {
             const lineTop = (totalMinutes / 120) * 80;
             scrollContainer.scrollTop = Math.max(0, lineTop - scrollContainer.clientHeight / 2);
@@ -770,7 +778,7 @@ class RangeEditModal extends Modal {
                     dropdown.addOption(cat.id, cat.label);
                 }
                 dropdown.setValue(this.sort);
-                dropdown.onChange(val => this.sort = val as TimeBlockCategoryId);
+                dropdown.onChange(val => this.sort = val);
             });
 
         // 按钮
@@ -907,20 +915,20 @@ class ExecutionInfoModal extends Modal {
 
         // 实际执行的任务（与计划不同时提示）
         if (this.actualTitle && this.actualTitle !== this.event.title) {
-            this.infoPanelEl.createEl('div', {
+            this.infoPanelEl.createDiv({
                 text: t('exec.actual', { title: this.actualTitle }),
                 cls: 'exec-info-actual',
             });
         }
 
         // 执行次数（该任务累计）
-        this.infoPanelEl.createEl('div', {
+        this.infoPanelEl.createDiv({
             text: t('exec.count', { count: this.records.length }),
             cls: 'exec-info-count',
         });
 
         // 任务记录：该任务在哪些时间点被执行过
-        this.infoPanelEl.createEl('div', { text: t('exec.records'), cls: 'exec-info-subtitle' });
+        this.infoPanelEl.createDiv({ text: t('exec.records'), cls: 'exec-info-subtitle' });
         const recordList = this.infoPanelEl.createDiv({ cls: 'exec-info-records' });
         if (this.records.length === 0) {
             recordList.createDiv({ cls: 'exec-info-empty', text: t('exec.noRecords') });
@@ -1006,7 +1014,7 @@ class ExecutionInfoModal extends Modal {
             type: 'text',
             cls: 'exec-change-add-input',
             attr: { placeholder: t('exec.newTaskPlaceholder') },
-        }) as HTMLInputElement;
+        });
         input.oninput = () => { newTitle = input.value; };
         const addBtn = addRow.createEl('button', {
             text: t('exec.addTask'),

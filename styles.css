@@ -118,12 +118,19 @@
 /* 时间区块层：色块可点击 */
 .range-block-fill {
     pointer-events: auto;
+    border-left: 8px solid var(--range-color, #888888);
+    background-color: var(--range-bg, transparent);
+    top: var(--range-top, 0);
+    height: var(--range-height, 0);
 }
 
 /* 只读时间区块背景（事件层 / 执行层） */
 .range-bg {
     pointer-events: none;
     z-index: 0;
+    border-left: 8px solid var(--range-color, #888888);
+    top: var(--range-top, 0);
+    height: var(--range-height, 0);
 }
 
 /* 红线 */
@@ -135,6 +142,7 @@
     background: red;
     z-index: 10;
     pointer-events: none;
+    top: var(--line-top, 0);
 }
 
 .day-column {
@@ -282,6 +290,7 @@
     overflow: hidden;
     white-space: nowrap;
     text-overflow: ellipsis;
+    border-left: 4px solid var(--chip-color, #888888);
 }
 
 /* 删除按钮 */
@@ -491,6 +500,7 @@
     height: 14px;
     border-radius: 3px;
     flex-shrink: 0;
+    background-color: var(--swatch-color, #888888);
 }
 
 
@@ -769,6 +779,7 @@
     border-radius: 50%;
     margin-right: 6px;
     vertical-align: middle;
+    background: var(--dot-color, #888888);
 }
 
 
@@ -781,6 +792,10 @@
     padding: 2px 4px;
     font-size: 11px;
     overflow: hidden;
+    top: var(--card-top, 0);
+    height: var(--card-height, 0);
+    border-top: 5px solid var(--card-color, #888888);
+    background-color: var(--card-bg, transparent);
 }
 
 /* 可点击的事件卡片 */
@@ -974,6 +989,7 @@
     border-radius: 50%;
     margin-right: 8px;
     vertical-align: middle;
+    background: var(--dot-color, #888888);
 }
 
 /* 分类选择弹窗：当前选中项 */

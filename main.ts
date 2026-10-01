@@ -1,4 +1,4 @@
-import { App, Plugin, PluginSettingTab, type SettingDefinitionItem } from 'obsidian';
+import { App, Plugin, PluginSettingTab, Setting, type SettingDefinitionItem } from 'obsidian';
 
 import type { WeekRangeData } from './src/timeblock-data';
 import type { TimeBlockCategoryData } from './src/timeblock-category-manager';
@@ -85,13 +85,12 @@ export default class ParrotPlanPlugin extends Plugin {
         this.addSettingTab(new ParrotPlanSettingTab(this.app, this));
     }
 
-    async onunload() {
+    onunload() {
         // 只保存数据，不 detach leaf（否则会打乱用户布局）
         const leaves = this.app.workspace.getLeavesOfType(VIEW_TYPE_WEEK);
         for (const leaf of leaves) {
             if (leaf.view instanceof WeekScheduleView) {
-                const view = leaf.view as WeekScheduleView;
-                await view.save();
+                void leaf.view.save();
             }
         }
     }
@@ -114,7 +113,7 @@ class ParrotPlanSettingTab extends PluginSettingTab {
 
     display(): void {
         this.containerEl.empty();
-        this.containerEl.createEl('h2', { text: t('settings.title') });
+        new Setting(this.containerEl).setName(t('settings.title')).setHeading();
         this.containerEl.createEl('p', { text: t('settings.about') });
     }
 }
