@@ -38,7 +38,10 @@ export interface RangeScheme {
 /** 方案集合（持久化） */
 export interface RangeSchemeData {
 	schemes: RangeScheme[];
+	/** 当前激活的方案 */
 	activeSchemeId?: string;
+	/** 默认方案 */
+	defaultSchemeId?: string;
 }
 
 // 默认周日程数据（兜底用）

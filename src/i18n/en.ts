@@ -85,6 +85,10 @@ export const en: I18nMessages = {
     'rangeScheme.new': 'New scheme',
     'rangeScheme.namePlaceholder': 'Scheme name',
     'rangeScheme.empty': 'No schemes, click + to add',
+    'rangeScheme.noActive': 'No scheme selected',
+    'rangeScheme.switchTo': 'Switch',
+    'rangeScheme.setDefault': 'Set default',
+    'rangeScheme.isDefault': 'Default',
 
     // Category
     'category.legend': 'Time Block Legend',

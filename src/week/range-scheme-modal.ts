@@ -40,20 +40,18 @@ export class RangeSchemeModal extends Modal {
         contentEl.empty();
         contentEl.addClass('range-scheme-modal');
 
-        // ===== 顶部：方案切换 / 方案管理 =====
+        // ===== 顶部：当前方案名称 / 方案管理 =====
         const header = contentEl.createDiv({ cls: 'range-scheme-header' });
         header.createEl('h3', { text: t('rangeScheme.title') });
 
         const actions = header.createDiv({ cls: 'range-scheme-actions' });
 
-        const switchBtn = actions.createEl('button', {
-            text: t('rangeScheme.switch'),
-            cls: 'range-scheme-btn',
+        // 当前方案名称（纯展示）
+        const activeScheme = this.schemeData.schemes.find(s => s.id === this.schemeData.activeSchemeId);
+        actions.createSpan({
+            text: activeScheme?.name ?? t('rangeScheme.noActive'),
+            cls: 'range-scheme-current',
         });
-        switchBtn.onclick = () => {
-            // 占位：方案切换弹窗
-            new SchemePlaceholderModal(this.app, t('rangeScheme.switch')).open();
-        };
 
         const manageBtn = actions.createEl('button', {
             text: t('rangeScheme.manage'),
@@ -62,6 +60,8 @@ export class RangeSchemeModal extends Modal {
         manageBtn.onclick = () => {
             new SchemeManageModal(this.app, this.schemeData, () => {
                 this.onChange?.();
+                // 方案数据可能变化，重新渲染以刷新当前方案名称
+                this.onOpen();
             }).open();
         };
 
@@ -180,6 +180,36 @@ export class SchemeManageModal extends Modal {
                 scheme.name = name.value;
             });
 
+            // 切换（设为当前方案）
+            const switchBtn = row.createEl('button', {
+                text: t('rangeScheme.switchTo'),
+                cls: 'tbcat-action-btn',
+            });
+            if (scheme.id === this.schemeData.activeSchemeId) {
+                switchBtn.addClass('is-active');
+            }
+            switchBtn.addEventListener('click', () => {
+                this.schemeData.activeSchemeId = scheme.id;
+                this.onConfirm?.();
+                this.renderList();
+            });
+
+            // 设为默认
+            const defaultBtn = row.createEl('button', {
+                text: scheme.id === this.schemeData.defaultSchemeId
+                    ? t('rangeScheme.isDefault')
+                    : t('rangeScheme.setDefault'),
+                cls: 'tbcat-action-btn',
+            });
+            if (scheme.id === this.schemeData.defaultSchemeId) {
+                defaultBtn.addClass('is-active');
+            }
+            defaultBtn.addEventListener('click', () => {
+                this.schemeData.defaultSchemeId = scheme.id;
+                this.onConfirm?.();
+                this.renderList();
+            });
+
             // 删除
             const del = row.createEl('button', {
                 text: '✕',
@@ -190,26 +220,6 @@ export class SchemeManageModal extends Modal {
                 this.renderList();
             });
         });
-    }
-
-    onClose() {
-        this.contentEl.empty();
-    }
-}
-
-/** 方案切换 / 管理的占位弹窗 */
-class SchemePlaceholderModal extends Modal {
-    private title: string;
-
-    constructor(app: App, title: string) {
-        super(app);
-        this.title = title;
-    }
-
-    onOpen() {
-        const { contentEl } = this;
-        contentEl.empty();
-        contentEl.createEl('h3', { text: this.title });
     }
 
     onClose() {
