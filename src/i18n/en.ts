@@ -40,6 +40,11 @@ export const en: I18nMessages = {
     'today.category': 'Category',
     'today.timeRange': 'Time',
     'today.allDay': 'All day',
+    'today.complete': 'Complete Planned Task',
+    'today.replace': 'Replace with Another Task',
+    'today.completeDone': 'Recorded execution of "{title}"',
+    'today.replaceNeedEvent': 'Select an event on the timeline to replace first',
+    'today.replaceDone': 'Replaced the event with "{title}"',
 
     // Year view
     'year.weekLabel': 'Week {week}',
@@ -161,5 +166,7 @@ export const en: I18nMessages = {
     'inbox.dayGoal': 'Day Goals',
     'inbox.emptyWeekGoal': 'No goals this week. Assign tasks in the Year view.',
     'inbox.emptyDayGoal': 'No goals today.',
+    'inbox.groupAllDay': 'All-day Goals',
+    'inbox.groupTimed': 'Timed Goals',
     'inbox.maxDepth': 'Subtasks can nest at most {max} levels',
 };

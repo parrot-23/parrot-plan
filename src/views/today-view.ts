@@ -1,10 +1,11 @@
 import type { App } from 'obsidian';
+import { Notice } from 'obsidian';
 
 import type { TimeBlockCategoryData } from '../week/timeblock-category-manager';
 import type { InboxData, InboxItem } from '../shared/task-panel';
 import { renderTaskPanel } from '../shared/task-panel';
 import { getCurrentDayKey, getCurrentWeekKey, makeDayKeyFromWeek } from '../week/timeblock-data';
-import type { EventBlock } from '../week/week-schedule-view';
+import type { EventBlock, ExecutionRecord } from '../week/week-schedule-view';
 import { getWeekDays, t } from '../i18n';
 
 /** 把分钟数格式化为 HH:MM */
@@ -25,6 +26,8 @@ export class TodayView {
     private save: () => Promise<void>;
     /** 获取全部事件（用于在时间轴上展示今天的计划事件） */
     private getEvents: () => EventBlock[];
+    /** 获取全部执行记录（用于「完成执行计划任务」写入） */
+    private getExecutions: () => ExecutionRecord[];
     /** 当前渲染容器（用于自刷新） */
     private container?: HTMLElement;
     /** 红线定时器 */
@@ -40,12 +43,14 @@ export class TodayView {
         categoryData: TimeBlockCategoryData,
         save: () => Promise<void>,
         getEvents: () => EventBlock[],
+        getExecutions: () => ExecutionRecord[],
     ) {
         this.app = app;
         this.inboxData = inboxData;
         this.categoryData = categoryData;
         this.save = save;
         this.getEvents = getEvents;
+        this.getExecutions = getExecutions;
     }
 
     async renderInto(container: HTMLElement): Promise<void> {
@@ -79,12 +84,14 @@ export class TodayView {
             },
             undefined,                     // 不显示「周目标」按钮
             getCurrentDayKey(),            // 当前日期键（用于「日目标」筛选）
+            (item) => this.getDayGoalGroup(item), // 日目标分组：全天 / 时间点
         );
 
-        // ===== 中间：日期方框 + 任务详情方框 =====
+        // ===== 中间：日期方框 + 任务详情方框 + 操作按钮 =====
         const centerPanel = container.createDiv({ cls: 'today-center-panel' });
         this.renderDateBox(centerPanel);
         this.renderDetailBox(centerPanel);
+        this.renderActionButtons(centerPanel);
 
         // ===== 右侧：当天时间轴 =====
         const timelinePanel = container.createDiv({ cls: 'today-timeline-panel' });
@@ -94,6 +101,30 @@ export class TodayView {
     /** 重新渲染自身 */
     private async refresh(): Promise<void> {
         if (this.container) await this.renderInto(this.container);
+    }
+
+    /**
+     * 判断任务属于「全天目标」还是「时间点目标」。
+     * 若该任务（或其任一后代）今天存在带时间点的事件，则为「时间点目标」，否则为「全天目标」。
+     */
+    private getDayGoalGroup(item: InboxItem): 'allday' | 'timed' {
+        const now = new Date();
+        const todayDay = (now.getDay() + 6) % 7 + 1;
+        const weekKey = getCurrentWeekKey();
+        const events = this.getEvents();
+
+        const hasTimedEvent = (target: InboxItem): boolean => {
+            if (events.some(ev =>
+                ev.inboxId === target.id && ev.weekKey === weekKey && ev.day === todayDay && !ev.allDay,
+            )) {
+                return true;
+            }
+            return this.inboxData.items.some(child =>
+                child.parentId === target.id && !child.removed && hasTimedEvent(child),
+            );
+        };
+
+        return hasTimedEvent(item) ? 'timed' : 'allday';
     }
 
     /** 渲染今天的年月日方框 */
@@ -131,6 +162,81 @@ export class TodayView {
         }
 
         body.createDiv({ cls: 'today-detail-empty', text: t('today.noSelection') });
+    }
+
+    /** 渲染操作按钮（仅在选中任务时可用） */
+    private renderActionButtons(panel: HTMLElement) {
+        const selectedItem = this.getSelectedItem();
+        const row = panel.createDiv({ cls: 'today-action-row' });
+
+        const completeBtn = row.createEl('button', {
+            cls: 'today-action-btn',
+            text: t('today.complete'),
+        });
+        completeBtn.disabled = !selectedItem;
+        completeBtn.onclick = () => {
+            void this.completeSelectedTask();
+        };
+
+        const replaceBtn = row.createEl('button', {
+            cls: 'today-action-btn',
+            text: t('today.replace'),
+        });
+        replaceBtn.disabled = !selectedItem;
+        replaceBtn.onclick = () => {
+            void this.replaceSelectedEvent();
+        };
+    }
+
+    /** 当前任务面板选中的任务（未移除） */
+    private getSelectedItem(): InboxItem | undefined {
+        return this.inboxData.selectedId
+            ? this.inboxData.items.find(i => i.id === this.inboxData.selectedId && !i.removed)
+            : undefined;
+    }
+
+    /** 完成执行计划任务：为选中任务生成一条执行记录 */
+    private async completeSelectedTask(): Promise<void> {
+        const item = this.getSelectedItem();
+        if (!item) return;
+
+        const now = new Date();
+        const todayDay = (now.getDay() + 6) % 7 + 1;
+        const weekKey = getCurrentWeekKey();
+        const totalMinutes = now.getHours() * 60 + now.getMinutes();
+
+        this.getExecutions().push({
+            id: `exec_${Date.now()}`,
+            inboxId: item.id,
+            day: todayDay,
+            start: totalMinutes,
+            end: totalMinutes,
+            weekKey,
+        });
+        await this.save();
+        new Notice(t('today.completeDone', { title: item.title }));
+        await this.refresh();
+    }
+
+    /** 替换执行其他任务：用当前选中任务替换时间轴上选中的事件 */
+    private async replaceSelectedEvent(): Promise<void> {
+        const item = this.getSelectedItem();
+        if (!item) return;
+
+        const ev = this.selectedEventId
+            ? this.getEvents().find(e => e.id === this.selectedEventId)
+            : undefined;
+        if (!ev) {
+            new Notice(t('today.replaceNeedEvent'));
+            return;
+        }
+
+        ev.title = item.title;
+        ev.categoryId = item.categoryId;
+        ev.inboxId = item.id;
+        await this.save();
+        new Notice(t('today.replaceDone', { title: item.title }));
+        await this.refresh();
     }
 
     /** 展示收集盒任务详情 */

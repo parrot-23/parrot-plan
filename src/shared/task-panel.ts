@@ -195,6 +195,11 @@ export function renderTaskPanel(
     currentWeekKey?: string,
     /** 当前日期键（提供后显示「日目标」按钮，用于只看当天任务） */
     currentDayKey?: string,
+    /**
+     * 日目标分组：返回任务属于「全天目标」还是「时间点目标」。
+     * 提供后，日目标模式会按此自动分组显示。
+     */
+    getDayGoalGroup?: (item: InboxItem) => 'allday' | 'timed',
 ) {
     container.empty();
     container.addClass('inbox-panel');
@@ -373,6 +378,24 @@ export function renderTaskPanel(
                     ? 'inbox.emptyWeekGoal'
                     : 'inbox.empty';
             listDiv.createDiv({ cls: 'inbox-empty' }).setText(t(emptyKey));
+            return;
+        }
+
+        // 日目标模式 + 提供分组回调：按「全天目标 / 时间点目标」分组显示
+        if (dayGoalOnly && getDayGoalGroup) {
+            const allDayItems = topItems.filter(i => getDayGoalGroup(i) === 'allday');
+            const timedItems = topItems.filter(i => getDayGoalGroup(i) === 'timed');
+
+            const renderGroup = (labelKey: 'inbox.groupAllDay' | 'inbox.groupTimed', items: InboxItem[]) => {
+                if (items.length === 0) return;
+                listDiv.createDiv({ cls: 'inbox-group-header', text: t(labelKey) });
+                for (const item of items) {
+                    renderItem(item, 0);
+                }
+            };
+
+            renderGroup('inbox.groupAllDay', allDayItems);
+            renderGroup('inbox.groupTimed', timedItems);
             return;
         }
 

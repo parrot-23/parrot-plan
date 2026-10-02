@@ -84,6 +84,7 @@ export class MainView extends ItemView {
             this.weekView.timeBlockCategoryData,
             () => this.weekView.save(),
             () => this.weekView.events,
+            () => this.weekView.executions,
         );
         this.swimlaneView = new SwimlaneView(
             this.app,

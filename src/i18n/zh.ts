@@ -38,6 +38,11 @@ export const zh = {
     'today.category': '分类',
     'today.timeRange': '时间',
     'today.allDay': '全天',
+    'today.complete': '完成执行计划任务',
+    'today.replace': '替换执行其他任务',
+    'today.completeDone': '已记录「{title}」的执行',
+    'today.replaceNeedEvent': '请先在时间轴上选中要替换的事件',
+    'today.replaceDone': '已将事件替换为「{title}」',
 
     // 年视图
     'year.weekLabel': '第{week}周',
@@ -159,6 +164,8 @@ export const zh = {
     'inbox.dayGoal': '日目标',
     'inbox.emptyWeekGoal': '本周暂无目标，去「年」视图分配任务',
     'inbox.emptyDayGoal': '今天暂无目标',
+    'inbox.groupAllDay': '全天目标',
+    'inbox.groupTimed': '时间点目标',
     'inbox.maxDepth': '子任务最多嵌套 {max} 层',
 };
 
