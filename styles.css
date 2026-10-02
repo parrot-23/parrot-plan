@@ -1485,6 +1485,47 @@
     padding: 12px;
 }
 
+/* 顶部栏：年份切换 + 图例（横向滚动时保持可见） */
+.swimlane-top-bar {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 10px;
+    position: sticky;
+    left: 0;
+    width: max-content;
+}
+
+/* 顶部年份切换（复用年视图日历的按钮样式） */
+.swimlane-year-nav {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+/* 图例：计划项 / 执行记录 */
+.swimlane-legend {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.swimlane-legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--text-muted);
+}
+
+.swimlane-legend-color {
+    width: 14px;
+    height: 14px;
+    border-radius: 3px;
+    flex-shrink: 0;
+    background-color: var(--swatch-color, #888888);
+}
+
 /* 表头行：周号 */
 .swimlane-header-row {
     display: flex;

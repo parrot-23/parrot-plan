@@ -53,6 +53,8 @@ export const en: I18nMessages = {
     'year.assigned': 'Assigned "{title}" to {week}',
     // Swimlane
     'swimlane.weekLabel': 'W{week}',
+    'swimlane.legendPlan': 'Planned',
+    'swimlane.legendExec': 'Executed',
     'year.unassigned': 'Unassigned "{title}" from {week}',
 
     // Command and ribbon

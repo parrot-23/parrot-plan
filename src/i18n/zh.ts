@@ -51,6 +51,8 @@ export const zh = {
     'year.assigned': '已将「{title}」分配到 {week}',
     // 泳道图
     'swimlane.weekLabel': 'W{week}',
+    'swimlane.legendPlan': '计划项',
+    'swimlane.legendExec': '执行记录',
     'year.unassigned': '已取消「{title}」在 {week} 的分配',
 
     // 命令与功能区
