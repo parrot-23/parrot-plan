@@ -129,6 +129,8 @@ export const zh = {
     'inbox.selectCategory': '选择分类',
     'inbox.noCategory': '不分类',
     'inbox.title': '📥 任务面板',
+    'inbox.weekGoal': '周目标',
+    'inbox.emptyWeekGoal': '本周暂无目标，去「年」视图分配任务',
     'inbox.maxDepth': '子任务最多嵌套 {max} 层',
 };
 

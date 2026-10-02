@@ -131,5 +131,7 @@ export const en: I18nMessages = {
     'inbox.selectCategory': 'Select category',
     'inbox.noCategory': 'No category',
     'inbox.title': '📥 Task Panel',
+    'inbox.weekGoal': 'Week Goals',
+    'inbox.emptyWeekGoal': 'No goals this week. Assign tasks in the Year view.',
     'inbox.maxDepth': 'Subtasks can nest at most {max} levels',
 };

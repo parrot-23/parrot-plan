@@ -136,7 +136,8 @@ export class WeekScheduleView extends ItemView {
             },
             async (item) => {              // onUpdate 回调
                 await this.save();
-            }
+            },
+            this.currentWeekKey,           // 当前周键（用于「周目标」筛选）
         );
 
         // ===== 右侧：顶部工具栏 + 日历 =====

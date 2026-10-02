@@ -677,6 +677,37 @@
     color: var(--text-normal);
 }
 
+/* 标题栏右侧按钮组 */
+.inbox-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+/* 周目标按钮 */
+.inbox-week-goal-btn {
+    height: 24px;
+    padding: 0 8px;
+    border-radius: 4px;
+    border: 1px solid var(--background-modifier-border);
+    background: var(--interactive-normal);
+    color: var(--text-normal);
+    font-size: 12px;
+    line-height: 1;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.inbox-week-goal-btn:hover {
+    background: var(--interactive-hover);
+}
+
+.inbox-week-goal-btn.is-active {
+    background: var(--interactive-accent);
+    color: var(--text-on-accent);
+    border-color: var(--interactive-accent);
+}
+
 .inbox-add-btn {
     width: 24px;
     height: 24px;
@@ -1086,7 +1117,7 @@
     border-right: 1px solid var(--background-modifier-border);
     border-bottom: 1px solid var(--background-modifier-border);
     cursor: pointer;
-    background: var(--background-secondary);
+    /* background: var(--background-secondary); */
     transition: background 0.1s;
 }
 
@@ -1150,6 +1181,8 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    /* 左侧色条与任务分类颜色一致 */
+    border-left: 4px solid var(--task-color, #888888);
 }
 
 /* ===== 时间区间设置窗口 ===== */

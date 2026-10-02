@@ -75,13 +75,16 @@ export class YearView {
         if (this.container) await this.renderInto(this.container);
     }
 
-    /** 汇总各周已分配的任务（周键 → 任务标题列表） */
-    private buildAssignedTasks(): Record<string, string[]> {
-        const map: Record<string, string[]> = {};
+    /** 汇总各周已分配的任务（周键 → 任务列表，含分类颜色） */
+    private buildAssignedTasks(): Record<string, { title: string; color?: string }[]> {
+        const map: Record<string, { title: string; color?: string }[]> = {};
         for (const item of this.inboxData.items) {
             if (item.removed || !item.assignedWeekKeys) continue;
+            const color = item.categoryId
+                ? this.categoryData.categories.find(c => c.id === item.categoryId)?.color
+                : undefined;
             for (const weekKey of item.assignedWeekKeys) {
-                (map[weekKey] ??= []).push(item.title);
+                (map[weekKey] ??= []).push({ title: item.title, color });
             }
         }
         return map;

@@ -158,11 +158,15 @@ export function renderTaskPanel(
     onRefresh: () => void,
     onAction?: (action: string, item: InboxItem) => void | Promise<void>,
     onUpdate?: (item: InboxItem) => void | Promise<void>,
+    /** 当前周键（提供后显示「周目标」按钮，用于只看本周任务） */
+    currentWeekKey?: string,
 ) {
     container.empty();
     container.addClass('inbox-panel');
 
     let selectedId: string | null = null;
+    /** 是否只看本周目标 */
+    let weekGoalOnly = false;
 
     // ===== 列表区域（可滚动）=====
     const listDiv = container.createDiv({ cls: 'inbox-list' });
@@ -307,11 +311,16 @@ export function renderTaskPanel(
         listDiv.empty();
 
         // 只显示未移除的顶层条目
-        const topItems = getChildren(inboxData, undefined);
+        let topItems = getChildren(inboxData, undefined);
+
+        // 周目标模式：仅显示分配到当前周的任务
+        if (weekGoalOnly && currentWeekKey) {
+            topItems = topItems.filter(i => i.assignedWeekKeys?.includes(currentWeekKey!));
+        }
 
         if (topItems.length === 0) {
             listDiv.createDiv({ cls: 'inbox-empty' })
-                .setText(t('inbox.empty'));
+                .setText(weekGoalOnly ? t('inbox.emptyWeekGoal') : t('inbox.empty'));
             return;
         }
 
@@ -327,7 +336,22 @@ export function renderTaskPanel(
     const header = container.createDiv({ cls: 'inbox-header' });
     header.createSpan({ text: t('inbox.title'), cls: 'inbox-title' });
 
-    const addBtn = header.createEl('button', { cls: 'inbox-add-btn', text: '+' });
+    const headerActions = header.createDiv({ cls: 'inbox-header-actions' });
+
+    // 周目标按钮（仅提供 currentWeekKey 时显示）
+    if (currentWeekKey) {
+        const weekGoalBtn = headerActions.createEl('button', {
+            cls: 'inbox-week-goal-btn',
+            text: t('inbox.weekGoal'),
+        });
+        weekGoalBtn.onclick = () => {
+            weekGoalOnly = !weekGoalOnly;
+            weekGoalBtn.toggleClass('is-active', weekGoalOnly);
+            renderList();
+        };
+    }
+
+    const addBtn = headerActions.createEl('button', { cls: 'inbox-add-btn', text: '+' });
     addBtn.onclick = () => {
         // 选中某个任务时，+ 添加为其子任务
         const parent = selectedId

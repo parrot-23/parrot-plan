@@ -14,8 +14,8 @@ export interface YearWeekGridOptions {
     onWeekClick?: (week: number, year: number) => void;
     /** 高亮的周（可选） */
     activeWeek?: number;
-    /** 各周已分配的任务（周键 → 任务标题列表），用于在格子内展示 */
-    assignedTasks?: Record<string, string[]>;
+    /** 各周已分配的任务（周键 → 任务列表），用于在格子内展示 */
+    assignedTasks?: Record<string, { title: string; color?: string }[]>;
 }
 
 /** 12 个月的固定配色（同一月份始终同色） */
@@ -133,8 +133,11 @@ export function renderYearWeekGrid(
                 const tasks = options.assignedTasks?.[weekKey] ?? [];
                 if (tasks.length > 0) {
                     const taskList = cell.createDiv({ cls: 'year-week-cell-tasks' });
-                    for (const title of tasks) {
-                        taskList.createDiv({ cls: 'year-week-cell-task', text: title });
+                    for (const task of tasks) {
+                        const taskEl = taskList.createDiv({ cls: 'year-week-cell-task', text: task.title });
+                        if (task.color) {
+                            taskEl.setCssProps({ '--task-color': task.color });
+                        }
                     }
                 }
 
