@@ -44,6 +44,18 @@ export interface RangeSchemeData {
 	defaultSchemeId?: string;
 }
 
+/** 将 #rgb / #rrggbb 颜色转为带透明度的 rgba 字符串 */
+export function hexToTransparent(hex: string, alpha: number): string {
+	let h = hex.replace('#', '');
+	if (h.length === 3) {
+		h = h.split('').map(c => c + c).join('');
+	}
+	const r = parseInt(h.slice(0, 2), 16);
+	const g = parseInt(h.slice(2, 4), 16);
+	const b = parseInt(h.slice(4, 6), 16);
+	return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
 // 默认周日程数据（兜底用）
 export const DEFAULT_WEEK_RANGE: WeekRangeData = {
 	version: 1,

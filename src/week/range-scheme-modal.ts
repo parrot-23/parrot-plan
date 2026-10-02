@@ -3,21 +3,27 @@ import { App, Modal, Setting } from 'obsidian';
 import type { TimeBlockCategoryData } from './timeblock-category-manager';
 import { renderTimeBlockCategoryLegend } from './timeblock-category-manager';
 import type { RangeSchemeData, RangeScheme } from './timeblock-data';
+import { hexToTransparent } from './timeblock-data';
 import { renderTemplatePanel, type TemplateViewContext } from './template-manager';
 import { renderWeekGrid } from '../shared/week-grid';
+import { RangeEditModal } from './week-schedule-view';
 import { t } from '../i18n';
 
 /**
  * 时间区间设置窗口。
- * 顶部：方案切换 / 方案管理按钮。
+ * 顶部：当前方案名称 / 方案管理按钮。
  * 主体：左侧图例管理 + 日模板（复用周计划视图的图例管理），右侧日历（复用公共组件 week-grid）。
+ * 右侧日历：选中图例后点击网格可添加区间，点击已有色块可编辑，× 可删除；数据写入当前激活方案。
  */
 export class RangeSchemeModal extends Modal {
     private categoryData: TimeBlockCategoryData;
     private schemeData: RangeSchemeData;
     private templateCtx: TemplateViewContext;
     private onApplyTemplate: (templateId: string, targetDays: number[]) => void | Promise<void>;
+    private onSave: () => Promise<void>;
     private onChange?: () => void;
+    /** 图例中选中的分类（新建区间时的默认分类） */
+    private selectedCategoryId?: string;
 
     constructor(
         app: App,
@@ -25,6 +31,7 @@ export class RangeSchemeModal extends Modal {
         schemeData: RangeSchemeData,
         templateCtx: TemplateViewContext,
         onApplyTemplate: (templateId: string, targetDays: number[]) => void | Promise<void>,
+        onSave: () => Promise<void>,
         onChange?: () => void,
     ) {
         super(app);
@@ -32,6 +39,7 @@ export class RangeSchemeModal extends Modal {
         this.schemeData = schemeData;
         this.templateCtx = templateCtx;
         this.onApplyTemplate = onApplyTemplate;
+        this.onSave = onSave;
         this.onChange = onChange;
     }
 
@@ -47,7 +55,7 @@ export class RangeSchemeModal extends Modal {
         const actions = header.createDiv({ cls: 'range-scheme-actions' });
 
         // 当前方案名称（纯展示）
-        const activeScheme = this.schemeData.schemes.find(s => s.id === this.schemeData.activeSchemeId);
+        const activeScheme = this.getActiveScheme();
         actions.createSpan({
             text: activeScheme?.name ?? t('rangeScheme.noActive'),
             cls: 'range-scheme-current',
@@ -77,6 +85,12 @@ export class RangeSchemeModal extends Modal {
             () => {
                 this.onChange?.();
             },
+            this.selectedCategoryId,
+            (id) => {
+                // 点击图例选中/取消选中分类
+                this.selectedCategoryId = this.selectedCategoryId === id ? undefined : id;
+                this.onOpen();
+            },
         );
 
         // 日模板（图例下方）
@@ -85,7 +99,86 @@ export class RangeSchemeModal extends Modal {
 
         // 右侧：日历
         const calendarPanel = body.createDiv({ cls: 'range-scheme-calendar' });
-        renderWeekGrid(calendarPanel);
+        const refs = renderWeekGrid(calendarPanel);
+        this.renderRangeLayer(refs.bodyRowInner);
+    }
+
+    /** 获取当前激活方案 */
+    private getActiveScheme(): RangeScheme | undefined {
+        return this.schemeData.schemes.find(s => s.id === this.schemeData.activeSchemeId);
+    }
+
+    /** 在日历网格上渲染当前激活方案的时间区间，并绑定添加/编辑/删除交互 */
+    private renderRangeLayer(bodyRowInner: HTMLElement) {
+        const scheme = this.getActiveScheme();
+        const cols = bodyRowInner.querySelectorAll('.day-column');
+
+        for (let d = 1; d <= 7; d++) {
+            const col = cols[d - 1] as HTMLElement;
+
+            // 点击空白 → 新建时间区间（写入当前激活方案）
+            col.onclick = (e) => {
+                if (!scheme) return;
+                const target = e.target as HTMLElement;
+                if (!target.classList.contains('day-column') && !target.classList.contains('hour-cell')) return;
+                const rect = col.getBoundingClientRect();
+                const y = e.clientY - rect.top;
+                const startMinutes = Math.floor((y / 80) * 120 / 30) * 30;
+                new RangeEditModal(this.app, startMinutes, (start, end, sort) => {
+                    let dayData = scheme.days.find(day => day.day === d);
+                    if (!dayData) {
+                        dayData = { day: d, ranges: [] };
+                        scheme.days.push(dayData);
+                    }
+                    const id = `r_${Date.now()}`;
+                    dayData.ranges.push({ id, start, end, sort });
+                    void (async () => {
+                        await this.onSave();
+                        this.onOpen();
+                    })();
+                }, this.categoryData, undefined, this.selectedCategoryId).open();
+            };
+
+            // 已有色块
+            const dayData = scheme?.days.find(day => day.day === d);
+            const dayRanges = dayData?.ranges ?? [];
+            for (const range of dayRanges) {
+                const block = col.createDiv({ cls: 'range-block range-block-fill' });
+                const cat = this.categoryData.categories.find(c => c.id === range.sort);
+                const rawColor = cat?.color ?? '#888888';
+
+                const top = (range.start / 120) * 80;
+                const height = ((range.end - range.start) / 120) * 80;
+                block.setCssProps({
+                    '--range-color': rawColor,
+                    '--range-bg': hexToTransparent(rawColor, 0.1),
+                    '--range-top': `${top}px`,
+                    '--range-height': `${height}px`,
+                });
+
+                block.onclick = (e) => {
+                    e.stopPropagation();
+                    new RangeEditModal(this.app, 0, (start, end, sort) => {
+                        range.start = start;
+                        range.end = end;
+                        range.sort = sort;
+                        void (async () => {
+                            await this.onSave();
+                            this.onOpen();
+                        })();
+                    }, this.categoryData, range).open();
+                };
+
+                const delBtn = block.createDiv({ cls: 'range-delete-btn' });
+                delBtn.setText('×');
+                delBtn.onclick = async (e) => {
+                    e.stopPropagation();
+                    dayData!.ranges = dayData!.ranges.filter(r => r.id !== range.id);
+                    await this.onSave();
+                    this.onOpen();
+                };
+            }
+        }
     }
 
     onClose() {

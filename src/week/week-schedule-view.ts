@@ -3,6 +3,7 @@
 import { ItemView, WorkspaceLeaf, Modal, Setting, Notice, App } from 'obsidian';
 import type { Plugin } from 'obsidian';
 import type { WeekRangeData, CategorizedRange, TimeBlockCategoryId, RangeSchemeData } from './timeblock-data';
+import { hexToTransparent } from './timeblock-data';
 import type { TimeBlockCategoryData } from './timeblock-category-manager';
 import type { DayTemplateData } from './template-manager';
 import { renderTimeBlockCategoryLegend } from './timeblock-category-manager';
@@ -615,6 +616,7 @@ export class WeekScheduleView extends ItemView {
                 this.schemeData,
                 this,
                 (templateId, targetDays) => this.applyTemplate(templateId, targetDays),
+                () => this.save(),
                 () => {
                     void this.save();
                     void this.onOpen();
@@ -686,15 +688,7 @@ export class WeekScheduleView extends ItemView {
     
     // 工具方法
     private hexToTransparent(hex: string, alpha: number): string {
-        // 支持 #rgb 和 #rrggbb
-        let h = hex.replace('#', '');
-        if (h.length === 3) {
-            h = h.split('').map(c => c + c).join('');
-        }
-        const r = parseInt(h.slice(0, 2), 16);
-        const g = parseInt(h.slice(2, 4), 16);
-        const b = parseInt(h.slice(4, 6), 16);
-        return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+        return hexToTransparent(hex, alpha);
     }
 
     // 获取收集盒数据。
@@ -710,7 +704,7 @@ export class WeekScheduleView extends ItemView {
 
 // 时间区块。
 // 弹窗。
-class RangeEditModal extends Modal {
+export class RangeEditModal extends Modal {
     private start: number;
     private end: number;
     private sort: TimeBlockCategoryId;
