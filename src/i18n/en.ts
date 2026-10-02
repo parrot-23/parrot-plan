@@ -56,6 +56,14 @@ export const en: I18nMessages = {
     // Settings
     'settings.title': 'Parrot Plan Settings',
     'settings.about': 'A weekly schedule planner: time block planning, event scheduling, and execution tracking.',
+    'settings.data': 'Data',
+    'settings.clearData': 'Clear data',
+    'settings.clearDataDesc': 'Delete all tasks, events, time ranges and settings, restoring defaults. This cannot be undone.',
+    'settings.clearDataConfirm': 'Clear all data?',
+    'settings.clearDataConfirmDesc': 'All data will be permanently deleted and cannot be recovered.',
+    'settings.clearDataDone': 'Data cleared',
+    'settings.confirm': 'Confirm',
+    'settings.cancel': 'Cancel',
 
     // All-day events
     'allday.label': 'All day',

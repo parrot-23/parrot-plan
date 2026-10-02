@@ -3,7 +3,7 @@
 import { ItemView, WorkspaceLeaf, Modal, Setting, Notice, App } from 'obsidian';
 import type { Plugin } from 'obsidian';
 import type { WeekRangeData, CategorizedRange, TimeBlockCategoryId, RangeSchemeData, DailyRange, WeekKey } from './timeblock-data';
-import { hexToTransparent, getCurrentWeekKey, makeWeekKey, parseWeekKey } from './timeblock-data';
+import { hexToTransparent, getCurrentWeekKey, makeWeekKey, parseWeekKey, DEFAULT_WEEK_RANGE } from './timeblock-data';
 import type { TimeBlockCategoryData } from './timeblock-category-manager';
 import type { DayTemplateData } from './template-manager';
 import { renderTimeBlockCategoryLegend } from './timeblock-category-manager';
@@ -98,6 +98,38 @@ export class WeekScheduleView extends ItemView {
             executions: this.executions,
             inboxData: this.inboxData,
         });
+    }
+
+    /** 重置为默认数据（清空全部数据后调用） */
+    resetData() {
+        // 注意：子视图（年/当日/泳道）持有 inboxData、timeBlockCategoryData 的引用，
+        // 因此这里必须「原地清空」而非重新赋值，否则子视图仍指向旧对象。
+        this.rangeData.days = DEFAULT_WEEK_RANGE.days;
+        this.rangeData.weeks = {};
+
+        this.dayTemplateData.dayTemplates = [];
+        this.dayTemplateData.dayProperties = [];
+
+        this.timeBlockCategoryData.categories = [
+            { id: 'work', label: t('defaultCategory.work'), color: '#4c8dff' },
+            { id: 'rest', label: t('defaultCategory.rest'), color: '#43b581' },
+            { id: 'play', label: t('defaultCategory.play'), color: '#f2a65a' },
+        ];
+
+        this.schemeData.schemes = [];
+        this.schemeData.activeSchemeId = undefined;
+        this.schemeData.defaultSchemeId = undefined;
+
+        this.events.length = 0;
+        this.executions.length = 0;
+
+        this.inboxData.items.length = 0;
+        this.inboxData.selectedId = undefined;
+        this.inboxData.collapsedIds = [];
+        this.inboxData.weekGoalOnly = false;
+        this.inboxData.dayGoalOnly = false;
+
+        this.currentWeekKey = getCurrentWeekKey();
     }
  
     getViewType(): string { return VIEW_TYPE_WEEK; }

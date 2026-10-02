@@ -54,6 +54,14 @@ export const zh = {
     // 设置页
     'settings.title': 'Parrot Plan 设置',
     'settings.about': '一个周日程规划插件：时间区块规划、事件排布与执行追踪。',
+    'settings.data': '数据',
+    'settings.clearData': '清空数据',
+    'settings.clearDataDesc': '删除全部任务、事件、时间区间与配置，恢复为默认状态。此操作不可撤销。',
+    'settings.clearDataConfirm': '确认清空数据？',
+    'settings.clearDataConfirmDesc': '所有数据将被永久删除且无法恢复。',
+    'settings.clearDataDone': '数据已清空',
+    'settings.confirm': '确认',
+    'settings.cancel': '取消',
 
     // 全天事件
     'allday.label': '全天',

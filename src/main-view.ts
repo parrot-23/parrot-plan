@@ -106,6 +106,12 @@ export class MainView extends ItemView {
         await this.weekView.save();
     }
 
+    /** 清空数据后重置视图 */
+    async resetData() {
+        this.weekView.resetData();
+        await this.renderContent();
+    }
+
     async onOpen() {
         const root = this.containerEl.children[1] as HTMLElement;
         root.empty();

@@ -1,4 +1,4 @@
-import { App, Plugin, PluginSettingTab, Setting, type SettingDefinitionItem } from 'obsidian';
+import { App, Modal, Notice, Plugin, PluginSettingTab, type SettingDefinitionItem } from 'obsidian';
 
 import type { WeekRangeData, RangeSchemeData } from './src/week/timeblock-data';
 import { getCurrentWeekKey } from './src/week/timeblock-data';
@@ -99,10 +99,28 @@ export default class ParrotPlanPlugin extends Plugin {
             }
         }
     }
+
+    /** 清空全部插件数据并重置为默认值 */
+    async clearAllData(): Promise<void> {
+        await this.saveData({});
+        const leaves = this.app.workspace.getLeavesOfType(VIEW_TYPE_MAIN);
+        for (const leaf of leaves) {
+            if (leaf.view instanceof MainView) {
+                await leaf.view.resetData();
+            }
+        }
+    }
 }
 
 
 class ParrotPlanSettingTab extends PluginSettingTab {
+    private plugin: ParrotPlanPlugin;
+
+    constructor(app: App, plugin: ParrotPlanPlugin) {
+        super(app, plugin);
+        this.plugin = plugin;
+    }
+
     getSettingDefinitions(): SettingDefinitionItem[] {
         return [
             {
@@ -113,13 +131,75 @@ class ParrotPlanSettingTab extends PluginSettingTab {
                     setting.setDesc(t('settings.about'));
                 },
             },
+            {
+                name: t('settings.data'),
+                searchable: false,
+                render: (setting) => {
+                    setting.setName(t('settings.data')).setHeading();
+                },
+            },
+            {
+                name: t('settings.clearData'),
+                desc: t('settings.clearDataDesc'),
+                render: (setting) => {
+                    setting
+                        .setName(t('settings.clearData'))
+                        .setDesc(t('settings.clearDataDesc'))
+                        .addButton((btn) => {
+                            btn.setButtonText(t('settings.clearData'))
+                                .setWarning()
+                                .onClick(() => {
+                                    new ConfirmModal(
+                                        this.app,
+                                        t('settings.clearDataConfirm'),
+                                        t('settings.clearDataConfirmDesc'),
+                                        async () => {
+                                            await this.plugin.clearAllData();
+                                            new Notice(t('settings.clearDataDone'));
+                                        },
+                                    ).open();
+                                });
+                        });
+                },
+            },
         ];
     }
+}
 
-    display(): void {
-        this.containerEl.empty();
-        new Setting(this.containerEl).setName(t('settings.title')).setHeading();
-        this.containerEl.createEl('p', { text: t('settings.about') });
+/** 通用确认弹窗 */
+class ConfirmModal extends Modal {
+    private message: string;
+    private detail: string;
+    private onConfirm: () => void | Promise<void>;
+
+    constructor(app: App, message: string, detail: string, onConfirm: () => void | Promise<void>) {
+        super(app);
+        this.message = message;
+        this.detail = detail;
+        this.onConfirm = onConfirm;
+    }
+
+    onOpen() {
+        const { contentEl } = this;
+        contentEl.createEl('h3', { text: this.message });
+        contentEl.createEl('p', { text: this.detail });
+
+        const btnRow = contentEl.createDiv({ cls: 'modal-button-container' });
+        btnRow.createEl('button', { text: t('settings.cancel') }).onclick = () => this.close();
+        const confirmBtn = btnRow.createEl('button', {
+            text: t('settings.confirm'),
+            cls: 'mod-warning',
+        });
+        confirmBtn.onclick = () => {
+            void (async () => {
+                await this.onConfirm();
+                this.close();
+            })();
+        };
+    }
+
+    onClose() {
+        this.contentEl.empty();
     }
 }
 
