@@ -437,10 +437,10 @@ export class WeekScheduleView extends ItemView {
         );
     }
 
-    /** 获取当前激活方案的日区间数据（无激活方案时回退到 rangeData.days） */
+    /** 获取当前激活方案的日区间数据（无激活方案时返回空） */
     getActiveDays(): DailyRange[] {
         const scheme = this.schemeData.schemes.find(s => s.id === this.schemeData.activeSchemeId);
-        return scheme ? scheme.days : this.rangeData.days;
+        return scheme ? scheme.days : [];
     }
 
     /** 应用日模板到指定日期（供时间区间弹窗的模板面板调用，写入当前激活方案） */
