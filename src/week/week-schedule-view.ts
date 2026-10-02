@@ -2,13 +2,15 @@
 
 import { ItemView, WorkspaceLeaf, Modal, Setting, Notice, App } from 'obsidian';
 import type { Plugin } from 'obsidian';
-import type { WeekRangeData, CategorizedRange, TimeBlockCategoryId } from './timeblock-data';
+import type { WeekRangeData, CategorizedRange, TimeBlockCategoryId, RangeSchemeData } from './timeblock-data';
 import type { TimeBlockCategoryData } from './timeblock-category-manager';
 import type { DayTemplateData } from './template-manager';
 import { renderTimeBlockCategoryLegend } from './timeblock-category-manager';
-import { renderDayTemplateRow, renderTemplatePanel } from './template-manager';
+import { renderDayTemplateRow } from './template-manager';
 import { renderTaskPanel, DEFAULT_INBOX_DATA, type InboxData } from '../shared/task-panel';
 import type { InboxItem } from '../shared/task-panel';
+import { renderWeekGrid } from '../shared/week-grid';
+import { RangeSchemeModal } from './range-scheme-modal';
 import { t, getWeekDays } from '../i18n';
 
 export const VIEW_TYPE_WEEK = 'week-schedule-view';
@@ -54,6 +56,8 @@ export class WeekScheduleView extends ItemView {
         dayProperties: [],
     };
     timeBlockCategoryData: TimeBlockCategoryData;
+    /** 时间区间方案数据 */
+    schemeData: RangeSchemeData = { schemes: [] };
     events: EventBlock[] = [];
     executions: ExecutionRecord[] = [];
     inboxData: InboxData = DEFAULT_INBOX_DATA;
@@ -88,6 +92,7 @@ export class WeekScheduleView extends ItemView {
             days: this.rangeData.days,   // 网格时间区块。
             dayTemplateData: this.dayTemplateData, // 日模板数据
             timeBlockCategoryData: this.timeBlockCategoryData, // 时间区块图例
+            schemeData: this.schemeData, // 时间区间方案
             events: this.events,
             executions: this.executions,
             inboxData: this.inboxData,
@@ -109,20 +114,17 @@ export class WeekScheduleView extends ItemView {
         // 在容器内部创建 .week-schedule 根节点，避免与宿主容器样式冲突
         const root = content.createDiv({ cls: 'week-schedule' });
 
-        const grid = root.createDiv({ cls: 'schedule-grid' });
+        // ===== 周网格骨架（公共组件）=====
+        const { grid, headerRow, bodyRowInner } = renderWeekGrid(root, {
+            onHeaderClick: (d) => {
+                // 事件层：点击星期表头添加全天事件
+                if (this.activeLayer === 'event') {
+                    void this.addAllDayEvent(d);
+                }
+            },
+        });
 
-        // ===== 统一骨架（只创建一次）=====
-        const headerRow = grid.createDiv({ cls: 'grid-header-row' });
-        const headerRowInner = headerRow.createDiv({ cls: 'day-headers' });
-        const days = getWeekDays();
-        for (let d = 1; d <= 7; d++) {
-            const header = headerRowInner.createDiv({ cls: 'day-header' });
-            header.setText(days[d - 1]);
-            // 事件层：点击星期表头添加全天事件
-            if (this.activeLayer === 'event') {
-                header.onclick = () => this.addAllDayEvent(d);
-            }
-        }
+        // ===== 日模板行（周计划特有）=====
         renderDayTemplateRow(
             headerRow.parentElement!,
             this.dayTemplateData.dayProperties,
@@ -139,26 +141,6 @@ export class WeekScheduleView extends ItemView {
         if (this.activeLayer === 'event' || this.activeLayer === 'execution') {
             this.renderAllDayRow(grid);
         }
-
-        const bodyRow = grid.createDiv({ cls: 'grid-body-row' });
-        const timeCol = bodyRow.createDiv({ cls: 'time-column' });
-        const bodyRowInner = bodyRow.createDiv({ cls: 'day-bodies' });
-
-        for (let h = 0; h < 24; h += 2) {
-            timeCol.createDiv({ cls: 'time-cell two-hour' })
-                .setText(`${h.toString().padStart(2, '0')}:00`);
-        }
-
-        // ===== 公共背景网格（7列 + 每列12个半小时格子）=====
-        for (let d = 1; d <= 7; d++) {
-            const col = bodyRowInner.createDiv({ cls: 'day-column' });
-
-            for (let h = 0; h < 24; h += 2) {
-                // 背景格子不拦截点击，让列统一处理
-                col.createDiv({ cls: 'hour-cell two-hour' });
-            }
-        }
-
 
         // ===== 层级分支（传已创建好的容器）=====
         switch (this.activeLayer) {
@@ -618,6 +600,25 @@ export class WeekScheduleView extends ItemView {
             void this.onOpen();
         };
 
+        // 时间区间设置按钮
+        const schemeBar = toolbar.createDiv({ cls: 'range-scheme-bar' });
+        const schemeBtn = schemeBar.createEl('button', {
+            text: t('rangeScheme.open'),
+            cls: 'range-scheme-open-btn',
+        });
+        schemeBtn.onclick = () => {
+            new RangeSchemeModal(
+                this.app,
+                this.timeBlockCategoryData,
+                this.schemeData,
+                this,
+                (templateId, targetDays) => this.applyTemplate(templateId, targetDays),
+                () => {
+                    void this.onOpen();
+                },
+            ).open();
+        };
+
         // 图例
         const legendContainer = toolbar.createDiv({ cls: 'legend-container' });
         renderTimeBlockCategoryLegend(
@@ -634,26 +635,6 @@ export class WeekScheduleView extends ItemView {
                 void this.onOpen();
             }
         );
-
-        // 模板
-        const templateContainer = toolbar.createDiv({ cls: 'template-container' });
-        renderTemplatePanel(this.app, templateContainer, this, async (templateId, targetDays) => {
-            const tpl = this.dayTemplateData.dayTemplates.find(t => t.id === templateId);
-            if (!tpl) { new Notice(t('template.notFound')); return; }
-            for (const day of targetDays) {
-                let dayData = this.rangeData.days.find(d => d.day === day);
-                if (!dayData) { dayData = { day, ranges: [] }; this.rangeData.days.push(dayData); }
-                dayData.ranges = tpl.ranges.map(range => ({
-                    ...range,
-                    id: `r_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
-                }));
-                let prop = this.dayTemplateData.dayProperties.find(p => p.day === day);
-                if (prop) { prop.templateId = templateId; }
-                else { this.dayTemplateData.dayProperties.push({ day, templateId }); }
-            }
-            await this.save();
-            await this.onOpen();
-        });
 
         // 任务面板
         const inboxContainer = toolbar.createDiv({ cls: 'inbox-container' });
@@ -678,6 +659,25 @@ export class WeekScheduleView extends ItemView {
                 await this.save();
             }
         );
+    }
+
+    /** 应用日模板到指定日期（供时间区间弹窗的模板面板调用） */
+    private async applyTemplate(templateId: string, targetDays: number[]) {
+        const tpl = this.dayTemplateData.dayTemplates.find(t => t.id === templateId);
+        if (!tpl) { new Notice(t('template.notFound')); return; }
+        for (const day of targetDays) {
+            let dayData = this.rangeData.days.find(d => d.day === day);
+            if (!dayData) { dayData = { day, ranges: [] }; this.rangeData.days.push(dayData); }
+            dayData.ranges = tpl.ranges.map(range => ({
+                ...range,
+                id: `r_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+            }));
+            let prop = this.dayTemplateData.dayProperties.find(p => p.day === day);
+            if (prop) { prop.templateId = templateId; }
+            else { this.dayTemplateData.dayProperties.push({ day, templateId }); }
+        }
+        await this.save();
+        await this.onOpen();
     }
 
     

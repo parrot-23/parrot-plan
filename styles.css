@@ -1130,5 +1130,85 @@
     color: var(--text-on-accent);
 }
 
+/* ===== 时间区间设置窗口 ===== */
+.range-scheme-modal {
+    width: 100%;
+}
+
+/* 顶部：标题 + 方案按钮 */
+.range-scheme-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+}
+
+.range-scheme-header h3 {
+    margin: 0;
+}
+
+.range-scheme-actions {
+    display: flex;
+    gap: 6px;
+}
+
+.range-scheme-btn {
+    padding: 4px 10px;
+    border-radius: 4px;
+    border: 1px solid var(--background-modifier-border);
+    background: var(--interactive-normal);
+    cursor: pointer;
+    font-size: 13px;
+}
+
+.range-scheme-btn:hover {
+    background: var(--interactive-hover);
+}
+
+/* 主体：左右结构 */
+.range-scheme-body {
+    display: flex;
+    flex-direction: row;
+    gap: 12px;
+    height: 480px;
+}
+
+/* 左侧：图例管理 */
+.range-scheme-legend {
+    flex-shrink: 0;
+    width: 200px;
+    overflow-y: auto;
+    border-right: 1px solid var(--background-modifier-border);
+    padding-right: 8px;
+}
+
+/* 右侧：日历 */
+.range-scheme-calendar {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+/* 工具栏中的时间区间设置按钮 */
+.range-scheme-bar {
+    margin-bottom: 8px;
+}
+
+.range-scheme-open-btn {
+    width: 100%;
+    padding: 6px 10px;
+    border-radius: 4px;
+    border: 1px solid var(--background-modifier-border);
+    background: var(--interactive-normal);
+    cursor: pointer;
+    font-size: 13px;
+}
+
+.range-scheme-open-btn:hover {
+    background: var(--interactive-hover);
+}
+
 
 

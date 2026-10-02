@@ -74,6 +74,16 @@ export const zh = {
     'range.endTime': '结束时间',
     'range.category': '分类',
 
+    // 时间区间设置窗口
+    'rangeScheme.open': '时间区间设置',
+    'rangeScheme.title': '时间区间设置',
+    'rangeScheme.switch': '方案切换',
+    'rangeScheme.manage': '方案管理',
+    'rangeScheme.manageTitle': '方案管理',
+    'rangeScheme.new': '新方案',
+    'rangeScheme.namePlaceholder': '方案名称',
+    'rangeScheme.empty': '暂无方案，点右上角 + 新增',
+
     // 分类
     'category.legend': '时间区块图例',
     'category.config': '分类配置',

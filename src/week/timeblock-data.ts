@@ -28,6 +28,19 @@ export interface WeekRangeData {
 	days: DailyRange[];
 }
 
+/** 时间区间方案：一组命名的时间区块配置 */
+export interface RangeScheme {
+	id: string;
+	name: string;
+	days: DailyRange[];
+}
+
+/** 方案集合（持久化） */
+export interface RangeSchemeData {
+	schemes: RangeScheme[];
+	activeSchemeId?: string;
+}
+
 // 默认周日程数据（兜底用）
 export const DEFAULT_WEEK_RANGE: WeekRangeData = {
 	version: 1,

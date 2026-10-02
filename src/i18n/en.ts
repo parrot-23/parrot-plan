@@ -76,6 +76,16 @@ export const en: I18nMessages = {
     'range.endTime': 'End time',
     'range.category': 'Category',
 
+    // Range scheme settings window
+    'rangeScheme.open': 'Range Settings',
+    'rangeScheme.title': 'Range Settings',
+    'rangeScheme.switch': 'Switch Scheme',
+    'rangeScheme.manage': 'Manage Schemes',
+    'rangeScheme.manageTitle': 'Manage Schemes',
+    'rangeScheme.new': 'New scheme',
+    'rangeScheme.namePlaceholder': 'Scheme name',
+    'rangeScheme.empty': 'No schemes, click + to add',
+
     // Category
     'category.legend': 'Time Block Legend',
     'category.config': 'Category Config',
