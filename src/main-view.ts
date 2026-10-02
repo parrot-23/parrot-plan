@@ -12,6 +12,7 @@ import {
 } from './week/week-schedule-view';
 import { YearView } from './views/year-view';
 import { TodayView } from './views/today-view';
+import { SwimlaneView } from './views/swimlane-view';
 import { t } from './i18n';
 
 export const VIEW_TYPE_MAIN = 'parrot-plan-main-view';
@@ -37,6 +38,7 @@ export class MainView extends ItemView {
     private weekView: WeekScheduleView;
     private yearView: YearView;
     private todayView: TodayView;
+    private swimlaneView: SwimlaneView;
     private activeTab: NavTab = 'week';
     private contentRoot!: HTMLElement;
 
@@ -81,6 +83,13 @@ export class MainView extends ItemView {
             this.weekView.inboxData,
             this.weekView.timeBlockCategoryData,
             () => this.weekView.save(),
+        );
+        this.swimlaneView = new SwimlaneView(
+            this.app,
+            this.weekView.inboxData,
+            this.weekView.timeBlockCategoryData,
+            () => this.weekView.save(),
+            () => this.weekView.executions,
         );
     }
 
@@ -143,6 +152,11 @@ export class MainView extends ItemView {
 
         if (this.activeTab === 'today') {
             await this.todayView.renderInto(this.contentRoot);
+            return;
+        }
+
+        if (this.activeTab === 'swimlane') {
+            await this.swimlaneView.renderInto(this.contentRoot);
             return;
         }
 

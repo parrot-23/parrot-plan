@@ -43,6 +43,8 @@ export interface ExecutionRecord {
     start: number;
     end: number;
     note?: string;
+    /** 所属周键（如 2026-W40） */
+    weekKey?: WeekKey;
 }
 
 

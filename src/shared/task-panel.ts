@@ -306,6 +306,8 @@ export function renderTaskPanel(
             // 重新渲染列表高亮
             renderList();
             updateToolbar();
+            // 通知宿主视图刷新（如泳道图需根据选中任务重绘）
+            onRefresh();
         };
 
         // 递归渲染子任务

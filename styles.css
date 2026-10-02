@@ -1264,6 +1264,81 @@
     position: relative;
 }
 
+/* ===== 泳道图视图 ===== */
+.swimlane-view {
+    display: flex;
+    flex-direction: row;
+    height: 100%;
+    flex: 1;
+    min-height: 0;
+}
+
+/* 左侧任务面板 */
+.swimlane-task-panel {
+    flex-shrink: 0;
+    width: 250px;
+    height: 100%;
+    box-sizing: border-box;
+    overflow: hidden;
+    padding: 10px;
+    border-right: 1px solid var(--background-modifier-border);
+}
+
+/* 右侧泳道图 */
+.swimlane-board {
+    flex: 1;
+    min-width: 0;
+    height: 100%;
+    overflow: auto;
+    padding: 12px;
+}
+
+/* 表头行：周号 */
+.swimlane-header-row {
+    display: flex;
+    min-width: max-content;
+}
+
+.swimlane-header-cell {
+    flex-shrink: 0;
+    width: 60px;
+    box-sizing: border-box;
+    padding: 4px 2px;
+    text-align: center;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-muted);
+    border-right: 1px solid var(--background-modifier-border);
+    border-bottom: 1px solid var(--background-modifier-border);
+}
+
+/* 泳道行 */
+.swimlane-lane-row {
+    display: flex;
+    min-width: max-content;
+}
+
+.swimlane-cell {
+    flex-shrink: 0;
+    width: 60px;
+    height: 60px;
+    box-sizing: border-box;
+    border-right: 1px solid var(--background-modifier-border);
+    border-bottom: 1px solid var(--background-modifier-border);
+}
+
+/* 计划线：命中的周格子 */
+.swimlane-cell.is-plan {
+    background: var(--interactive-accent);
+    opacity: 0.85;
+}
+
+/* 执行线：命中的周格子 */
+.swimlane-cell.is-exec {
+    background: var(--color-green, #43b581);
+    opacity: 0.85;
+}
+
 /* ===== 时间区间设置窗口 ===== */
 /* 直接撑开 Obsidian 弹窗容器，保证能容纳左侧图例 + 日历 */
 .modal:has(.range-scheme-modal) {
