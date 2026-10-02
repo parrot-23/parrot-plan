@@ -1,4 +1,5 @@
 import { t } from '../i18n';
+import { makeWeekKey } from '../week/timeblock-data';
 
 /**
  * 周历面板：公共组件。
@@ -9,10 +10,12 @@ import { t } from '../i18n';
 export interface YearWeekGridOptions {
     /** 年份，默认当前年 */
     year?: number;
-    /** 点击某周时的回调 */
-    onWeekClick?: (week: number) => void;
+    /** 点击某周时的回调（year: 当前年份，week: 周号） */
+    onWeekClick?: (week: number, year: number) => void;
     /** 高亮的周（可选） */
     activeWeek?: number;
+    /** 各周已分配的任务（周键 → 任务标题列表），用于在格子内展示 */
+    assignedTasks?: Record<string, string[]>;
 }
 
 /** 12 个月的固定配色（同一月份始终同色） */
@@ -125,7 +128,17 @@ export function renderYearWeekGrid(
                 monthEl.setCssProps({ '--month-color': MONTH_COLORS[(month - 1) % 12] });
                 cell.createDiv({ cls: 'year-week-cell-week', text: t('year.weekLabel', { week }) });
 
-                cell.onclick = () => options.onWeekClick?.(week);
+                // 已分配到该周的任务
+                const weekKey = makeWeekKey(year, week);
+                const tasks = options.assignedTasks?.[weekKey] ?? [];
+                if (tasks.length > 0) {
+                    const taskList = cell.createDiv({ cls: 'year-week-cell-tasks' });
+                    for (const title of tasks) {
+                        taskList.createDiv({ cls: 'year-week-cell-task', text: title });
+                    }
+                }
+
+                cell.onclick = () => options.onWeekClick?.(week, year);
             }
         }
     }

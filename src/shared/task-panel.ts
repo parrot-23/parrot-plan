@@ -16,6 +16,8 @@ export interface InboxItem {
     createdAt: number;
     /** 父任务 id（无则为顶层任务），支持无限层级子任务 */
     parentId?: string;
+    /** 已分配到的周键列表（如 ['2026-W40']），可分配到多个周 */
+    assignedWeekKeys?: string[];
     /** 已从收集盒移除（不再显示，但数据保留，可查历史） */
     removed?: boolean;
 }

@@ -67,7 +67,12 @@ export class MainView extends ItemView {
             this.weekView.inboxData,
             this.weekView.timeBlockCategoryData,
             () => this.weekView.save(),
-            () => this.weekView.onOpen(),
+            (weekKey) => {
+                // 未选中任务时点击周格子 → 切到周计划并定位到该周
+                this.weekView.currentWeekKey = weekKey;
+                this.activeTab = 'week';
+                void this.renderContent();
+            },
         );
     }
 

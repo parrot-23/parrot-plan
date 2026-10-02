@@ -1127,6 +1127,31 @@
     background: var(--month-color, #888888);
 }
 
+/* 格子内已分配的任务列表 */
+.year-week-cell-tasks {
+    position: absolute;
+    top: 24px;
+    left: 4px;
+    right: 4px;
+    bottom: 4px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    overflow: hidden;
+}
+
+.year-week-cell-task {
+    font-size: 10px;
+    line-height: 1.3;
+    padding: 1px 4px;
+    border-radius: 3px;
+    background: var(--background-primary);
+    color: var(--text-normal);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
 /* ===== 时间区间设置窗口 ===== */
 /* 直接撑开 Obsidian 弹窗容器，保证能容纳左侧图例 + 日历 */
 .modal:has(.range-scheme-modal) {

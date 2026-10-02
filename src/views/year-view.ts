@@ -1,9 +1,12 @@
 import type { App } from 'obsidian';
+import { Notice } from 'obsidian';
 
 import type { TimeBlockCategoryData } from '../week/timeblock-category-manager';
 import type { InboxData } from '../shared/task-panel';
 import { renderTaskPanel } from '../shared/task-panel';
 import { renderYearWeekGrid } from '../shared/year-week-grid';
+import { makeWeekKey } from '../week/timeblock-data';
+import { t } from '../i18n';
 
 /**
  * 年视图：左侧任务面板 + 右侧周历面板（1-52 周）。
@@ -14,23 +17,27 @@ export class YearView {
     private inboxData: InboxData;
     private categoryData: TimeBlockCategoryData;
     private save: () => Promise<void>;
-    private refresh: () => Promise<void>;
+    /** 未选中任务时点击周格子 → 跳转到该周的周计划 */
+    private onJumpToWeek?: (weekKey: string) => void;
+    /** 当前渲染容器（用于自刷新） */
+    private container?: HTMLElement;
 
     constructor(
         app: App,
         inboxData: InboxData,
         categoryData: TimeBlockCategoryData,
         save: () => Promise<void>,
-        refresh: () => Promise<void>,
+        onJumpToWeek?: (weekKey: string) => void,
     ) {
         this.app = app;
         this.inboxData = inboxData;
         this.categoryData = categoryData;
         this.save = save;
-        this.refresh = refresh;
+        this.onJumpToWeek = onJumpToWeek;
     }
 
     async renderInto(container: HTMLElement): Promise<void> {
+        this.container = container;
         container.empty();
         container.addClass('year-view');
 
@@ -56,9 +63,59 @@ export class YearView {
         // 右侧：周历面板
         const calendarPanel = container.createDiv({ cls: 'year-calendar-panel' });
         renderYearWeekGrid(calendarPanel, {
-            onWeekClick: (week) => {
-                // 占位：后续可跳转到对应周
+            assignedTasks: this.buildAssignedTasks(),
+            onWeekClick: (week, year) => {
+                void this.onWeekClick(week, year);
             },
         });
+    }
+
+    /** 重新渲染自身 */
+    private async refresh(): Promise<void> {
+        if (this.container) await this.renderInto(this.container);
+    }
+
+    /** 汇总各周已分配的任务（周键 → 任务标题列表） */
+    private buildAssignedTasks(): Record<string, string[]> {
+        const map: Record<string, string[]> = {};
+        for (const item of this.inboxData.items) {
+            if (item.removed || !item.assignedWeekKeys) continue;
+            for (const weekKey of item.assignedWeekKeys) {
+                (map[weekKey] ??= []).push(item.title);
+            }
+        }
+        return map;
+    }
+
+    /**
+     * 点击周格子：
+     * - 已选中任务 → 将任务分配到该周（可分配到多个周，再次点击同一周则取消）
+     * - 未选中任务 → 跳转到该周的周计划
+     */
+    private async onWeekClick(week: number, year: number): Promise<void> {
+        const weekKey = makeWeekKey(year, week);
+        const selectedId = this.inboxData.selectedId;
+        const item = selectedId
+            ? this.inboxData.items.find(i => i.id === selectedId && !i.removed)
+            : undefined;
+
+        if (!item) {
+            // 未选中任务：跳转到对应周的周计划
+            this.onJumpToWeek?.(weekKey);
+            return;
+        }
+
+        // 已选中任务：分配到该周（再次点击同一周则取消分配）
+        const keys = item.assignedWeekKeys ?? [];
+        if (keys.includes(weekKey)) {
+            item.assignedWeekKeys = keys.filter(k => k !== weekKey);
+            await this.save();
+            new Notice(t('year.unassigned', { title: item.title, week: weekKey }));
+        } else {
+            item.assignedWeekKeys = [...keys, weekKey];
+            await this.save();
+            new Notice(t('year.assigned', { title: item.title, week: weekKey }));
+        }
+        await this.refresh();
     }
 }

@@ -34,6 +34,8 @@ export const zh = {
     'year.weekLabel': '第{week}周',
     'year.monthLabel': '{month}月',
     'year.thisYear': '今年',
+    'year.assigned': '已将「{title}」分配到 {week}',
+    'year.unassigned': '已取消「{title}」在 {week} 的分配',
 
     // 命令与功能区
     'command.open': '打开周日程面板',
