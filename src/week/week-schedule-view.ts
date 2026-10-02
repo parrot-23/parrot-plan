@@ -115,8 +115,41 @@ export class WeekScheduleView extends ItemView {
         // 在容器内部创建 .week-schedule 根节点，避免与宿主容器样式冲突
         const root = content.createDiv({ cls: 'week-schedule' });
 
+        // ===== 左侧：任务面板 =====
+        const taskPanel = root.createDiv({ cls: 'week-task-panel' });
+        renderTaskPanel(
+            this.app,
+            taskPanel,
+            this.inboxData,
+            this.timeBlockCategoryData,
+            async () => {
+                // onAdd 回调
+                await this.save();
+            },
+            () => {
+                // onRefresh 回调
+                void this.onOpen();
+            },
+            async (action, item) => {
+                // 占位：后续实现各按钮功能
+                new Notice(`[placeholder] ${action}: ${item.title}`);
+            },
+            async (item) => {              // onUpdate 回调
+                await this.save();
+            }
+        );
+
+        // ===== 右侧：顶部工具栏 + 日历 =====
+        const main = root.createDiv({ cls: 'week-main' });
+
+        // 右上角工具栏（年周标签、时间区间设置、切换方案、图例）
+        this.renderToolbar(main);
+
+        // 日历区域
+        const calendar = main.createDiv({ cls: 'week-calendar' });
+
         // ===== 周网格骨架（公共组件）=====
-        const { grid, headerRow, bodyRowInner } = renderWeekGrid(root, {
+        const { grid, headerRow, bodyRowInner } = renderWeekGrid(calendar, {
             onHeaderClick: (d) => {
                 // 点击星期表头添加全天事件
                 void this.addAllDayEvent(d);
@@ -139,8 +172,6 @@ export class WeekScheduleView extends ItemView {
 
         // ===== 事件层 =====
         this.renderEventLayer(bodyRowInner);
-
-        this.renderToolbar(root);
     }
 
     async onClose() {
@@ -394,14 +425,14 @@ export class WeekScheduleView extends ItemView {
         weekSelect.onchange = apply;
     }
 
-    // ===== 工具栏 =====
+    // ===== 工具栏（右上角）=====
     private renderToolbar(content: HTMLElement) {
         const toolbar = content.createDiv({ cls: 'schedule-toolbar' });
 
         // 年 / 周切换
         this.renderWeekNav(toolbar);
 
-        // 时间区间设置按钮
+        // 时间区间设置按钮 + 当前方案下拉框
         const schemeBar = toolbar.createDiv({ cls: 'range-scheme-bar' });
         const schemeBtn = schemeBar.createEl('button', {
             text: t('rangeScheme.open'),
@@ -449,30 +480,6 @@ export class WeekScheduleView extends ItemView {
             () => {
                 void this.onOpen();
             },
-        );
-
-        // 任务面板
-        const inboxContainer = toolbar.createDiv({ cls: 'inbox-container' });
-        renderTaskPanel(
-            this.app,
-            inboxContainer,
-            this.inboxData,
-            this.timeBlockCategoryData,
-            async () => {
-                // onAdd 回调
-                await this.save();
-            },
-            () => {
-                // onRefresh 回调
-                void this.onOpen();
-            },
-            async (action, item) => {
-                // 占位：后续实现各按钮功能
-                new Notice(`[placeholder] ${action}: ${item.title}`);
-            },
-            async (item) => {              // onUpdate 回调
-                await this.save();
-            }
         );
     }
 
