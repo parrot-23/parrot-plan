@@ -3,7 +3,7 @@
 import { ItemView, WorkspaceLeaf, Modal, Setting, Notice, App } from 'obsidian';
 import type { Plugin } from 'obsidian';
 import type { WeekRangeData, CategorizedRange, TimeBlockCategoryId, RangeSchemeData, DailyRange, WeekKey } from './timeblock-data';
-import { hexToTransparent, getCurrentWeekKey, makeWeekKey, parseWeekKey, makeDayKeyFromWeek, makeDefaultScheme, DEFAULT_SCHEME_ID, DEFAULT_WEEK_RANGE } from './timeblock-data';
+import { hexToTransparent, getCurrentWeekKey, makeWeekKey, parseWeekKey, shiftWeekKey, makeDayKeyFromWeek, makeDefaultScheme, DEFAULT_SCHEME_ID, DEFAULT_WEEK_RANGE } from './timeblock-data';
 import type { TimeBlockCategoryData } from './timeblock-category-manager';
 import type { DayTemplateData } from './template-manager';
 import { renderTimeBlockCategoryLegend } from './timeblock-category-manager';
@@ -442,17 +442,6 @@ export class WeekScheduleView extends ItemView {
         const nav = toolbar.createDiv({ cls: 'week-nav' });
         const { year, week } = parseWeekKey(this.currentWeekKey);
 
-        // 「本周」按钮：切回本周，且在本周时高亮
-        const thisWeekBtn = nav.createEl('button', {
-            text: t('weekNav.thisWeek'),
-            cls: 'week-nav-today-btn',
-        });
-        thisWeekBtn.toggleClass('is-active', this.currentWeekKey === getCurrentWeekKey());
-        thisWeekBtn.onclick = () => {
-            this.currentWeekKey = getCurrentWeekKey();
-            void this.onOpen();
-        };
-
         // 年份下拉（当前年 ±5）
         const yearSelect = nav.createEl('select', { cls: 'week-nav-select' });
         const nowYear = new Date().getFullYear();
@@ -474,6 +463,38 @@ export class WeekScheduleView extends ItemView {
         };
         yearSelect.onchange = apply;
         weekSelect.onchange = apply;
+
+        
+
+        // 上一周 / 下一周
+        const prevBtn = nav.createEl('button', {
+            text: '‹',
+            cls: 'week-nav-arrow-btn',
+        });
+        prevBtn.onclick = () => {
+            this.currentWeekKey = shiftWeekKey(this.currentWeekKey, -1);
+            void this.onOpen();
+        };
+
+        const nextBtn = nav.createEl('button', {
+            text: '›',
+            cls: 'week-nav-arrow-btn',
+        });
+        nextBtn.onclick = () => {
+            this.currentWeekKey = shiftWeekKey(this.currentWeekKey, 1);
+            void this.onOpen();
+        };
+
+        // 「本周」按钮：切回本周，且在本周时高亮
+        const thisWeekBtn = nav.createEl('button', {
+            text: t('weekNav.thisWeek'),
+            cls: 'week-nav-today-btn',
+        });
+        thisWeekBtn.toggleClass('is-active', this.currentWeekKey === getCurrentWeekKey());
+        thisWeekBtn.onclick = () => {
+            this.currentWeekKey = getCurrentWeekKey();
+            void this.onOpen();
+        };
     }
 
     // ===== 工具栏（右上角）=====

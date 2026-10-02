@@ -95,6 +95,29 @@ export function parseWeekKey(key: WeekKey): { year: number; week: number } {
 	return { year: Number(yearStr), week: Number(weekStr) };
 }
 
+/** 计算某年包含的 ISO 周数（52 或 53） */
+export function getWeeksInYear(year: number): number {
+	// 12 月 28 日必定落在该年最后一周
+	return getISOWeek(new Date(year, 11, 28));
+}
+
+/** 周键偏移：delta 为正向后、为负向前，自动处理跨年 */
+export function shiftWeekKey(key: WeekKey, delta: number): WeekKey {
+	let { year, week } = parseWeekKey(key);
+	week += delta;
+	while (week < 1) {
+		year -= 1;
+		week += getWeeksInYear(year);
+	}
+	let weeksInYear = getWeeksInYear(year);
+	while (week > weeksInYear) {
+		week -= weeksInYear;
+		year += 1;
+		weeksInYear = getWeeksInYear(year);
+	}
+	return makeWeekKey(year, week);
+}
+
 /** 获取指定日期所在的 ISO 周号（1-52/53） */
 export function getISOWeek(date: Date): number {
 	const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
