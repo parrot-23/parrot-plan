@@ -83,6 +83,10 @@ export const zh = {
     'rangeScheme.switchTo': '切换',
     'rangeScheme.isDefault': '默认',
 
+    // 周切换
+    'weekNav.year': '年',
+    'weekNav.week': '周',
+
     // 分类
     'category.legend': '时间区块图例',
     'category.config': '分类配置',

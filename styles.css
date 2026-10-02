@@ -1103,6 +1103,20 @@
     gap: 6px;
 }
 
+/* 年 / 周切换 */
+.week-nav {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 8px;
+}
+
+.week-nav-select {
+    flex: 1;
+    padding: 4px 6px;
+    border-radius: 4px;
+    font-size: 13px;
+}
+
 .range-scheme-open-btn {
     width: 100%;
     padding: 6px 10px;

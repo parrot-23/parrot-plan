@@ -1,6 +1,7 @@
 import { App, Plugin, PluginSettingTab, Setting, type SettingDefinitionItem } from 'obsidian';
 
 import type { WeekRangeData, RangeSchemeData } from './src/week/timeblock-data';
+import { getCurrentWeekKey } from './src/week/timeblock-data';
 import type { TimeBlockCategoryData } from './src/week/timeblock-category-manager';
 import type { DayTemplateData } from './src/week/template-manager';
 
@@ -42,7 +43,7 @@ export default class ParrotPlanPlugin extends Plugin {
             };
         }
 
-        const initialData = savedData as unknown as WeekRangeData;
+        const initialData = migrateWeekRangeData(savedData);
         const initialTemplateData = (savedData.dayTemplateData ?? { dayTemplates: [], dayProperties: [] }) as DayTemplateData;
         const initialCategoryData = (savedData.timeBlockCategoryData ?? defaultCategories) as TimeBlockCategoryData;
         const initialInboxData = (savedData.inboxData ?? DEFAULT_INBOX_DATA) as InboxData;
@@ -120,4 +121,21 @@ class ParrotPlanSettingTab extends PluginSettingTab {
         new Setting(this.containerEl).setName(t('settings.title')).setHeading();
         this.containerEl.createEl('p', { text: t('settings.about') });
     }
+}
+
+/** 迁移旧版周区间数据：把旧的 days 归入当前周的 weeks */
+function migrateWeekRangeData(savedData: Record<string, unknown>): WeekRangeData {
+    const days = Array.isArray(savedData.days) ? savedData.days : DEFAULT_WEEK_RANGE.days;
+    const weeks = (savedData.weeks && typeof savedData.weeks === 'object')
+        ? savedData.weeks as Record<string, unknown>
+        : {};
+    // 旧数据没有 weeks，把 days 归入当前周
+    if (Object.keys(weeks).length === 0 && Array.isArray(savedData.days)) {
+        weeks[getCurrentWeekKey()] = savedData.days;
+    }
+    return {
+        version: 1,
+        days: days as WeekRangeData['days'],
+        weeks: weeks as WeekRangeData['weeks'],
+    };
 }

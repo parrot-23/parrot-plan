@@ -2,8 +2,8 @@
 
 import { ItemView, WorkspaceLeaf, Modal, Setting, Notice, App } from 'obsidian';
 import type { Plugin } from 'obsidian';
-import type { WeekRangeData, CategorizedRange, TimeBlockCategoryId, RangeSchemeData, DailyRange } from './timeblock-data';
-import { hexToTransparent } from './timeblock-data';
+import type { WeekRangeData, CategorizedRange, TimeBlockCategoryId, RangeSchemeData, DailyRange, WeekKey } from './timeblock-data';
+import { hexToTransparent, getCurrentWeekKey, makeWeekKey, parseWeekKey } from './timeblock-data';
 import type { TimeBlockCategoryData } from './timeblock-category-manager';
 import type { DayTemplateData } from './template-manager';
 import { renderTimeBlockCategoryLegend } from './timeblock-category-manager';
@@ -30,6 +30,8 @@ export interface EventBlock {
     allDay?: boolean;
     completed?: boolean;
     notePath?: string;
+    /** 所属周键（如 2026-W40） */
+    weekKey?: WeekKey;
 }
 
 export interface ExecutionRecord {
@@ -58,6 +60,8 @@ export class WeekScheduleView extends ItemView {
     events: EventBlock[] = [];
     executions: ExecutionRecord[] = [];
     inboxData: InboxData = DEFAULT_INBOX_DATA;
+    /** 当前显示的周键（如 2026-W40） */
+    currentWeekKey: WeekKey = getCurrentWeekKey();
     /** 被主视图复用时的宿主容器（用于刷新） */
     private hostContainer?: HTMLElement;
 
@@ -84,6 +88,7 @@ export class WeekScheduleView extends ItemView {
         await this.plugin.saveData({
             version: 1,
             days: this.rangeData.days,   // 网格时间区块。
+            weeks: this.rangeData.weeks, // 按周存储的日历区间
             dayTemplateData: this.dayTemplateData, // 日模板数据
             timeBlockCategoryData: this.timeBlockCategoryData, // 时间区块图例
             schemeData: this.schemeData, // 时间区间方案
@@ -155,7 +160,7 @@ export class WeekScheduleView extends ItemView {
             const cell = cells.createDiv({ cls: 'all-day-cell' });
 
             // 已有全天事件
-            const dayAllDay = this.events.filter(ev => ev.day === d && ev.allDay);
+            const dayAllDay = this.events.filter(ev => ev.day === d && ev.allDay && ev.weekKey === this.currentWeekKey);
             for (const ev of dayAllDay) {
                 const chip = cell.createDiv({ cls: 'all-day-chip' });
                 const cat = ev.categoryId
@@ -200,6 +205,7 @@ export class WeekScheduleView extends ItemView {
             inboxId: selectedInboxItem.id,
             allDay: true,
             completed: false,
+            weekKey: this.currentWeekKey,
         });
         await this.save();
         await this.onOpen();
@@ -253,6 +259,7 @@ export class WeekScheduleView extends ItemView {
                         categoryId: selectedInboxItem.categoryId,
                         inboxId: selectedInboxItem.id,
                         completed: false,
+                        weekKey: this.currentWeekKey,
                     });
                     await this.save();
                     await this.onOpen();
@@ -271,6 +278,7 @@ export class WeekScheduleView extends ItemView {
                             title,
                             categoryId,
                             completed: false,
+                            weekKey: this.currentWeekKey,
                         });
                         void (async () => {
                             await this.save();
@@ -280,8 +288,8 @@ export class WeekScheduleView extends ItemView {
                 ).open();
             };
 
-            // 渲染已有事件（排除全天事件）
-            const dayEvents = this.events.filter(ev => ev.day === d && !ev.allDay);
+            // 渲染已有事件（排除全天事件，仅当前周）
+            const dayEvents = this.events.filter(ev => ev.day === d && !ev.allDay && ev.weekKey === this.currentWeekKey);
             for (const ev of dayEvents) {
                 const card = this.createEventCard(col, ev);
                 const cat = ev.categoryId
@@ -358,9 +366,40 @@ export class WeekScheduleView extends ItemView {
         }
     }
 
+    // ===== 年 / 周切换 =====
+    private renderWeekNav(toolbar: HTMLElement) {
+        const nav = toolbar.createDiv({ cls: 'week-nav' });
+        const { year, week } = parseWeekKey(this.currentWeekKey);
+
+        // 年份下拉（当前年 ±5）
+        const yearSelect = nav.createEl('select', { cls: 'week-nav-select' });
+        const nowYear = new Date().getFullYear();
+        for (let y = nowYear - 5; y <= nowYear + 5; y++) {
+            yearSelect.createEl('option', { text: `${y}`, value: `${y}` });
+        }
+        yearSelect.value = `${year}`;
+
+        // 周号下拉（1-52）
+        const weekSelect = nav.createEl('select', { cls: 'week-nav-select' });
+        for (let w = 1; w <= 52; w++) {
+            weekSelect.createEl('option', { text: `${t('weekNav.week')} ${w}`, value: `${w}` });
+        }
+        weekSelect.value = `${week}`;
+
+        const apply = () => {
+            this.currentWeekKey = makeWeekKey(Number(yearSelect.value), Number(weekSelect.value));
+            void this.onOpen();
+        };
+        yearSelect.onchange = apply;
+        weekSelect.onchange = apply;
+    }
+
     // ===== 工具栏 =====
     private renderToolbar(content: HTMLElement) {
         const toolbar = content.createDiv({ cls: 'schedule-toolbar' });
+
+        // 年 / 周切换
+        this.renderWeekNav(toolbar);
 
         // 时间区间设置按钮
         const schemeBar = toolbar.createDiv({ cls: 'range-scheme-bar' });
@@ -437,18 +476,24 @@ export class WeekScheduleView extends ItemView {
         );
     }
 
-    /** 获取当前激活方案的日区间数据（无激活方案时返回空） */
+    /** 获取当前周的日历区间数据（从方案复制而来） */
     getActiveDays(): DailyRange[] {
-        const scheme = this.schemeData.schemes.find(s => s.id === this.schemeData.activeSchemeId);
-        return scheme ? scheme.days : [];
+        return this.rangeData.weeks?.[this.currentWeekKey] ?? [];
     }
 
-    /** 应用日模板到指定日期（供时间区间弹窗的模板面板调用，写入当前激活方案） */
+    /** 获取当前激活方案的日区间配置（周无关的模板数据） */
+    getSchemeDays(): DailyRange[] {
+        const scheme = this.schemeData.schemes.find(s => s.id === this.schemeData.activeSchemeId);
+        return scheme?.days ?? [];
+    }
+
+    /** 应用日模板到指定日期（写入当前激活方案） */
     private async applyTemplate(templateId: string, targetDays: number[]) {
         const tpl = this.dayTemplateData.dayTemplates.find(t => t.id === templateId);
         if (!tpl) { new Notice(t('template.notFound')); return; }
         const scheme = this.schemeData.schemes.find(s => s.id === this.schemeData.activeSchemeId);
         if (!scheme) { new Notice(t('rangeScheme.noActive')); return; }
+        if (!scheme.days) scheme.days = [];
         for (const day of targetDays) {
             let dayData = scheme.days.find(d => d.day === day);
             if (!dayData) { dayData = { day, ranges: [] }; scheme.days.push(dayData); }

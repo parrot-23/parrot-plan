@@ -132,6 +132,7 @@ export class RangeSchemeModal extends Modal {
                 const y = e.clientY - rect.top;
                 const startMinutes = Math.floor((y / 80) * 120 / 30) * 30;
                 new RangeEditModal(this.app, startMinutes, (start, end, sort) => {
+                    if (!scheme.days) scheme.days = [];
                     let dayData = scheme.days.find(day => day.day === d);
                     if (!dayData) {
                         dayData = { day: d, ranges: [] };
@@ -147,7 +148,7 @@ export class RangeSchemeModal extends Modal {
             };
 
             // 已有色块
-            const dayData = scheme?.days.find(day => day.day === d);
+            const dayData = scheme?.days?.find(day => day.day === d);
             const dayRanges = dayData?.ranges ?? [];
             for (const range of dayRanges) {
                 const block = col.createDiv({ cls: 'range-block range-block-fill' });
@@ -212,7 +213,10 @@ export class SchemeManageModal extends Modal {
         this.schemeData = schemeData;
         this.onConfirm = onConfirm;
         // 拷贝一份草稿，取消不影响原数据
-        this.draft = schemeData.schemes.map(s => ({ ...s, days: s.days.map(d => ({ ...d, ranges: [...d.ranges] })) }));
+        this.draft = schemeData.schemes.map(s => ({
+            ...s,
+            days: (s.days ?? []).map(d => ({ ...d, ranges: [...d.ranges] })),
+        }));
     }
 
     onOpen() {

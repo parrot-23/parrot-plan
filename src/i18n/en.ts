@@ -85,6 +85,10 @@ export const en: I18nMessages = {
     'rangeScheme.switchTo': 'Switch',
     'rangeScheme.isDefault': 'Default',
 
+    // Week navigation
+    'weekNav.year': 'Year',
+    'weekNav.week': 'Week',
+
     // Category
     'category.legend': 'Time Block Legend',
     'category.config': 'Category Config',
