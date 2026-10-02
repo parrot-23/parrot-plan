@@ -113,6 +113,7 @@ export const zh = {
 
     // 收集盒
     'inbox.addTitle': '添加到收集盒',
+    'inbox.addSubTitle': '添加子任务到「{title}」',
     'inbox.name': '名称',
     'inbox.namePlaceholder': '一句话概括',
     'inbox.desc': '描述',
@@ -124,7 +125,8 @@ export const zh = {
     'inbox.empty': '收集盒为空，点击 + 添加',
     'inbox.selectCategory': '选择分类',
     'inbox.noCategory': '不分类',
-    'inbox.title': '📥 收集盒',
+    'inbox.title': '📥 任务面板',
+    'inbox.maxDepth': '子任务最多嵌套 {max} 层',
 };
 
 export type I18nMessages = typeof zh;

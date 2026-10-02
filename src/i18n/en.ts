@@ -115,6 +115,7 @@ export const en: I18nMessages = {
 
     // Inbox
     'inbox.addTitle': 'Add to Inbox',
+    'inbox.addSubTitle': 'Add subtask to "{title}"',
     'inbox.name': 'Name',
     'inbox.namePlaceholder': 'One-line summary',
     'inbox.desc': 'Description',
@@ -126,5 +127,6 @@ export const en: I18nMessages = {
     'inbox.empty': 'Inbox is empty, click + to add',
     'inbox.selectCategory': 'Select category',
     'inbox.noCategory': 'No category',
-    'inbox.title': '📥 Inbox',
+    'inbox.title': '📥 Task Panel',
+    'inbox.maxDepth': 'Subtasks can nest at most {max} levels',
 };

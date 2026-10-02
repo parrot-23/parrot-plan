@@ -12,7 +12,8 @@
     flex-shrink: 0;
     width: 250px;
     height: 100%;
-    overflow-y: auto;
+    box-sizing: border-box;
+    overflow: hidden;
     padding: 10px;
     border-right: 1px solid var(--background-modifier-border);
 }
@@ -653,12 +654,11 @@
 
 /* ===== 收集盒面板 ===== */
 .inbox-panel {
-    margin-top: 12px;
     padding: 8px 12px;
     border: 1px solid var(--background-modifier-border);
     border-radius: 6px;
     background: var(--background-secondary);
-    max-height: 220px;
+    height: 100%;
     display: flex;
     flex-direction: column;
 }
@@ -708,6 +708,30 @@
     border-radius: 4px;
     background: var(--background-primary);
     border: 1px solid var(--background-modifier-border);
+    cursor: default;
+    /* 按层级缩进（每层 16px） */
+    margin-left: calc(var(--inbox-depth, 0) * 16px);
+}
+
+/* 任务标题行（折叠箭头 + 色点 + 标题） */
+.inbox-item-title-row {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+/* 折叠/展开箭头 */
+.inbox-item-toggle {
+    flex-shrink: 0;
+    width: 14px;
+    text-align: center;
+    font-size: 10px;
+    color: var(--text-muted);
+    cursor: pointer;
+    user-select: none;
+}
+
+.inbox-item-toggle-empty {
     cursor: default;
 }
 
@@ -988,7 +1012,8 @@
     flex-shrink: 0;
     width: 250px;
     height: 100%;
-    overflow-y: auto;
+    box-sizing: border-box;
+    overflow: hidden;
     padding: 10px;
     border-right: 1px solid var(--background-modifier-border);
 }
