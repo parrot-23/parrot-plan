@@ -87,6 +87,22 @@ export function getCurrentWeekKey(): WeekKey {
 	return makeWeekKey(now.getFullYear(), getISOWeek(now));
 }
 
+/** 日期键：`YYYY-MM-DD`，如 2026-10-02 */
+export type DayKey = string;
+
+/** 由日期生成日期键 */
+export function makeDayKey(date: Date): DayKey {
+	const y = date.getFullYear();
+	const m = String(date.getMonth() + 1).padStart(2, '0');
+	const d = String(date.getDate()).padStart(2, '0');
+	return `${y}-${m}-${d}`;
+}
+
+/** 获取当前日期对应的日期键 */
+export function getCurrentDayKey(): DayKey {
+	return makeDayKey(new Date());
+}
+
 // 默认周日程数据（兜底用）
 export const DEFAULT_WEEK_RANGE: WeekRangeData = {
 	version: 1,

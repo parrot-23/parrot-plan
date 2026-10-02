@@ -18,6 +18,8 @@ export interface InboxItem {
     parentId?: string;
     /** 已分配到的周键列表（如 ['2026-W40']），可分配到多个周 */
     assignedWeekKeys?: string[];
+    /** 已分配到的日期列表（如 ['2026-10-02']），可分配到多天 */
+    assignedDayKeys?: string[];
     /** 已从收集盒移除（不再显示，但数据保留，可查历史） */
     removed?: boolean;
 }
@@ -29,6 +31,8 @@ export interface InboxData {
     collapsedIds?: string[];
     /** 是否只看本周目标（持久化） */
     weekGoalOnly?: boolean;
+    /** 是否只看当日目标（持久化） */
+    dayGoalOnly?: boolean;
 }
 
 export const DEFAULT_INBOX_DATA: InboxData = {
@@ -162,6 +166,8 @@ export function renderTaskPanel(
     onUpdate?: (item?: InboxItem) => void | Promise<void>,
     /** 当前周键（提供后显示「周目标」按钮，用于只看本周任务） */
     currentWeekKey?: string,
+    /** 当前日期键（提供后显示「日目标」按钮，用于只看当天任务） */
+    currentDayKey?: string,
 ) {
     container.empty();
     container.addClass('inbox-panel');
@@ -169,6 +175,8 @@ export function renderTaskPanel(
     let selectedId: string | null = null;
     /** 是否只看本周目标（持久化在 inboxData 中） */
     let weekGoalOnly = inboxData.weekGoalOnly ?? false;
+    /** 是否只看当日目标（持久化在 inboxData 中） */
+    let dayGoalOnly = inboxData.dayGoalOnly ?? false;
 
     // ===== 列表区域（可滚动）=====
     const listDiv = container.createDiv({ cls: 'inbox-list' });
@@ -320,9 +328,18 @@ export function renderTaskPanel(
             topItems = topItems.filter(i => i.assignedWeekKeys?.includes(currentWeekKey!));
         }
 
+        // 日目标模式：仅显示分配到当天的任务
+        if (dayGoalOnly && currentDayKey) {
+            topItems = topItems.filter(i => i.assignedDayKeys?.includes(currentDayKey!));
+        }
+
         if (topItems.length === 0) {
-            listDiv.createDiv({ cls: 'inbox-empty' })
-                .setText(weekGoalOnly ? t('inbox.emptyWeekGoal') : t('inbox.empty'));
+            const emptyKey = dayGoalOnly
+                ? 'inbox.emptyDayGoal'
+                : weekGoalOnly
+                    ? 'inbox.emptyWeekGoal'
+                    : 'inbox.empty';
+            listDiv.createDiv({ cls: 'inbox-empty' }).setText(t(emptyKey));
             return;
         }
 
@@ -351,6 +368,26 @@ export function renderTaskPanel(
             weekGoalOnly = !weekGoalOnly;
             inboxData.weekGoalOnly = weekGoalOnly;
             weekGoalBtn.toggleClass('is-active', weekGoalOnly);
+            renderList();
+            // 持久化状态
+            void (async () => {
+                if (onUpdate) await onUpdate();
+                onRefresh();
+            })();
+        };
+    }
+
+    // 日目标按钮（仅提供 currentDayKey 时显示）
+    if (currentDayKey) {
+        const dayGoalBtn = headerActions.createEl('button', {
+            cls: 'inbox-week-goal-btn',
+            text: t('inbox.dayGoal'),
+        });
+        dayGoalBtn.toggleClass('is-active', dayGoalOnly);
+        dayGoalBtn.onclick = () => {
+            dayGoalOnly = !dayGoalOnly;
+            inboxData.dayGoalOnly = dayGoalOnly;
+            dayGoalBtn.toggleClass('is-active', dayGoalOnly);
             renderList();
             // 持久化状态
             void (async () => {

@@ -94,6 +94,7 @@ export const en: I18nMessages = {
     // Week navigation
     'weekNav.year': 'Year',
     'weekNav.week': 'Week',
+    'weekNav.thisWeek': 'This week',
 
     // Category
     'category.legend': 'Time Block Legend',
@@ -135,6 +136,8 @@ export const en: I18nMessages = {
     'inbox.noCategory': 'No category',
     'inbox.title': '📥 Task Panel',
     'inbox.weekGoal': 'Week Goals',
+    'inbox.dayGoal': 'Day Goals',
     'inbox.emptyWeekGoal': 'No goals this week. Assign tasks in the Year view.',
+    'inbox.emptyDayGoal': 'No goals today.',
     'inbox.maxDepth': 'Subtasks can nest at most {max} levels',
 };

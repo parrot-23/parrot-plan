@@ -99,6 +99,8 @@ export function renderYearWeekGrid(
 
     function render() {
         yearLabel.setText(String(year));
+        // 当前显示的是今年时，高亮「今年」按钮
+        todayBtn.toggleClass('is-active', year === new Date().getFullYear());
         grid.empty();
 
         // 每行 13 周（约 3 个月），共 4 行

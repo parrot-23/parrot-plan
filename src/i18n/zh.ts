@@ -92,6 +92,7 @@ export const zh = {
     // 周切换
     'weekNav.year': '年',
     'weekNav.week': '周',
+    'weekNav.thisWeek': '本周',
 
     // 分类
     'category.legend': '时间区块图例',
@@ -133,7 +134,9 @@ export const zh = {
     'inbox.noCategory': '不分类',
     'inbox.title': '📥 任务面板',
     'inbox.weekGoal': '周目标',
+    'inbox.dayGoal': '日目标',
     'inbox.emptyWeekGoal': '本周暂无目标，去「年」视图分配任务',
+    'inbox.emptyDayGoal': '今天暂无目标',
     'inbox.maxDepth': '子任务最多嵌套 {max} 层',
 };
 

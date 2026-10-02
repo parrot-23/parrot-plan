@@ -3,6 +3,7 @@ import type { App } from 'obsidian';
 import type { TimeBlockCategoryData } from '../week/timeblock-category-manager';
 import type { InboxData } from '../shared/task-panel';
 import { renderTaskPanel } from '../shared/task-panel';
+import { getCurrentDayKey } from '../week/timeblock-data';
 import { t } from '../i18n';
 
 /**
@@ -54,6 +55,8 @@ export class TodayView {
             async () => {
                 await this.save();
             },
+            undefined,                     // 不显示「周目标」按钮
+            getCurrentDayKey(),            // 当前日期键（用于「日目标」筛选）
         );
 
         // ===== 中间：执行区（空面板 + 开始执行按钮）=====

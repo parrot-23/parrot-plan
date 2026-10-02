@@ -403,6 +403,17 @@ export class WeekScheduleView extends ItemView {
         const nav = toolbar.createDiv({ cls: 'week-nav' });
         const { year, week } = parseWeekKey(this.currentWeekKey);
 
+        // 「本周」按钮：切回本周，且在本周时高亮
+        const thisWeekBtn = nav.createEl('button', {
+            text: t('weekNav.thisWeek'),
+            cls: 'week-nav-today-btn',
+        });
+        thisWeekBtn.toggleClass('is-active', this.currentWeekKey === getCurrentWeekKey());
+        thisWeekBtn.onclick = () => {
+            this.currentWeekKey = getCurrentWeekKey();
+            void this.onOpen();
+        };
+
         // 年份下拉（当前年 ±5）
         const yearSelect = nav.createEl('select', { cls: 'week-nav-select' });
         const nowYear = new Date().getFullYear();
