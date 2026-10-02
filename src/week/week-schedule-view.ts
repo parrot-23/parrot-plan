@@ -73,7 +73,8 @@ export class WeekScheduleView extends ItemView {
     constructor(leaf: WorkspaceLeaf, plugin: Plugin, data: WeekRangeData, templateData: DayTemplateData, categoryData: TimeBlockCategoryData,
         events?: EventBlock[],
         executions?: ExecutionRecord[],
-        inboxData?: InboxData, 
+        inboxData?: InboxData,
+        schemeData?: RangeSchemeData,
     ) {
         super(leaf);
         this.plugin = plugin;
@@ -83,6 +84,7 @@ export class WeekScheduleView extends ItemView {
         this.events = events ?? [];
         this.executions = executions ?? [];
         this.inboxData = inboxData ?? DEFAULT_INBOX_DATA;
+        this.schemeData = schemeData ?? { schemes: [] };
     }
 
     // 调用插件方法，存储数据。
@@ -614,6 +616,7 @@ export class WeekScheduleView extends ItemView {
                 this,
                 (templateId, targetDays) => this.applyTemplate(templateId, targetDays),
                 () => {
+                    void this.save();
                     void this.onOpen();
                 },
             ).open();

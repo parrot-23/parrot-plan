@@ -1,7 +1,7 @@
 import { ItemView, WorkspaceLeaf } from 'obsidian';
 import type { Plugin } from 'obsidian';
 
-import type { WeekRangeData } from './week/timeblock-data';
+import type { WeekRangeData, RangeSchemeData } from './week/timeblock-data';
 import type { TimeBlockCategoryData } from './week/timeblock-category-manager';
 import type { DayTemplateData } from './week/template-manager';
 import type { InboxData } from './shared/task-panel';
@@ -47,6 +47,7 @@ export class MainView extends ItemView {
         events: EventBlock[],
         executions: ExecutionRecord[],
         inboxData: InboxData,
+        schemeData: RangeSchemeData,
     ) {
         super(leaf);
         this.plugin = plugin;
@@ -59,6 +60,7 @@ export class MainView extends ItemView {
             events,
             executions,
             inboxData,
+            schemeData,
         );
         this.yearView = new YearView(
             this.app,

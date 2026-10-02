@@ -169,17 +169,6 @@ export class SchemeManageModal extends Modal {
         this.draft.forEach((scheme, index) => {
             const row = this.listEl.createDiv({ cls: 'tbcat-row' });
 
-            // 名称
-            const name = row.createEl('input', {
-                type: 'text',
-                placeholder: t('rangeScheme.namePlaceholder'),
-                cls: 'tbcat-name',
-            });
-            name.value = scheme.name;
-            name.addEventListener('input', () => {
-                scheme.name = name.value;
-            });
-
             // 切换（设为当前方案）
             const switchBtn = row.createEl('button', {
                 text: t('rangeScheme.switchTo'),
@@ -189,6 +178,7 @@ export class SchemeManageModal extends Modal {
                 switchBtn.addClass('is-active');
             }
             switchBtn.addEventListener('click', () => {
+                this.schemeData.schemes = this.draft;
                 this.schemeData.activeSchemeId = scheme.id;
                 this.onConfirm?.();
                 this.renderList();
@@ -196,18 +186,28 @@ export class SchemeManageModal extends Modal {
 
             // 设为默认
             const defaultBtn = row.createEl('button', {
-                text: scheme.id === this.schemeData.defaultSchemeId
-                    ? t('rangeScheme.isDefault')
-                    : t('rangeScheme.setDefault'),
+                text: t('rangeScheme.isDefault'),
                 cls: 'tbcat-action-btn',
             });
             if (scheme.id === this.schemeData.defaultSchemeId) {
                 defaultBtn.addClass('is-active');
             }
             defaultBtn.addEventListener('click', () => {
+                this.schemeData.schemes = this.draft;
                 this.schemeData.defaultSchemeId = scheme.id;
                 this.onConfirm?.();
                 this.renderList();
+            });
+
+            // 名称
+            const name = row.createEl('input', {
+                type: 'text',
+                placeholder: t('rangeScheme.namePlaceholder'),
+                cls: 'tbcat-name',
+            });
+            name.value = scheme.name;
+            name.addEventListener('input', () => {
+                scheme.name = name.value;
             });
 
             // 删除

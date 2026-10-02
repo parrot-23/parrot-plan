@@ -1,6 +1,6 @@
 import { App, Plugin, PluginSettingTab, Setting, type SettingDefinitionItem } from 'obsidian';
 
-import type { WeekRangeData } from './src/week/timeblock-data';
+import type { WeekRangeData, RangeSchemeData } from './src/week/timeblock-data';
 import type { TimeBlockCategoryData } from './src/week/timeblock-category-manager';
 import type { DayTemplateData } from './src/week/template-manager';
 
@@ -36,6 +36,7 @@ export default class ParrotPlanPlugin extends Plugin {
                 dayTemplateData: { dayTemplates: [], dayProperties: [] },
                 timeBlockCategoryData: defaultCategories,
                 inboxData: DEFAULT_INBOX_DATA,
+                schemeData: { schemes: [] },
                 events: [],
                 executions: [],
             };
@@ -45,6 +46,7 @@ export default class ParrotPlanPlugin extends Plugin {
         const initialTemplateData = (savedData.dayTemplateData ?? { dayTemplates: [], dayProperties: [] }) as DayTemplateData;
         const initialCategoryData = (savedData.timeBlockCategoryData ?? defaultCategories) as TimeBlockCategoryData;
         const initialInboxData = (savedData.inboxData ?? DEFAULT_INBOX_DATA) as InboxData;
+        const initialSchemeData = (savedData.schemeData ?? { schemes: [] }) as RangeSchemeData;
 
         // 注册视图
         this.registerView(
@@ -53,6 +55,7 @@ export default class ParrotPlanPlugin extends Plugin {
                 (savedData.events ?? []) as EventBlock[],
                 (savedData.executions ?? []) as ExecutionRecord[],
                 initialInboxData,
+                initialSchemeData,
             )
         );
 

@@ -87,7 +87,6 @@ export const en: I18nMessages = {
     'rangeScheme.empty': 'No schemes, click + to add',
     'rangeScheme.noActive': 'No scheme selected',
     'rangeScheme.switchTo': 'Switch',
-    'rangeScheme.setDefault': 'Set default',
     'rangeScheme.isDefault': 'Default',
 
     // Category

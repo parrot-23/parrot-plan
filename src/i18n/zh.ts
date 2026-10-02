@@ -85,7 +85,6 @@ export const zh = {
     'rangeScheme.empty': '暂无方案，点右上角 + 新增',
     'rangeScheme.noActive': '未选择方案',
     'rangeScheme.switchTo': '切换',
-    'rangeScheme.setDefault': '设为默认',
     'rangeScheme.isDefault': '默认',
 
     // 分类
