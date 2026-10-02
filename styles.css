@@ -361,11 +361,13 @@
     overflow: hidden;
 }
 
-/* 单个全天格子 */
+/* 单个全天格子：任务方块从左到右、从上到下依次排布 */
 .all-day-cell {
     flex: 1;
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-content: flex-start;
     gap: 2px;
     padding: 2px;
     border-right: 1px solid var(--background-modifier-border);
@@ -377,7 +379,18 @@
     border-right: none;
 }
 
-/* 全天事件条目 */
+/* 全天事件条目：颜色小方块（用于全天行） */
+.all-day-square {
+    position: relative;
+    flex-shrink: 0;
+    width: 12px;
+    height: 12px;
+    border-radius: 3px;
+    background: var(--chip-color, #888888);
+    cursor: pointer;
+}
+
+/* 全天事件条目：带文字的清单条目（用于展开面板） */
 .all-day-chip {
     position: relative;
     font-size: 11px;
@@ -393,13 +406,20 @@
 /* 删除按钮 */
 .all-day-chip-del {
     position: absolute;
-    top: 0;
-    right: 2px;
-    font-size: 12px;
+    top: -4px;
+    right: -4px;
+    width: 12px;
+    height: 12px;
+    line-height: 10px;
+    text-align: center;
+    font-size: 11px;
     font-weight: bold;
-    color: var(--text-muted);
+    color: var(--text-on-accent);
+    background: #888;
+    border-radius: 50%;
     cursor: pointer;
     opacity: 0;
+    z-index: 2;
 }
 
 .all-day-chip:hover .all-day-chip-del {
@@ -407,7 +427,7 @@
 }
 
 .all-day-chip-del:hover {
-    color: var(--text-error);
+    background: var(--text-error);
 }
 
 

@@ -243,9 +243,9 @@ export class WeekScheduleView extends ItemView {
         for (let d = 1; d <= 7; d++) {
             const cell = cells.createDiv({ cls: 'all-day-cell' });
 
-            // 已有全天事件
+            // 已有全天事件（显示为颜色小方块）
             for (const ev of this.getAllDayEvents(d)) {
-                this.renderAllDayChip(cell, ev);
+                this.renderAllDaySquare(cell, ev);
             }
 
             // 点击格子添加全天事件
@@ -265,7 +265,7 @@ export class WeekScheduleView extends ItemView {
             toggleBtn.toggleClass('is-active', this.allDayPanelOpen);
         };
 
-        // 面板内容：7 列，分别显示当天安排在全天的所有任务
+        // 面板内容：7 列，分别显示当天安排在全天的所有任务（任务清单）
         const panelCells = panel.createDiv({ cls: 'all-day-panel-cells' });
         for (let d = 1; d <= 7; d++) {
             const cell = panelCells.createDiv({ cls: 'all-day-panel-cell' });
@@ -285,7 +285,18 @@ export class WeekScheduleView extends ItemView {
         return this.events.filter(ev => ev.day === day && ev.allDay && ev.weekKey === this.currentWeekKey);
     }
 
-    /** 渲染单个全天事件条目（含删除按钮） */
+    /** 渲染单个全天事件条目（颜色小方块，用于全天行；不可删除） */
+    private renderAllDaySquare(cell: HTMLElement, ev: EventBlock) {
+        const square = cell.createDiv({ cls: 'all-day-square' });
+        const cat = ev.categoryId
+            ? this.timeBlockCategoryData.categories.find(c => c.id === ev.categoryId)
+            : undefined;
+        square.setCssProps({ '--chip-color': cat?.color ?? '#888888' });
+        // 方块内不显示文字，用 title 提示任务名
+        square.setAttribute('title', ev.title);
+    }
+
+    /** 渲染单个全天事件条目（带文字的清单条目，用于展开面板） */
     private renderAllDayChip(cell: HTMLElement, ev: EventBlock) {
         const chip = cell.createDiv({ cls: 'all-day-chip' });
         const cat = ev.categoryId
