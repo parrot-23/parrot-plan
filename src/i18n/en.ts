@@ -32,6 +32,9 @@ export const en: I18nMessages = {
     'nav.achievement': 'Achievements',
     'nav.placeholder': 'This is the "{name}" page',
 
+    // Today view
+    'today.start': 'Start',
+
     // Year view
     'year.weekLabel': 'Week {week}',
     'year.monthLabel': '{month}',

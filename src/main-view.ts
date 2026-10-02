@@ -11,6 +11,7 @@ import {
     type ExecutionRecord,
 } from './week/week-schedule-view';
 import { YearView } from './views/year-view';
+import { TodayView } from './views/today-view';
 import { t } from './i18n';
 
 export const VIEW_TYPE_MAIN = 'parrot-plan-main-view';
@@ -35,6 +36,7 @@ export class MainView extends ItemView {
     plugin: Plugin;
     private weekView: WeekScheduleView;
     private yearView: YearView;
+    private todayView: TodayView;
     private activeTab: NavTab = 'week';
     private contentRoot!: HTMLElement;
 
@@ -73,6 +75,12 @@ export class MainView extends ItemView {
                 this.activeTab = 'week';
                 void this.renderContent();
             },
+        );
+        this.todayView = new TodayView(
+            this.app,
+            this.weekView.inboxData,
+            this.weekView.timeBlockCategoryData,
+            () => this.weekView.save(),
         );
     }
 
@@ -133,6 +141,11 @@ export class MainView extends ItemView {
             return;
         }
 
+        if (this.activeTab === 'today') {
+            await this.todayView.renderInto(this.contentRoot);
+            return;
+        }
+
         // 其余页面：占位
         const tab = NAV_TABS.find(t => t.id === this.activeTab)!;
         const placeholder = this.contentRoot.createDiv({ cls: 'parrot-plan-placeholder' });
@@ -140,6 +153,7 @@ export class MainView extends ItemView {
     }
 
     async onClose() {
+        this.todayView.destroy();
         this.containerEl.empty();
     }
 }

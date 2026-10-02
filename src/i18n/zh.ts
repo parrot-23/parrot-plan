@@ -30,6 +30,9 @@ export const zh = {
     'nav.achievement': '成就榜单',
     'nav.placeholder': '当前是「{name}」页面',
 
+    // 当日执行视图
+    'today.start': '开始执行',
+
     // 年视图
     'year.weekLabel': '第{week}周',
     'year.monthLabel': '{month}月',

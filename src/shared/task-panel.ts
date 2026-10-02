@@ -27,6 +27,8 @@ export interface InboxData {
     selectedId?: string;
     /** 已折叠的任务 id（其子任务不显示） */
     collapsedIds?: string[];
+    /** 是否只看本周目标（持久化） */
+    weekGoalOnly?: boolean;
 }
 
 export const DEFAULT_INBOX_DATA: InboxData = {
@@ -157,7 +159,7 @@ export function renderTaskPanel(
     onAdd: (item: InboxItem) => void | Promise<void>,
     onRefresh: () => void,
     onAction?: (action: string, item: InboxItem) => void | Promise<void>,
-    onUpdate?: (item: InboxItem) => void | Promise<void>,
+    onUpdate?: (item?: InboxItem) => void | Promise<void>,
     /** 当前周键（提供后显示「周目标」按钮，用于只看本周任务） */
     currentWeekKey?: string,
 ) {
@@ -165,8 +167,8 @@ export function renderTaskPanel(
     container.addClass('inbox-panel');
 
     let selectedId: string | null = null;
-    /** 是否只看本周目标 */
-    let weekGoalOnly = false;
+    /** 是否只看本周目标（持久化在 inboxData 中） */
+    let weekGoalOnly = inboxData.weekGoalOnly ?? false;
 
     // ===== 列表区域（可滚动）=====
     const listDiv = container.createDiv({ cls: 'inbox-list' });
@@ -344,10 +346,17 @@ export function renderTaskPanel(
             cls: 'inbox-week-goal-btn',
             text: t('inbox.weekGoal'),
         });
+        weekGoalBtn.toggleClass('is-active', weekGoalOnly);
         weekGoalBtn.onclick = () => {
             weekGoalOnly = !weekGoalOnly;
+            inboxData.weekGoalOnly = weekGoalOnly;
             weekGoalBtn.toggleClass('is-active', weekGoalOnly);
             renderList();
+            // 持久化状态
+            void (async () => {
+                if (onUpdate) await onUpdate();
+                onRefresh();
+            })();
         };
     }
 

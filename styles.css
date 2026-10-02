@@ -1185,6 +1185,78 @@
     border-left: 4px solid var(--task-color, #888888);
 }
 
+/* ===== 当日执行视图 ===== */
+.today-view {
+    display: flex;
+    flex-direction: row;
+    height: 100%;
+    flex: 1;
+    min-height: 0;
+}
+
+/* 左侧任务面板 */
+.today-task-panel {
+    flex-shrink: 0;
+    width: 250px;
+    height: 100%;
+    box-sizing: border-box;
+    overflow: hidden;
+    padding: 10px;
+    border-right: 1px solid var(--background-modifier-border);
+}
+
+/* 中间执行区 */
+.today-exec-panel {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+
+/* 开始执行按钮 */
+.today-start-btn {
+    padding: 12px 32px;
+    border-radius: 8px;
+    border: 1px solid var(--interactive-accent);
+    background: var(--interactive-accent);
+    color: var(--text-on-accent);
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.today-start-btn:hover {
+    background: var(--interactive-accent-hover);
+}
+
+/* 右侧当天时间轴 */
+.today-timeline-panel {
+    flex-shrink: 0;
+    width: 220px;
+    height: 100%;
+    box-sizing: border-box;
+    overflow-y: auto;
+    border-left: 1px solid var(--background-modifier-border);
+}
+
+.today-timeline {
+    display: flex;
+    flex-direction: row;
+}
+
+.today-time-column {
+    flex-shrink: 0;
+    width: 50px;
+    box-sizing: border-box;
+}
+
+.today-day-column {
+    flex: 1;
+    position: relative;
+}
+
 /* ===== 时间区间设置窗口 ===== */
 /* 直接撑开 Obsidian 弹窗容器，保证能容纳左侧图例 + 日历 */
 .modal:has(.range-scheme-modal) {
