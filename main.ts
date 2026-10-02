@@ -1,12 +1,13 @@
 import { App, Plugin, PluginSettingTab, Setting, type SettingDefinitionItem } from 'obsidian';
 
-import type { WeekRangeData } from './src/timeblock-data';
-import type { TimeBlockCategoryData } from './src/timeblock-category-manager';
-import type { DayTemplateData } from './src/template-manager';
+import type { WeekRangeData } from './src/week/timeblock-data';
+import type { TimeBlockCategoryData } from './src/week/timeblock-category-manager';
+import type { DayTemplateData } from './src/week/template-manager';
 
-import { DEFAULT_WEEK_RANGE } from './src/timeblock-data';
-import { VIEW_TYPE_WEEK, WeekScheduleView, type EventBlock, type ExecutionRecord } from './src/week-schedule-view';
-import { DEFAULT_INBOX_DATA, type InboxData } from './src/inbox-manager';
+import { DEFAULT_WEEK_RANGE } from './src/week/timeblock-data';
+import type { EventBlock, ExecutionRecord } from './src/week/week-schedule-view';
+import { DEFAULT_INBOX_DATA, type InboxData } from './src/week/inbox-manager';
+import { VIEW_TYPE_MAIN, MainView } from './src/main-view';
 import { initI18n, t } from './src/i18n';
 
 export default class ParrotPlanPlugin extends Plugin {
@@ -47,8 +48,8 @@ export default class ParrotPlanPlugin extends Plugin {
 
         // 注册视图
         this.registerView(
-            VIEW_TYPE_WEEK,
-            (leaf) => new WeekScheduleView(leaf, this, initialData, initialTemplateData, initialCategoryData,
+            VIEW_TYPE_MAIN,
+            (leaf) => new MainView(leaf, this, initialData, initialTemplateData, initialCategoryData,
                 (savedData.events ?? []) as EventBlock[],
                 (savedData.executions ?? []) as ExecutionRecord[],
                 initialInboxData,
@@ -58,10 +59,10 @@ export default class ParrotPlanPlugin extends Plugin {
         // Ribbon 图标
         this.addRibbonIcon('calendar-clock', t('ribbon.open'), async () => {
             const { workspace } = this.app;
-            let leaf = workspace.getLeavesOfType(VIEW_TYPE_WEEK)[0];
+            let leaf = workspace.getLeavesOfType(VIEW_TYPE_MAIN)[0];
             if (!leaf) {
                 leaf = workspace.getLeaf(false)!;
-                await leaf.setViewState({ type: VIEW_TYPE_WEEK });
+                await leaf.setViewState({ type: VIEW_TYPE_MAIN });
             }
             await workspace.revealLeaf(leaf);
         });
@@ -72,10 +73,10 @@ export default class ParrotPlanPlugin extends Plugin {
             name: t('command.open'),
             callback: async () => {
                 const { workspace } = this.app;
-                let leaf = workspace.getLeavesOfType(VIEW_TYPE_WEEK)[0];
+                let leaf = workspace.getLeavesOfType(VIEW_TYPE_MAIN)[0];
                 if (!leaf) {
                     leaf = workspace.getRightLeaf(false)!;
-                    await leaf.setViewState({ type: VIEW_TYPE_WEEK });
+                    await leaf.setViewState({ type: VIEW_TYPE_MAIN });
                 }
                 await workspace.revealLeaf(leaf);
             }
@@ -87,9 +88,9 @@ export default class ParrotPlanPlugin extends Plugin {
 
     onunload() {
         // 只保存数据，不 detach leaf（否则会打乱用户布局）
-        const leaves = this.app.workspace.getLeavesOfType(VIEW_TYPE_WEEK);
+        const leaves = this.app.workspace.getLeavesOfType(VIEW_TYPE_MAIN);
         for (const leaf of leaves) {
-            if (leaf.view instanceof WeekScheduleView) {
+            if (leaf.view instanceof MainView) {
                 void leaf.view.save();
             }
         }

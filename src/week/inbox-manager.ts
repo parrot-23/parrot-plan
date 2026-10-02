@@ -1,6 +1,6 @@
 import { App, Modal, Setting, Notice } from 'obsidian';
 import type { TimeBlockCategoryData } from './timeblock-category-manager';
-import { t } from './i18n';
+import { t } from '../i18n';
 
 export interface InboxItem {
     id: string;

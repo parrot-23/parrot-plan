@@ -28,6 +28,14 @@ export const en: I18nMessages = {
     'view.layer.event': 'Event Layer',
     'view.layer.execution': 'Execution Layer',
 
+    // Main navigation (tab button group)
+    'nav.year': 'Year',
+    'nav.week': 'Week Plan',
+    'nav.today': 'Today',
+    'nav.swimlane': 'Swimlane',
+    'nav.achievement': 'Achievements',
+    'nav.placeholder': 'This is the "{name}" page',
+
     // Command and ribbon
     'command.open': 'Open week schedule panel',
     'ribbon.open': 'Open week schedule',

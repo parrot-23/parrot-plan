@@ -26,6 +26,14 @@ export const zh = {
     'view.layer.event': '事件区块层',
     'view.layer.execution': '执行层',
 
+    // 主导航（tab 按钮组）
+    'nav.year': '年',
+    'nav.week': '周计划',
+    'nav.today': '当日执行',
+    'nav.swimlane': '泳道图',
+    'nav.achievement': '成就榜单',
+    'nav.placeholder': '当前是「{name}」页面',
+
     // 命令与功能区
     'command.open': '打开周日程面板',
     'ribbon.open': '打开周日程',

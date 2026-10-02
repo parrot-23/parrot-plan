@@ -9,7 +9,7 @@ import { renderTimeBlockCategoryLegend } from './timeblock-category-manager';
 import { renderDayTemplateRow, renderTemplatePanel } from './template-manager';
 import { renderInboxPanel, DEFAULT_INBOX_DATA, type InboxData } from './inbox-manager';
 import type { InboxItem } from './inbox-manager';
-import { t, getWeekDays } from './i18n';
+import { t, getWeekDays } from '../i18n';
 
 export const VIEW_TYPE_WEEK = 'week-schedule-view';
 
@@ -99,10 +99,17 @@ export class WeekScheduleView extends ItemView {
 
     async onOpen() {
         const content = this.containerEl.children[1] as HTMLElement;
-        content.empty();
-        content.addClass('week-schedule');
+        await this.renderInto(content);
+    }
 
-        const grid = content.createDiv({ cls: 'schedule-grid' });
+    /** 将周计划渲染到指定容器（供主视图复用） */
+    async renderInto(content: HTMLElement) {
+        content.empty();
+
+        // 在容器内部创建 .week-schedule 根节点，避免与宿主容器样式冲突
+        const root = content.createDiv({ cls: 'week-schedule' });
+
+        const grid = root.createDiv({ cls: 'schedule-grid' });
 
         // ===== 统一骨架（只创建一次）=====
         const headerRow = grid.createDiv({ cls: 'grid-header-row' });
@@ -166,7 +173,7 @@ export class WeekScheduleView extends ItemView {
                 break;
         }
 
-        this.renderToolbar(content);
+        this.renderToolbar(root);
     }
 
     async onClose() {
