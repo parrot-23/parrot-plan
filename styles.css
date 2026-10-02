@@ -1031,26 +1031,72 @@
     width: 100%;
 }
 
+/* 顶部年度切换栏 */
+.year-week-nav {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 10px;
+}
+
+.year-week-nav-btn {
+    padding: 2px 10px;
+    border-radius: 4px;
+    border: 1px solid var(--background-modifier-border);
+    background: var(--interactive-normal);
+    color: var(--text-normal);
+    cursor: pointer;
+    font-size: 14px;
+    line-height: 1.4;
+}
+
+.year-week-nav-btn:hover {
+    background: var(--interactive-hover);
+}
+
+.year-week-nav-year {
+    font-size: 15px;
+    font-weight: 600;
+    min-width: 48px;
+    text-align: center;
+}
+
+.year-week-nav-today {
+    font-size: 12px;
+}
+
+/* 每 3 个月一行，共 4 行 */
 .year-week-grid-inner {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
-    gap: 8px;
+    display: flex;
+    flex-direction: column;
+    border-top: 1px solid var(--background-modifier-border);
+    border-left: 1px solid var(--background-modifier-border);
+}
+
+.year-week-row {
+    display: flex;
 }
 
 .year-week-cell {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: 10px 6px;
-    border: 1px solid var(--background-modifier-border);
-    border-radius: 6px;
+    flex: 1;
+    min-width: 0;
+    position: relative;
+    /* 高度加大 3 倍（原 30px 上下内边距 → 90px） */
+    padding: 90px 6px;
+    border-right: 1px solid var(--background-modifier-border);
+    border-bottom: 1px solid var(--background-modifier-border);
     cursor: pointer;
     background: var(--background-secondary);
     transition: background 0.1s;
 }
 
-.year-week-cell:hover {
+/* 补齐占位格（无内容、不可点） */
+.year-week-cell.is-empty {
+    cursor: default;
+    background: transparent;
+}
+
+.year-week-cell:not(.is-empty):hover {
     background: var(--background-modifier-hover);
 }
 
@@ -1060,19 +1106,25 @@
     border-color: var(--interactive-accent);
 }
 
+/* 右上角：周数 */
 .year-week-cell-week {
+    position: absolute;
+    top: 4px;
+    right: 6px;
     font-size: 13px;
     font-weight: 600;
 }
 
+/* 左上角：月份（固定配色背景块） */
 .year-week-cell-month {
+    position: absolute;
+    top: 4px;
+    left: 6px;
     font-size: 11px;
-    color: var(--text-muted);
-    margin-top: 2px;
-}
-
-.year-week-cell.is-active .year-week-cell-month {
-    color: var(--text-on-accent);
+    color: #ffffff;
+    padding: 1px 6px;
+    border-radius: 3px;
+    background: var(--month-color, #888888);
 }
 
 /* ===== 时间区间设置窗口 ===== */

@@ -35,6 +35,7 @@ export const en: I18nMessages = {
     // Year view
     'year.weekLabel': 'Week {week}',
     'year.monthLabel': '{month}',
+    'year.thisYear': 'This year',
 
     // Command and ribbon
     'command.open': 'Open week schedule panel',

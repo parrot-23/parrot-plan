@@ -33,6 +33,7 @@ export const zh = {
     // 年视图
     'year.weekLabel': '第{week}周',
     'year.monthLabel': '{month}月',
+    'year.thisYear': '今年',
 
     // 命令与功能区
     'command.open': '打开周日程面板',

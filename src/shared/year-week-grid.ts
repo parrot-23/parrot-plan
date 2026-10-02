@@ -15,6 +15,22 @@ export interface YearWeekGridOptions {
     activeWeek?: number;
 }
 
+/** 12 个月的固定配色（同一月份始终同色） */
+const MONTH_COLORS = [
+    '#e57373', // 1 月
+    '#f06292', // 2 月
+    '#ba68c8', // 3 月
+    '#9575cd', // 4 月
+    '#7986cb', // 5 月
+    '#64b5f6', // 6 月
+    '#4fc3f7', // 7 月
+    '#4db6ac', // 8 月
+    '#81c784', // 9 月
+    '#aed581', // 10 月
+    '#ffb74d', // 11 月
+    '#a1887f', // 12 月
+];
+
 /** 计算某年第 N 周（ISO 周）所属的月份（1-12） */
 function weekToMonth(year: number, week: number): number {
     // ISO 第 1 周：包含 1 月 4 日的那一周
@@ -36,27 +52,83 @@ export function renderYearWeekGrid(
     container: HTMLElement,
     options: YearWeekGridOptions = {},
 ): void {
-    const year = options.year ?? new Date().getFullYear();
+    let year = options.year ?? new Date().getFullYear();
     const totalWeeks = 52;
 
     container.empty();
     container.addClass('year-week-grid');
 
+    // ===== 顶部：年度切换 =====
+    const nav = container.createDiv({ cls: 'year-week-nav' });
+
+    const prevBtn = nav.createEl('button', {
+        text: '‹',
+        cls: 'year-week-nav-btn',
+    });
+    prevBtn.onclick = () => {
+        year -= 1;
+        render();
+    };
+
+    const yearLabel = nav.createDiv({ cls: 'year-week-nav-year' });
+
+    const nextBtn = nav.createEl('button', {
+        text: '›',
+        cls: 'year-week-nav-btn',
+    });
+    nextBtn.onclick = () => {
+        year += 1;
+        render();
+    };
+
+    // 快速回到今年
+    const todayBtn = nav.createEl('button', {
+        text: t('year.thisYear'),
+        cls: 'year-week-nav-btn year-week-nav-today',
+    });
+    todayBtn.onclick = () => {
+        year = new Date().getFullYear();
+        render();
+    };
+
+    // ===== 网格容器（每 3 个月一行，共 4 行）=====
     const grid = container.createDiv({ cls: 'year-week-grid-inner' });
 
-    for (let week = 1; week <= totalWeeks; week++) {
-        const month = weekToMonth(year, week);
-        const cell = grid.createDiv({ cls: 'year-week-cell' });
+    function render() {
+        yearLabel.setText(String(year));
+        grid.empty();
 
-        if (options.activeWeek === week) {
-            cell.addClass('is-active');
+        // 每行 13 周（约 3 个月），共 4 行
+        const weeksPerRow = 13;
+        const rowCount = Math.ceil(totalWeeks / weeksPerRow);
+
+        for (let row = 0; row < rowCount; row++) {
+            const rowEl = grid.createDiv({ cls: 'year-week-row' });
+
+            for (let i = 0; i < weeksPerRow; i++) {
+                const week = row * weeksPerRow + i + 1;
+                if (week > totalWeeks) {
+                    // 补齐占位，保持列对齐
+                    rowEl.createDiv({ cls: 'year-week-cell is-empty' });
+                    continue;
+                }
+
+                const month = weekToMonth(year, week);
+                const cell = rowEl.createDiv({ cls: 'year-week-cell' });
+
+                if (options.activeWeek === week) {
+                    cell.addClass('is-active');
+                }
+
+                // 左上角：月份（带固定配色背景）；右上角：周数
+                const monthEl = cell.createDiv({ cls: 'year-week-cell-month', text: t('year.monthLabel', { month }) });
+                monthEl.setCssProps({ '--month-color': MONTH_COLORS[(month - 1) % 12] });
+                cell.createDiv({ cls: 'year-week-cell-week', text: t('year.weekLabel', { week }) });
+
+                cell.onclick = () => options.onWeekClick?.(week);
+            }
         }
-
-        // 第几周
-        cell.createDiv({ cls: 'year-week-cell-week', text: t('year.weekLabel', { week }) });
-        // 所属月份
-        cell.createDiv({ cls: 'year-week-cell-month', text: t('year.monthLabel', { month }) });
-
-        cell.onclick = () => options.onWeekClick?.(week);
     }
+
+    render();
 }
