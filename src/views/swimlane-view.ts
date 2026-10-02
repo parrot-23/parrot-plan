@@ -62,6 +62,12 @@ export class SwimlaneView {
 
         // ===== 右侧：泳道图 =====
         const board = container.createDiv({ cls: 'swimlane-board' });
+        // 鼠标滚轮左右滚动
+        board.addEventListener('wheel', (evt) => {
+            if (evt.deltaY === 0) return;
+            evt.preventDefault();
+            board.scrollLeft += evt.deltaY;
+        }, { passive: false });
         this.renderBoard(board);
     }
 
@@ -79,7 +85,7 @@ export class SwimlaneView {
         for (let w = 1; w <= totalWeeks; w++) {
             headerRow.createDiv({
                 cls: 'swimlane-header-cell',
-                text: t('year.weekLabel', { week: w }),
+                text: t('swimlane.weekLabel', { week: w }),
             });
         }
 

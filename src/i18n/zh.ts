@@ -38,6 +38,8 @@ export const zh = {
     'year.monthLabel': '{month}月',
     'year.thisYear': '今年',
     'year.assigned': '已将「{title}」分配到 {week}',
+    // 泳道图
+    'swimlane.weekLabel': 'W{week}',
     'year.unassigned': '已取消「{title}」在 {week} 的分配',
 
     // 命令与功能区

@@ -40,6 +40,8 @@ export const en: I18nMessages = {
     'year.monthLabel': '{month}',
     'year.thisYear': 'This year',
     'year.assigned': 'Assigned "{title}" to {week}',
+    // Swimlane
+    'swimlane.weekLabel': 'W{week}',
     'year.unassigned': 'Unassigned "{title}" from {week}',
 
     // Command and ribbon
