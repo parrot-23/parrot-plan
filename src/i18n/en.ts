@@ -139,6 +139,8 @@ export const en: I18nMessages = {
     'inbox.descPlaceholder': 'Additional notes (optional)',
     'inbox.nameRequired': 'Name cannot be empty',
     'inbox.setCategory': 'Set category',
+    'inbox.category': 'Category',
+    'inbox.detail': 'Details',
     'inbox.delete': 'Delete',
     'inbox.deleteConfirm': 'Delete task "{title}"?',
     'inbox.empty': 'Inbox is empty, click + to add',

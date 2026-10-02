@@ -137,6 +137,8 @@ export const zh = {
     'inbox.descPlaceholder': '补充说明（可选）',
     'inbox.nameRequired': '名称不能为空',
     'inbox.setCategory': '设置分类',
+    'inbox.category': '分类',
+    'inbox.detail': '详情',
     'inbox.delete': '删除',
     'inbox.deleteConfirm': '确定删除任务「{title}」？',
     'inbox.empty': '收集盒为空，点击 + 添加',

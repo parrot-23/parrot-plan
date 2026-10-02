@@ -87,10 +87,13 @@ function collectDescendantIds(inboxData: InboxData, id: string): string[] {
 class InboxAddModal extends Modal {
     private title: string = '';
     private description: string = '';
+    private categoryId: string = '';
 
     constructor(
         app: App,
         private onSubmit: (item: InboxItem) => void,
+        /** 分类数据（用于新建时直接选择分类） */
+        private categoryData: TimeBlockCategoryData,
         /** 父任务标题（添加子任务时显示） */
         private parentTitle?: string,
     ) {
@@ -122,6 +125,17 @@ class InboxAddModal extends Modal {
             });
 
         new Setting(contentEl)
+            .setName(t('inbox.category'))
+            .addDropdown(drop => {
+                drop.addOption('', t('inbox.noCategory'));
+                for (const cat of this.categoryData.categories) {
+                    drop.addOption(cat.id, cat.label);
+                }
+                drop.setValue(this.categoryId)
+                    .onChange(val => this.categoryId = val);
+            });
+
+        new Setting(contentEl)
             .addButton(btn => btn
                 .setButtonText(t('common.add'))
                 .setCta()
@@ -143,6 +157,7 @@ class InboxAddModal extends Modal {
             id: `inbox_${Date.now()}`,
             title: this.title.trim(),
             description: this.description.trim(),
+            categoryId: this.categoryId || undefined,
             createdAt: Date.now(),
         };
         this.onSubmit(item);
@@ -172,7 +187,6 @@ export function renderTaskPanel(
     container.empty();
     container.addClass('inbox-panel');
 
-    let selectedId: string | null = null;
     /** 是否只看本周目标（持久化在 inboxData 中） */
     let weekGoalOnly = inboxData.weekGoalOnly ?? false;
     /** 是否只看当日目标（持久化在 inboxData 中） */
@@ -185,7 +199,7 @@ export function renderTaskPanel(
     const toolbar = container.createDiv({ cls: 'inbox-toolbar' });
 
     const actions: { id: string; label: string; icon: string }[] = [
-        { id: 'set-category', label: t('inbox.setCategory'), icon: '🏷️' },
+        { id: 'detail', label: t('inbox.detail'), icon: '📄' },
         { id: 'delete', label: t('inbox.delete'), icon: '🗑️' },
     ];
 
@@ -197,18 +211,19 @@ export function renderTaskPanel(
         btn.createSpan({ cls: 'inbox-toolbar-icon', text: action.icon });
         btn.createSpan({ cls: 'inbox-toolbar-label', text: action.label });
         btn.onclick = () => {
-            if (!selectedId) return;
-            const item = inboxData.items.find(i => i.id === selectedId);
+            if (!inboxData.selectedId) return;
+            const item = inboxData.items.find(i => i.id === inboxData.selectedId);
             if (!item) return;
 
-            if (action.id === 'set-category') {
-                // 弹窗选分类
-                new CategorySelectModal(app, categoryData, item.categoryId, (catId) => {
-                    item.categoryId = catId || undefined;
-                    void (async () => {
-                        if (onUpdate) await onUpdate(item);
-                        renderList();
-                    })();
+            if (action.id === 'detail') {
+                // 查看/编辑任务详情
+                new InboxDetailModal(app, item, categoryData, async (updated) => {
+                    item.title = updated.title;
+                    item.description = updated.description;
+                    item.categoryId = updated.categoryId;
+                    if (onUpdate) await onUpdate(item);
+                    renderList();
+                    onRefresh();
                 }).open();
             } else if (action.id === 'delete') {
                 // 从收集盒移除（不再显示，但数据保留，可查历史）
@@ -222,7 +237,6 @@ export function renderTaskPanel(
                     if (inboxData.selectedId && ids.includes(inboxData.selectedId)) {
                         inboxData.selectedId = undefined;
                     }
-                    selectedId = null;
                     if (onUpdate) await onUpdate(item);
                     renderList();
                     updateToolbar();
@@ -294,13 +308,12 @@ export function renderTaskPanel(
                 .setText(item.description);
         }
 
-        // 点击选中/取消
-        itemEl.onclick = () => {
-            if (selectedId === item.id) {
-                selectedId = null;
+        // 点击选中/取消（以 inboxData.selectedId 为准，避免宿主刷新后本地状态失效）
+        itemEl.onclick = (e) => {
+            e.stopPropagation();
+            if (inboxData.selectedId === item.id) {
                 inboxData.selectedId = undefined;
             } else {
-                selectedId = item.id;
                 inboxData.selectedId = item.id;
             }
             // 重新渲染列表高亮
@@ -353,6 +366,15 @@ export function renderTaskPanel(
     renderList();
     updateToolbar();
 
+    // 点击面板空白处取消选中（任务项自身已 stopPropagation）
+    container.onclick = () => {
+        if (!inboxData.selectedId) return;
+        inboxData.selectedId = undefined;
+        renderList();
+        updateToolbar();
+        onRefresh();
+    };
+
     // ===== 标题栏 + 添加按钮（放底部或顶部都行，这里放顶部）=====
     const header = container.createDiv({ cls: 'inbox-header' });
     header.createSpan({ text: t('inbox.title'), cls: 'inbox-title' });
@@ -402,8 +424,8 @@ export function renderTaskPanel(
     const addBtn = headerActions.createEl('button', { cls: 'inbox-add-btn', text: '+' });
     addBtn.onclick = () => {
         // 选中某个任务时，+ 添加为其子任务
-        const parent = selectedId
-            ? inboxData.items.find(i => i.id === selectedId && !i.removed)
+        const parent = inboxData.selectedId
+            ? inboxData.items.find(i => i.id === inboxData.selectedId && !i.removed)
             : undefined;
 
         // 限制最大嵌套层数
@@ -423,13 +445,12 @@ export function renderTaskPanel(
             inboxData.items.push(item);
             void (async () => {
                 await onAdd(item);
-                selectedId = null;  // 添加后清除选中
-                inboxData.selectedId = undefined;
+                inboxData.selectedId = undefined;  // 添加后清除选中
                 renderList();
                 updateToolbar();
                 onRefresh();
             })();
-        }, parent?.title).open();
+        }, categoryData, parent?.title).open();
     };
 
     // 把 header 移到最前面（DOM 顺序：header → list → toolbar）
@@ -477,52 +498,81 @@ class ConfirmDeleteInboxModal extends Modal {
     }
 }
 
-// ===== 设置分类选择弹窗 =====
-class CategorySelectModal extends Modal {
+// ===== 任务详情弹窗（查看/编辑标题、描述、分类）=====
+class InboxDetailModal extends Modal {
+    private title: string;
+    private description: string;
+    private categoryId: string;
+
     constructor(
         app: App,
-        private categories: TimeBlockCategoryData,
-        private currentCategoryId: string | undefined,
-        private onSelect: (categoryId: string) => void,
+        private item: InboxItem,
+        private categoryData: TimeBlockCategoryData,
+        private onSave: (updated: { title: string; description: string; categoryId?: string }) => void | Promise<void>,
     ) {
         super(app);
+        this.title = item.title;
+        this.description = item.description;
+        this.categoryId = item.categoryId ?? '';
     }
 
     onOpen() {
         const { contentEl } = this;
         contentEl.empty();
-        contentEl.createEl('h3', { text: t('inbox.selectCategory') });
+        contentEl.createEl('h3', { text: t('inbox.detail') });
 
-        // 清除分类
         new Setting(contentEl)
-            .setName(t('inbox.noCategory'))
+            .setName(t('inbox.name'))
+            .addText(text => {
+                text.setPlaceholder(t('inbox.namePlaceholder'))
+                    .setValue(this.title)
+                    .onChange(val => this.title = val);
+            });
+
+        new Setting(contentEl)
+            .setName(t('inbox.desc'))
+            .addTextArea(text => {
+                text.setPlaceholder(t('inbox.descPlaceholder'))
+                    .setValue(this.description)
+                    .onChange(val => this.description = val);
+            });
+
+        new Setting(contentEl)
+            .setName(t('inbox.category'))
+            .addDropdown(drop => {
+                drop.addOption('', t('inbox.noCategory'));
+                for (const cat of this.categoryData.categories) {
+                    drop.addOption(cat.id, cat.label);
+                }
+                drop.setValue(this.categoryId)
+                    .onChange(val => this.categoryId = val);
+            });
+
+        new Setting(contentEl)
             .addButton(btn => btn
-                .setButtonText(t('common.clear'))
-                .onClick(() => {
-                    this.onSelect('');
-                    this.close();
-                })
+                .setButtonText(t('common.save'))
+                .setCta()
+                .onClick(() => this.submit())
+            )
+            .addButton(btn => btn
+                .setButtonText(t('common.cancel'))
+                .onClick(() => this.close())
             );
+    }
 
-        // 每个分类
-        for (const cat of this.categories.categories) {
-            const setting = new Setting(contentEl).setName(cat.label);
-
-            const dot = setting.nameEl.createSpan({ cls: 'inbox-category-dot-lg' });
-            dot.setCssProps({ '--dot-color': cat.color });
-
-            setting.addButton(btn => btn
-                .setButtonText(t('common.select'))
-                .onClick(() => {
-                    this.onSelect(cat.id);
-                    this.close();
-                })
-            );
-
-            if (cat.id === this.currentCategoryId) {
-                setting.settingEl.addClass('is-selected');
-            }
+    private submit() {
+        if (!this.title.trim()) {
+            new Notice(t('inbox.nameRequired'));
+            return;
         }
+        void (async () => {
+            await this.onSave({
+                title: this.title.trim(),
+                description: this.description.trim(),
+                categoryId: this.categoryId || undefined,
+            });
+            this.close();
+        })();
     }
 
     onClose() {
