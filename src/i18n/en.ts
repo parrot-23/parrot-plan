@@ -83,6 +83,7 @@ export const en: I18nMessages = {
     'allday.label': 'All day',
     'allday.needSelect': 'Please select a task in the inbox first',
     'allday.added': 'Added all-day event "{title}"',
+    'allday.empty': 'None',
 
     // Event layer
     'event.scheduled': 'Scheduled "{title}"',

@@ -268,8 +268,9 @@
 .all-day-row {
     display: flex;
     flex-shrink: 0;
-    min-height: 28px;
+    height: 28px;
     border-bottom: 1px solid var(--background-modifier-border);
+    position: relative;
 }
 
 /* 左侧占位（与时间轴对齐） */
@@ -306,10 +307,10 @@
     color: var(--text-on-accent);
 }
 
-/* 全天展开面板：绝对定位覆盖在日历上方，不改变日历位置 */
+/* 全天展开面板：从全天行向下展开，绝对定位覆盖在日历上方，不改变日历位置 */
 .all-day-panel {
     position: absolute;
-    top: 0;
+    top: 100%;
     left: 0;
     right: 0;
     height: 0;
@@ -326,10 +327,38 @@
     overflow-y: auto;
 }
 
+/* 面板内容：7 列，与日历日期列对齐（左侧留出时间轴宽度） */
+.all-day-panel-cells {
+    display: flex;
+    padding-left: 50px;
+    box-sizing: border-box;
+    min-height: 100%;
+}
+
+.all-day-panel-cell {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 4px;
+    border-right: 1px solid var(--background-modifier-border);
+}
+
+.all-day-panel-cell:last-child {
+    border-right: none;
+}
+
+.all-day-panel-empty {
+    font-size: 11px;
+    color: var(--text-faint);
+    font-style: italic;
+}
+
 /* 7 天格子容器 */
 .all-day-cells {
     flex: 1;
     display: flex;
+    overflow: hidden;
 }
 
 /* 单个全天格子 */
@@ -341,6 +370,7 @@
     padding: 2px;
     border-right: 1px solid var(--background-modifier-border);
     min-height: 24px;
+    overflow: hidden;
 }
 
 .all-day-cell:last-child {

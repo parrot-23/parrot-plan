@@ -244,24 +244,8 @@ export class WeekScheduleView extends ItemView {
             const cell = cells.createDiv({ cls: 'all-day-cell' });
 
             // 已有全天事件
-            const dayAllDay = this.events.filter(ev => ev.day === d && ev.allDay && ev.weekKey === this.currentWeekKey);
-            for (const ev of dayAllDay) {
-                const chip = cell.createDiv({ cls: 'all-day-chip' });
-                const cat = ev.categoryId
-                    ? this.timeBlockCategoryData.categories.find(c => c.id === ev.categoryId)
-                    : undefined;
-                chip.setCssProps({ '--chip-color': cat?.color ?? '#888888' });
-                chip.setText(ev.title);
-
-                // 可删除
-                const delBtn = chip.createDiv({ cls: 'all-day-chip-del' });
-                delBtn.setText('×');
-                delBtn.onclick = async (e) => {
-                    e.stopPropagation();
-                    this.events = this.events.filter(x => x.id !== ev.id);
-                    await this.save();
-                    await this.onOpen();
-                };
+            for (const ev of this.getAllDayEvents(d)) {
+                this.renderAllDayChip(cell, ev);
             }
 
             // 点击格子添加全天事件
@@ -271,14 +255,53 @@ export class WeekScheduleView extends ItemView {
             };
         }
 
-        // ===== 展开面板：覆盖在日历上方，不改变日历位置 =====
-        const panel = grid.createDiv({ cls: 'all-day-panel' });
+        // ===== 展开面板：从全天行向下展开，覆盖在日历上方，不改变日历位置 =====
+        const panel = row.createDiv({ cls: 'all-day-panel' });
         panel.toggleClass('is-open', this.allDayPanelOpen);
         toggleBtn.toggleClass('is-active', this.allDayPanelOpen);
         toggleBtn.onclick = () => {
             this.allDayPanelOpen = !this.allDayPanelOpen;
             panel.toggleClass('is-open', this.allDayPanelOpen);
             toggleBtn.toggleClass('is-active', this.allDayPanelOpen);
+        };
+
+        // 面板内容：7 列，分别显示当天安排在全天的所有任务
+        const panelCells = panel.createDiv({ cls: 'all-day-panel-cells' });
+        for (let d = 1; d <= 7; d++) {
+            const cell = panelCells.createDiv({ cls: 'all-day-panel-cell' });
+            const dayEvents = this.getAllDayEvents(d);
+            if (dayEvents.length === 0) {
+                cell.createDiv({ cls: 'all-day-panel-empty', text: t('allday.empty') });
+                continue;
+            }
+            for (const ev of dayEvents) {
+                this.renderAllDayChip(cell, ev);
+            }
+        }
+    }
+
+    /** 某天在当前周的全天事件 */
+    private getAllDayEvents(day: number): EventBlock[] {
+        return this.events.filter(ev => ev.day === day && ev.allDay && ev.weekKey === this.currentWeekKey);
+    }
+
+    /** 渲染单个全天事件条目（含删除按钮） */
+    private renderAllDayChip(cell: HTMLElement, ev: EventBlock) {
+        const chip = cell.createDiv({ cls: 'all-day-chip' });
+        const cat = ev.categoryId
+            ? this.timeBlockCategoryData.categories.find(c => c.id === ev.categoryId)
+            : undefined;
+        chip.setCssProps({ '--chip-color': cat?.color ?? '#888888' });
+        chip.setText(ev.title);
+
+        // 可删除
+        const delBtn = chip.createDiv({ cls: 'all-day-chip-del' });
+        delBtn.setText('×');
+        delBtn.onclick = async (e) => {
+            e.stopPropagation();
+            this.events = this.events.filter(x => x.id !== ev.id);
+            await this.save();
+            await this.onOpen();
         };
     }
 

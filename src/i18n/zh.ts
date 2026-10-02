@@ -81,6 +81,7 @@ export const zh = {
     'allday.label': '全天',
     'allday.needSelect': '请先在收集盒中选中一个任务',
     'allday.added': '已添加全天事件"{title}"',
+    'allday.empty': '暂无',
 
     // 事件层
     'event.scheduled': '已排入"{title}"',
