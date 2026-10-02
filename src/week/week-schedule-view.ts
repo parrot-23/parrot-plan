@@ -12,13 +12,10 @@ import { renderTaskPanel, DEFAULT_INBOX_DATA, type InboxData } from '../shared/t
 import type { InboxItem } from '../shared/task-panel';
 import { renderWeekGrid } from '../shared/week-grid';
 import { RangeSchemeModal } from './range-scheme-modal';
-import { t, getWeekDays } from '../i18n';
+import { t } from '../i18n';
 
 export const VIEW_TYPE_WEEK = 'week-schedule-view';
 
-
-// 定义层级。
-type EditLayer = 'time-range' | 'event' | 'execution';
 
 export interface EventBlock {
     id: string;
@@ -48,7 +45,6 @@ export interface ExecutionRecord {
 
 
 export class WeekScheduleView extends ItemView {
-    activeLayer: EditLayer = 'time-range';
     plugin: Plugin;
     rangeData: WeekRangeData;
     // 日模板数据。
@@ -62,14 +58,9 @@ export class WeekScheduleView extends ItemView {
     events: EventBlock[] = [];
     executions: ExecutionRecord[] = [];
     inboxData: InboxData = DEFAULT_INBOX_DATA;
-    /** 图例中选中的分类（新建时间区块时的默认分类） */
-    selectedCategoryId?: string;
+    /** 被主视图复用时的宿主容器（用于刷新） */
+    private hostContainer?: HTMLElement;
 
-    private readonly layers: { value: EditLayer; label: string; disabled: boolean }[] = [
-        { value: 'time-range', label: t('view.layer.timeRange'), disabled: false },
-        { value: 'event', label: t('view.layer.event'), disabled: false },
-        { value: 'execution', label: t('view.layer.execution'), disabled: false },
-    ];
     // Obsidian 旧 API：ItemView 构造函数只接受 leaf
     constructor(leaf: WorkspaceLeaf, plugin: Plugin, data: WeekRangeData, templateData: DayTemplateData, categoryData: TimeBlockCategoryData,
         events?: EventBlock[],
@@ -106,12 +97,14 @@ export class WeekScheduleView extends ItemView {
     getDisplayText(): string { return t('view.title'); }
 
     async onOpen() {
-        const content = this.containerEl.children[1] as HTMLElement;
+        // 若已被主视图渲染到指定容器，则刷新该容器；否则用自身视图容器
+        const content = this.hostContainer ?? (this.containerEl.children[1] as HTMLElement);
         await this.renderInto(content);
     }
 
     /** 将周计划渲染到指定容器（供主视图复用） */
     async renderInto(content: HTMLElement) {
+        this.hostContainer = content;
         content.empty();
 
         // 在容器内部创建 .week-schedule 根节点，避免与宿主容器样式冲突
@@ -120,10 +113,8 @@ export class WeekScheduleView extends ItemView {
         // ===== 周网格骨架（公共组件）=====
         const { grid, headerRow, bodyRowInner } = renderWeekGrid(root, {
             onHeaderClick: (d) => {
-                // 事件层：点击星期表头添加全天事件
-                if (this.activeLayer === 'event') {
-                    void this.addAllDayEvent(d);
-                }
+                // 点击星期表头添加全天事件
+                void this.addAllDayEvent(d);
             },
         });
 
@@ -133,30 +124,16 @@ export class WeekScheduleView extends ItemView {
             this.dayTemplateData.dayProperties,
             this.dayTemplateData.dayTemplates,
             (day) => {
-                // 事件层：点击模板行单元格添加全天事件
-                if (this.activeLayer === 'event') {
-                    void this.addAllDayEvent(day);
-                }
+                // 点击模板行单元格添加全天事件
+                void this.addAllDayEvent(day);
             }
         );
 
-        // ===== 全天事件行（事件层 / 执行层显示）=====
-        if (this.activeLayer === 'event' || this.activeLayer === 'execution') {
-            this.renderAllDayRow(grid);
-        }
+        // ===== 全天事件行 =====
+        this.renderAllDayRow(grid);
 
-        // ===== 层级分支（传已创建好的容器）=====
-        switch (this.activeLayer) {
-            case 'time-range':
-                this.renderTimeRangeLayer(bodyRowInner);
-                break;
-            case 'event':
-                this.renderEventLayer(bodyRowInner);
-                break;
-            case 'execution':
-                this.renderExecutionLayer(bodyRowInner);
-                break;
-        }
+        // ===== 事件层 =====
+        this.renderEventLayer(bodyRowInner);
 
         this.renderToolbar(root);
     }
@@ -166,80 +143,6 @@ export class WeekScheduleView extends ItemView {
         content.empty();
     }
    
-    // ===== 时间区块层（原逻辑完整搬入）=====
-    private renderTimeRangeLayer(bodyRowInner: HTMLElement) {
-
-        const cols = bodyRowInner.querySelectorAll('.day-column');
-        for (let d = 1; d <= 7; d++) {
-            const col = cols[d - 1] as HTMLElement;
-
-            // 点击空白 → 新建时间区块
-            col.onclick = (e) => {
-                if (this.activeLayer !== 'time-range') return;
-                const target = e.target as HTMLElement;
-                if (!target.classList.contains('day-column') && !target.classList.contains('hour-cell')) return;
-                const rect = col.getBoundingClientRect();
-                const y = e.clientY - rect.top;
-                const startMinutes = Math.floor((y / 80) * 120 / 30) * 30;
-                new RangeEditModal(this.app, startMinutes, (start, end, sort) => {
-                    let dayData = this.rangeData.days.find(day => day.day === d);
-                    if (!dayData) {
-                        dayData = { day: d, ranges: [] };
-                        this.rangeData.days.push(dayData);
-                    }
-                    const id = `r_${Date.now()}`;
-                    dayData.ranges.push({ id, start, end, sort });
-                    void (async () => {
-                        await this.save();
-                        await this.onOpen();
-                    })();
-                }, this.timeBlockCategoryData, undefined, this.selectedCategoryId).open();
-            };
-
-            // 已有色块
-            const dayData = this.rangeData.days.find(day => day.day === d);
-            const dayRanges = dayData?.ranges ?? [];
-            for (const range of dayRanges) {
-                const block = col.createDiv({ cls: 'range-block range-block-fill' });
-                const cat = this.timeBlockCategoryData.categories.find(c => c.id === range.sort);
-                const rawColor = cat?.color ?? '#888888';
-
-                const top = (range.start / 120) * 80;
-                const height = ((range.end - range.start) / 120) * 80;
-                block.setCssProps({
-                    '--range-color': rawColor,
-                    '--range-bg': this.hexToTransparent(rawColor, 0.1),
-                    '--range-top': `${top}px`,
-                    '--range-height': `${height}px`,
-                });
-
-                block.onclick = (e) => {
-                    e.stopPropagation();
-                    if (this.activeLayer !== 'time-range') return;
-                    new RangeEditModal(this.app, 0, (start, end, sort) => {
-                        range.start = start;
-                        range.end = end;
-                        range.sort = sort;
-                        void (async () => {
-                            await this.save();
-                            await this.onOpen();
-                        })();
-                    }, this.timeBlockCategoryData, range).open();
-                };
-
-                const delBtn = block.createDiv({ cls: 'range-delete-btn' });
-                delBtn.setText('×');
-                delBtn.onclick = async (e) => {
-                    e.stopPropagation();
-                    if (this.activeLayer !== 'time-range') return;
-                    dayData!.ranges = dayData!.ranges.filter(r => r.id !== range.id);
-                    await this.save();
-                    await this.onOpen();
-                };
-            }
-        }
-    }
-
     // ===== 全天事件行 =====
     private renderAllDayRow(grid: HTMLElement) {
         const row = grid.createDiv({ cls: 'all-day-row' });
@@ -261,26 +164,22 @@ export class WeekScheduleView extends ItemView {
                 chip.setCssProps({ '--chip-color': cat?.color ?? '#888888' });
                 chip.setText(ev.title);
 
-                // 事件层：可删除
-                if (this.activeLayer === 'event') {
-                    const delBtn = chip.createDiv({ cls: 'all-day-chip-del' });
-                    delBtn.setText('×');
-                    delBtn.onclick = async (e) => {
-                        e.stopPropagation();
-                        this.events = this.events.filter(x => x.id !== ev.id);
-                        await this.save();
-                        await this.onOpen();
-                    };
-                }
-            }
-
-            // 事件层：点击格子添加全天事件
-            if (this.activeLayer === 'event') {
-                cell.onclick = (e) => {
-                    if ((e.target as HTMLElement).closest('.all-day-chip-del')) return;
-                    void this.addAllDayEvent(d);
+                // 可删除
+                const delBtn = chip.createDiv({ cls: 'all-day-chip-del' });
+                delBtn.setText('×');
+                delBtn.onclick = async (e) => {
+                    e.stopPropagation();
+                    this.events = this.events.filter(x => x.id !== ev.id);
+                    await this.save();
+                    await this.onOpen();
                 };
             }
+
+            // 点击格子添加全天事件
+            cell.onclick = (e) => {
+                if ((e.target as HTMLElement).closest('.all-day-chip-del')) return;
+                void this.addAllDayEvent(d);
+            };
         }
     }
 
@@ -313,8 +212,8 @@ export class WeekScheduleView extends ItemView {
         for (let d = 1; d <= 7; d++) {
             const col = cols[d - 1] as HTMLElement;
 
-            // ===== 新增：渲染只读时间区块背景 =====
-            const dayData = this.rangeData.days.find(day => day.day === d);
+            // ===== 渲染只读时间区块背景（当前激活方案）=====
+            const dayData = this.getActiveDays().find(day => day.day === d);
             const dayRanges = dayData?.ranges ?? [];
             for (const range of dayRanges) {
                 const bgBlock = col.createDiv({ cls: 'range-block range-bg' });
@@ -333,7 +232,6 @@ export class WeekScheduleView extends ItemView {
 
             // 点击空白 → 新建事件（后续接弹窗）
             col.onclick = async (e) => {
-                if (this.activeLayer !== 'event') return;
                 const target = e.target as HTMLElement;
                 if (target.closest('.event-card')) return;
 
@@ -424,6 +322,9 @@ export class WeekScheduleView extends ItemView {
                 };
             }
         }
+
+        // 当前时间红线（仅当天列）
+        this.renderCurrentTimeLine(bodyRowInner);
     }
 
     // ===== 公共：事件卡片（仅定位 + 基础外观）=====
@@ -435,134 +336,6 @@ export class WeekScheduleView extends ItemView {
         });
         card.setText(title ?? ev.title);
         return card;
-    }
-
-    // ===== 执行层 =====
-    private renderExecutionLayer(bodyRowInner: HTMLElement) {
-        const now = new Date();
-        const currentDay = (now.getDay() + 6) % 7 + 1;
-        const currentMinutes = now.getHours() * 60 + now.getMinutes();
-
-        const cols = bodyRowInner.querySelectorAll('.day-column');
-        for (let d = 1; d <= 7; d++) {
-            const col = cols[d - 1] as HTMLElement;
-
-            // 只读时间区块背景
-            const dayData = this.rangeData.days.find(day => day.day === d);
-            const dayRanges = dayData?.ranges ?? [];
-            for (const range of dayRanges) {
-                const bgBlock = col.createDiv({ cls: 'range-block range-bg' });
-                const cat = this.timeBlockCategoryData.categories.find(c => c.id === range.sort);
-                const rawColor = cat?.color ?? '#888888';
-                const afColor = this.hexToTransparent(rawColor, 0.5);
-                bgBlock.setCssProps({
-                    '--range-color': afColor,
-                    '--range-top': `${(range.start / 120) * 80}px`,
-                    '--range-height': `${((range.end - range.start) / 120) * 80}px`,
-                });
-            }
-
-            // 事件卡片（只读展示，排除全天事件）
-            const dayEvents = this.events.filter(ev => ev.day === d && !ev.allDay);
-            for (const ev of dayEvents) {
-                // 执行记录：该计划事件对应的实际执行
-                const record = this.executions.find(ex => ex.eventId === ev.id);
-                // 实际执行的任务（有记录则用记录里的任务，否则用计划任务）
-                const actualInboxId = record?.inboxId ?? ev.inboxId;
-                const actualTask = actualInboxId
-                    ? this.inboxData.items.find(i => i.id === actualInboxId)
-                    : undefined;
-                const displayTitle = actualTask?.title ?? ev.title;
-                const displayCategoryId = actualTask?.categoryId ?? ev.categoryId;
-
-                const card = this.createEventCard(col, ev, displayTitle);
-
-                // 颜色区分：本周已过的时间点用彩色，未过的用灰色
-                const isPast = d < currentDay || (d === currentDay && ev.end <= currentMinutes);
-                if (isPast) {
-                    const cat = displayCategoryId
-                        ? this.timeBlockCategoryData.categories.find(c => c.id === displayCategoryId)
-                        : undefined;
-                    const rawColor = cat?.color ?? '#888888';
-                    card.setCssProps({
-                        '--card-color': rawColor,
-                        '--card-bg': this.hexToTransparent(rawColor, 0.15),
-                    });
-                } else {
-                    card.addClass('event-card-pending');
-                }
-
-                // 当天已过的时间点：未处理则显示 ! 标识（纯状态展示，处理走信息面板）
-                const isToday = d === currentDay;
-                const isHandled = !!record;
-                if (isToday && isPast && !isHandled) {
-                    const mark = card.createDiv({ cls: 'event-confirm-mark' });
-                    mark.setText('!');
-                }
-
-                // 点击卡片 → 打开信息面板
-                card.addClass('event-card-clickable');
-                card.onclick = (e) => {
-                    e.stopPropagation();
-                    // 任务记录：同一来源任务（inboxId）在所有时间点的执行记录
-                    const taskRecords = ev.inboxId
-                        ? this.executions.filter(ex => ex.inboxId === ev.inboxId)
-                        : this.executions.filter(ex => ex.eventId === ev.id);
-                    new ExecutionInfoModal(
-                        this.app,
-                        ev,
-                        taskRecords,
-                        isHandled,
-                        this.inboxData.items,
-                        displayTitle,
-                        async (action, note, changedTask) => {
-                            if (action === 'confirm') {
-                                // 一个计划事件只能确认一次
-                                if (this.executions.some(ex => ex.eventId === ev.id)) return;
-                                this.executions.push({
-                                    id: `ex_${Date.now()}`,
-                                    eventId: ev.id,
-                                    inboxId: ev.inboxId,
-                                    day: ev.day,
-                                    start: ev.start,
-                                    end: ev.end,
-                                    note,
-                                });
-                            } else if (action === 'change' && changedTask) {
-                                // 变更执行：实际做的是另一个任务（不改计划层）
-                                let inboxId = changedTask.inboxId;
-                                // 手动新任务：加入收集盒，拿到真实 id
-                                if (!inboxId) {
-                                    const newItem: InboxItem = {
-                                        id: `inbox_${Date.now()}`,
-                                        title: changedTask.title,
-                                        description: '',
-                                        createdAt: Date.now(),
-                                    };
-                                    this.inboxData.items.unshift(newItem);
-                                    inboxId = newItem.id;
-                                }
-                                // 执行记录：eventId 关联计划事件，inboxId 记录实际任务
-                                this.executions.push({
-                                    id: `ex_${Date.now()}`,
-                                    eventId: ev.id,
-                                    inboxId,
-                                    day: ev.day,
-                                    start: ev.start,
-                                    end: ev.end,
-                                    note,
-                                });
-                            }
-                            await this.save();
-                            await this.onOpen();
-                        }
-                    ).open();
-                };
-            }
-        }
-
-        // 当前时间红线（仅当天列）
-        this.renderCurrentTimeLine(bodyRowInner);
     }
 
     // ===== 当前时间红线 =====
@@ -589,20 +362,6 @@ export class WeekScheduleView extends ItemView {
     private renderToolbar(content: HTMLElement) {
         const toolbar = content.createDiv({ cls: 'schedule-toolbar' });
 
-        // 层级选择
-        const layerBar = toolbar.createDiv({ cls: 'layer-bar' });
-        layerBar.createSpan({ text: t('view.layer'), cls: 'layer-label' });
-        const select = layerBar.createEl('select', { cls: 'layer-select' });
-        for (const layer of this.layers) {
-            const opt = select.createEl('option', { text: layer.label, value: layer.value });
-            if (layer.disabled) opt.disabled = true;
-        }
-        select.value = this.activeLayer;
-        select.onchange = () => {
-            this.activeLayer = select.value as EditLayer;
-            void this.onOpen();
-        };
-
         // 时间区间设置按钮
         const schemeBar = toolbar.createDiv({ cls: 'range-scheme-bar' });
         const schemeBtn = schemeBar.createEl('button', {
@@ -624,6 +383,24 @@ export class WeekScheduleView extends ItemView {
             ).open();
         };
 
+        // 当前时间区间方案下拉框
+        const schemeSelect = schemeBar.createEl('select', { cls: 'range-scheme-select' });
+        schemeSelect.createEl('option', {
+            text: t('rangeScheme.noActive'),
+            value: '',
+        });
+        for (const scheme of this.schemeData.schemes) {
+            schemeSelect.createEl('option', { text: scheme.name, value: scheme.id });
+        }
+        schemeSelect.value = this.schemeData.activeSchemeId ?? '';
+        schemeSelect.onchange = () => {
+            this.schemeData.activeSchemeId = schemeSelect.value || undefined;
+            void (async () => {
+                await this.save();
+                await this.onOpen();
+            })();
+        };
+
         // 图例
         const legendContainer = toolbar.createDiv({ cls: 'legend-container' });
         renderTimeBlockCategoryLegend(
@@ -633,12 +410,6 @@ export class WeekScheduleView extends ItemView {
             () => {
                 void this.onOpen();
             },
-            this.selectedCategoryId,
-            (id) => {
-                // 点击图例选中/取消选中分类
-                this.selectedCategoryId = this.selectedCategoryId === id ? undefined : id;
-                void this.onOpen();
-            }
         );
 
         // 任务面板
@@ -886,194 +657,6 @@ class EventEditModal extends Modal {
                 this.close();
             }))
             .addButton(btn => btn.setButtonText(t('common.cancel')).onClick(() => this.close()));
-    }
-
-    onClose() { this.contentEl.empty(); }
-}
-
-
-// ===== 执行信息面板 =====
-class ExecutionInfoModal extends Modal {
-    private note: string = '';
-    /** 变更执行时选中的任务 */
-    private changedInboxId: string | undefined = undefined;
-    private changedTitle: string = '';
-    /** 变更执行时手动添加的新任务 */
-    private manualTasks: { id: string; title: string }[] = [];
-    /** 变更选择区容器 */
-    private changePanelEl!: HTMLElement;
-    /** 原事件信息区容器 */
-    private infoPanelEl!: HTMLElement;
-
-    constructor(
-        app: App,
-        private event: EventBlock,
-        private records: ExecutionRecord[],
-        private isHandled: boolean,
-        private inboxItems: InboxItem[],
-        private actualTitle: string,
-        private onSubmit: (action: 'confirm' | 'change', note: string, changedTask?: { inboxId?: string; title: string }) => void | Promise<void>,
-    ) {
-        super(app);
-    }
-
-    onOpen() {
-        const { contentEl } = this;
-        contentEl.empty();
-
-        // 原事件信息区（变更执行时隐藏）
-        this.infoPanelEl = contentEl.createDiv({ cls: 'exec-info-panel' });
-        this.infoPanelEl.createEl('h3', { text: this.event.title });
-
-        // 实际执行的任务（与计划不同时提示）
-        if (this.actualTitle && this.actualTitle !== this.event.title) {
-            this.infoPanelEl.createDiv({
-                text: t('exec.actual', { title: this.actualTitle }),
-                cls: 'exec-info-actual',
-            });
-        }
-
-        // 执行次数（该任务累计）
-        this.infoPanelEl.createDiv({
-            text: t('exec.count', { count: this.records.length }),
-            cls: 'exec-info-count',
-        });
-
-        // 任务记录：该任务在哪些时间点被执行过
-        this.infoPanelEl.createDiv({ text: t('exec.records'), cls: 'exec-info-subtitle' });
-        const recordList = this.infoPanelEl.createDiv({ cls: 'exec-info-records' });
-        if (this.records.length === 0) {
-            recordList.createDiv({ cls: 'exec-info-empty', text: t('exec.noRecords') });
-        } else {
-            for (const rec of this.records) {
-                const row = recordList.createDiv({ cls: 'exec-info-record' });
-                row.createSpan({
-                    text: `${this.formatDay(rec.day)} ${this.formatTime(rec.start)} - ${this.formatTime(rec.end)}`,
-                    cls: 'exec-info-record-time',
-                });
-                if (rec.note) {
-                    row.createSpan({ text: rec.note, cls: 'exec-info-record-note' });
-                }
-            }
-        }
-
-        // 备注输入
-        new Setting(this.infoPanelEl)
-            .setName(t('exec.note'))
-            .addTextArea(text => text
-                .setPlaceholder(t('exec.notePlaceholder'))
-                .setValue(this.note)
-                .onChange(val => this.note = val));
-
-        // 变更执行选择区（默认隐藏）
-        this.changePanelEl = contentEl.createDiv({ cls: 'exec-change-panel hidden' });
-        this.renderChangePanel();
-
-        // 操作按钮
-        const btnSetting = new Setting(contentEl);
-        if (!this.isHandled) {
-            btnSetting.addButton(btn => btn
-                .setButtonText(t('exec.confirm'))
-                .setCta()
-                .onClick(async () => {
-                    await this.onSubmit('confirm', this.note.trim());
-                    this.close();
-                }));
-            btnSetting.addButton(btn => btn
-                .setButtonText(t('exec.change'))
-                .onClick(() => {
-                    // 隐藏原事件信息，只显示变更选择区
-                    this.infoPanelEl.addClass('hidden');
-                    this.changePanelEl.removeClass('hidden');
-                }));
-        }
-        btnSetting.addButton(btn => btn
-            .setButtonText(t('common.cancel'))
-            .onClick(() => this.close()));
-    }
-
-    // 变更执行：选择实际做的任务
-    private renderChangePanel() {
-        const panel = this.changePanelEl;
-        panel.empty();
-        panel.createDiv({ text: t('exec.actualTask'), cls: 'exec-info-subtitle' });
-
-        // 任务列表（收集盒任务 + 手动添加的新任务）
-        const list = panel.createDiv({ cls: 'exec-change-list' });
-        const allTasks = [
-            ...this.inboxItems.map(i => ({ id: i.id, title: i.title })),
-            ...this.manualTasks,
-        ];
-        if (allTasks.length === 0) {
-            list.createDiv({ cls: 'exec-info-empty', text: t('exec.noTasks') });
-        } else {
-            for (const task of allTasks) {
-                const row = list.createDiv({ cls: 'exec-change-item' });
-                row.setText(task.title);
-                if (this.changedInboxId === task.id) row.addClass('is-selected');
-                row.onclick = () => {
-                    this.changedInboxId = task.id;
-                    this.changedTitle = task.title;
-                    this.renderChangePanel();
-                };
-            }
-        }
-
-        // 手动添加新任务
-        let newTitle = '';
-        const addRow = panel.createDiv({ cls: 'exec-change-add-row' });
-        const input = addRow.createEl('input', {
-            type: 'text',
-            cls: 'exec-change-add-input',
-            attr: { placeholder: t('exec.newTaskPlaceholder') },
-        });
-        input.oninput = () => { newTitle = input.value; };
-        const addBtn = addRow.createEl('button', {
-            text: t('exec.addTask'),
-            cls: 'exec-change-add-btn',
-        });
-        addBtn.onclick = () => {
-            const title = newTitle.trim();
-            if (!title) {
-                new Notice(t('exec.taskNameRequired'));
-                return;
-            }
-            const id = `manual_${Date.now()}`;
-            this.manualTasks.push({ id, title });
-            this.changedInboxId = id;
-            this.changedTitle = title;
-            this.renderChangePanel();
-        };
-
-        // 确认变更
-        new Setting(panel)
-            .addButton(btn => btn
-                .setButtonText(t('exec.confirmChange'))
-                .setCta()
-                .onClick(async () => {
-                    if (!this.changedTitle.trim()) {
-                        new Notice(t('exec.selectOrAdd'));
-                        return;
-                    }
-                    // 手动任务（manual_ 前缀）不带 inboxId，交由外部加入收集盒
-                    const isManual = this.changedInboxId?.startsWith('manual_');
-                    await this.onSubmit('change', this.note.trim(), {
-                        inboxId: isManual ? undefined : this.changedInboxId,
-                        title: this.changedTitle.trim(),
-                    });
-                    this.close();
-                }));
-    }
-
-    private formatDay(day: number): string {
-        const days = getWeekDays();
-        return days[day - 1] ?? '';
-    }
-
-    private formatTime(minutes: number): string {
-        const h = Math.floor(minutes / 60);
-        const m = minutes % 60;
-        return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
     }
 
     onClose() { this.contentEl.empty(); }

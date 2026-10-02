@@ -23,10 +23,6 @@ export const en: I18nMessages = {
 
     // View
     'view.title': 'Week Schedule',
-    'view.layer': 'Layer: ',
-    'view.layer.timeRange': 'Time Block Layer',
-    'view.layer.event': 'Event Layer',
-    'view.layer.execution': 'Execution Layer',
 
     // Main navigation (tab button group)
     'nav.year': 'Year',
@@ -127,21 +123,4 @@ export const en: I18nMessages = {
     'inbox.selectCategory': 'Select category',
     'inbox.noCategory': 'No category',
     'inbox.title': '📥 Inbox',
-
-    // Execution layer
-    'exec.actual': 'Actually executed: {title}',
-    'exec.count': 'Execution count: {count}',
-    'exec.records': 'Task records',
-    'exec.noRecords': 'No execution records',
-    'exec.note': 'Note',
-    'exec.notePlaceholder': 'Additional notes (optional)',
-    'exec.confirm': 'Confirm execution',
-    'exec.change': 'Change execution',
-    'exec.actualTask': 'Actually executed task',
-    'exec.noTasks': 'No tasks',
-    'exec.newTaskPlaceholder': 'New task name',
-    'exec.addTask': 'Add task',
-    'exec.taskNameRequired': 'Please enter a task name',
-    'exec.confirmChange': 'Confirm change',
-    'exec.selectOrAdd': 'Please select or add a task',
 };

@@ -152,17 +152,6 @@
     position: relative;
 }
 
-/* 层级选择器 */
-.layer-bar {
-    /* position: absolute; */
-    z-index: 999;
-}
-
-.layer-bar select {
-    padding: 2px 6px;
-    border-radius: 4px;
-}
-
 
 /* ======================== 模板面板 ==== */
 /* ===== 模板面板 ===== */
@@ -870,124 +859,9 @@
     z-index: 2;
 }
 
-/* ===== 执行信息面板 ===== */
-.exec-info-actual {
-    font-size: 13px;
-    color: var(--text-accent);
-    margin-bottom: 8px;
-}
-
-.exec-info-count {
-    font-size: 13px;
-    color: var(--text-muted);
-    margin-bottom: 12px;
-}
-
-.exec-info-subtitle {
-    font-size: 12px;
-    font-weight: bold;
-    color: var(--text-muted);
-    margin-bottom: 6px;
-}
-
-.exec-info-records {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-    margin-bottom: 12px;
-    max-height: 160px;
-    overflow-y: auto;
-}
-
-.exec-info-record {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 4px 8px;
-    border-radius: 4px;
-    background: var(--background-secondary);
-    font-size: 12px;
-}
-
-.exec-info-record-time {
-    color: var(--text-muted);
-    flex-shrink: 0;
-}
-
-.exec-info-record-note {
-    color: var(--text-normal);
-    word-break: break-word;
-}
-
-.exec-info-empty {
-    font-size: 12px;
-    color: var(--text-muted);
-    font-style: italic;
-    padding: 8px 0;
-}
-
+/* ===== 全天事件行 ===== */
 .all-day-corner{
     text-align: center;
-}
-
-/* 变更执行选择区 */
-.exec-change-panel {
-    margin-top: 8px;
-    padding-top: 8px;
-    border-top: 1px solid var(--background-modifier-border);
-}
-
-.exec-change-list {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-    margin-bottom: 8px;
-    max-height: 160px;
-    overflow-y: auto;
-}
-
-.exec-change-item {
-    padding: 6px 8px;
-    border-radius: 4px;
-    border: 1px solid var(--background-modifier-border);
-    background: var(--background-secondary);
-    font-size: 12px;
-    cursor: pointer;
-}
-
-.exec-change-item:hover {
-    background: var(--background-modifier-hover);
-}
-
-.exec-change-item.is-selected {
-    background: var(--interactive-accent);
-    color: var(--text-on-accent);
-    border-color: var(--interactive-accent);
-}
-
-/* 手动添加新任务行 */
-.exec-change-add-row {
-    display: flex;
-    gap: 6px;
-    margin-bottom: 8px;
-}
-
-.exec-change-add-input {
-    flex: 1;
-}
-
-.exec-change-add-btn {
-    flex-shrink: 0;
-    font-size: 12px;
-    padding: 4px 10px;
-    border-radius: 4px;
-    border: 1px solid var(--background-modifier-border);
-    background: var(--interactive-normal);
-    cursor: pointer;
-}
-
-.exec-change-add-btn:hover {
-    background: var(--interactive-hover);
 }
 
 /* ===== 通用工具类 ===== */
@@ -1149,9 +1023,13 @@
 }
 
 /* ===== 时间区间设置窗口 ===== */
+/* 直接撑开 Obsidian 弹窗容器，保证能容纳左侧图例 + 日历 */
+.modal:has(.range-scheme-modal) {
+    width: 760px;
+    max-width: 90vw;
+}
 .range-scheme-modal {
     width: 100%;
-    min-width: 700px;
 }
 
 /* 顶部：标题 + 方案按钮 */
@@ -1220,6 +1098,9 @@
 /* 工具栏中的时间区间设置按钮 */
 .range-scheme-bar {
     margin-bottom: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
 }
 
 .range-scheme-open-btn {
@@ -1234,6 +1115,14 @@
 
 .range-scheme-open-btn:hover {
     background: var(--interactive-hover);
+}
+
+/* 当前方案下拉框 */
+.range-scheme-select {
+    width: 100%;
+    padding: 4px 6px;
+    border-radius: 4px;
+    font-size: 13px;
 }
 
 

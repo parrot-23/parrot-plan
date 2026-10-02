@@ -21,10 +21,6 @@ export const zh = {
 
     // 视图
     'view.title': '周日程',
-    'view.layer': '层级：',
-    'view.layer.timeRange': '时间区块层',
-    'view.layer.event': '事件区块层',
-    'view.layer.execution': '执行层',
 
     // 主导航（tab 按钮组）
     'nav.year': '年',
@@ -125,23 +121,6 @@ export const zh = {
     'inbox.selectCategory': '选择分类',
     'inbox.noCategory': '不分类',
     'inbox.title': '📥 收集盒',
-
-    // 执行层
-    'exec.actual': '实际执行：{title}',
-    'exec.count': '执行次数：{count}',
-    'exec.records': '任务记录',
-    'exec.noRecords': '暂无执行记录',
-    'exec.note': '备注',
-    'exec.notePlaceholder': '补充说明（可选）',
-    'exec.confirm': '确认执行',
-    'exec.change': '变更执行',
-    'exec.actualTask': '实际执行的任务',
-    'exec.noTasks': '暂无任务',
-    'exec.newTaskPlaceholder': '新任务名称',
-    'exec.addTask': '添加新任务',
-    'exec.taskNameRequired': '请输入任务名称',
-    'exec.confirmChange': '确认变更',
-    'exec.selectOrAdd': '请选择或添加任务',
 };
 
 export type I18nMessages = typeof zh;

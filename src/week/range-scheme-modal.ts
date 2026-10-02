@@ -269,21 +269,6 @@ export class SchemeManageModal extends Modal {
         this.draft.forEach((scheme, index) => {
             const row = this.listEl.createDiv({ cls: 'tbcat-row' });
 
-            // 切换（设为当前方案）
-            const switchBtn = row.createEl('button', {
-                text: t('rangeScheme.switchTo'),
-                cls: 'tbcat-action-btn',
-            });
-            if (scheme.id === this.schemeData.activeSchemeId) {
-                switchBtn.addClass('is-active');
-            }
-            switchBtn.addEventListener('click', () => {
-                this.schemeData.schemes = this.draft;
-                this.schemeData.activeSchemeId = scheme.id;
-                this.onConfirm?.();
-                this.renderList();
-            });
-
             // 设为默认
             const defaultBtn = row.createEl('button', {
                 text: t('rangeScheme.isDefault'),
@@ -317,6 +302,21 @@ export class SchemeManageModal extends Modal {
             });
             del.addEventListener('click', () => {
                 this.draft.splice(index, 1);
+                this.renderList();
+            });
+
+            // 切换（设为当前方案）
+            const switchBtn = row.createEl('button', {
+                text: t('rangeScheme.switchTo'),
+                cls: 'tbcat-action-btn',
+            });
+            if (scheme.id === this.schemeData.activeSchemeId) {
+                switchBtn.addClass('is-active');
+            }
+            switchBtn.addEventListener('click', () => {
+                this.schemeData.schemes = this.draft;
+                this.schemeData.activeSchemeId = scheme.id;
+                this.onConfirm?.();
                 this.renderList();
             });
         });
