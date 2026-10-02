@@ -219,7 +219,7 @@ export class WeekScheduleView extends ItemView {
             const col = cols[d - 1] as HTMLElement;
 
             // ===== 渲染只读时间区块背景（当前激活方案）=====
-            const dayData = this.getActiveDays().find(day => day.day === d);
+            const dayData = this.getSchemeDays().find(day => day.day === d);
             const dayRanges = dayData?.ranges ?? [];
             for (const range of dayRanges) {
                 const bgBlock = col.createDiv({ cls: 'range-block range-bg' });
@@ -474,11 +474,6 @@ export class WeekScheduleView extends ItemView {
                 await this.save();
             }
         );
-    }
-
-    /** 获取当前周的日历区间数据（从方案复制而来） */
-    getActiveDays(): DailyRange[] {
-        return this.rangeData.weeks?.[this.currentWeekKey] ?? [];
     }
 
     /** 获取当前激活方案的日区间配置（周无关的模板数据） */
