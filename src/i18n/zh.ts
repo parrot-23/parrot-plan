@@ -50,6 +50,7 @@ export const zh = {
     'defaultCategory.work': '工作',
     'defaultCategory.rest': '休息',
     'defaultCategory.play': '娱乐',
+    'defaultCategory.uncategorized': '未分类',
 
     // 设置页
     'settings.title': 'Parrot Plan 设置',
@@ -93,11 +94,13 @@ export const zh = {
     'rangeScheme.manage': '方案管理',
     'rangeScheme.manageTitle': '方案管理',
     'rangeScheme.new': '新方案',
+    'rangeScheme.defaultName': '默认方案',
     'rangeScheme.namePlaceholder': '方案名称',
     'rangeScheme.empty': '暂无方案，点右上角 + 新增',
     'rangeScheme.noActive': '未选择方案',
     'rangeScheme.switchTo': '切换',
     'rangeScheme.isDefault': '默认',
+    'rangeScheme.defaultLocked': '默认方案不可删除',
 
     // 周切换
     'weekNav.year': '年',
@@ -110,6 +113,7 @@ export const zh = {
     'category.new': '新分类',
     'category.empty': '暂无分类，点右上角 + 新增',
     'category.namePlaceholder': '分类名称',
+    'category.uncategorizedLocked': '未分类不可删除',
 
     // 模板
     'template.title': '日模板',

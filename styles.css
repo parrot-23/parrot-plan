@@ -630,6 +630,13 @@
 .tbcat-del-btn {
     color: var(--text-error);
 }
+.tbcat-lock {
+    width: 24px;
+    text-align: center;
+    font-size: 12px;
+    opacity: 0.6;
+    cursor: not-allowed;
+}
 .tbcat-action-btn {
     font-size: 12px;
     padding: 2px 8px;
@@ -1142,6 +1149,19 @@
     background: var(--interactive-accent);
     color: var(--text-on-accent);
     border-color: var(--interactive-accent);
+}
+
+/* 当前所在周：用醒目边框特别标明 */
+.year-week-cell.is-current-week {
+    border: 2px solid var(--interactive-accent);
+    box-shadow: inset 0 0 0 1px var(--interactive-accent);
+    z-index: 1;
+}
+
+/* 当前周同时被选中时，保持选中背景 */
+.year-week-cell.is-current-week.is-active {
+    border-color: var(--text-on-accent);
+    box-shadow: inset 0 0 0 1px var(--text-on-accent);
 }
 
 /* 右上角：周数 */

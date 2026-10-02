@@ -3,7 +3,7 @@ import { App, Modal, Setting } from 'obsidian';
 import type { TimeBlockCategoryData } from './timeblock-category-manager';
 import { renderTimeBlockCategoryLegend } from './timeblock-category-manager';
 import type { RangeSchemeData, RangeScheme } from './timeblock-data';
-import { hexToTransparent } from './timeblock-data';
+import { hexToTransparent, DEFAULT_SCHEME_ID, ensureDefaultScheme } from './timeblock-data';
 import { renderTemplatePanel, type TemplateViewContext } from './template-manager';
 import { renderWeekGrid } from '../shared/week-grid';
 import { RangeEditModal } from './week-schedule-view';
@@ -83,7 +83,9 @@ export class RangeSchemeModal extends Modal {
             legendPanel,
             this.categoryData,
             () => {
+                // 图例分类增删改后：通知宿主刷新，并重渲染本弹窗以更新图例
                 this.onChange?.();
+                this.onOpen();
             },
             this.selectedCategoryId,
             (id) => {
@@ -254,6 +256,8 @@ export class SchemeManageModal extends Modal {
                 .setCta()
                 .onClick(() => {
                     this.schemeData.schemes = this.draft;
+                    // 兜底：确保默认方案始终存在且位于首位
+                    ensureDefaultScheme(this.schemeData, t('rangeScheme.defaultName'));
                     this.onConfirm?.();
                     this.close();
                 }));
@@ -299,15 +303,23 @@ export class SchemeManageModal extends Modal {
                 scheme.name = name.value;
             });
 
-            // 删除
-            const del = row.createEl('button', {
-                text: '✕',
-                cls: 'tbcat-del-btn',
-            });
-            del.addEventListener('click', () => {
-                this.draft.splice(index, 1);
-                this.renderList();
-            });
+            // 删除（默认方案不可删除）
+            if (scheme.id === DEFAULT_SCHEME_ID) {
+                const lock = row.createEl('span', {
+                    text: '🔒',
+                    cls: 'tbcat-lock',
+                });
+                lock.setAttribute('aria-label', t('rangeScheme.defaultLocked'));
+            } else {
+                const del = row.createEl('button', {
+                    text: '✕',
+                    cls: 'tbcat-del-btn',
+                });
+                del.addEventListener('click', () => {
+                    this.draft.splice(index, 1);
+                    this.renderList();
+                });
+            }
 
             // 切换（设为当前方案）
             const switchBtn = row.createEl('button', {

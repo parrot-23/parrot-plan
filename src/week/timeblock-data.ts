@@ -49,6 +49,29 @@ export interface RangeSchemeData {
 	defaultSchemeId?: string;
 }
 
+/** 默认方案：固定 id，不可删除 */
+export const DEFAULT_SCHEME_ID = 'default';
+
+/** 生成默认方案对象（name 走 i18n） */
+export function makeDefaultScheme(name: string): RangeScheme {
+	return { id: DEFAULT_SCHEME_ID, name, days: [] };
+}
+
+/** 确保方案集合中始终存在默认方案，且位于首位 */
+export function ensureDefaultScheme(schemeData: RangeSchemeData, name: string): void {
+	const list = schemeData.schemes;
+	const existing = list.find(s => s.id === DEFAULT_SCHEME_ID);
+	if (existing) {
+		if (list[0] !== existing) {
+			schemeData.schemes = [existing, ...list.filter(s => s !== existing)];
+		}
+	} else {
+		schemeData.schemes = [makeDefaultScheme(name), ...list];
+	}
+	// 默认方案 id 始终指向默认方案
+	schemeData.defaultSchemeId = DEFAULT_SCHEME_ID;
+}
+
 /** 将 #rgb / #rrggbb 颜色转为带透明度的 rgba 字符串 */
 export function hexToTransparent(hex: string, alpha: number): string {
 	let h = hex.replace('#', '');
@@ -101,6 +124,22 @@ export function makeDayKey(date: Date): DayKey {
 /** 获取当前日期对应的日期键 */
 export function getCurrentDayKey(): DayKey {
 	return makeDayKey(new Date());
+}
+
+/** 由周键 + 星期几（1=周一 ... 7=周日）计算对应的日期键 */
+export function makeDayKeyFromWeek(weekKey: WeekKey, day: number): DayKey {
+	const { year, week } = parseWeekKey(weekKey);
+	// ISO 第 1 周：包含 1 月 4 日的那一周
+	const jan4 = new Date(year, 0, 4);
+	const jan4Day = jan4.getDay(); // 0=周日
+	// 1 月 4 日所在周的周一
+	const firstMonday = new Date(year, 0, 4 - ((jan4Day + 6) % 7));
+	// 目标周的周一
+	const monday = new Date(firstMonday);
+	monday.setDate(firstMonday.getDate() + (week - 1) * 7);
+	// 加上 (day - 1) 天
+	monday.setDate(monday.getDate() + (day - 1));
+	return makeDayKey(monday);
 }
 
 // 默认周日程数据（兜底用）

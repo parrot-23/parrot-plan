@@ -13,6 +13,34 @@ export interface TimeBlockCategoryData {
     categories: TimeBlockCategory[];
 }
 
+/** 未分类：固定 id 与颜色，作为默认分类，不可删除 */
+export const UNCATEGORIZED_CATEGORY_ID = 'uncategorized';
+export const UNCATEGORIZED_CATEGORY_COLOR = '#888888';
+
+/** 生成「未分类」分类对象（label 走 i18n） */
+export function makeUncategorizedCategory(): TimeBlockCategory {
+    return {
+        id: UNCATEGORIZED_CATEGORY_ID,
+        label: t('defaultCategory.uncategorized'),
+        color: UNCATEGORIZED_CATEGORY_COLOR,
+    };
+}
+
+/** 确保分类列表中始终存在「未分类」，且位于首位（作为默认选择） */
+export function ensureUncategorizedCategory(categoryData: TimeBlockCategoryData): void {
+    const list = categoryData.categories;
+    const existing = list.find(c => c.id === UNCATEGORIZED_CATEGORY_ID);
+    if (existing) {
+        // 已存在：修正颜色并移到首位
+        existing.color = UNCATEGORIZED_CATEGORY_COLOR;
+        if (list[0] !== existing) {
+            categoryData.categories = [existing, ...list.filter(c => c !== existing)];
+        }
+    } else {
+        categoryData.categories = [makeUncategorizedCategory(), ...list];
+    }
+}
+
 export function renderTimeBlockCategoryLegend(    
     app: App,
     container: HTMLElement,
@@ -20,18 +48,22 @@ export function renderTimeBlockCategoryLegend(
     onChange?: () => void,
     selectedId?: string,
     onSelect?: (id: string) => void,
+    /** 是否显示配置（齿轮）按钮，默认显示 */
+    showConfigButton: boolean = true,
 ): void {
     const legend = container.createDiv({ cls: 'range-legend' });
     legend.createDiv({ text: t('category.legend'), cls: 'legend-title' });
 
-    // 齿轮按钮
-    const gearBtn = legend.createDiv({ cls: 'category-gear-btn' });
-    gearBtn.setText('⚙️');
-    gearBtn.onclick = () => {
-        new CategoryConfigModal(app, categoryData, () => {
-             onChange?.();
-        }).open();
-    };
+    // 齿轮按钮（可选）
+    if (showConfigButton) {
+        const gearBtn = legend.createDiv({ cls: 'category-gear-btn' });
+        gearBtn.setText('⚙️');
+        gearBtn.onclick = () => {
+            new CategoryConfigModal(app, categoryData, () => {
+                 onChange?.();
+            }).open();
+        };
+    }
 
     for (const cat of categoryData.categories) {
         const row = legend.createDiv({ cls: 'legend-item' });
@@ -98,6 +130,8 @@ export class CategoryConfigModal extends Modal {
                 .onClick(() => {
                     // 先不接 main.ts，验证用
                     this.categoryData.categories = this.draft;
+                    // 兜底：确保「未分类」始终存在且位于首位
+                    ensureUncategorizedCategory(this.categoryData);
                     this.onConfirm?.();
                     this.close();
                 }));
@@ -138,15 +172,23 @@ export class CategoryConfigModal extends Modal {
                 cat.label = name.value;
             });
 
-            // 删除
-            const del = row.createEl('button', {
-                text: '✕',
-                cls: 'tbcat-del-btn',
-            });
-            del.addEventListener('click', () => {
-                this.draft.splice(index, 1);
-                this.renderList();
-            });
+            // 删除（「未分类」不可删除）
+            if (cat.id === UNCATEGORIZED_CATEGORY_ID) {
+                const lock = row.createEl('span', {
+                    text: '🔒',
+                    cls: 'tbcat-lock',
+                });
+                lock.setAttribute('aria-label', t('category.uncategorizedLocked'));
+            } else {
+                const del = row.createEl('button', {
+                    text: '✕',
+                    cls: 'tbcat-del-btn',
+                });
+                del.addEventListener('click', () => {
+                    this.draft.splice(index, 1);
+                    this.renderList();
+                });
+            }
         });
     }
 

@@ -1,5 +1,5 @@
 import { t } from '../i18n';
-import { makeWeekKey } from '../week/timeblock-data';
+import { makeWeekKey, getISOWeek } from '../week/timeblock-data';
 
 /**
  * 周历面板：公共组件。
@@ -57,6 +57,11 @@ export function renderYearWeekGrid(
 ): void {
     let year = options.year ?? new Date().getFullYear();
     const totalWeeks = 52;
+
+    // 当前所在周（用于特别标明）
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentWeek = getISOWeek(now);
 
     container.empty();
     container.addClass('year-week-grid');
@@ -123,6 +128,11 @@ export function renderYearWeekGrid(
 
                 if (options.activeWeek === week) {
                     cell.addClass('is-active');
+                }
+
+                // 当前所在周：特别标明（仅当显示的是今年时）
+                if (year === currentYear && week === currentWeek) {
+                    cell.addClass('is-current-week');
                 }
 
                 // 左上角：月份（带固定配色背景）；右上角：周数

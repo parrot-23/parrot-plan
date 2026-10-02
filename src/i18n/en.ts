@@ -52,6 +52,7 @@ export const en: I18nMessages = {
     'defaultCategory.work': 'Work',
     'defaultCategory.rest': 'Rest',
     'defaultCategory.play': 'Play',
+    'defaultCategory.uncategorized': 'Uncategorized',
 
     // Settings
     'settings.title': 'Parrot Plan Settings',
@@ -95,11 +96,13 @@ export const en: I18nMessages = {
     'rangeScheme.manage': 'Manage Schemes',
     'rangeScheme.manageTitle': 'Manage Schemes',
     'rangeScheme.new': 'New scheme',
+    'rangeScheme.defaultName': 'Default scheme',
     'rangeScheme.namePlaceholder': 'Scheme name',
     'rangeScheme.empty': 'No schemes, click + to add',
     'rangeScheme.noActive': 'No scheme selected',
     'rangeScheme.switchTo': 'Switch',
     'rangeScheme.isDefault': 'Default',
+    'rangeScheme.defaultLocked': 'Default scheme cannot be deleted',
 
     // Week navigation
     'weekNav.year': 'Year',
@@ -112,6 +115,7 @@ export const en: I18nMessages = {
     'category.new': 'New category',
     'category.empty': 'No categories, click + to add',
     'category.namePlaceholder': 'Category name',
+    'category.uncategorizedLocked': 'Uncategorized cannot be deleted',
 
     // Template
     'template.title': 'Day Template',

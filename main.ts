@@ -1,8 +1,9 @@
 import { App, Modal, Notice, Plugin, PluginSettingTab, type SettingDefinitionItem } from 'obsidian';
 
 import type { WeekRangeData, RangeSchemeData } from './src/week/timeblock-data';
-import { getCurrentWeekKey } from './src/week/timeblock-data';
+import { getCurrentWeekKey, ensureDefaultScheme } from './src/week/timeblock-data';
 import type { TimeBlockCategoryData } from './src/week/timeblock-category-manager';
+import { ensureUncategorizedCategory } from './src/week/timeblock-category-manager';
 import type { DayTemplateData } from './src/week/template-manager';
 
 import { DEFAULT_WEEK_RANGE } from './src/week/timeblock-data';
@@ -24,6 +25,7 @@ export default class ParrotPlanPlugin extends Plugin {
 
         const defaultCategories: TimeBlockCategoryData = {
             categories: [
+                { id: 'uncategorized', label: t('defaultCategory.uncategorized'), color: '#888888' },
                 { id: 'work', label: t('defaultCategory.work'), color: '#4c8dff' },
                 { id: 'rest', label: t('defaultCategory.rest'), color: '#43b581' },
                 { id: 'play', label: t('defaultCategory.play'), color: '#f2a65a' },
@@ -46,8 +48,12 @@ export default class ParrotPlanPlugin extends Plugin {
         const initialData = migrateWeekRangeData(savedData);
         const initialTemplateData = (savedData.dayTemplateData ?? { dayTemplates: [], dayProperties: [] }) as DayTemplateData;
         const initialCategoryData = (savedData.timeBlockCategoryData ?? defaultCategories) as TimeBlockCategoryData;
+        // 兼容旧数据：确保「未分类」始终存在且位于首位
+        ensureUncategorizedCategory(initialCategoryData);
         const initialInboxData = (savedData.inboxData ?? DEFAULT_INBOX_DATA) as InboxData;
         const initialSchemeData = (savedData.schemeData ?? { schemes: [] }) as RangeSchemeData;
+        // 兼容旧数据：确保默认方案始终存在且位于首位
+        ensureDefaultScheme(initialSchemeData, t('rangeScheme.defaultName'));
 
         // 注册视图
         this.registerView(

@@ -3,7 +3,7 @@
 import { ItemView, WorkspaceLeaf, Modal, Setting, Notice, App } from 'obsidian';
 import type { Plugin } from 'obsidian';
 import type { WeekRangeData, CategorizedRange, TimeBlockCategoryId, RangeSchemeData, DailyRange, WeekKey } from './timeblock-data';
-import { hexToTransparent, getCurrentWeekKey, makeWeekKey, parseWeekKey, DEFAULT_WEEK_RANGE } from './timeblock-data';
+import { hexToTransparent, getCurrentWeekKey, makeWeekKey, parseWeekKey, makeDayKeyFromWeek, makeDefaultScheme, DEFAULT_SCHEME_ID, DEFAULT_WEEK_RANGE } from './timeblock-data';
 import type { TimeBlockCategoryData } from './timeblock-category-manager';
 import type { DayTemplateData } from './template-manager';
 import { renderTimeBlockCategoryLegend } from './timeblock-category-manager';
@@ -111,14 +111,15 @@ export class WeekScheduleView extends ItemView {
         this.dayTemplateData.dayProperties = [];
 
         this.timeBlockCategoryData.categories = [
+            { id: 'uncategorized', label: t('defaultCategory.uncategorized'), color: '#888888' },
             { id: 'work', label: t('defaultCategory.work'), color: '#4c8dff' },
             { id: 'rest', label: t('defaultCategory.rest'), color: '#43b581' },
             { id: 'play', label: t('defaultCategory.play'), color: '#f2a65a' },
         ];
 
-        this.schemeData.schemes = [];
+        this.schemeData.schemes = [makeDefaultScheme(t('rangeScheme.defaultName'))];
         this.schemeData.activeSchemeId = undefined;
-        this.schemeData.defaultSchemeId = undefined;
+        this.schemeData.defaultSchemeId = DEFAULT_SCHEME_ID;
 
         this.events.length = 0;
         this.executions.length = 0;
@@ -273,6 +274,8 @@ export class WeekScheduleView extends ItemView {
             completed: false,
             weekKey: this.currentWeekKey,
         });
+        // 加入某天时，同时成为该周的周目标
+        this.assignItemToDay(selectedInboxItem, day);
         await this.save();
         await this.onOpen();
         new Notice(t('allday.added', { title: selectedInboxItem.title }));
@@ -327,6 +330,8 @@ export class WeekScheduleView extends ItemView {
                         completed: false,
                         weekKey: this.currentWeekKey,
                     });
+                    // 加入某天时，同时成为该周的周目标
+                    this.assignItemToDay(selectedInboxItem, d);
                     await this.save();
                     await this.onOpen();
                     new Notice(t('event.scheduled', { title: selectedInboxItem.title }));
@@ -499,16 +504,17 @@ export class WeekScheduleView extends ItemView {
             ).open();
         };
 
-        // 当前时间区间方案下拉框
+        // 当前时间区间方案下拉框（至少存在默认方案，无需「未选择方案」选项）
         const schemeSelect = schemeBar.createEl('select', { cls: 'range-scheme-select' });
-        schemeSelect.createEl('option', {
-            text: t('rangeScheme.noActive'),
-            value: '',
-        });
         for (const scheme of this.schemeData.schemes) {
             schemeSelect.createEl('option', { text: scheme.name, value: scheme.id });
         }
-        schemeSelect.value = this.schemeData.activeSchemeId ?? '';
+        // 未激活时默认选中默认方案
+        const activeId = this.schemeData.activeSchemeId
+            ?? this.schemeData.defaultSchemeId
+            ?? this.schemeData.schemes[0]?.id
+            ?? '';
+        schemeSelect.value = activeId;
         schemeSelect.onchange = () => {
             this.schemeData.activeSchemeId = schemeSelect.value || undefined;
             void (async () => {
@@ -517,7 +523,7 @@ export class WeekScheduleView extends ItemView {
             })();
         };
 
-        // 图例
+        // 图例（日历顶部：不显示配置按钮）
         const legendContainer = toolbar.createDiv({ cls: 'legend-container' });
         renderTimeBlockCategoryLegend(
             this.app,
@@ -526,6 +532,9 @@ export class WeekScheduleView extends ItemView {
             () => {
                 void this.onOpen();
             },
+            undefined,
+            undefined,
+            false,
         );
     }
 
@@ -570,6 +579,22 @@ export class WeekScheduleView extends ItemView {
         // 已移除的条目不可再排入
         if (!item || item.removed) return null;
         return item;
+    }
+
+    /**
+     * 将任务标记为「已加入某天」，同时加入当前周目标。
+     * 加入某天时，该任务也应成为这一周的周目标。
+     */
+    private assignItemToDay(item: InboxItem, day: number): void {
+        const dayKey = makeDayKeyFromWeek(this.currentWeekKey, day);
+        const dayKeys = item.assignedDayKeys ?? [];
+        if (!dayKeys.includes(dayKey)) {
+            item.assignedDayKeys = [...dayKeys, dayKey];
+        }
+        const weekKeys = item.assignedWeekKeys ?? [];
+        if (!weekKeys.includes(this.currentWeekKey)) {
+            item.assignedWeekKeys = [...weekKeys, this.currentWeekKey];
+        }
     }
 
 }
