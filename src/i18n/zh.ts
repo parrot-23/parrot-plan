@@ -34,6 +34,10 @@ export const zh = {
     'nav.achievement': '成就榜单',
     'nav.placeholder': '当前是「{name}」页面',
 
+    // 年视图
+    'year.weekLabel': '第{week}周',
+    'year.monthLabel': '{month}月',
+
     // 命令与功能区
     'command.open': '打开周日程面板',
     'ribbon.open': '打开周日程',

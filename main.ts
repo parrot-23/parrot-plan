@@ -6,7 +6,7 @@ import type { DayTemplateData } from './src/week/template-manager';
 
 import { DEFAULT_WEEK_RANGE } from './src/week/timeblock-data';
 import type { EventBlock, ExecutionRecord } from './src/week/week-schedule-view';
-import { DEFAULT_INBOX_DATA, type InboxData } from './src/week/inbox-manager';
+import { DEFAULT_INBOX_DATA, type InboxData } from './src/shared/task-panel';
 import { VIEW_TYPE_MAIN, MainView } from './src/main-view';
 import { initI18n, t } from './src/i18n';
 

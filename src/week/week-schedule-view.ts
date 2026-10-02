@@ -7,8 +7,8 @@ import type { TimeBlockCategoryData } from './timeblock-category-manager';
 import type { DayTemplateData } from './template-manager';
 import { renderTimeBlockCategoryLegend } from './timeblock-category-manager';
 import { renderDayTemplateRow, renderTemplatePanel } from './template-manager';
-import { renderInboxPanel, DEFAULT_INBOX_DATA, type InboxData } from './inbox-manager';
-import type { InboxItem } from './inbox-manager';
+import { renderTaskPanel, DEFAULT_INBOX_DATA, type InboxData } from '../shared/task-panel';
+import type { InboxItem } from '../shared/task-panel';
 import { t, getWeekDays } from '../i18n';
 
 export const VIEW_TYPE_WEEK = 'week-schedule-view';
@@ -655,9 +655,9 @@ export class WeekScheduleView extends ItemView {
             await this.onOpen();
         });
 
-        // 收集盒面板
+        // 任务面板
         const inboxContainer = toolbar.createDiv({ cls: 'inbox-container' });
-        renderInboxPanel(
+        renderTaskPanel(
             this.app,
             inboxContainer,
             this.inboxData,

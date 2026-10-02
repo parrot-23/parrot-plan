@@ -4,12 +4,13 @@ import type { Plugin } from 'obsidian';
 import type { WeekRangeData } from './week/timeblock-data';
 import type { TimeBlockCategoryData } from './week/timeblock-category-manager';
 import type { DayTemplateData } from './week/template-manager';
-import type { InboxData } from './week/inbox-manager';
+import type { InboxData } from './shared/task-panel';
 import {
     WeekScheduleView,
     type EventBlock,
     type ExecutionRecord,
 } from './week/week-schedule-view';
+import { YearView } from './views/year-view';
 import { t } from './i18n';
 
 export const VIEW_TYPE_MAIN = 'parrot-plan-main-view';
@@ -33,6 +34,7 @@ const NAV_TABS: { id: NavTab; label: string }[] = [
 export class MainView extends ItemView {
     plugin: Plugin;
     private weekView: WeekScheduleView;
+    private yearView: YearView;
     private activeTab: NavTab = 'week';
     private contentRoot!: HTMLElement;
 
@@ -57,6 +59,13 @@ export class MainView extends ItemView {
             events,
             executions,
             inboxData,
+        );
+        this.yearView = new YearView(
+            this.app,
+            this.weekView.inboxData,
+            this.weekView.timeBlockCategoryData,
+            () => this.weekView.save(),
+            () => this.weekView.onOpen(),
         );
     }
 
@@ -109,6 +118,11 @@ export class MainView extends ItemView {
 
         if (this.activeTab === 'week') {
             await this.weekView.renderInto(this.contentRoot);
+            return;
+        }
+
+        if (this.activeTab === 'year') {
+            await this.yearView.renderInto(this.contentRoot);
             return;
         }
 

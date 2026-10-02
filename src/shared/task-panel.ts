@@ -1,6 +1,12 @@
 import { App, Modal, Setting, Notice } from 'obsidian';
-import type { TimeBlockCategoryData } from './timeblock-category-manager';
+import type { TimeBlockCategoryData } from '../week/timeblock-category-manager';
 import { t } from '../i18n';
+
+/**
+ * 任务面板：公共组件。
+ * 多个视图（年视图、周计划、当日执行等）都会使用，
+ * 本文件管理任务面板自身的全部信息与渲染逻辑。
+ */
 
 export interface InboxItem {
     id: string;
@@ -14,7 +20,7 @@ export interface InboxItem {
 
 export interface InboxData {
     items: InboxItem[];
-    selectedId?: string; 
+    selectedId?: string;
 }
 
 export const DEFAULT_INBOX_DATA: InboxData = {
@@ -87,7 +93,7 @@ class InboxAddModal extends Modal {
 }
 
 // ===== 渲染面板 =====
-export function renderInboxPanel(
+export function renderTaskPanel(
     app: App,
     container: HTMLElement,
     inboxData: InboxData,

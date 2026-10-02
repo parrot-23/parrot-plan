@@ -1054,5 +1054,81 @@
     color: var(--text-muted);
 }
 
+/* ===== 年视图 ===== */
+.year-view {
+    display: flex;
+    flex-direction: row;
+    height: 100%;
+    flex: 1;
+    min-height: 0;
+}
+
+/* 左侧任务面板 */
+.year-task-panel {
+    flex-shrink: 0;
+    width: 250px;
+    height: 100%;
+    overflow-y: auto;
+    padding: 10px;
+    border-right: 1px solid var(--background-modifier-border);
+}
+
+/* 右侧周历面板 */
+.year-calendar-panel {
+    flex: 1;
+    min-width: 0;
+    overflow-y: auto;
+    padding: 12px;
+}
+
+/* 周历网格 */
+.year-week-grid {
+    width: 100%;
+}
+
+.year-week-grid-inner {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+    gap: 8px;
+}
+
+.year-week-cell {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 10px 6px;
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 6px;
+    cursor: pointer;
+    background: var(--background-secondary);
+    transition: background 0.1s;
+}
+
+.year-week-cell:hover {
+    background: var(--background-modifier-hover);
+}
+
+.year-week-cell.is-active {
+    background: var(--interactive-accent);
+    color: var(--text-on-accent);
+    border-color: var(--interactive-accent);
+}
+
+.year-week-cell-week {
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.year-week-cell-month {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-top: 2px;
+}
+
+.year-week-cell.is-active .year-week-cell-month {
+    color: var(--text-on-accent);
+}
+
 
 

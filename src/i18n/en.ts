@@ -36,6 +36,10 @@ export const en: I18nMessages = {
     'nav.achievement': 'Achievements',
     'nav.placeholder': 'This is the "{name}" page',
 
+    // Year view
+    'year.weekLabel': 'Week {week}',
+    'year.monthLabel': '{month}',
+
     // Command and ribbon
     'command.open': 'Open week schedule panel',
     'ribbon.open': 'Open week schedule',
