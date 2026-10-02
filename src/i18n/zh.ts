@@ -32,6 +32,12 @@ export const zh = {
 
     // 当日执行视图
     'today.start': '开始执行',
+    'today.detailTitle': '任务详情',
+    'today.noSelection': '选中左侧任务或时间轴上的事件以查看详情',
+    'today.noDescription': '暂无描述',
+    'today.category': '分类',
+    'today.timeRange': '时间',
+    'today.allDay': '全天',
 
     // 年视图
     'year.weekLabel': '第{week}周',

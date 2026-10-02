@@ -1279,30 +1279,117 @@
     border-right: 1px solid var(--background-modifier-border);
 }
 
-/* 中间执行区 */
-.today-exec-panel {
+/* 中间：日期方框 + 任务详情方框 */
+.today-center-panel {
     flex: 1;
     min-width: 0;
     display: flex;
+    flex-direction: column;
+    gap: 16px;
+    padding: 20px;
+    box-sizing: border-box;
+    overflow-y: auto;
+}
+
+/* 今天的年月日方框 */
+.today-date-box {
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
-    padding: 20px;
+    gap: 4px;
+    padding: 16px;
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 10px;
+    background: var(--background-secondary);
 }
 
-/* 开始执行按钮 */
-.today-start-btn {
-    padding: 12px 32px;
-    border-radius: 8px;
-    border: 1px solid var(--interactive-accent);
-    background: var(--interactive-accent);
-    color: var(--text-on-accent);
+.today-date-year {
+    font-size: 14px;
+    color: var(--text-muted);
+    letter-spacing: 2px;
+}
+
+.today-date-md {
+    font-size: 32px;
+    font-weight: 700;
+    line-height: 1.1;
+    color: var(--text-normal);
+}
+
+.today-date-weekday {
+    font-size: 14px;
+    color: var(--text-muted);
+}
+
+/* 任务详情方框 */
+.today-detail-box {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 10px;
+    background: var(--background-secondary);
+    overflow: hidden;
+}
+
+.today-detail-title {
+    flex-shrink: 0;
+    padding: 10px 14px;
+    font-size: 14px;
+    font-weight: 600;
+    border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.today-detail-body {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.today-detail-name {
     font-size: 16px;
     font-weight: 600;
-    cursor: pointer;
+    color: var(--text-normal);
+    word-break: break-word;
 }
 
-.today-start-btn:hover {
-    background: var(--interactive-accent-hover);
+.today-detail-desc {
+    font-size: 13px;
+    color: var(--text-muted);
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.today-detail-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    color: var(--text-normal);
+}
+
+.today-detail-label {
+    color: var(--text-muted);
+}
+
+.today-detail-empty {
+    margin: auto;
+    text-align: center;
+    font-size: 13px;
+    color: var(--text-faint);
+}
+
+/* 时间轴上被选中的事件卡片 */
+.event-card.is-selected {
+    outline: 2px solid var(--interactive-accent);
+    outline-offset: -1px;
 }
 
 /* 右侧当天时间轴 */

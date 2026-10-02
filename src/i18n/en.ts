@@ -34,6 +34,12 @@ export const en: I18nMessages = {
 
     // Today view
     'today.start': 'Start',
+    'today.detailTitle': 'Task Details',
+    'today.noSelection': 'Select a task on the left or an event on the timeline to view details',
+    'today.noDescription': 'No description',
+    'today.category': 'Category',
+    'today.timeRange': 'Time',
+    'today.allDay': 'All day',
 
     // Year view
     'year.weekLabel': 'Week {week}',

@@ -1,11 +1,18 @@
 import type { App } from 'obsidian';
 
 import type { TimeBlockCategoryData } from '../week/timeblock-category-manager';
-import type { InboxData } from '../shared/task-panel';
+import type { InboxData, InboxItem } from '../shared/task-panel';
 import { renderTaskPanel } from '../shared/task-panel';
 import { getCurrentDayKey, getCurrentWeekKey, makeDayKeyFromWeek } from '../week/timeblock-data';
 import type { EventBlock } from '../week/week-schedule-view';
-import { t } from '../i18n';
+import { getWeekDays, t } from '../i18n';
+
+/** 把分钟数格式化为 HH:MM */
+function formatMinutes(minutes: number): string {
+    const h = Math.floor(minutes / 60);
+    const m = minutes % 60;
+    return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+}
 
 /**
  * 当日执行视图：左侧任务面板 + 中间执行区 + 右侧当天时间轴。
@@ -22,6 +29,10 @@ export class TodayView {
     private container?: HTMLElement;
     /** 红线定时器 */
     private timer?: number;
+    /** 时间轴上被选中的事件 id（用于在中心方框展示详情） */
+    private selectedEventId?: string;
+    /** 上一次渲染时任务面板选中的任务 id（用于检测选中变化） */
+    private lastSelectedItemId?: string;
 
     constructor(
         app: App,
@@ -42,6 +53,12 @@ export class TodayView {
         this.clearTimer();
         container.empty();
         container.addClass('today-view');
+
+        // 任务面板选中项发生变化时，清除时间轴事件选中（两者互斥）
+        if (this.inboxData.selectedId !== this.lastSelectedItemId) {
+            this.lastSelectedItemId = this.inboxData.selectedId;
+            this.selectedEventId = undefined;
+        }
 
         // ===== 左侧：任务面板 =====
         const taskPanel = container.createDiv({ cls: 'today-task-panel' });
@@ -64,15 +81,10 @@ export class TodayView {
             getCurrentDayKey(),            // 当前日期键（用于「日目标」筛选）
         );
 
-        // ===== 中间：执行区（空面板 + 开始执行按钮）=====
-        const execPanel = container.createDiv({ cls: 'today-exec-panel' });
-        const startBtn = execPanel.createEl('button', {
-            text: t('today.start'),
-            cls: 'today-start-btn',
-        });
-        startBtn.onclick = () => {
-            // 占位：后续实现执行逻辑
-        };
+        // ===== 中间：日期方框 + 任务详情方框 =====
+        const centerPanel = container.createDiv({ cls: 'today-center-panel' });
+        this.renderDateBox(centerPanel);
+        this.renderDetailBox(centerPanel);
 
         // ===== 右侧：当天时间轴 =====
         const timelinePanel = container.createDiv({ cls: 'today-timeline-panel' });
@@ -82,6 +94,94 @@ export class TodayView {
     /** 重新渲染自身 */
     private async refresh(): Promise<void> {
         if (this.container) await this.renderInto(this.container);
+    }
+
+    /** 渲染今天的年月日方框 */
+    private renderDateBox(panel: HTMLElement) {
+        const now = new Date();
+        const box = panel.createDiv({ cls: 'today-date-box' });
+        box.createDiv({ cls: 'today-date-year', text: `${now.getFullYear()}` });
+        box.createDiv({ cls: 'today-date-md' })
+            .setText(`${String(now.getMonth() + 1).padStart(2, '0')} / ${String(now.getDate()).padStart(2, '0')}`);
+        box.createDiv({ cls: 'today-date-weekday', text: getWeekDays()[(now.getDay() + 6) % 7] });
+    }
+
+    /** 渲染任务详情方框（展示左侧选中任务或时间轴选中事件的详情） */
+    private renderDetailBox(panel: HTMLElement) {
+        const box = panel.createDiv({ cls: 'today-detail-box' });
+        box.createDiv({ cls: 'today-detail-title', text: t('today.detailTitle') });
+
+        const body = box.createDiv({ cls: 'today-detail-body' });
+
+        // 优先展示时间轴上选中的事件；否则展示任务面板选中的任务
+        const selectedEvent = this.selectedEventId
+            ? this.getEvents().find(ev => ev.id === this.selectedEventId)
+            : undefined;
+        const selectedItem = this.inboxData.selectedId
+            ? this.inboxData.items.find(i => i.id === this.inboxData.selectedId && !i.removed)
+            : undefined;
+
+        if (selectedEvent) {
+            this.renderEventDetail(body, selectedEvent);
+            return;
+        }
+        if (selectedItem) {
+            this.renderItemDetail(body, selectedItem);
+            return;
+        }
+
+        body.createDiv({ cls: 'today-detail-empty', text: t('today.noSelection') });
+    }
+
+    /** 展示收集盒任务详情 */
+    private renderItemDetail(body: HTMLElement, item: InboxItem) {
+        body.createDiv({ cls: 'today-detail-name', text: item.title });
+        body.createDiv({ cls: 'today-detail-desc' })
+            .setText(item.description || t('today.noDescription'));
+
+        const cat = item.categoryId
+            ? this.categoryData.categories.find(c => c.id === item.categoryId)
+            : undefined;
+        if (cat) {
+            const row = body.createDiv({ cls: 'today-detail-row' });
+            row.createSpan({ cls: 'today-detail-label', text: `${t('today.category')}:` });
+            const dot = row.createSpan({ cls: 'inbox-category-dot' });
+            dot.setCssProps({ '--dot-color': cat.color });
+            row.createSpan({ text: cat.label });
+        }
+    }
+
+    /** 展示时间轴事件详情 */
+    private renderEventDetail(body: HTMLElement, ev: EventBlock) {
+        body.createDiv({ cls: 'today-detail-name', text: ev.title });
+
+        const row = body.createDiv({ cls: 'today-detail-row' });
+        row.createSpan({ cls: 'today-detail-label', text: `${t('today.timeRange')}:` });
+        row.createSpan({
+            text: ev.allDay
+                ? t('today.allDay')
+                : `${formatMinutes(ev.start)} - ${formatMinutes(ev.end)}`,
+        });
+
+        const cat = ev.categoryId
+            ? this.categoryData.categories.find(c => c.id === ev.categoryId)
+            : undefined;
+        if (cat) {
+            const catRow = body.createDiv({ cls: 'today-detail-row' });
+            catRow.createSpan({ cls: 'today-detail-label', text: `${t('today.category')}:` });
+            const dot = catRow.createSpan({ cls: 'inbox-category-dot' });
+            dot.setCssProps({ '--dot-color': cat.color });
+            catRow.createSpan({ text: cat.label });
+        }
+
+        // 若事件来源于收集盒任务，补充任务描述
+        const sourceItem = ev.inboxId
+            ? this.inboxData.items.find(i => i.id === ev.inboxId && !i.removed)
+            : undefined;
+        if (sourceItem) {
+            body.createDiv({ cls: 'today-detail-desc' })
+                .setText(sourceItem.description || t('today.noDescription'));
+        }
     }
 
     /** 渲染当天时间轴（时间刻度 + 今天的计划事件 + 当前时刻红线） */
@@ -131,7 +231,7 @@ export class TodayView {
         );
 
         for (const ev of events) {
-            const card = col.createDiv({ cls: 'event-card' });
+            const card = col.createDiv({ cls: 'event-card event-card-clickable' });
             card.setCssProps({
                 '--card-top': `${(ev.start / 120) * 80}px`,
                 '--card-height': `${((ev.end - ev.start) / 120) * 80}px`,
@@ -144,6 +244,14 @@ export class TodayView {
                 '--card-bg': '#eeeeee88',
             });
             card.setText(ev.title);
+
+            // 点击事件卡片 → 在中心方框展示详情（再次点击取消选中）
+            if (this.selectedEventId === ev.id) card.addClass('is-selected');
+            card.onclick = (e) => {
+                e.stopPropagation();
+                this.selectedEventId = this.selectedEventId === ev.id ? undefined : ev.id;
+                void this.refresh();
+            };
         }
     }
 
