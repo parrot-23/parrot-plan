@@ -23,6 +23,7 @@
 /* 网格背景 */
 .schedule-grid {
     flex: 1;
+    min-width: 450px;
     display: flex;
     flex-direction: column;
     overflow: hidden;
@@ -1150,6 +1151,7 @@
 /* ===== 时间区间设置窗口 ===== */
 .range-scheme-modal {
     width: 100%;
+    min-width: 700px;
 }
 
 /* 顶部：标题 + 方案按钮 */

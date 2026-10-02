@@ -2,7 +2,7 @@
 
 import { ItemView, WorkspaceLeaf, Modal, Setting, Notice, App } from 'obsidian';
 import type { Plugin } from 'obsidian';
-import type { WeekRangeData, CategorizedRange, TimeBlockCategoryId, RangeSchemeData } from './timeblock-data';
+import type { WeekRangeData, CategorizedRange, TimeBlockCategoryId, RangeSchemeData, DailyRange } from './timeblock-data';
 import { hexToTransparent } from './timeblock-data';
 import type { TimeBlockCategoryData } from './timeblock-category-manager';
 import type { DayTemplateData } from './template-manager';
@@ -666,13 +666,21 @@ export class WeekScheduleView extends ItemView {
         );
     }
 
-    /** 应用日模板到指定日期（供时间区间弹窗的模板面板调用） */
+    /** 获取当前激活方案的日区间数据（无激活方案时回退到 rangeData.days） */
+    getActiveDays(): DailyRange[] {
+        const scheme = this.schemeData.schemes.find(s => s.id === this.schemeData.activeSchemeId);
+        return scheme ? scheme.days : this.rangeData.days;
+    }
+
+    /** 应用日模板到指定日期（供时间区间弹窗的模板面板调用，写入当前激活方案） */
     private async applyTemplate(templateId: string, targetDays: number[]) {
         const tpl = this.dayTemplateData.dayTemplates.find(t => t.id === templateId);
         if (!tpl) { new Notice(t('template.notFound')); return; }
+        const scheme = this.schemeData.schemes.find(s => s.id === this.schemeData.activeSchemeId);
+        if (!scheme) { new Notice(t('rangeScheme.noActive')); return; }
         for (const day of targetDays) {
-            let dayData = this.rangeData.days.find(d => d.day === day);
-            if (!dayData) { dayData = { day, ranges: [] }; this.rangeData.days.push(dayData); }
+            let dayData = scheme.days.find(d => d.day === day);
+            if (!dayData) { dayData = { day, ranges: [] }; scheme.days.push(dayData); }
             dayData.ranges = tpl.ranges.map(range => ({
                 ...range,
                 id: `r_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,

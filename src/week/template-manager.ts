@@ -1,5 +1,5 @@
 import { App, Modal, Setting, Notice } from 'obsidian';
-import type { CategorizedRange, WeekRangeData } from './timeblock-data';
+import type { CategorizedRange, WeekRangeData, DailyRange } from './timeblock-data';
 import { t, getWeekDays } from '../i18n';
 
 // 数据全部由 main.ts 中的主视图，自己持有。
@@ -10,6 +10,8 @@ export interface TemplateViewContext {
     dayTemplateData: DayTemplateData;
     save(): Promise<void>;
     onOpen(): Promise<void>;
+    /** 获取当前激活方案的日区间数据（无激活方案时回退到 rangeData.days） */
+    getActiveDays(): DailyRange[];
 }
 
 /** 日模板 */
@@ -68,7 +70,8 @@ export function renderTemplatePanel(
     app: App,
     container: HTMLElement,
     ctx: TemplateViewContext,
-    onApply: (templateId: string, targetDays: number[]) => void | Promise<void>
+    onApply: (templateId: string, targetDays: number[]) => void | Promise<void>,
+    onRefresh?: () => void
 ) {
     const panel = container.createDiv({ cls: 'template-panel' });
 
@@ -83,7 +86,8 @@ export function renderTemplatePanel(
         new TemplateCreateModal(app, ctx, () => {
             selectedTemplateId = null; // 新增后清空选中
             // 刷新面板
-            void ctx.onOpen();
+            if (onRefresh) { onRefresh(); }
+            else { void ctx.onOpen(); }
         }).open();
     };
 
@@ -161,7 +165,8 @@ export function renderTemplatePanel(
 
             // 4. 保存 + 刷新
             await ctx.save();
-            await ctx.onOpen();
+            if (onRefresh) { onRefresh(); }
+            else { await ctx.onOpen(); }
         }).open();
     };
 
@@ -225,9 +230,8 @@ export class TemplateCreateModal extends Modal {
                         return;
                     }
 
-                    // ✅ 从 sourceDay 复制 ranges（由外部传入）
-                    // 这里先留空，下一步再接
-                    const dayData = this.ctx.rangeData.days.find(d => d.day === sourceDay);
+                    // 从当前激活方案的对应星期复制 ranges
+                    const dayData = this.ctx.getActiveDays().find(d => d.day === sourceDay);
                     const ranges = (dayData?.ranges ?? []).map(({ id, ...rest }) => rest);
                     
                     this.ctx.dayTemplateData.dayTemplates.push({

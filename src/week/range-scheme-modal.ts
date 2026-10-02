@@ -95,7 +95,14 @@ export class RangeSchemeModal extends Modal {
 
         // 日模板（图例下方）
         const templateContainer = legendPanel.createDiv({ cls: 'template-container' });
-        renderTemplatePanel(this.app, templateContainer, this.templateCtx, this.onApplyTemplate);
+        renderTemplatePanel(this.app, templateContainer, this.templateCtx, async (templateId, targetDays) => {
+            await this.onApplyTemplate(templateId, targetDays);
+            // 应用后刷新弹窗内的日历
+            this.onOpen();
+        }, () => {
+            // 新增模板后刷新弹窗
+            this.onOpen();
+        });
 
         // 右侧：日历
         const calendarPanel = body.createDiv({ cls: 'range-scheme-calendar' });
