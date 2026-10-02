@@ -55,6 +55,7 @@
     display: flex;
     flex-direction: column;
     overflow: hidden;
+    position: relative;
 }
 
 
@@ -277,6 +278,52 @@
     width: 50px;
     box-sizing: border-box;
     border-right: 1px solid var(--background-modifier-border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* 全天面板展开/收起按钮 */
+.all-day-toggle-btn {
+    width: 100%;
+    height: 100%;
+    padding: 0;
+    border: none;
+    background: transparent;
+    color: var(--text-muted);
+    font-size: 11px;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.all-day-toggle-btn:hover {
+    background: var(--background-modifier-hover);
+    color: var(--text-normal);
+}
+
+.all-day-toggle-btn.is-active {
+    background: var(--interactive-accent);
+    color: var(--text-on-accent);
+}
+
+/* 全天展开面板：绝对定位覆盖在日历上方，不改变日历位置 */
+.all-day-panel {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 0;
+    overflow: hidden;
+    background: var(--background-primary);
+    border-bottom: 1px solid var(--background-modifier-border);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    z-index: 20;
+    transition: height 0.15s ease;
+}
+
+.all-day-panel.is-open {
+    height: 300px;
+    overflow-y: auto;
 }
 
 /* 7 天格子容器 */

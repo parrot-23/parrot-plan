@@ -64,6 +64,10 @@ export class WeekScheduleView extends ItemView {
     inboxData: InboxData = DEFAULT_INBOX_DATA;
     /** 当前显示的周键（如 2026-W40） */
     currentWeekKey: WeekKey = getCurrentWeekKey();
+    /** 全天面板是否展开（覆盖在日历上方，不改变日历位置） */
+    private allDayPanelOpen = false;
+    /** 日历主体的滚动位置（刷新时保留，避免跳动） */
+    private savedScrollTop: number | null = null;
     /** 被主视图复用时的宿主容器（用于刷新） */
     private hostContainer?: HTMLElement;
 
@@ -145,6 +149,13 @@ export class WeekScheduleView extends ItemView {
     /** 将周计划渲染到指定容器（供主视图复用） */
     async renderInto(content: HTMLElement) {
         this.hostContainer = content;
+
+        // 刷新前记录日历主体的滚动位置，渲染后恢复，避免位置跳动
+        const prevScroll = content.querySelector('.grid-body-row') as HTMLElement | null;
+        if (prevScroll) {
+            this.savedScrollTop = prevScroll.scrollTop;
+        }
+
         content.empty();
 
         // 在容器内部创建 .week-schedule 根节点，避免与宿主容器样式冲突
@@ -203,8 +214,8 @@ export class WeekScheduleView extends ItemView {
             }
         );
 
-        // ===== 全天事件行 =====
-        this.renderAllDayRow(grid);
+        // ===== 全天事件行（放在星期表头下方、日历主体上方）=====
+        this.renderAllDayRow(grid, bodyRowInner.parentElement!);
 
         // ===== 事件层 =====
         this.renderEventLayer(bodyRowInner);
@@ -216,11 +227,17 @@ export class WeekScheduleView extends ItemView {
     }
    
     // ===== 全天事件行 =====
-    private renderAllDayRow(grid: HTMLElement) {
+    private renderAllDayRow(grid: HTMLElement, beforeEl: HTMLElement) {
         const row = grid.createDiv({ cls: 'all-day-row' });
-        // 左侧占位（与时间轴对齐）
+        // 插入到日历主体行之前（即星期表头下方）
+        grid.insertBefore(row, beforeEl);
+
+        // 左侧：展开/收起按钮（替代原来的「全天」文字）
         const allDayCorner = row.createDiv({ cls: 'all-day-corner' });
-        allDayCorner.setText(t('allday.label'));
+        const toggleBtn = allDayCorner.createEl('button', {
+            text: t('allday.label'),
+            cls: 'all-day-toggle-btn',
+        });
 
         const cells = row.createDiv({ cls: 'all-day-cells' });
         for (let d = 1; d <= 7; d++) {
@@ -253,6 +270,16 @@ export class WeekScheduleView extends ItemView {
                 void this.addAllDayEvent(d);
             };
         }
+
+        // ===== 展开面板：覆盖在日历上方，不改变日历位置 =====
+        const panel = grid.createDiv({ cls: 'all-day-panel' });
+        panel.toggleClass('is-open', this.allDayPanelOpen);
+        toggleBtn.toggleClass('is-active', this.allDayPanelOpen);
+        toggleBtn.onclick = () => {
+            this.allDayPanelOpen = !this.allDayPanelOpen;
+            panel.toggleClass('is-open', this.allDayPanelOpen);
+            toggleBtn.toggleClass('is-active', this.allDayPanelOpen);
+        };
     }
 
     // 添加全天事件（选中收集盒条目时）
@@ -312,7 +339,9 @@ export class WeekScheduleView extends ItemView {
 
                 const rect = col.getBoundingClientRect();
                 const y = e.clientY - rect.top;
-                const startMinutes = Math.floor((y / 80) * 120 / 30) * 30;
+                // 限制在一天范围内（列可能被拉伸到高于 24 小时的高度）
+                const rawStart = Math.floor((y / 80) * 120 / 30) * 30;
+                const startMinutes = Math.max(0, Math.min(rawStart, 1440 - 60));
                 const endMinutes = startMinutes + 60;
 
                 // ===== 新增：检查收集盒是否有选中条目 =====
@@ -429,11 +458,16 @@ export class WeekScheduleView extends ItemView {
         const line = col.createDiv({ cls: 'current-time-line' });
         line.setCssProps({ '--line-top': `${(totalMinutes / 120) * 80}px` });
 
-        // 滚动到红线位置（居中显示）
+        // 滚动到红线位置（居中显示）；若刷新前已有滚动位置，则保留原位置
         const scrollContainer = bodyRowInner.closest('.grid-body-row');
         if (scrollContainer) {
-            const lineTop = (totalMinutes / 120) * 80;
-            scrollContainer.scrollTop = Math.max(0, lineTop - scrollContainer.clientHeight / 2);
+            if (this.savedScrollTop !== null) {
+                scrollContainer.scrollTop = this.savedScrollTop;
+                this.savedScrollTop = null;
+            } else {
+                const lineTop = (totalMinutes / 120) * 80;
+                scrollContainer.scrollTop = Math.max(0, lineTop - scrollContainer.clientHeight / 2);
+            }
         }
     }
 

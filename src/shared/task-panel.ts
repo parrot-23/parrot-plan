@@ -83,6 +83,18 @@ function collectDescendantIds(inboxData: InboxData, id: string): string[] {
     return result;
 }
 
+/** 判断某任务自身或其任一后代是否满足条件（用于目标筛选时保留父级链路） */
+function itemOrDescendantMatches(
+    inboxData: InboxData,
+    item: InboxItem,
+    predicate: (target: InboxItem) => boolean,
+): boolean {
+    if (predicate(item)) return true;
+    return getChildren(inboxData, item.id).some(child =>
+        itemOrDescendantMatches(inboxData, child, predicate),
+    );
+}
+
 // ===== 新增弹窗 =====
 class InboxAddModal extends Modal {
     private title: string = '';
@@ -338,14 +350,20 @@ export function renderTaskPanel(
         // 只显示未移除的顶层条目
         let topItems = getChildren(inboxData, undefined);
 
-        // 周目标模式：仅显示分配到当前周的任务
+        // 周目标模式：仅显示分配到当前周的任务（含子任务命中时保留父级链路）
         if (weekGoalOnly && currentWeekKey) {
-            topItems = topItems.filter(i => i.assignedWeekKeys?.includes(currentWeekKey!));
+            const weekKey = currentWeekKey;
+            topItems = topItems.filter(i =>
+                itemOrDescendantMatches(inboxData, i, t => t.assignedWeekKeys?.includes(weekKey) ?? false),
+            );
         }
 
-        // 日目标模式：仅显示分配到当天的任务
+        // 日目标模式：仅显示分配到当天的任务（含子任务命中时保留父级链路）
         if (dayGoalOnly && currentDayKey) {
-            topItems = topItems.filter(i => i.assignedDayKeys?.includes(currentDayKey!));
+            const dayKey = currentDayKey;
+            topItems = topItems.filter(i =>
+                itemOrDescendantMatches(inboxData, i, t => t.assignedDayKeys?.includes(dayKey) ?? false),
+            );
         }
 
         if (topItems.length === 0) {
