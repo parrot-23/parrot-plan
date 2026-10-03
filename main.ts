@@ -11,7 +11,7 @@ import type { EventBlock, ExecutionRecord } from './src/week/week-schedule-view'
 import { DEFAULT_INBOX_DATA, type InboxData } from './src/shared/task-panel';
 import { VIEW_TYPE_MAIN, MainView } from './src/main-view';
 import { initI18n, t } from './src/i18n';
-import { initLogger } from './src/shared/logger';
+import { initLogger, log } from './src/shared/logger';
 
 export default class ParrotPlanPlugin extends Plugin {
 
@@ -21,6 +21,7 @@ export default class ParrotPlanPlugin extends Plugin {
 
         // 初始化日志（清空上一次的日志内容）
         await initLogger(this.app);
+        log('插件 onload 开始');
 
         // 读取数据
         const rawData: unknown = await this.loadData();
@@ -62,12 +63,18 @@ export default class ParrotPlanPlugin extends Plugin {
         // 注册视图
         this.registerView(
             VIEW_TYPE_MAIN,
-            (leaf) => new MainView(leaf, this, initialData, initialTemplateData, initialCategoryData,
-                (savedData.events ?? []) as EventBlock[],
-                (savedData.executions ?? []) as ExecutionRecord[],
-                initialInboxData,
-                initialSchemeData,
-            )
+            (leaf) => {
+                log('创建主视图（registerView 工厂被调用）', {
+                    events: ((savedData.events ?? []) as EventBlock[]).length,
+                    executions: ((savedData.executions ?? []) as ExecutionRecord[]).length,
+                });
+                return new MainView(leaf, this, initialData, initialTemplateData, initialCategoryData,
+                    (savedData.events ?? []) as EventBlock[],
+                    (savedData.executions ?? []) as ExecutionRecord[],
+                    initialInboxData,
+                    initialSchemeData,
+                );
+            }
         );
 
         // Ribbon 图标
@@ -101,6 +108,7 @@ export default class ParrotPlanPlugin extends Plugin {
     }
 
     onunload() {
+        log('插件 onunload（卸载/重载）');
         // 只保存数据，不 detach leaf（否则会打乱用户布局）
         const leaves = this.app.workspace.getLeavesOfType(VIEW_TYPE_MAIN);
         for (const leaf of leaves) {

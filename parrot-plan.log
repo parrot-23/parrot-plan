@@ -1,6 +1,8 @@
-[2026-10-03T16:06:48.861Z] 渲染周表日历 {"weekKey":"2026-W40","events":5,"executions":0}
-[2026-10-03T16:06:48.862Z]   计划事件 {"id":"ev_1791017403644","day":1,"start":450,"end":510,"allDay":false,"title":"test","inboxId":"inbox_1791017400854"}
-[2026-10-03T16:06:48.862Z]   计划事件 {"id":"ev_1791017403979","day":1,"start":690,"end":750,"allDay":false,"title":"test","inboxId":"inbox_1791017400854"}
-[2026-10-03T16:06:48.862Z]   计划事件 {"id":"ev_1791017407484","day":1,"start":840,"end":900,"allDay":false,"title":"test","inboxId":"inbox_1791017400854"}
-[2026-10-03T16:06:48.863Z]   计划事件 {"id":"ev_1791017410858","day":2,"start":480,"end":540,"allDay":false,"title":"test","inboxId":"inbox_1791017400854"}
-[2026-10-03T16:06:48.863Z]   计划事件 {"id":"ev_1791017411626","day":2,"start":690,"end":750,"allDay":false,"title":"test","inboxId":"inbox_1791017400854"}
+[2026-10-03T16:13:30.878Z] 插件 onload 开始
+[2026-10-03T16:13:30.892Z] 创建主视图（registerView 工厂被调用） {"events":5,"executions":0}
+[2026-10-03T16:13:30.902Z] 渲染周表日历 {"weekKey":"2026-W40","events":5,"executions":0}
+[2026-10-03T16:13:30.902Z]   计划事件 {"id":"ev_1791017403644","day":1,"start":450,"end":510,"allDay":false,"title":"test","inboxId":"inbox_1791017400854"}
+[2026-10-03T16:13:30.903Z]   计划事件 {"id":"ev_1791017403979","day":1,"start":690,"end":750,"allDay":false,"title":"test","inboxId":"inbox_1791017400854"}
+[2026-10-03T16:13:30.903Z]   计划事件 {"id":"ev_1791017407484","day":1,"start":840,"end":900,"allDay":false,"title":"test","inboxId":"inbox_1791017400854"}
+[2026-10-03T16:13:30.904Z]   计划事件 {"id":"ev_1791017410858","day":2,"start":480,"end":540,"allDay":false,"title":"test","inboxId":"inbox_1791017400854"}
+[2026-10-03T16:13:30.904Z]   计划事件 {"id":"ev_1791017411626","day":2,"start":690,"end":750,"allDay":false,"title":"test","inboxId":"inbox_1791017400854"}
