@@ -12,9 +12,12 @@ main.js
 
 # backup
 *.bak
+*.log
 *.bak1
 
 # obsidian
 data.json
 .hotreload
+parrot-plan.log
+
 
