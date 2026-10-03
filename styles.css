@@ -1434,6 +1434,63 @@
     color: var(--text-muted);
 }
 
+/* 任务层级方框（位于任务详情方框上方） */
+.today-hierarchy-box {
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 10px;
+    background: var(--background-secondary);
+    overflow: hidden;
+}
+
+.today-hierarchy-title {
+    flex-shrink: 0;
+    padding: 10px 14px;
+    font-size: 14px;
+    font-weight: 600;
+    border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.today-hierarchy-body {
+    padding: 10px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    max-height: 180px;
+    overflow-y: auto;
+}
+
+/* 单个层级条目：按层级缩进 */
+.today-hierarchy-item {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 13px;
+    color: var(--text-normal);
+    padding-left: calc(var(--hierarchy-depth, 0) * 14px);
+}
+
+/* 层级连接符 */
+.today-hierarchy-branch {
+    flex-shrink: 0;
+    width: 12px;
+    text-align: center;
+    color: var(--text-faint);
+    font-size: 11px;
+}
+
+.today-hierarchy-name {
+    word-break: break-word;
+}
+
+/* 当前任务高亮 */
+.today-hierarchy-item.is-current .today-hierarchy-name {
+    font-weight: 600;
+    color: var(--interactive-accent);
+}
+
 /* 任务详情方框 */
 .today-detail-box {
     flex: 1;

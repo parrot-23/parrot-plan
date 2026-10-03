@@ -87,9 +87,10 @@ export class TodayView {
             (item) => this.getDayGoalGroup(item), // 日目标分组：全天 / 时间点
         );
 
-        // ===== 中间：日期方框 + 任务详情方框 + 操作按钮 =====
+        // ===== 中间：日期方框 + 任务层级方框 + 任务详情方框 + 操作按钮 =====
         const centerPanel = container.createDiv({ cls: 'today-center-panel' });
         this.renderDateBox(centerPanel);
+        this.renderHierarchyBox(centerPanel);
         this.renderDetailBox(centerPanel);
         this.renderActionButtons(centerPanel);
 
@@ -127,6 +128,60 @@ export class TodayView {
         box.createDiv({ cls: 'today-date-md' })
             .setText(`${String(now.getMonth() + 1).padStart(2, '0')} / ${String(now.getDate()).padStart(2, '0')}`);
         box.createDiv({ cls: 'today-date-weekday', text: getWeekDays()[(now.getDay() + 6) % 7] });
+    }
+
+    /** 渲染任务层级方框（展示当前任务的所有父级任务树） */
+    private renderHierarchyBox(panel: HTMLElement) {
+        // 当前任务：优先时间轴选中事件的来源任务，其次任务面板选中任务
+        const selectedEvent = this.selectedEventId
+            ? this.getEvents().find(ev => ev.id === this.selectedEventId)
+            : undefined;
+        const currentItem = selectedEvent?.inboxId
+            ? this.inboxData.items.find(i => i.id === selectedEvent.inboxId && !i.removed)
+            : this.getSelectedItem();
+
+        // 无当前任务时不显示层级方框
+        if (!currentItem) return;
+
+        const box = panel.createDiv({ cls: 'today-hierarchy-box' });
+        box.createDiv({ cls: 'today-hierarchy-title', text: t('today.hierarchyTitle') });
+
+        const body = box.createDiv({ cls: 'today-hierarchy-body' });
+
+        // 沿 parentId 向上收集父级链（从当前任务到顶层）
+        const chain: InboxItem[] = [];
+        let cursor: InboxItem | undefined = currentItem;
+        const visited = new Set<string>();
+        while (cursor && !visited.has(cursor.id)) {
+            visited.add(cursor.id);
+            chain.push(cursor);
+            cursor = cursor.parentId
+                ? this.inboxData.items.find(i => i.id === cursor!.parentId && !i.removed)
+                : undefined;
+        }
+        // 反转：从顶层父级到当前任务
+        chain.reverse();
+
+        chain.forEach((item, index) => {
+            const isCurrent = item.id === currentItem.id;
+            const row = body.createDiv({ cls: 'today-hierarchy-item' });
+            row.setCssProps({ '--hierarchy-depth': String(index) });
+            if (isCurrent) row.addClass('is-current');
+
+            // 层级连接符
+            row.createSpan({ cls: 'today-hierarchy-branch', text: index === 0 ? '' : '└' });
+
+            // 分类色点
+            const cat = item.categoryId
+                ? this.categoryData.categories.find(c => c.id === item.categoryId)
+                : undefined;
+            if (cat) {
+                const dot = row.createSpan({ cls: 'inbox-category-dot' });
+                dot.setCssProps({ '--dot-color': cat.color });
+            }
+
+            row.createSpan({ cls: 'today-hierarchy-name', text: item.title });
+        });
     }
 
     /** 渲染任务详情方框（展示左侧选中任务或时间轴选中事件的详情） */
