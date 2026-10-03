@@ -16,6 +16,7 @@
     overflow: hidden;
     padding: 10px;
     border-right: 1px solid var(--background-modifier-border);
+    background: var(--background-secondary);
 }
 
 /* 右侧主区（顶部工具栏 + 日历） */
@@ -322,6 +323,8 @@
     background: var(--background-primary);
     border-bottom: 1px solid var(--background-modifier-border);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    /* 裁掉向上溢出的阴影，避免盖住上方全天行 */
+    clip-path: inset(0 -20px -20px -20px);
     z-index: 20;
     transition: height 0.15s ease;
 }
@@ -410,8 +413,8 @@
 /* 删除按钮 */
 .all-day-chip-del {
     position: absolute;
-    top: -4px;
-    right: -4px;
+    top: 2px;
+    right: 2px;
     width: 12px;
     height: 12px;
     line-height: 10px;
@@ -761,11 +764,9 @@
 }
 
 /* ===== 收集盒面板 ===== */
+/* 仅负责内部布局；外框（padding / border / background）由各视图的 *-task-panel 统一提供，
+   避免同一元素上两个类互相覆盖导致不同视图对齐不一致 */
 .inbox-panel {
-    padding: 8px 12px;
-    border: 1px solid var(--background-modifier-border);
-    border-radius: 6px;
-    background: var(--background-secondary);
     height: 100%;
     display: flex;
     flex-direction: column;
@@ -993,6 +994,49 @@
     background: var(--dot-color, #888888);
 }
 
+/* 分类选择器（新建任务弹窗：全部列出，点击选中） */
+.inbox-cat-picker {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    justify-content: flex-end;
+}
+
+.inbox-cat-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 8px;
+    border-radius: 4px;
+    border: 1px solid var(--background-modifier-border);
+    background: var(--background-primary);
+    cursor: pointer;
+    font-size: 13px;
+}
+
+.inbox-cat-chip:hover {
+    background: var(--background-modifier-hover);
+}
+
+.inbox-cat-chip.is-selected {
+    border-color: var(--interactive-accent);
+    border-width: 2px;
+    padding: 3px 7px;
+}
+
+.inbox-cat-square {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: 2px;
+    background: var(--dot-color, #888888);
+}
+
+.inbox-cat-square.is-none {
+    background: transparent;
+    border: 1px dashed var(--text-muted);
+}
+
 
 /* 事件层 */
 .event-card {
@@ -1166,6 +1210,7 @@
     overflow: hidden;
     padding: 10px;
     border-right: 1px solid var(--background-modifier-border);
+    background: var(--background-secondary);
 }
 
 /* 右侧周历面板 */
@@ -1342,6 +1387,7 @@
     overflow: hidden;
     padding: 10px;
     border-right: 1px solid var(--background-modifier-border);
+    background: var(--background-secondary);
 }
 
 /* 中间：日期方框 + 任务详情方框 */
@@ -1529,6 +1575,7 @@
     overflow: hidden;
     padding: 10px;
     border-right: 1px solid var(--background-modifier-border);
+    background: var(--background-secondary);
 }
 
 /* 右侧泳道图 */

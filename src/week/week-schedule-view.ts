@@ -323,6 +323,11 @@ export class WeekScheduleView extends ItemView {
             new Notice(t('allday.needSelect'));
             return;
         }
+        // 同一任务在当前周的同一天已排入过，则不再重复创建
+        if (this.hasEventForItem(selectedInboxItem, day)) {
+            new Notice(t('event.alreadyScheduled', { title: selectedInboxItem.title }));
+            return;
+        }
         this.events.push({
             id: `ev_${Date.now()}`,
             day,
@@ -381,6 +386,11 @@ export class WeekScheduleView extends ItemView {
                 // ===== 新增：检查收集盒是否有选中条目 =====
                 const selectedInboxItem = this.getSelectedInboxItem();
                 if (selectedInboxItem) {
+                    // 同一任务在当前周的同一天已排入过，则不再重复创建
+                    if (this.hasEventForItem(selectedInboxItem, d)) {
+                        new Notice(t('event.alreadyScheduled', { title: selectedInboxItem.title }));
+                        return;
+                    }
                     // 直接创建事件，标题和分类从收集盒条目继承，并记录来源任务
                     this.events.push({
                         id: `ev_${Date.now()}`,
@@ -675,6 +685,15 @@ export class WeekScheduleView extends ItemView {
         // 已移除的条目不可再排入
         if (!item || item.removed) return null;
         return item;
+    }
+
+    /** 判断某任务在当前周的某天是否已排入事件（避免重复排入） */
+    private hasEventForItem(item: InboxItem, day: number): boolean {
+        return this.events.some(ev =>
+            ev.inboxId === item.id
+            && ev.day === day
+            && ev.weekKey === this.currentWeekKey,
+        );
     }
 
     /**

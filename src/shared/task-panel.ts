@@ -137,16 +137,31 @@ class InboxAddModal extends Modal {
                     .onChange(val => this.description = val);
             });
 
-        new Setting(contentEl)
-            .setName(t('inbox.category'))
-            .addDropdown(drop => {
-                drop.addOption('', t('inbox.noCategory'));
-                for (const cat of this.categoryData.categories) {
-                    drop.addOption(cat.id, cat.label);
-                }
-                drop.setValue(this.categoryId)
-                    .onChange(val => this.categoryId = val);
-            });
+        // 分类：全部列出，点击选中（颜色小方块 + 文字）
+        const catSetting = new Setting(contentEl).setName(t('inbox.category'));
+        const catList = catSetting.controlEl.createDiv({ cls: 'inbox-cat-picker' });
+
+        const renderCatChips = () => {
+            catList.empty();
+            // 「无分类」选项
+            const options: { id: string; label: string; color?: string }[] = [
+                { id: '', label: t('inbox.noCategory') },
+                ...this.categoryData.categories.map(c => ({ id: c.id, label: c.label, color: c.color })),
+            ];
+            for (const opt of options) {
+                const chip = catList.createDiv({ cls: 'inbox-cat-chip' });
+                if (this.categoryId === opt.id) chip.addClass('is-selected');
+                const square = chip.createSpan({ cls: 'inbox-cat-square' });
+                square.setCssProps({ '--dot-color': opt.color ?? 'transparent' });
+                if (!opt.color) square.addClass('is-none');
+                chip.createSpan({ cls: 'inbox-cat-label', text: opt.label });
+                chip.onclick = () => {
+                    this.categoryId = opt.id;
+                    renderCatChips();
+                };
+            }
+        };
+        renderCatChips();
 
         new Setting(contentEl)
             .addButton(btn => btn
@@ -530,7 +545,7 @@ export function renderTaskPanel(
             inboxData.items.push(item);
             void (async () => {
                 await onAdd(item);
-                inboxData.selectedId = undefined;  // 添加后清除选中
+                // 保持原有选中状态（添加子任务后父任务仍保持选中）
                 renderList();
                 updateToolbar();
                 onRefresh();
