@@ -98,6 +98,24 @@ export class WeekScheduleView extends ItemView {
 
     // 调用插件方法，存储数据。
     async save() {
+        log('保存数据', {
+            weekKey: this.currentWeekKey,
+            events: this.events.length,
+            executions: this.executions.length,
+        });
+        // 记录本次保存的全部计划事件数据
+        for (const ev of this.events) {
+            log('  保存事件', {
+                id: ev.id,
+                day: ev.day,
+                start: ev.start,
+                end: ev.end,
+                allDay: ev.allDay ?? false,
+                title: ev.title,
+                inboxId: ev.inboxId,
+                weekKey: ev.weekKey,
+            });
+        }
         await this.plugin.saveData({
             version: 1,
             days: this.rangeData.days,   // 网格时间区块。
@@ -162,6 +180,19 @@ export class WeekScheduleView extends ItemView {
             events: this.events.length,
             executions: this.executions.length,
         });
+        // 记录本周每个计划事件的具体数据（用于排查位置/时间错位）
+        for (const ev of this.events) {
+            if (ev.weekKey !== this.currentWeekKey) continue;
+            log('  计划事件', {
+                id: ev.id,
+                day: ev.day,
+                start: ev.start,
+                end: ev.end,
+                allDay: ev.allDay ?? false,
+                title: ev.title,
+                inboxId: ev.inboxId,
+            });
+        }
 
         // 刷新前记录日历主体的滚动位置，渲染后恢复，避免位置跳动
         const prevScroll = content.querySelector('.grid-body-row');
