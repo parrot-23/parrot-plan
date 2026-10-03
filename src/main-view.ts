@@ -14,6 +14,7 @@ import { YearView } from './views/year-view';
 import { TodayView } from './views/today-view';
 import { SwimlaneView } from './views/swimlane-view';
 import { t } from './i18n';
+import { log } from './shared/logger';
 
 export const VIEW_TYPE_MAIN = 'parrot-plan-main-view';
 
@@ -55,6 +56,10 @@ export class MainView extends ItemView {
     ) {
         super(leaf);
         this.plugin = plugin;
+        log('MainView 构造', {
+            events: events.length,
+            executions: executions.length,
+        });
         this.weekView = new WeekScheduleView(
             leaf,
             plugin,
@@ -140,6 +145,11 @@ export class MainView extends ItemView {
 
     /** 根据当前 tab 渲染内容区 */
     private async renderContent() {
+        log('MainView.renderContent', {
+            tab: this.activeTab,
+            events: this.weekView.events.length,
+            executions: this.weekView.executions.length,
+        });
         // 刷新导航高亮
         const navBtns = this.containerEl.querySelectorAll('.parrot-plan-nav-btn');
         navBtns.forEach((btn, i) => {

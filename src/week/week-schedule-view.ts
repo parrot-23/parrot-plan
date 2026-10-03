@@ -94,6 +94,10 @@ export class WeekScheduleView extends ItemView {
         this.executions = executions ?? [];
         this.inboxData = inboxData ?? DEFAULT_INBOX_DATA;
         this.schemeData = schemeData ?? { schemes: [] };
+        log('WeekScheduleView 构造', {
+            events: this.events.length,
+            executions: this.executions.length,
+        });
     }
 
     // 调用插件方法，存储数据。
