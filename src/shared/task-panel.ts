@@ -541,7 +541,10 @@ export function renderTaskPanel(
                 inboxData.projectFocusId = undefined;
             } else {
                 // 未聚焦：需先选中一个任务，聚焦到该任务
-                if (!inboxData.selectedId) return;
+                if (!inboxData.selectedId) {
+                    new Notice(t('inbox.projectFocusNeedSelect'));
+                    return;
+                }
                 inboxData.projectFocusId = inboxData.selectedId;
             }
             projectFocusBtn.toggleClass('is-active', !!inboxData.projectFocusId);

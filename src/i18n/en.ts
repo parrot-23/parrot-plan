@@ -196,4 +196,5 @@ export const en: I18nMessages = {
     'inbox.maxDepth': 'Subtasks can nest at most {max} levels',
     'inbox.projectFocusBtn': 'By Project',
     'inbox.projectFocus': 'Project Layout',
+    'inbox.projectFocusNeedSelect': 'Select a task first, then arrange by project',
 };
