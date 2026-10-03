@@ -327,8 +327,8 @@ export class WeekScheduleView extends ItemView {
             new Notice(t('allday.needSelect'));
             return;
         }
-        // 同一任务在当前周的同一天已排入过，则不再重复创建
-        if (this.hasEventForItem(selectedInboxItem, day)) {
+        // 当天已有该任务的任何事件（全天或时间点），则不再重复添加
+        if (this.hasAnyEventForItem(selectedInboxItem, day)) {
             new Notice(t('event.alreadyScheduled', { title: selectedInboxItem.title }));
             return;
         }
@@ -390,11 +390,8 @@ export class WeekScheduleView extends ItemView {
                 // ===== 新增：检查收集盒是否有选中条目 =====
                 const selectedInboxItem = this.getSelectedInboxItem();
                 if (selectedInboxItem) {
-                    // 同一任务在当前周的同一天已排入过，则不再重复创建
-                    if (this.hasEventForItem(selectedInboxItem, d)) {
-                        new Notice(t('event.alreadyScheduled', { title: selectedInboxItem.title }));
-                        return;
-                    }
+                    // 时间点事件可与其他时刻重复；但若当天全天已有该任务，则移除全天事件
+                    this.removeAllDayEventForItem(selectedInboxItem, d);
                     // 直接创建事件，标题和分类从收集盒条目继承，并记录来源任务
                     this.events.push({
                         id: `ev_${Date.now()}`,
@@ -751,12 +748,22 @@ export class WeekScheduleView extends ItemView {
         return item;
     }
 
-    /** 判断某任务在当前周的某天是否已排入事件（避免重复排入） */
-    private hasEventForItem(item: InboxItem, day: number): boolean {
+    /** 判断某任务在当前周的某天是否已排入任何事件（全天或时间点） */
+    private hasAnyEventForItem(item: InboxItem, day: number): boolean {
         return this.events.some(ev =>
             ev.inboxId === item.id
             && ev.day === day
             && ev.weekKey === this.currentWeekKey,
+        );
+    }
+
+    /** 移除某任务在当前周某天的全天事件（用于时间点事件创建时替换全天事件） */
+    private removeAllDayEventForItem(item: InboxItem, day: number): void {
+        this.events = this.events.filter(ev =>
+            !(ev.inboxId === item.id
+                && ev.day === day
+                && ev.weekKey === this.currentWeekKey
+                && ev.allDay),
         );
     }
 

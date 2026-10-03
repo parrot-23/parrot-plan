@@ -1795,6 +1795,18 @@
     padding-right: 8px;
 }
 
+/* 弹窗内图例：标题与分类纵向排列（不影响工具栏中的横向图例） */
+.range-scheme-legend .range-legend {
+    flex-direction: column;
+    align-items: stretch;
+    flex-wrap: nowrap;
+}
+
+.range-scheme-legend .legend-title {
+    margin-right: 0;
+    margin-bottom: 4px;
+}
+
 /* 右侧：日历 */
 .range-scheme-calendar {
     flex: 1;

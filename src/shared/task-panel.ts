@@ -111,6 +111,8 @@ class InboxAddModal extends Modal {
         private parentTitle?: string,
     ) {
         super(app);
+        // 默认选中第一个分类（未分类）
+        this.categoryId = categoryData.categories[0]?.id ?? '';
     }
 
     onOpen() {
@@ -143,11 +145,8 @@ class InboxAddModal extends Modal {
 
         const renderCatChips = () => {
             catList.empty();
-            // 「无分类」选项
-            const options: { id: string; label: string; color?: string }[] = [
-                { id: '', label: t('inbox.noCategory') },
-                ...this.categoryData.categories.map(c => ({ id: c.id, label: c.label, color: c.color })),
-            ];
+            const options: { id: string; label: string; color?: string }[] =
+                this.categoryData.categories.map(c => ({ id: c.id, label: c.label, color: c.color }));
             for (const opt of options) {
                 const chip = catList.createDiv({ cls: 'inbox-cat-chip' });
                 if (this.categoryId === opt.id) chip.addClass('is-selected');
