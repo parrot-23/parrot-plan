@@ -192,6 +192,8 @@ export const zh = {
     'inbox.groupTimed': '时间点目标',
     'inbox.groupUnspecified': '未指定',
     'inbox.maxDepth': '子任务最多嵌套 {max} 层',
+    'inbox.projectFocusBtn': '按项目排布',
+    'inbox.projectFocus': '项目排布',
 };
 
 export type I18nMessages = typeof zh;

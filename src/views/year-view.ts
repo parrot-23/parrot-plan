@@ -58,6 +58,7 @@ export class YearView {
             async () => {
                 await this.save();
             },
+            { enableProjectFocus: true },  // 启用「按项目排布」按钮
         );
 
         // 右侧：周历面板
@@ -78,8 +79,28 @@ export class YearView {
     /** 汇总各周已分配的任务（周键 → 任务列表，含分类颜色） */
     private buildAssignedTasks(): Record<string, { title: string; color?: string }[]> {
         const map: Record<string, { title: string; color?: string }[]> = {};
+
+        // 项目聚焦：仅显示聚焦任务及其所有子任务，隐藏其余任务
+        const focusId = this.inboxData.projectFocusId;
+        let visibleIds: Set<string> | undefined;
+        if (focusId) {
+            const focusItem = this.inboxData.items.find(i => i.id === focusId && !i.removed);
+            if (focusItem) {
+                visibleIds = new Set<string>([focusId]);
+                const walk = (parentId: string) => {
+                    for (const child of this.inboxData.items) {
+                        if (child.removed || child.parentId !== parentId) continue;
+                        visibleIds!.add(child.id);
+                        walk(child.id);
+                    }
+                };
+                walk(focusId);
+            }
+        }
+
         for (const item of this.inboxData.items) {
             if (item.removed || !item.assignedWeekKeys) continue;
+            if (visibleIds && !visibleIds.has(item.id)) continue;
             const color = item.categoryId
                 ? this.categoryData.categories.find(c => c.id === item.categoryId)?.color
                 : undefined;

@@ -973,6 +973,13 @@
     border-color: var(--interactive-accent-hover);
 }
 
+/* 「按项目排布」按钮：聚焦激活时高亮 */
+.inbox-project-focus-btn.is-active {
+    background: var(--interactive-accent);
+    color: var(--text-on-accent);
+    border-color: var(--interactive-accent);
+}
+
 .inbox-toolbar-icon {
     font-size: 14px;
     line-height: 1;
@@ -1046,7 +1053,7 @@
     border-radius: 4px;
     padding: 2px 4px;
     font-size: 11px;
-    overflow: hidden;
+    /* overflow: hidden; */
     top: var(--card-top, 0);
     height: var(--card-height, 0);
     border-top: 5px solid var(--card-color, #888888);
@@ -1356,17 +1363,29 @@
 }
 
 .year-week-cell-task {
+    display: flex;
+    align-items: center;
+    gap: 4px;
     font-size: 10px;
     line-height: 1.3;
     padding: 1px 4px;
     border-radius: 3px;
-    background: var(--background-primary);
+    /* 浅色同色背景（分类颜色降低透明度） */
+    background: var(--task-bg, var(--background-primary));
     color: var(--text-normal);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    /* 左侧色条与任务分类颜色一致 */
-    border-left: 4px solid var(--task-color, #888888);
+}
+
+/* 分类颜色小圆点 */
+.year-week-cell-task::before {
+    content: '';
+    flex-shrink: 0;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--task-color, #888888);
 }
 
 /* ===== 当日执行视图 ===== */
@@ -1617,15 +1636,17 @@
 /* 日执行时间轴：为左侧状态气泡预留空间 */
 .today-day-column .today-event-card {
     left: 56px;
+    /* 气泡位于卡片内部左侧，为文字留出空间 */
+    padding-left: 46px;
 }
 
-/* 事件状态气泡：贴在区块左侧 */
+/* 事件状态气泡：贴在区块内部左侧 */
 .event-status-bubble {
     position: absolute;
-    right: 100%;
-    top: 50%;
+    left: 0;
+    top: 4px;
+    margin-left: -50px;
     transform: translateY(-50%);
-    margin-right: 4px;
     padding: 1px 5px;
     border-radius: 8px;
     font-size: 10px;
@@ -1634,6 +1655,7 @@
     color: #ffffff;
     background-color: #888888;
     pointer-events: none;
+    z-index: 1;
 }
 
 .event-status-bubble.is-planned {

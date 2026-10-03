@@ -1,5 +1,5 @@
 import { t } from '../i18n';
-import { makeWeekKey, getISOWeek } from '../week/timeblock-data';
+import { makeWeekKey, getISOWeek, hexToTransparent } from '../week/timeblock-data';
 
 /**
  * 周历面板：公共组件。
@@ -148,7 +148,11 @@ export function renderYearWeekGrid(
                     for (const task of tasks) {
                         const taskEl = taskList.createDiv({ cls: 'year-week-cell-task', text: task.title });
                         if (task.color) {
-                            taskEl.setCssProps({ '--task-color': task.color });
+                            taskEl.setCssProps({
+                                '--task-color': task.color,
+                                // 浅色同色背景：分类颜色降低透明度
+                                '--task-bg': hexToTransparent(task.color, 0.18),
+                            });
                         }
                     }
                 }

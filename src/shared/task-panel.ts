@@ -1,7 +1,6 @@
 import { App, Modal, Setting, Notice } from 'obsidian';
 import type { TimeBlockCategoryData } from '../week/timeblock-category-manager';
-import { makeDayKeyFromWeek } from '../week/timeblock-data';
-import { t, getWeekDays } from '../i18n';
+import { t } from '../i18n';
 
 /**
  * 任务面板：公共组件。
@@ -34,6 +33,8 @@ export interface InboxData {
     weekGoalOnly?: boolean;
     /** 是否只看当日目标（持久化） */
     dayGoalOnly?: boolean;
+    /** 项目聚焦：仅显示该任务及其所有子任务（持久化，用于「按项目排布」） */
+    projectFocusId?: string;
 }
 
 export const DEFAULT_INBOX_DATA: InboxData = {
@@ -197,6 +198,20 @@ class InboxAddModal extends Modal {
 }
 
 // ===== 渲染面板 =====
+export interface TaskPanelOptions {
+    /** 当前周键（提供后显示「周目标」按钮，用于只看本周任务） */
+    currentWeekKey?: string;
+    /** 当前日期键（提供后显示「日目标」按钮，用于只看当天任务） */
+    currentDayKey?: string;
+    /**
+     * 日目标分组：返回任务属于「全天目标」还是「时间点目标」。
+     * 提供后，日目标模式会按此自动分组显示。
+     */
+    getDayGoalGroup?: (item: InboxItem) => 'allday' | 'timed';
+    /** 是否启用「按项目排布」按钮（仅年视图使用） */
+    enableProjectFocus?: boolean;
+}
+
 export function renderTaskPanel(
     app: App,
     container: HTMLElement,
@@ -206,16 +221,9 @@ export function renderTaskPanel(
     onRefresh: () => void,
     onAction?: (action: string, item: InboxItem) => void | Promise<void>,
     onUpdate?: (item?: InboxItem) => void | Promise<void>,
-    /** 当前周键（提供后显示「周目标」按钮，用于只看本周任务） */
-    currentWeekKey?: string,
-    /** 当前日期键（提供后显示「日目标」按钮，用于只看当天任务） */
-    currentDayKey?: string,
-    /**
-     * 日目标分组：返回任务属于「全天目标」还是「时间点目标」。
-     * 提供后，日目标模式会按此自动分组显示。
-     */
-    getDayGoalGroup?: (item: InboxItem) => 'allday' | 'timed',
+    options: TaskPanelOptions = {},
 ) {
+    const { currentWeekKey, currentDayKey, getDayGoalGroup, enableProjectFocus } = options;
     container.empty();
     container.addClass('inbox-panel');
 
@@ -282,11 +290,46 @@ export function renderTaskPanel(
         };
     }
 
+    // 「按项目排布」按钮（仅年视图启用）：聚焦到选中任务，专门排布其所有子任务
+    if (enableProjectFocus) {
+        const projectFocusBtn = toolbar.createEl('button', {
+            cls: 'inbox-toolbar-btn inbox-project-focus-btn',
+            attr: { 'data-action': 'project-focus' },
+        });
+        projectFocusBtn.createSpan({ cls: 'inbox-toolbar-icon', text: '🗂️' });
+        projectFocusBtn.createSpan({ cls: 'inbox-toolbar-label', text: t('inbox.projectFocusBtn') });
+        projectFocusBtn.onclick = (e) => {
+            e.stopPropagation();
+            // 已聚焦：再次点击退出聚焦
+            if (inboxData.projectFocusId) {
+                inboxData.projectFocusId = undefined;
+            } else {
+                // 未聚焦：需先选中一个任务，聚焦到该任务
+                if (!inboxData.selectedId) return;
+                inboxData.projectFocusId = inboxData.selectedId;
+            }
+            renderList();
+            updateToolbar();
+            void (async () => {
+                if (onUpdate) await onUpdate();
+                onRefresh();
+            })();
+        };
+    }
+
     // ===== 更新工具栏显示 =====
     function updateToolbar() {
         const hasSelection = !!inboxData.selectedId;
         const buttons = toolbar.querySelectorAll('.inbox-toolbar-btn');
         for (const btn of Array.from(buttons)) {
+            // 「按项目排布」按钮：聚焦中始终可点（用于退出），否则需选中任务
+            if (btn.classList.contains('inbox-project-focus-btn')) {
+                const enabled = !!inboxData.projectFocusId || hasSelection;
+                (btn as HTMLButtonElement).disabled = !enabled;
+                btn.toggleClass('is-disabled', !enabled);
+                btn.toggleClass('is-active', !!inboxData.projectFocusId);
+                continue;
+            }
             (btn as HTMLButtonElement).disabled = !hasSelection;
             btn.toggleClass('is-disabled', !hasSelection);
         }
@@ -372,7 +415,21 @@ export function renderTaskPanel(
         // 只显示未移除的顶层条目
         let topItems = getChildren(inboxData, undefined);
 
-        // 周目标模式：仅显示「自身」分配到当前周的任务（任意层级，平铺显示），并按星期几分组
+        // 项目聚焦模式：仅显示聚焦任务及其所有子任务（以聚焦任务为根递归展示）
+        const focusId = inboxData.projectFocusId;
+        if (focusId) {
+            const focusItem = inboxData.items.find(i => i.id === focusId && !i.removed);
+            if (!focusItem) {
+                // 聚焦任务已不存在（被删除等），自动退出聚焦
+                inboxData.projectFocusId = undefined;
+            } else {
+                listDiv.createDiv({ cls: 'inbox-group-header', text: t('inbox.projectFocus') });
+                renderItem(focusItem, 0);
+                return;
+            }
+        }
+
+        // 周目标模式：仅显示「自身」分配到当前周的任务（任意层级，平铺显示），统一归入「周目标」分组
         if (weekGoalOnly && currentWeekKey) {
             const weekKey = currentWeekKey;
             const assignedItems = getVisibleItems(inboxData).filter(i =>
@@ -384,33 +441,11 @@ export function renderTaskPanel(
                 return;
             }
 
-            // 按星期几分组：1=周一 ... 7=周日；未指定具体天的归入「未指定」
-            const weekDays = getWeekDays();
-            const dayKeys = new Map<number, string>();
-            for (let d = 1; d <= 7; d++) {
-                dayKeys.set(d, makeDayKeyFromWeek(weekKey, d));
-            }
-
-            const groups: { label: string; items: InboxItem[] }[] = [];
-            for (let d = 1; d <= 7; d++) {
-                const key = dayKeys.get(d)!;
-                const items = assignedItems.filter(i => i.assignedDayKeys?.includes(key) ?? false);
-                if (items.length > 0) groups.push({ label: weekDays[d - 1], items });
-            }
-            // 未指定具体星期的任务
-            const unspecified = assignedItems.filter(i =>
-                !Array.from(dayKeys.values()).some(key => i.assignedDayKeys?.includes(key) ?? false),
-            );
-            if (unspecified.length > 0) {
-                groups.push({ label: t('inbox.groupUnspecified'), items: unspecified });
-            }
-
-            for (const group of groups) {
-                listDiv.createDiv({ cls: 'inbox-group-header', text: group.label });
-                for (const item of group.items) {
-                    // 平铺渲染：每个任务自身独立成项，不再递归子任务
-                    renderItem(item, 0, false);
-                }
+            // 单一分组：列出本周所有目标，不再按星期几分组
+            listDiv.createDiv({ cls: 'inbox-group-header', text: t('inbox.weekGoal') });
+            for (const item of assignedItems) {
+                // 平铺渲染：每个任务自身独立成项，不再递归子任务
+                renderItem(item, 0, false);
             }
             return;
         }

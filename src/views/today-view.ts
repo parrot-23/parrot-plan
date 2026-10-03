@@ -82,9 +82,10 @@ export class TodayView {
             async () => {
                 await this.save();
             },
-            undefined,                     // 不显示「周目标」按钮
-            getCurrentDayKey(),            // 当前日期键（用于「日目标」筛选）
-            (item) => this.getDayGoalGroup(item), // 日目标分组：全天 / 时间点
+            {
+                currentDayKey: getCurrentDayKey(),          // 用于「日目标」筛选
+                getDayGoalGroup: (item) => this.getDayGoalGroup(item), // 日目标分组：全天 / 时间点
+            },
         );
 
         // ===== 中间：日期方框 + 任务层级方框 + 任务详情方框 + 操作按钮 =====

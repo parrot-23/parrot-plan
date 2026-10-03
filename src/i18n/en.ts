@@ -194,4 +194,6 @@ export const en: I18nMessages = {
     'inbox.groupTimed': 'Timed Goals',
     'inbox.groupUnspecified': 'Unspecified',
     'inbox.maxDepth': 'Subtasks can nest at most {max} levels',
+    'inbox.projectFocusBtn': 'By Project',
+    'inbox.projectFocus': 'Project Layout',
 };
