@@ -105,12 +105,16 @@
 .day-bodies {
     flex: 1;
     display: flex;
+    /* 列高度由内容（12 × 80px = 960px）决定，不被 flex 压缩 */
+    align-items: flex-start;
 }
 
 /* 单个日期列 */
 .day-column {
     flex: 1;
     position: relative;
+    /* 撑满 24 小时内容高度，保证整列可点击 */
+    min-height: 960px;
     /* border-right: 1px solid var(--background-modifier-border); */
 }
 

@@ -24,6 +24,8 @@ export class RangeSchemeModal extends Modal {
     private onChange?: () => void;
     /** 图例中选中的分类（新建区间时的默认分类） */
     private selectedCategoryId?: string;
+    /** 重渲染前保存的日历滚动位置，用于无感知刷新 */
+    private savedScrollTop: number | null = null;
 
     constructor(
         app: App,
@@ -45,6 +47,9 @@ export class RangeSchemeModal extends Modal {
 
     onOpen() {
         const { contentEl } = this;
+        // 重渲染前记录日历滚动位置，避免刷新后跳回顶部
+        const prevScroll = contentEl.querySelector('.grid-body-row') as HTMLElement | null;
+        if (prevScroll) this.savedScrollTop = prevScroll.scrollTop;
         contentEl.empty();
         contentEl.addClass('range-scheme-modal');
 
@@ -110,6 +115,13 @@ export class RangeSchemeModal extends Modal {
         const calendarPanel = body.createDiv({ cls: 'range-scheme-calendar' });
         const refs = renderWeekGrid(calendarPanel);
         this.renderRangeLayer(refs.bodyRowInner);
+
+        // 恢复滚动位置（无感知刷新）
+        if (this.savedScrollTop !== null) {
+            const scrollContainer = refs.bodyRowInner.closest('.grid-body-row') as HTMLElement | null;
+            if (scrollContainer) scrollContainer.scrollTop = this.savedScrollTop;
+            this.savedScrollTop = null;
+        }
     }
 
     /** 获取当前激活方案 */
