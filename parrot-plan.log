@@ -1,11 +1,13 @@
-[2026-10-03T16:14:50.169Z] 插件 onload 开始
-[2026-10-03T16:14:50.174Z] 创建主视图（registerView 工厂被调用） {"events":5,"executions":0}
-[2026-10-03T16:14:50.174Z] MainView 构造 {"events":5,"executions":0}
-[2026-10-03T16:14:50.175Z] WeekScheduleView 构造 {"events":5,"executions":0}
-[2026-10-03T16:14:50.176Z] MainView.renderContent {"tab":"week","events":5,"executions":0}
-[2026-10-03T16:14:50.176Z] 渲染周表日历 {"weekKey":"2026-W40","events":5,"executions":0}
-[2026-10-03T16:14:50.176Z]   计划事件 {"id":"ev_1791017403644","day":1,"start":450,"end":510,"allDay":false,"title":"test","inboxId":"inbox_1791017400854"}
-[2026-10-03T16:14:50.176Z]   计划事件 {"id":"ev_1791017403979","day":1,"start":690,"end":750,"allDay":false,"title":"test","inboxId":"inbox_1791017400854"}
-[2026-10-03T16:14:50.176Z]   计划事件 {"id":"ev_1791017407484","day":1,"start":840,"end":900,"allDay":false,"title":"test","inboxId":"inbox_1791017400854"}
-[2026-10-03T16:14:50.176Z]   计划事件 {"id":"ev_1791017410858","day":2,"start":480,"end":540,"allDay":false,"title":"test","inboxId":"inbox_1791017400854"}
-[2026-10-03T16:14:50.176Z]   计划事件 {"id":"ev_1791017411626","day":2,"start":690,"end":750,"allDay":false,"title":"test","inboxId":"inbox_1791017400854"}
+[2026-10-03T16:20:55.787Z] 插件 onload 开始
+[2026-10-03T16:20:55.809Z] 创建主视图（registerView 工厂被调用） {"events":6,"executions":0}
+[2026-10-03T16:20:55.810Z] MainView 构造 {"events":6,"executions":0}
+[2026-10-03T16:20:55.811Z] WeekScheduleView 构造 {"events":6,"executions":0}
+[2026-10-03T16:20:55.811Z] MainView.renderContent {"tab":"week","events":6,"executions":0}
+[2026-10-03T16:20:55.812Z] 渲染周表日历 {"weekKey":"2026-W40","events":6,"executions":0}
+[2026-10-03T16:20:55.812Z]   计划事件 {"id":"ev_1791044383880","day":7,"start":120,"end":180,"allDay":false,"title":"test","inboxId":"inbox_1791017400854"}
+[2026-10-03T16:20:55.812Z]   计划事件 {"id":"ev_1791044384140","day":7,"start":390,"end":450,"allDay":false,"title":"test","inboxId":"inbox_1791017400854"}
+[2026-10-03T16:20:55.812Z]   计划事件 {"id":"ev_1791044384376","day":7,"start":510,"end":570,"allDay":false,"title":"test","inboxId":"inbox_1791017400854"}
+[2026-10-03T16:20:55.812Z]   计划事件 {"id":"ev_1791044384564","day":7,"start":720,"end":780,"allDay":false,"title":"test","inboxId":"inbox_1791017400854"}
+[2026-10-03T16:20:55.812Z]   计划事件 {"id":"ev_1791044384796","day":7,"start":840,"end":900,"allDay":false,"title":"test","inboxId":"inbox_1791017400854"}
+[2026-10-03T16:20:55.812Z]   计划事件 {"id":"ev_1791044395154","day":4,"start":690,"end":750,"allDay":false,"title":"test","inboxId":"inbox_1791017400854"}
+[2026-10-03T16:21:05.067Z] MainView.renderContent {"tab":"today","events":6,"executions":0}

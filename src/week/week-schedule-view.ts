@@ -358,7 +358,9 @@ export class WeekScheduleView extends ItemView {
         delBtn.setText('×');
         delBtn.onclick = async (e) => {
             e.stopPropagation();
-            this.events = this.events.filter(x => x.id !== ev.id);
+            // 原地删除，保持数组引用不变（插件持有同一引用）
+            const idx = this.events.findIndex(x => x.id === ev.id);
+            if (idx >= 0) this.events.splice(idx, 1);
             await this.save();
             await this.onOpen();
         };
@@ -519,7 +521,9 @@ export class WeekScheduleView extends ItemView {
                 delBtn.setText('×');
                 delBtn.onclick = async (e) => {
                     e.stopPropagation();
-                    this.events = this.events.filter(e => e.id !== ev.id);
+                    // 原地删除，保持数组引用不变（插件持有同一引用）
+                    const idx = this.events.findIndex(x => x.id === ev.id);
+                    if (idx >= 0) this.events.splice(idx, 1);
                     await this.save();
                     await this.onOpen();
                 };
@@ -825,12 +829,16 @@ export class WeekScheduleView extends ItemView {
 
     /** 移除某任务在当前周某天的全天事件（用于时间点事件创建时替换全天事件） */
     private removeAllDayEventForItem(item: InboxItem, day: number): void {
-        this.events = this.events.filter(ev =>
-            !(ev.inboxId === item.id
+        // 原地删除，保持数组引用不变（插件持有同一引用）
+        for (let i = this.events.length - 1; i >= 0; i--) {
+            const ev = this.events[i];
+            if (ev.inboxId === item.id
                 && ev.day === day
                 && ev.weekKey === this.currentWeekKey
-                && ev.allDay),
-        );
+                && ev.allDay) {
+                this.events.splice(i, 1);
+            }
+        }
     }
 
     /**

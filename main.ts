@@ -14,6 +14,20 @@ import { initI18n, t } from './src/i18n';
 import { initLogger, log } from './src/shared/logger';
 
 export default class ParrotPlanPlugin extends Plugin {
+    /**
+     * 插件持有的唯一数据源。
+     * 视图重建（registerView 工厂再次调用）时从这里读取最新数据，
+     * 避免用 onload 时的旧快照导致内存中的新数据丢失。
+     */
+    data: {
+        weekRange: WeekRangeData;
+        templateData: DayTemplateData;
+        categoryData: TimeBlockCategoryData;
+        events: EventBlock[];
+        executions: ExecutionRecord[];
+        inboxData: InboxData;
+        schemeData: RangeSchemeData;
+    } | null = null;
 
     async onload() {
         // 初始化 i18n（跟随 Obsidian 界面语言）
@@ -60,19 +74,29 @@ export default class ParrotPlanPlugin extends Plugin {
         // 兼容旧数据：确保默认方案始终存在且位于首位
         ensureDefaultScheme(initialSchemeData, t('rangeScheme.defaultName'));
 
+        // 存入插件实例，作为唯一数据源（视图重建时从这里读取最新数据）
+        this.data = {
+            weekRange: initialData,
+            templateData: initialTemplateData,
+            categoryData: initialCategoryData,
+            events: (savedData.events ?? []) as EventBlock[],
+            executions: (savedData.executions ?? []) as ExecutionRecord[],
+            inboxData: initialInboxData,
+            schemeData: initialSchemeData,
+        };
+
         // 注册视图
         this.registerView(
             VIEW_TYPE_MAIN,
             (leaf) => {
+                // 每次创建视图都从插件实例读取最新数据，避免使用旧快照
+                const d = this.data!;
                 log('创建主视图（registerView 工厂被调用）', {
-                    events: ((savedData.events ?? []) as EventBlock[]).length,
-                    executions: ((savedData.executions ?? []) as ExecutionRecord[]).length,
+                    events: d.events.length,
+                    executions: d.executions.length,
                 });
-                return new MainView(leaf, this, initialData, initialTemplateData, initialCategoryData,
-                    (savedData.events ?? []) as EventBlock[],
-                    (savedData.executions ?? []) as ExecutionRecord[],
-                    initialInboxData,
-                    initialSchemeData,
+                return new MainView(leaf, this, d.weekRange, d.templateData, d.categoryData,
+                    d.events, d.executions, d.inboxData, d.schemeData,
                 );
             }
         );
