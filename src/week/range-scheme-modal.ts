@@ -124,9 +124,12 @@ export class RangeSchemeModal extends Modal {
         }
     }
 
-    /** 获取当前激活方案 */
+    /** 获取当前激活方案（未激活时回退到默认方案） */
     private getActiveScheme(): RangeScheme | undefined {
-        return this.schemeData.schemes.find(s => s.id === this.schemeData.activeSchemeId);
+        const active = this.schemeData.schemes.find(s => s.id === this.schemeData.activeSchemeId);
+        if (active) return active;
+        return this.schemeData.schemes.find(s => s.id === DEFAULT_SCHEME_ID)
+            ?? this.schemeData.schemes[0];
     }
 
     /** 在日历网格上渲染当前激活方案的时间区间，并绑定添加/编辑/删除交互 */

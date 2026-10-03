@@ -122,7 +122,7 @@ export class WeekScheduleView extends ItemView {
         ];
 
         this.schemeData.schemes = [makeDefaultScheme(t('rangeScheme.defaultName'))];
-        this.schemeData.activeSchemeId = undefined;
+        this.schemeData.activeSchemeId = DEFAULT_SCHEME_ID;
         this.schemeData.defaultSchemeId = DEFAULT_SCHEME_ID;
 
         this.events.length = 0;
@@ -627,17 +627,24 @@ export class WeekScheduleView extends ItemView {
         );
     }
 
+    /** 获取当前激活方案（未激活时回退到默认方案） */
+    private getActiveScheme() {
+        const active = this.schemeData.schemes.find(s => s.id === this.schemeData.activeSchemeId);
+        if (active) return active;
+        return this.schemeData.schemes.find(s => s.id === DEFAULT_SCHEME_ID)
+            ?? this.schemeData.schemes[0];
+    }
+
     /** 获取当前激活方案的日区间配置（周无关的模板数据） */
     getSchemeDays(): DailyRange[] {
-        const scheme = this.schemeData.schemes.find(s => s.id === this.schemeData.activeSchemeId);
-        return scheme?.days ?? [];
+        return this.getActiveScheme()?.days ?? [];
     }
 
     /** 应用日模板到指定日期（写入当前激活方案） */
     private async applyTemplate(templateId: string, targetDays: number[]) {
         const tpl = this.dayTemplateData.dayTemplates.find(t => t.id === templateId);
         if (!tpl) { new Notice(t('template.notFound')); return; }
-        const scheme = this.schemeData.schemes.find(s => s.id === this.schemeData.activeSchemeId);
+        const scheme = this.getActiveScheme();
         if (!scheme) { new Notice(t('rangeScheme.noActive')); return; }
         if (!scheme.days) scheme.days = [];
         for (const day of targetDays) {

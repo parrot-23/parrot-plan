@@ -70,6 +70,12 @@ export function ensureDefaultScheme(schemeData: RangeSchemeData, name: string): 
 	}
 	// 默认方案 id 始终指向默认方案
 	schemeData.defaultSchemeId = DEFAULT_SCHEME_ID;
+	// 未激活或激活的方案已不存在时，回退到默认方案
+	const activeExists = schemeData.activeSchemeId
+		&& schemeData.schemes.some(s => s.id === schemeData.activeSchemeId);
+	if (!activeExists) {
+		schemeData.activeSchemeId = DEFAULT_SCHEME_ID;
+	}
 }
 
 /** 将 #rgb / #rrggbb 颜色转为带透明度的 rgba 字符串 */
