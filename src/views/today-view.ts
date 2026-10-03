@@ -105,7 +105,7 @@ export class TodayView {
 
     /**
      * 判断任务属于「全天目标」还是「时间点目标」。
-     * 若该任务（或其任一后代）今天存在带时间点的事件，则为「时间点目标」，否则为「全天目标」。
+     * 仅依据该任务「自身」今天是否存在带时间点的事件：有则为「时间点目标」，否则为「全天目标」。
      */
     private getDayGoalGroup(item: InboxItem): 'allday' | 'timed' {
         const now = new Date();
@@ -113,18 +113,10 @@ export class TodayView {
         const weekKey = getCurrentWeekKey();
         const events = this.getEvents();
 
-        const hasTimedEvent = (target: InboxItem): boolean => {
-            if (events.some(ev =>
-                ev.inboxId === target.id && ev.weekKey === weekKey && ev.day === todayDay && !ev.allDay,
-            )) {
-                return true;
-            }
-            return this.inboxData.items.some(child =>
-                child.parentId === target.id && !child.removed && hasTimedEvent(child),
-            );
-        };
-
-        return hasTimedEvent(item) ? 'timed' : 'allday';
+        const hasTimedEvent = events.some(ev =>
+            ev.inboxId === item.id && ev.weekKey === weekKey && ev.day === todayDay && !ev.allDay,
+        );
+        return hasTimedEvent ? 'timed' : 'allday';
     }
 
     /** 渲染今天的年月日方框 */

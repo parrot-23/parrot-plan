@@ -172,6 +172,7 @@ export const zh = {
     'inbox.emptyDayGoal': '今天暂无目标',
     'inbox.groupAllDay': '全天目标',
     'inbox.groupTimed': '时间点目标',
+    'inbox.groupUnspecified': '未指定',
     'inbox.maxDepth': '子任务最多嵌套 {max} 层',
 };
 

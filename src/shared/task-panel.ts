@@ -1,6 +1,7 @@
 import { App, Modal, Setting, Notice } from 'obsidian';
 import type { TimeBlockCategoryData } from '../week/timeblock-category-manager';
-import { t } from '../i18n';
+import { makeDayKeyFromWeek } from '../week/timeblock-data';
+import { t, getWeekDays } from '../i18n';
 
 /**
  * 任务面板：公共组件。
@@ -276,7 +277,7 @@ export function renderTaskPanel(
     }
 
     // ===== 渲染单个任务（递归）=====
-    function renderItem(item: InboxItem, depth: number) {
+    function renderItem(item: InboxItem, depth: number, recurse = true) {
         const itemEl = listDiv.createDiv({
             cls: 'inbox-item',
             attr: { 'data-id': item.id },
@@ -341,7 +342,7 @@ export function renderTaskPanel(
         };
 
         // 递归渲染子任务
-        if (!collapsed) {
+        if (recurse && !collapsed) {
             for (const child of children) {
                 renderItem(child, depth + 1);
             }
@@ -355,12 +356,47 @@ export function renderTaskPanel(
         // 只显示未移除的顶层条目
         let topItems = getChildren(inboxData, undefined);
 
-        // 周目标模式：仅显示分配到当前周的任务（含子任务命中时保留父级链路）
+        // 周目标模式：仅显示「自身」分配到当前周的任务（任意层级，平铺显示），并按星期几分组
         if (weekGoalOnly && currentWeekKey) {
             const weekKey = currentWeekKey;
-            topItems = topItems.filter(i =>
-                itemOrDescendantMatches(inboxData, i, t => t.assignedWeekKeys?.includes(weekKey) ?? false),
+            const assignedItems = getVisibleItems(inboxData).filter(i =>
+                i.assignedWeekKeys?.includes(weekKey) ?? false,
             );
+
+            if (assignedItems.length === 0) {
+                listDiv.createDiv({ cls: 'inbox-empty' }).setText(t('inbox.emptyWeekGoal'));
+                return;
+            }
+
+            // 按星期几分组：1=周一 ... 7=周日；未指定具体天的归入「未指定」
+            const weekDays = getWeekDays();
+            const dayKeys = new Map<number, string>();
+            for (let d = 1; d <= 7; d++) {
+                dayKeys.set(d, makeDayKeyFromWeek(weekKey, d));
+            }
+
+            const groups: { label: string; items: InboxItem[] }[] = [];
+            for (let d = 1; d <= 7; d++) {
+                const key = dayKeys.get(d)!;
+                const items = assignedItems.filter(i => i.assignedDayKeys?.includes(key) ?? false);
+                if (items.length > 0) groups.push({ label: weekDays[d - 1], items });
+            }
+            // 未指定具体星期的任务
+            const unspecified = assignedItems.filter(i =>
+                !Array.from(dayKeys.values()).some(key => i.assignedDayKeys?.includes(key) ?? false),
+            );
+            if (unspecified.length > 0) {
+                groups.push({ label: t('inbox.groupUnspecified'), items: unspecified });
+            }
+
+            for (const group of groups) {
+                listDiv.createDiv({ cls: 'inbox-group-header', text: group.label });
+                for (const item of group.items) {
+                    // 平铺渲染：每个任务自身独立成项，不再递归子任务
+                    renderItem(item, 0, false);
+                }
+            }
+            return;
         }
 
         // 日目标模式：仅显示分配到当天的任务（含子任务命中时保留父级链路）
@@ -382,15 +418,23 @@ export function renderTaskPanel(
         }
 
         // 日目标模式 + 提供分组回调：按「全天目标 / 时间点目标」分组显示
-        if (dayGoalOnly && getDayGoalGroup) {
-            const allDayItems = topItems.filter(i => getDayGoalGroup(i) === 'allday');
-            const timedItems = topItems.filter(i => getDayGoalGroup(i) === 'timed');
+        // 分组依据是「任务自身」是否分配到当天，而非顶层任务，因此子任务可与其父任务分属不同组
+        if (dayGoalOnly && getDayGoalGroup && currentDayKey) {
+            const dayKey = currentDayKey;
+            // 收集所有「自身」分配到当天的任务（任意层级）
+            const assignedItems = getVisibleItems(inboxData).filter(i =>
+                i.assignedDayKeys?.includes(dayKey) ?? false,
+            );
+
+            const allDayItems = assignedItems.filter(i => getDayGoalGroup(i) === 'allday');
+            const timedItems = assignedItems.filter(i => getDayGoalGroup(i) === 'timed');
 
             const renderGroup = (labelKey: 'inbox.groupAllDay' | 'inbox.groupTimed', items: InboxItem[]) => {
                 if (items.length === 0) return;
                 listDiv.createDiv({ cls: 'inbox-group-header', text: t(labelKey) });
                 for (const item of items) {
-                    renderItem(item, 0);
+                    // 平铺渲染：每个任务自身独立成项，不再递归子任务（避免重复与跨组）
+                    renderItem(item, 0, false);
                 }
             };
 

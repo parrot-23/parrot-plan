@@ -918,18 +918,19 @@
 }
 
 .inbox-item.selected {
-    background: var(--interactive-accent);
-    color: var(--text-on-accent);
-    border-color: var(--interactive-accent-hover);
+    background: var(--background-primary);
+    border-color: var(--interactive-accent);
+    border-width: 2px;
+    /* 边框加粗后补偿内边距，避免内容位移 */
+    padding: 5px 7px;
 }
 
 .inbox-item.selected .inbox-item-title {
-    color: var(--text-on-accent);
+    color: var(--text-normal);
 }
 
 .inbox-item.selected .inbox-item-desc {
-    color: var(--text-on-accent-muted, var(--text-on-accent));
-    opacity: 0.8;
+    color: var(--text-muted);
 }
 
 /* ===== 底部工具栏 ===== */
