@@ -743,7 +743,7 @@ export class RangeEditModal extends Modal {
                 dropdown.onChange(val => this.start = Number(val));
             });
 
-        // 结束时间
+        // 结束时间（可选到 24:00）
         new Setting(contentEl)
             .setName(t('range.endTime'))
             .addDropdown(dropdown => {
@@ -756,6 +756,7 @@ export class RangeEditModal extends Modal {
                         );
                     }
                 }
+                dropdown.addOption('1440', '24:00');
                 dropdown.setValue(String(this.end));
                 dropdown.onChange(val => this.end = Number(val));
             });
@@ -846,6 +847,7 @@ class EventEditModal extends Modal {
                     dd.addOption(String(val), `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`);
                 }
             }
+            dd.addOption('1440', '24:00');
             dd.setValue(String(this.end)).onChange(val => this.end = Number(val));
         });
 

@@ -164,28 +164,48 @@ export class TodayView {
         body.createDiv({ cls: 'today-detail-empty', text: t('today.noSelection') });
     }
 
-    /** 渲染操作按钮（仅在选中任务时可用） */
+    /** 渲染操作按钮：选中左侧任务显示「执行非计划任务」；选中时间轴事件显示「执行计划 / 替换计划」 */
     private renderActionButtons(panel: HTMLElement) {
+        const selectedEvent = this.getSelectedEvent();
         const selectedItem = this.getSelectedItem();
         const row = panel.createDiv({ cls: 'today-action-row' });
 
-        const completeBtn = row.createEl('button', {
-            cls: 'today-action-btn',
-            text: t('today.complete'),
-        });
-        completeBtn.disabled = !selectedItem;
-        completeBtn.onclick = () => {
-            void this.completeSelectedTask();
-        };
+        // 选中时间轴事件：执行计划 / 替换计划
+        if (selectedEvent) {
+            const execBtn = row.createEl('button', {
+                cls: 'today-action-btn',
+                text: t('today.execPlanned'),
+            });
+            execBtn.onclick = () => {
+                void this.executePlannedEvent();
+            };
 
-        const replaceBtn = row.createEl('button', {
+            const replaceBtn = row.createEl('button', {
+                cls: 'today-action-btn',
+                text: t('today.replacePlanned'),
+            });
+            replaceBtn.onclick = () => {
+                void this.replacePlannedEvent();
+            };
+            return;
+        }
+
+        // 选中左侧任务：执行非计划任务
+        const unplannedBtn = row.createEl('button', {
             cls: 'today-action-btn',
-            text: t('today.replace'),
+            text: t('today.execUnplanned'),
         });
-        replaceBtn.disabled = !selectedItem;
-        replaceBtn.onclick = () => {
-            void this.replaceSelectedEvent();
+        unplannedBtn.disabled = !selectedItem;
+        unplannedBtn.onclick = () => {
+            void this.executeUnplannedTask();
         };
+    }
+
+    /** 当前时间轴上选中的事件 */
+    private getSelectedEvent(): EventBlock | undefined {
+        return this.selectedEventId
+            ? this.getEvents().find(ev => ev.id === this.selectedEventId)
+            : undefined;
     }
 
     /** 当前任务面板选中的任务（未移除） */
@@ -195,8 +215,8 @@ export class TodayView {
             : undefined;
     }
 
-    /** 完成执行计划任务：为选中任务生成一条执行记录 */
-    private async completeSelectedTask(): Promise<void> {
+    /** 执行非计划任务：为选中任务生成一条执行记录 */
+    private async executeUnplannedTask(): Promise<void> {
         const item = this.getSelectedItem();
         if (!item) return;
 
@@ -218,14 +238,37 @@ export class TodayView {
         await this.refresh();
     }
 
-    /** 替换执行其他任务：用当前选中任务替换时间轴上选中的事件 */
-    private async replaceSelectedEvent(): Promise<void> {
-        const item = this.getSelectedItem();
-        if (!item) return;
+    /** 执行计划：为时间轴上选中的事件生成一条执行记录 */
+    private async executePlannedEvent(): Promise<void> {
+        const ev = this.getSelectedEvent();
+        if (!ev) return;
 
-        const ev = this.selectedEventId
-            ? this.getEvents().find(e => e.id === this.selectedEventId)
-            : undefined;
+        const now = new Date();
+        const todayDay = (now.getDay() + 6) % 7 + 1;
+        const weekKey = getCurrentWeekKey();
+
+        this.getExecutions().push({
+            id: `exec_${Date.now()}`,
+            inboxId: ev.inboxId,
+            day: todayDay,
+            start: ev.start,
+            end: ev.end,
+            weekKey,
+        });
+        await this.save();
+        new Notice(t('today.completeDone', { title: ev.title }));
+        await this.refresh();
+    }
+
+    /** 替换计划：用当前选中任务替换时间轴上选中的事件 */
+    private async replacePlannedEvent(): Promise<void> {
+        const item = this.getSelectedItem();
+        if (!item) {
+            new Notice(t('today.replaceNeedEvent'));
+            return;
+        }
+
+        const ev = this.getSelectedEvent();
         if (!ev) {
             new Notice(t('today.replaceNeedEvent'));
             return;
