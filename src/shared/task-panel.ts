@@ -243,7 +243,9 @@ export function renderTaskPanel(
         });
         btn.createSpan({ cls: 'inbox-toolbar-icon', text: action.icon });
         btn.createSpan({ cls: 'inbox-toolbar-label', text: action.label });
-        btn.onclick = () => {
+        btn.onclick = (e) => {
+            // 阻止冒泡到面板空白处，避免打开弹窗时取消选中
+            e.stopPropagation();
             if (!inboxData.selectedId) return;
             const item = inboxData.items.find(i => i.id === inboxData.selectedId);
             if (!item) return;
@@ -488,7 +490,9 @@ export function renderTaskPanel(
             text: t('inbox.weekGoal'),
         });
         weekGoalBtn.toggleClass('is-active', weekGoalOnly);
-        weekGoalBtn.onclick = () => {
+        weekGoalBtn.onclick = (e) => {
+            // 阻止冒泡到面板空白处，避免误取消选中
+            e.stopPropagation();
             weekGoalOnly = !weekGoalOnly;
             inboxData.weekGoalOnly = weekGoalOnly;
             weekGoalBtn.toggleClass('is-active', weekGoalOnly);
@@ -508,7 +512,9 @@ export function renderTaskPanel(
             text: t('inbox.dayGoal'),
         });
         dayGoalBtn.toggleClass('is-active', dayGoalOnly);
-        dayGoalBtn.onclick = () => {
+        dayGoalBtn.onclick = (e) => {
+            // 阻止冒泡到面板空白处，避免误取消选中
+            e.stopPropagation();
             dayGoalOnly = !dayGoalOnly;
             inboxData.dayGoalOnly = dayGoalOnly;
             dayGoalBtn.toggleClass('is-active', dayGoalOnly);
@@ -522,7 +528,9 @@ export function renderTaskPanel(
     }
 
     const addBtn = headerActions.createEl('button', { cls: 'inbox-add-btn', text: '+' });
-    addBtn.onclick = () => {
+    addBtn.onclick = (e) => {
+        // 阻止冒泡到面板空白处，避免打开弹窗时取消选中
+        e.stopPropagation();
         // 选中某个任务时，+ 添加为其子任务
         const parent = inboxData.selectedId
             ? inboxData.items.find(i => i.id === inboxData.selectedId && !i.removed)
