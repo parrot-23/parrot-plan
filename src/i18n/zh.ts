@@ -100,6 +100,18 @@ export const zh = {
     'event.noCategory': '不分类',
     'event.titleRequired': '标题不能为空',
 
+    // 事件复制 / 粘贴
+    'eventCopy.copy': '复制当天事件',
+    'eventCopy.paste': '粘贴事件',
+    'eventCopy.copyTitle': '复制哪一天的全部事件',
+    'eventCopy.pasteTitle': '粘贴到哪几天',
+    'eventCopy.sourceHint': '当前复制的是：{year} 年 第 {week} 周 {day}',
+    'eventCopy.selectDay': '请选择要复制的一天',
+    'eventCopy.nothingToCopy': '该天没有可复制的事件',
+    'eventCopy.copied': '已复制 {count} 个事件',
+    'eventCopy.emptyClipboard': '剪贴板为空，请先复制某天事件',
+    'eventCopy.pasted': '已粘贴 {count} 个事件',
+
     // 时间区块
     'range.title': '时间区块',
     'range.startTime': '开始时间',

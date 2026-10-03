@@ -102,6 +102,18 @@ export const en: I18nMessages = {
     'event.noCategory': 'No category',
     'event.titleRequired': 'Title cannot be empty',
 
+    // Event copy / paste
+    'eventCopy.copy': 'Copy Day Events',
+    'eventCopy.paste': 'Paste Events',
+    'eventCopy.copyTitle': 'Copy all events from which day',
+    'eventCopy.pasteTitle': 'Paste to which days',
+    'eventCopy.sourceHint': 'Currently copied from: {year} W{week} {day}',
+    'eventCopy.selectDay': 'Please select a day to copy',
+    'eventCopy.nothingToCopy': 'No events to copy on that day',
+    'eventCopy.copied': 'Copied {count} event(s)',
+    'eventCopy.emptyClipboard': 'Clipboard is empty, copy a day first',
+    'eventCopy.pasted': 'Pasted {count} event(s)',
+
     // Time block
     'range.title': 'Time Block',
     'range.startTime': 'Start time',

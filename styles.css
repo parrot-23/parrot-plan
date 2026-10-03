@@ -1812,6 +1812,39 @@
     gap: 6px;
 }
 
+/* 事件复制 / 粘贴栏 */
+.event-copy-bar {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 6px;
+}
+
+.event-copy-btn {
+    padding: 6px 10px;
+    border-radius: 4px;
+    border: 1px solid var(--background-modifier-border);
+    background: var(--interactive-normal);
+    color: var(--text-normal);
+    cursor: pointer;
+    font-size: 13px;
+    white-space: nowrap;
+}
+
+.event-copy-btn:hover {
+    background: var(--interactive-hover);
+}
+
+/* 粘贴弹窗：来源天提示 */
+.event-copy-source-hint {
+    margin-bottom: 10px;
+    padding: 6px 10px;
+    border-radius: 6px;
+    background: var(--background-secondary);
+    color: var(--text-muted);
+    font-size: 13px;
+}
+
 /* 年 / 周切换 */
 .week-nav {
     display: flex;

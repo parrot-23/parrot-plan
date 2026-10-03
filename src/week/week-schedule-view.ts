@@ -12,7 +12,7 @@ import { renderTaskPanel, DEFAULT_INBOX_DATA, type InboxData } from '../shared/t
 import type { InboxItem } from '../shared/task-panel';
 import { renderWeekGrid } from '../shared/week-grid';
 import { RangeSchemeModal } from './range-scheme-modal';
-import { t } from '../i18n';
+import { t, getWeekDays } from '../i18n';
 
 export const VIEW_TYPE_WEEK = 'week-schedule-view';
 
@@ -70,6 +70,10 @@ export class WeekScheduleView extends ItemView {
     private savedScrollTop: number | null = null;
     /** 被主视图复用时的宿主容器（用于刷新） */
     private hostContainer?: HTMLElement;
+    /** 事件剪贴板：暂存「复制某天全部事件」的事件模板（不含 id/day/weekKey） */
+    private clipboardEvents: Omit<EventBlock, 'id' | 'day' | 'weekKey'>[] | null = null;
+    /** 剪贴板来源：周键 + 星期几（1=周一 ... 7=周日），用于粘贴弹窗提示 */
+    private clipboardSource: { weekKey: WeekKey; day: number } | null = null;
 
     // Obsidian 旧 API：ItemView 构造函数只接受 leaf
     constructor(leaf: WorkspaceLeaf, plugin: Plugin, data: WeekRangeData, templateData: DayTemplateData, categoryData: TimeBlockCategoryData,
@@ -622,6 +626,29 @@ export class WeekScheduleView extends ItemView {
             })();
         };
 
+        // 事件复制 / 粘贴（按天）
+        const copyBar = toolbar.createDiv({ cls: 'event-copy-bar' });
+
+        const copyBtn = copyBar.createEl('button', {
+            text: t('eventCopy.copy'),
+            cls: 'event-copy-btn',
+        });
+        copyBtn.onclick = () => {
+            new CopyDayEventsModal(this.app, (day) => this.copyDayEvents(day)).open();
+        };
+
+        const pasteBtn = copyBar.createEl('button', {
+            text: t('eventCopy.paste'),
+            cls: 'event-copy-btn',
+        });
+        pasteBtn.onclick = () => {
+            if (!this.clipboardEvents || this.clipboardEvents.length === 0) {
+                new Notice(t('eventCopy.emptyClipboard'));
+                return;
+            }
+            new PasteDayEventsModal(this.app, this.clipboardSource, (days) => this.pasteEventsToDays(days)).open();
+        };
+
         // 图例（日历顶部：不显示配置按钮）
         const legendContainer = toolbar.createDiv({ cls: 'legend-container' });
         renderTimeBlockCategoryLegend(
@@ -672,8 +699,43 @@ export class WeekScheduleView extends ItemView {
         await this.onOpen();
     }
 
+    /** 复制某天（当前周）的全部事件到剪贴板 */
+    private copyDayEvents(day: number) {
+        const dayEvents = this.events.filter(ev => ev.day === day && ev.weekKey === this.currentWeekKey);
+        if (dayEvents.length === 0) {
+            new Notice(t('eventCopy.nothingToCopy'));
+            return;
+        }
+        // 暂存事件模板（去掉 id / day / weekKey，粘贴时重新生成）
+        this.clipboardEvents = dayEvents.map(({ id, day: _d, weekKey: _w, ...rest }) => rest);
+        this.clipboardSource = { weekKey: this.currentWeekKey, day };
+        new Notice(t('eventCopy.copied', { count: dayEvents.length }));
+    }
+
+    /** 将剪贴板事件粘贴到当前周的指定星期几（保留源事件，可多次粘贴） */
+    private async pasteEventsToDays(days: number[]) {
+        if (!this.clipboardEvents || this.clipboardEvents.length === 0) {
+            new Notice(t('eventCopy.emptyClipboard'));
+            return;
+        }
+        let added = 0;
+        for (const day of days) {
+            for (const tpl of this.clipboardEvents) {
+                this.events.push({
+                    ...tpl,
+                    id: `ev_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+                    day,
+                    weekKey: this.currentWeekKey,
+                });
+                added++;
+            }
+        }
+        await this.save();
+        await this.onOpen();
+        new Notice(t('eventCopy.pasted', { count: added }));
+    }
+
     
-    // 工具方法
     private hexToTransparent(hex: string, alpha: number): string {
         return hexToTransparent(hex, alpha);
     }
@@ -892,6 +954,148 @@ class EventEditModal extends Modal {
                 this.close();
             }))
             .addButton(btn => btn.setButtonText(t('common.cancel')).onClick(() => this.close()));
+    }
+
+    onClose() { this.contentEl.empty(); }
+}
+
+/** 复制某天事件弹窗：单选一天 */
+class CopyDayEventsModal extends Modal {
+    constructor(
+        app: App,
+        private onConfirm: (day: number) => void,
+    ) {
+        super(app);
+    }
+
+    onOpen() {
+        const { contentEl } = this;
+        contentEl.empty();
+        contentEl.createEl('h3', { text: t('eventCopy.copyTitle') });
+
+        let selectedDay: number | null = null;
+        const days = getWeekDays();
+        const dayRow = contentEl.createDiv({ cls: 'apply-day-row' });
+        const dayBtns: HTMLElement[] = [];
+
+        for (let i = 1; i <= 7; i++) {
+            const btn = dayRow.createEl('button', {
+                text: days[i - 1],
+                cls: 'apply-day-btn',
+            });
+            dayBtns.push(btn);
+            btn.onclick = () => {
+                selectedDay = i;
+                dayBtns.forEach((b, idx) => b.toggleClass('is-selected', idx === i - 1));
+            };
+        }
+
+        new Setting(contentEl)
+            .addButton(btn => btn
+                .setButtonText(t('common.confirm'))
+                .setCta()
+                .onClick(() => {
+                    if (selectedDay === null) {
+                        new Notice(t('eventCopy.selectDay'));
+                        return;
+                    }
+                    this.onConfirm(selectedDay);
+                    this.close();
+                })
+            )
+            .addButton(btn => btn
+                .setButtonText(t('common.cancel'))
+                .onClick(() => this.close())
+            );
+    }
+
+    onClose() { this.contentEl.empty(); }
+}
+
+/** 粘贴事件弹窗：多选星期几 */
+class PasteDayEventsModal extends Modal {
+    constructor(
+        app: App,
+        /** 被复制的来源（周键 + 星期几），用于提示 */
+        private source: { weekKey: WeekKey; day: number } | null,
+        private onConfirm: (days: number[]) => void,
+    ) {
+        super(app);
+    }
+
+    onOpen() {
+        const { contentEl } = this;
+        contentEl.empty();
+        contentEl.createEl('h3', { text: t('eventCopy.pasteTitle') });
+
+        // 显示当前被复制的是哪一年、哪一周、哪一天
+        if (this.source) {
+            const { year, week } = parseWeekKey(this.source.weekKey);
+            const dayName = getWeekDays()[this.source.day - 1] ?? '';
+            contentEl.createDiv({
+                cls: 'event-copy-source-hint',
+                text: t('eventCopy.sourceHint', { year, week, day: dayName }),
+            });
+        }
+
+        const selectedDays = new Set<number>();
+        const days = getWeekDays();
+        const dayRow = contentEl.createDiv({ cls: 'apply-day-row' });
+        const dayBtns: HTMLElement[] = [];
+
+        for (let i = 1; i <= 7; i++) {
+            const btn = dayRow.createEl('button', {
+                text: days[i - 1],
+                cls: 'apply-day-btn',
+            });
+            dayBtns.push(btn);
+            btn.onclick = () => {
+                if (selectedDays.has(i)) {
+                    selectedDays.delete(i);
+                    btn.removeClass('is-selected');
+                } else {
+                    selectedDays.add(i);
+                    btn.addClass('is-selected');
+                }
+            };
+        }
+
+        // 快捷按钮行
+        const quickRow = contentEl.createDiv({ cls: 'apply-quick-row' });
+        const selectAllBtn = quickRow.createEl('button', {
+            text: t('template.selectAll'),
+            cls: 'template-action-btn',
+        });
+        selectAllBtn.onclick = () => {
+            for (let i = 1; i <= 7; i++) selectedDays.add(i);
+            dayBtns.forEach(btn => btn.addClass('is-selected'));
+        };
+        const clearBtn = quickRow.createEl('button', {
+            text: t('template.clearAll'),
+            cls: 'template-action-btn',
+        });
+        clearBtn.onclick = () => {
+            selectedDays.clear();
+            dayBtns.forEach(btn => btn.removeClass('is-selected'));
+        };
+
+        new Setting(contentEl)
+            .addButton(btn => btn
+                .setButtonText(t('common.confirm'))
+                .setCta()
+                .onClick(() => {
+                    if (selectedDays.size === 0) {
+                        new Notice(t('template.selectAtLeastOne'));
+                        return;
+                    }
+                    this.onConfirm(Array.from(selectedDays));
+                    this.close();
+                })
+            )
+            .addButton(btn => btn
+                .setButtonText(t('common.cancel'))
+                .onClick(() => this.close())
+            );
     }
 
     onClose() { this.contentEl.empty(); }
