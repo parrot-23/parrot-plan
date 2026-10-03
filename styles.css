@@ -973,13 +973,6 @@
     border-color: var(--interactive-accent-hover);
 }
 
-/* 「按项目排布」按钮：聚焦激活时高亮 */
-.inbox-project-focus-btn.is-active {
-    background: var(--interactive-accent);
-    color: var(--text-on-accent);
-    border-color: var(--interactive-accent);
-}
-
 .inbox-toolbar-icon {
     font-size: 14px;
     line-height: 1;

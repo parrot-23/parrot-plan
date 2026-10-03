@@ -290,46 +290,11 @@ export function renderTaskPanel(
         };
     }
 
-    // 「按项目排布」按钮（仅年视图启用）：聚焦到选中任务，专门排布其所有子任务
-    if (enableProjectFocus) {
-        const projectFocusBtn = toolbar.createEl('button', {
-            cls: 'inbox-toolbar-btn inbox-project-focus-btn',
-            attr: { 'data-action': 'project-focus' },
-        });
-        projectFocusBtn.createSpan({ cls: 'inbox-toolbar-icon', text: '🗂️' });
-        projectFocusBtn.createSpan({ cls: 'inbox-toolbar-label', text: t('inbox.projectFocusBtn') });
-        projectFocusBtn.onclick = (e) => {
-            e.stopPropagation();
-            // 已聚焦：再次点击退出聚焦
-            if (inboxData.projectFocusId) {
-                inboxData.projectFocusId = undefined;
-            } else {
-                // 未聚焦：需先选中一个任务，聚焦到该任务
-                if (!inboxData.selectedId) return;
-                inboxData.projectFocusId = inboxData.selectedId;
-            }
-            renderList();
-            updateToolbar();
-            void (async () => {
-                if (onUpdate) await onUpdate();
-                onRefresh();
-            })();
-        };
-    }
-
     // ===== 更新工具栏显示 =====
     function updateToolbar() {
         const hasSelection = !!inboxData.selectedId;
         const buttons = toolbar.querySelectorAll('.inbox-toolbar-btn');
         for (const btn of Array.from(buttons)) {
-            // 「按项目排布」按钮：聚焦中始终可点（用于退出），否则需选中任务
-            if (btn.classList.contains('inbox-project-focus-btn')) {
-                const enabled = !!inboxData.projectFocusId || hasSelection;
-                (btn as HTMLButtonElement).disabled = !enabled;
-                btn.toggleClass('is-disabled', !enabled);
-                btn.toggleClass('is-active', !!inboxData.projectFocusId);
-                continue;
-            }
             (btn as HTMLButtonElement).disabled = !hasSelection;
             btn.toggleClass('is-disabled', !hasSelection);
         }
@@ -552,6 +517,34 @@ export function renderTaskPanel(
             dayGoalOnly = !dayGoalOnly;
             inboxData.dayGoalOnly = dayGoalOnly;
             dayGoalBtn.toggleClass('is-active', dayGoalOnly);
+            renderList();
+            // 持久化状态
+            void (async () => {
+                if (onUpdate) await onUpdate();
+                onRefresh();
+            })();
+        };
+    }
+
+    // 「按项目排布」按钮（仅年视图启用）：聚焦到选中任务，专门排布其所有子任务
+    if (enableProjectFocus) {
+        const projectFocusBtn = headerActions.createEl('button', {
+            cls: 'inbox-week-goal-btn',
+            text: t('inbox.projectFocusBtn'),
+        });
+        projectFocusBtn.toggleClass('is-active', !!inboxData.projectFocusId);
+        projectFocusBtn.onclick = (e) => {
+            // 阻止冒泡到面板空白处，避免误取消选中
+            e.stopPropagation();
+            // 已聚焦：再次点击退出聚焦
+            if (inboxData.projectFocusId) {
+                inboxData.projectFocusId = undefined;
+            } else {
+                // 未聚焦：需先选中一个任务，聚焦到该任务
+                if (!inboxData.selectedId) return;
+                inboxData.projectFocusId = inboxData.selectedId;
+            }
+            projectFocusBtn.toggleClass('is-active', !!inboxData.projectFocusId);
             renderList();
             // 持久化状态
             void (async () => {
