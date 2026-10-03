@@ -11,12 +11,16 @@ import type { EventBlock, ExecutionRecord } from './src/week/week-schedule-view'
 import { DEFAULT_INBOX_DATA, type InboxData } from './src/shared/task-panel';
 import { VIEW_TYPE_MAIN, MainView } from './src/main-view';
 import { initI18n, t } from './src/i18n';
+import { initLogger } from './src/shared/logger';
 
 export default class ParrotPlanPlugin extends Plugin {
 
     async onload() {
         // 初始化 i18n（跟随 Obsidian 界面语言）
         initI18n();
+
+        // 初始化日志（清空上一次的日志内容）
+        await initLogger(this.app);
 
         // 读取数据
         const rawData: unknown = await this.loadData();

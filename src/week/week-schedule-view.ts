@@ -13,6 +13,7 @@ import type { InboxItem } from '../shared/task-panel';
 import { renderWeekGrid } from '../shared/week-grid';
 import { RangeSchemeModal } from './range-scheme-modal';
 import { t, getWeekDays } from '../i18n';
+import { log } from '../shared/logger';
 
 export const VIEW_TYPE_WEEK = 'week-schedule-view';
 
@@ -155,6 +156,12 @@ export class WeekScheduleView extends ItemView {
     /** 将周计划渲染到指定容器（供主视图复用） */
     async renderInto(content: HTMLElement) {
         this.hostContainer = content;
+
+        log('渲染周表日历', {
+            weekKey: this.currentWeekKey,
+            events: this.events.length,
+            executions: this.executions.length,
+        });
 
         // 刷新前记录日历主体的滚动位置，渲染后恢复，避免位置跳动
         const prevScroll = content.querySelector('.grid-body-row');
@@ -348,6 +355,12 @@ export class WeekScheduleView extends ItemView {
         });
         // 加入某天时，同时成为该周的周目标
         this.assignItemToDay(selectedInboxItem, day);
+        log('分配计划事件（全天）', {
+            weekKey: this.currentWeekKey,
+            day,
+            title: selectedInboxItem.title,
+            inboxId: selectedInboxItem.id,
+        });
         await this.save();
         await this.onOpen();
         new Notice(t('allday.added', { title: selectedInboxItem.title }));
@@ -408,6 +421,14 @@ export class WeekScheduleView extends ItemView {
                     });
                     // 加入某天时，同时成为该周的周目标
                     this.assignItemToDay(selectedInboxItem, d);
+                    log('分配计划事件（时间点）', {
+                        weekKey: this.currentWeekKey,
+                        day: d,
+                        start: startMinutes,
+                        end: endMinutes,
+                        title: selectedInboxItem.title,
+                        inboxId: selectedInboxItem.id,
+                    });
                     await this.save();
                     await this.onOpen();
                     new Notice(t('event.scheduled', { title: selectedInboxItem.title }));
@@ -426,6 +447,14 @@ export class WeekScheduleView extends ItemView {
                             categoryId,
                             completed: false,
                             weekKey: this.currentWeekKey,
+                        });
+                        log('分配计划事件（弹窗新建）', {
+                            weekKey: this.currentWeekKey,
+                            day: d,
+                            start,
+                            end,
+                            title,
+                            categoryId,
                         });
                         void (async () => {
                             await this.save();
