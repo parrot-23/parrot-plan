@@ -1614,6 +1614,49 @@
     position: relative;
 }
 
+/* 日执行时间轴：为左侧状态气泡预留空间 */
+.today-day-column .today-event-card {
+    left: 56px;
+}
+
+/* 事件状态气泡：贴在区块左侧 */
+.event-status-bubble {
+    position: absolute;
+    right: 100%;
+    top: 50%;
+    transform: translateY(-50%);
+    margin-right: 4px;
+    padding: 1px 5px;
+    border-radius: 8px;
+    font-size: 10px;
+    line-height: 1.4;
+    white-space: nowrap;
+    color: #ffffff;
+    background-color: #888888;
+    pointer-events: none;
+}
+
+.event-status-bubble.is-planned {
+    background-color: #4c8dff;
+}
+
+.event-status-bubble.is-executed {
+    background-color: #43b581;
+}
+
+.event-status-bubble.is-changed {
+    background-color: #f2a65a;
+}
+
+.event-status-bubble.is-added {
+    background-color: #9b6dff;
+}
+
+/* 非计划执行记录区块：虚线边框以示区分 */
+.event-card-exec {
+    border-top-style: dashed;
+}
+
 /* ===== 泳道图视图 ===== */
 .swimlane-view {
     display: flex;

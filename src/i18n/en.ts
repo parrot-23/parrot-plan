@@ -49,6 +49,10 @@ export const en: I18nMessages = {
     'today.completeDone': 'Recorded execution of "{title}"',
     'today.replaceNeedEvent': 'Select an event on the timeline to replace first',
     'today.replaceDone': 'Replaced the event with "{title}"',
+    'today.statusPlanned': 'Planned',
+    'today.statusExecuted': 'Executed',
+    'today.statusChanged': 'Changed',
+    'today.statusAdded': 'Added',
 
     // Year view
     'year.weekLabel': 'Week {week}',

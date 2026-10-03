@@ -26,6 +26,8 @@ export interface EventBlock {
     categoryId?: string;
     /** 来源收集盒任务 id（手动新建的事件无此字段） */
     inboxId?: string;
+    /** 被「替换计划」修改前的原任务 id（用于标记「变更计划」状态） */
+    replacedFromInboxId?: string;
     /** 全天事件（start=0, end=1440） */
     allDay?: boolean;
     completed?: boolean;

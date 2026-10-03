@@ -296,6 +296,7 @@ export class TodayView {
 
         this.getExecutions().push({
             id: `exec_${Date.now()}`,
+            eventId: ev.id,
             inboxId: ev.inboxId,
             day: todayDay,
             start: ev.start,
@@ -321,6 +322,10 @@ export class TodayView {
             return;
         }
 
+        // 记录被替换前的原任务，用于标记「变更计划」状态
+        if (ev.inboxId && ev.inboxId !== item.id) {
+            ev.replacedFromInboxId = ev.inboxId;
+        }
         ev.title = item.title;
         ev.categoryId = item.categoryId;
         ev.inboxId = item.id;
@@ -427,7 +432,7 @@ export class TodayView {
         );
 
         for (const ev of events) {
-            const card = col.createDiv({ cls: 'event-card event-card-clickable' });
+            const card = col.createDiv({ cls: 'event-card event-card-clickable today-event-card' });
             card.setCssProps({
                 '--card-top': `${(ev.start / 120) * 80}px`,
                 '--card-height': `${((ev.end - ev.start) / 120) * 80}px`,
@@ -441,6 +446,9 @@ export class TodayView {
             });
             card.setText(ev.title);
 
+            // 左侧状态气泡
+            this.renderStatusBubble(card, this.getEventStatus(ev));
+
             // 点击事件卡片 → 在中心方框展示详情（再次点击取消选中）
             if (this.selectedEventId === ev.id) card.addClass('is-selected');
             card.onclick = (e) => {
@@ -449,6 +457,53 @@ export class TodayView {
                 void this.refresh();
             };
         }
+
+        // 非计划执行记录：作为独立区块渲染，状态为「新增执行」
+        const plannedEventIds = new Set(events.map(ev => ev.id));
+        const unplannedExecs = this.getExecutions().filter(ex =>
+            ex.day === todayDay
+            && ex.weekKey === weekKey
+            && !(ex.eventId && plannedEventIds.has(ex.eventId)),
+        );
+        for (const ex of unplannedExecs) {
+            const card = col.createDiv({ cls: 'event-card event-card-exec today-event-card' });
+            card.setCssProps({
+                '--card-top': `${(ex.start / 120) * 80}px`,
+                '--card-height': `${Math.max((ex.end - ex.start) / 120 * 80, 20)}px`,
+            });
+            const item = ex.inboxId
+                ? this.inboxData.items.find(i => i.id === ex.inboxId && !i.removed)
+                : undefined;
+            const cat = item?.categoryId
+                ? this.categoryData.categories.find(c => c.id === item.categoryId)
+                : undefined;
+            card.setCssProps({
+                '--card-color': cat?.color ?? '#888888',
+                '--card-bg': '#eeeeee88',
+            });
+            card.setText(item?.title ?? t('today.statusAdded'));
+
+            this.renderStatusBubble(card, 'added');
+        }
+    }
+
+    /** 计算计划事件的状态：变更计划 > 已执行计划 > 计划 */
+    private getEventStatus(ev: EventBlock): 'planned' | 'executed' | 'changed' {
+        if (ev.replacedFromInboxId) return 'changed';
+        const executed = this.getExecutions().some(ex => ex.eventId === ev.id);
+        return executed ? 'executed' : 'planned';
+    }
+
+    /** 在事件区块左侧渲染状态气泡 */
+    private renderStatusBubble(card: HTMLElement, status: 'planned' | 'executed' | 'changed' | 'added') {
+        const labels: Record<typeof status, string> = {
+            planned: t('today.statusPlanned'),
+            executed: t('today.statusExecuted'),
+            changed: t('today.statusChanged'),
+            added: t('today.statusAdded'),
+        };
+        const bubble = card.createDiv({ cls: `event-status-bubble is-${status}` });
+        bubble.setText(labels[status]);
     }
 
     /** 清理定时器 */

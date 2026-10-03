@@ -47,6 +47,10 @@ export const zh = {
     'today.completeDone': '已记录「{title}」的执行',
     'today.replaceNeedEvent': '请先在时间轴上选中要替换的事件',
     'today.replaceDone': '已将事件替换为「{title}」',
+    'today.statusPlanned': '计划',
+    'today.statusExecuted': '已执行计划',
+    'today.statusChanged': '变更计划',
+    'today.statusAdded': '新增执行',
 
     // 年视图
     'year.weekLabel': '第{week}周',
