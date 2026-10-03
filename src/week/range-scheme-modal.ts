@@ -48,7 +48,7 @@ export class RangeSchemeModal extends Modal {
     onOpen() {
         const { contentEl } = this;
         // 重渲染前记录日历滚动位置，避免刷新后跳回顶部
-        const prevScroll = contentEl.querySelector('.grid-body-row') as HTMLElement | null;
+        const prevScroll = contentEl.querySelector('.grid-body-row');
         if (prevScroll) this.savedScrollTop = prevScroll.scrollTop;
         contentEl.empty();
         contentEl.addClass('range-scheme-modal');
@@ -118,7 +118,7 @@ export class RangeSchemeModal extends Modal {
 
         // 恢复滚动位置（无感知刷新）
         if (this.savedScrollTop !== null) {
-            const scrollContainer = refs.bodyRowInner.closest('.grid-body-row') as HTMLElement | null;
+            const scrollContainer = refs.bodyRowInner.closest('.grid-body-row');
             if (scrollContainer) scrollContainer.scrollTop = this.savedScrollTop;
             this.savedScrollTop = null;
         }
@@ -320,7 +320,7 @@ export class SchemeManageModal extends Modal {
 
             // 删除（默认方案不可删除）
             if (scheme.id === DEFAULT_SCHEME_ID) {
-                const lock = row.createEl('span', {
+                const lock = row.createSpan({
                     text: '🔒',
                     cls: 'tbcat-lock',
                 });

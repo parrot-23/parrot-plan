@@ -1,4 +1,4 @@
-import { App, Modal, Notice, Plugin, PluginSettingTab, type SettingDefinitionItem } from 'obsidian';
+import { App, Modal, Notice, Plugin, PluginSettingTab, Setting, type SettingDefinitionItem } from 'obsidian';
 
 import type { WeekRangeData, RangeSchemeData } from './src/week/timeblock-data';
 import { getCurrentWeekKey, ensureDefaultScheme } from './src/week/timeblock-data';
@@ -125,6 +125,39 @@ class ParrotPlanSettingTab extends PluginSettingTab {
     constructor(app: App, plugin: ParrotPlanPlugin) {
         super(app, plugin);
         this.plugin = plugin;
+    }
+
+    /** 传统设置页渲染（兼容 Obsidian 1.13 以下版本） */
+    display(): void {
+        const { containerEl } = this;
+        containerEl.empty();
+
+        new Setting(containerEl)
+            .setName(t('settings.title'))
+            .setDesc(t('settings.about'));
+
+        new Setting(containerEl)
+            .setName(t('settings.data'))
+            .setHeading();
+
+        new Setting(containerEl)
+            .setName(t('settings.clearData'))
+            .setDesc(t('settings.clearDataDesc'))
+            .addButton((btn) => {
+                btn.setButtonText(t('settings.clearData'))
+                    .setWarning()
+                    .onClick(() => {
+                        new ConfirmModal(
+                            this.app,
+                            t('settings.clearDataConfirm'),
+                            t('settings.clearDataConfirmDesc'),
+                            async () => {
+                                await this.plugin.clearAllData();
+                                new Notice(t('settings.clearDataDone'));
+                            },
+                        ).open();
+                    });
+            });
     }
 
     getSettingDefinitions(): SettingDefinitionItem[] {

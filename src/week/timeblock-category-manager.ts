@@ -174,7 +174,7 @@ export class CategoryConfigModal extends Modal {
 
             // 删除（「未分类」不可删除）
             if (cat.id === UNCATEGORIZED_CATEGORY_ID) {
-                const lock = row.createEl('span', {
+                const lock = row.createSpan({
                     text: '🔒',
                     cls: 'tbcat-lock',
                 });

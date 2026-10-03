@@ -347,7 +347,7 @@ export class ApplyTemplateModal extends Modal {
                         new Notice(t('template.selectAtLeastOne'));
                         return;
                     }
-                    this.onApply(this.templateId, Array.from(selectedDays));
+                    void this.onApply(this.templateId, Array.from(selectedDays));
                     this.close();
                 })
             )

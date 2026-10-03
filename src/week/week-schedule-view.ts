@@ -155,7 +155,7 @@ export class WeekScheduleView extends ItemView {
         this.hostContainer = content;
 
         // 刷新前记录日历主体的滚动位置，渲染后恢复，避免位置跳动
-        const prevScroll = content.querySelector('.grid-body-row') as HTMLElement | null;
+        const prevScroll = content.querySelector('.grid-body-row');
         if (prevScroll) {
             this.savedScrollTop = prevScroll.scrollTop;
         }
@@ -646,7 +646,9 @@ export class WeekScheduleView extends ItemView {
                 new Notice(t('eventCopy.emptyClipboard'));
                 return;
             }
-            new PasteDayEventsModal(this.app, this.clipboardSource, (days) => this.pasteEventsToDays(days)).open();
+            new PasteDayEventsModal(this.app, this.clipboardSource, (days) => {
+                void this.pasteEventsToDays(days);
+            }).open();
         };
 
         // 图例（日历顶部：不显示配置按钮）
