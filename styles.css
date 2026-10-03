@@ -105,8 +105,8 @@
 .day-bodies {
     flex: 1;
     display: flex;
-    /* 列高度由内容（12 × 80px = 960px）决定，不被 flex 压缩 */
-    align-items: flex-start;
+    /* 撑满 24 小时内容高度（12 × 80px = 960px），保证整列可点击 */
+    min-height: 960px;
 }
 
 /* 单个日期列 */
