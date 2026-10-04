@@ -1,4 +1,4 @@
-import { requestUrl, type App } from 'obsidian';
+import { requestUrl } from 'obsidian';
 import { log } from './logger';
 
 /**
@@ -9,15 +9,12 @@ import { log } from './logger';
 /** 接口基础地址（如需切换环境，只改这里） */
 export const CLOUD_BASE_URL = 'https://cloud1-d1g6azon61dd44c4e-1500284813.ap-shanghai.app.tcloudbase.com';
 
-/** 账号数据文件（相对 vault 根目录），与主数据隔离，避免被主数据保存覆盖 */
-const ACCOUNT_FILE = '.obsidian/plugins/parrot-plan/account.json';
-
 /** 接口基础地址 */
 function baseUrl(): string {
     return CLOUD_BASE_URL;
 }
 
-/** 账号信息（持久化在独立文件中） */
+/** 账号信息（随主数据一起持久化） */
 export interface AccountData {
     /** 登录令牌 */
     token?: string;
@@ -25,22 +22,6 @@ export interface AccountData {
     userId?: string;
     /** 令牌过期时间（毫秒时间戳） */
     expireTime?: number;
-}
-
-/** 读取账号数据（文件不存在或解析失败时返回空对象） */
-export async function loadAccount(app: App): Promise<AccountData> {
-    try {
-        const raw = await app.vault.adapter.read(ACCOUNT_FILE);
-        const parsed: unknown = JSON.parse(raw);
-        return parsed && typeof parsed === 'object' ? parsed as AccountData : {};
-    } catch {
-        return {};
-    }
-}
-
-/** 保存账号数据 */
-export async function saveAccount(app: App, account: AccountData): Promise<void> {
-    await app.vault.adapter.write(ACCOUNT_FILE, JSON.stringify(account, null, 2));
 }
 
 /** create 接口返回 */

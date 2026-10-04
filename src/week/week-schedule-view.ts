@@ -130,6 +130,8 @@ export class WeekScheduleView extends ItemView {
             events: this.events,
             executions: this.executions,
             inboxData: this.inboxData,
+            // 账号信息（由插件实例持有，随主数据一起持久化）
+            account: (this.plugin as Plugin & { account?: unknown }).account ?? {},
         });
     }
 

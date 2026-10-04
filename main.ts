@@ -14,8 +14,6 @@ import { initI18n, t } from './src/i18n';
 import { initLogger, log } from './src/shared/logger';
 import {
     type AccountData,
-    loadAccount,
-    saveAccount,
     createLoginToken,
     checkLoginToken,
 } from './src/shared/account';
@@ -37,19 +35,20 @@ export default class ParrotPlanPlugin extends Plugin {
         schemeData: RangeSchemeData;
     } | null = null;
 
-    /** 账号信息（独立文件持久化，与主数据隔离） */
+    /** 账号信息（随主数据一起持久化） */
     account: AccountData = {};
 
-    /** 读取账号信息到内存 */
-    async loadAccountData(): Promise<AccountData> {
-        this.account = await loadAccount(this.app);
-        return this.account;
-    }
-
-    /** 保存账号信息 */
+    /**
+     * 保存账号信息：读取当前主数据 → 合并 account → 写回，
+     * 避免覆盖其他字段（主数据由 week-schedule-view.save() 整体写入）。
+     */
     async saveAccountData(account: AccountData): Promise<void> {
         this.account = account;
-        await saveAccount(this.app, account);
+        const rawData: unknown = await this.loadData();
+        const savedData: Record<string, unknown> =
+            rawData && typeof rawData === 'object' ? rawData as Record<string, unknown> : {};
+        savedData.account = account;
+        await this.saveData(savedData);
     }
 
     async onload() {
@@ -60,13 +59,13 @@ export default class ParrotPlanPlugin extends Plugin {
         await initLogger(this.app);
         log('插件 onload 开始');
 
-        // 读取账号信息（独立文件）
-        await this.loadAccountData();
-
         // 读取数据
         const rawData: unknown = await this.loadData();
         let savedData: Record<string, unknown> =
             rawData && typeof rawData === 'object' ? rawData as Record<string, unknown> : {};
+
+        // 读取账号信息（随主数据一起存储）
+        this.account = (savedData.account ?? {}) as AccountData;
 
         const defaultCategories: TimeBlockCategoryData = {
             categories: [
