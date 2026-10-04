@@ -131,7 +131,8 @@ export default class ParrotPlanPlugin extends Plugin {
             const { workspace } = this.app;
             let leaf = workspace.getLeavesOfType(VIEW_TYPE_MAIN)[0];
             if (!leaf) {
-                leaf = workspace.getLeaf(false)!;
+                // 在主编辑区新建标签页打开（而非当前活动 leaf，避免落到右侧边栏）
+                leaf = workspace.getLeaf('tab');
                 await leaf.setViewState({ type: VIEW_TYPE_MAIN });
             }
             await workspace.revealLeaf(leaf);

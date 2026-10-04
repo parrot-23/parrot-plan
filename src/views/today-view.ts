@@ -36,6 +36,10 @@ export class TodayView {
     private selectedEventId?: string;
     /** 上一次渲染时任务面板选中的任务 id（用于检测选中变化） */
     private lastSelectedItemId?: string;
+    /** 是否处于「替换计划」模式 */
+    private replaceMode = false;
+    /** 替换模式下锁定的目标事件 id */
+    private replaceTargetEventId?: string;
 
     constructor(
         app: App,
@@ -93,6 +97,8 @@ export class TodayView {
         this.renderDateBox(centerPanel);
         this.renderHierarchyBox(centerPanel);
         this.renderDetailBox(centerPanel);
+        // 替换模式下，在任务详情下方展示「替换任务详情方框」
+        if (this.replaceMode) this.renderReplaceBox(centerPanel);
         this.renderActionButtons(centerPanel);
 
         // ===== 右侧：当天时间轴 =====
@@ -218,6 +224,28 @@ export class TodayView {
         const selectedItem = this.getSelectedItem();
         const row = panel.createDiv({ cls: 'today-action-row' });
 
+        // 替换模式：确认替换 / 取消替换
+        if (this.replaceMode) {
+            const confirmBtn = row.createEl('button', {
+                cls: 'today-action-btn mod-cta',
+                text: t('today.replaceConfirm'),
+            });
+            // 必须先在左侧选中任务，才能确认替换
+            confirmBtn.disabled = !selectedItem;
+            confirmBtn.onclick = () => {
+                void this.confirmReplace();
+            };
+
+            const cancelBtn = row.createEl('button', {
+                cls: 'today-action-btn',
+                text: t('today.replaceCancel'),
+            });
+            cancelBtn.onclick = () => {
+                this.cancelReplace();
+            };
+            return;
+        }
+
         // 选中时间轴事件：执行计划 / 替换计划
         if (selectedEvent) {
             const execBtn = row.createEl('button', {
@@ -233,7 +261,7 @@ export class TodayView {
                 text: t('today.replacePlanned'),
             });
             replaceBtn.onclick = () => {
-                void this.replacePlannedEvent();
+                this.startReplace();
             };
             return;
         }
@@ -247,6 +275,38 @@ export class TodayView {
         unplannedBtn.onclick = () => {
             void this.executeUnplannedTask();
         };
+    }
+
+    /** 渲染「替换任务详情方框」：左侧原计划事件，中间转换符号，右侧替换成的任务 */
+    private renderReplaceBox(panel: HTMLElement) {
+        const box = panel.createDiv({ cls: 'today-replace-box' });
+        box.createDiv({ cls: 'today-replace-title', text: t('today.replaceBoxTitle') });
+
+        const body = box.createDiv({ cls: 'today-replace-body' });
+
+        // 左侧：原计划事件
+        const sourceEl = body.createDiv({ cls: 'today-replace-side' });
+        sourceEl.createDiv({ cls: 'today-replace-label', text: t('today.replaceBoxSource') });
+        const sourceEvent = this.replaceTargetEventId
+            ? this.getEvents().find(e => e.id === this.replaceTargetEventId)
+            : undefined;
+        sourceEl.createDiv({
+            cls: 'today-replace-name',
+            text: sourceEvent?.title ?? t('today.replaceBoxSourceEmpty'),
+        });
+
+        // 中间：转换符号
+        body.createDiv({ cls: 'today-replace-arrow', text: '→' });
+
+        // 右侧：替换成的任务
+        const targetEl = body.createDiv({ cls: 'today-replace-side' });
+        targetEl.createDiv({ cls: 'today-replace-label', text: t('today.replaceBoxTarget') });
+        const item = this.getSelectedItem();
+        if (item) {
+            targetEl.createDiv({ cls: 'today-replace-name', text: item.title });
+        } else {
+            targetEl.createDiv({ cls: 'today-replace-empty', text: t('today.replaceBoxHint') });
+        }
     }
 
     /** 当前时间轴上选中的事件 */
@@ -309,17 +369,35 @@ export class TodayView {
         await this.refresh();
     }
 
-    /** 替换计划：用当前选中任务替换时间轴上选中的事件 */
-    private async replacePlannedEvent(): Promise<void> {
-        const item = this.getSelectedItem();
-        if (!item) {
-            new Notice(t('today.replaceNeedEvent'));
-            return;
-        }
-
+    /** 进入替换模式：锁定当前选中的时间轴事件，等待用户在左侧选择任务 */
+    private startReplace(): void {
         const ev = this.getSelectedEvent();
         if (!ev) {
             new Notice(t('today.replaceNeedEvent'));
+            return;
+        }
+        this.replaceTargetEventId = ev.id;
+        this.replaceMode = true;
+        void this.refresh();
+    }
+
+    /** 取消替换：退出替换模式 */
+    private cancelReplace(): void {
+        this.replaceMode = false;
+        this.replaceTargetEventId = undefined;
+        void this.refresh();
+    }
+
+    /** 确认替换：用左侧选中的任务替换锁定的目标事件 */
+    private async confirmReplace(): Promise<void> {
+        const item = this.getSelectedItem();
+        if (!item) return;
+
+        const ev = this.replaceTargetEventId
+            ? this.getEvents().find(e => e.id === this.replaceTargetEventId)
+            : undefined;
+        if (!ev) {
+            this.cancelReplace();
             return;
         }
 
@@ -330,6 +408,9 @@ export class TodayView {
         ev.title = item.title;
         ev.categoryId = item.categoryId;
         ev.inboxId = item.id;
+
+        this.replaceMode = false;
+        this.replaceTargetEventId = undefined;
         await this.save();
         new Notice(t('today.replaceDone', { title: item.title }));
         await this.refresh();
