@@ -86,6 +86,17 @@ export const en: I18nMessages = {
     'settings.clearDataDone': 'Data cleared',
     'settings.confirm': 'Confirm',
     'settings.cancel': 'Cancel',
+    'settings.account': 'Account',
+    'settings.accountName': 'Current account',
+    'settings.accountNotLoggedIn': 'Not logged in',
+    'settings.login': 'Log in',
+    'settings.loginTitle': 'Scan to log in',
+    'settings.loginLoading': 'Fetching login QR code…',
+    'settings.loginScanHint': 'Scan the QR code with your phone to log in',
+    'settings.loginSuccess': 'Logged in successfully',
+    'settings.loginTimeout': 'QR code expired, please log in again',
+    'settings.loginCreateFailed': 'Failed to fetch login QR code, please try again later',
+    'settings.loginQrFailed': 'Failed to generate QR code, please try again later',
 
     // All-day events
     'allday.label': 'All day',

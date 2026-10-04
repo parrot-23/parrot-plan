@@ -12,6 +12,14 @@ import { DEFAULT_INBOX_DATA, type InboxData } from './src/shared/task-panel';
 import { VIEW_TYPE_MAIN, MainView } from './src/main-view';
 import { initI18n, t } from './src/i18n';
 import { initLogger, log } from './src/shared/logger';
+import {
+    type AccountData,
+    loadAccount,
+    saveAccount,
+    createLoginToken,
+    checkLoginToken,
+} from './src/shared/account';
+import * as QRCode from 'qrcode';
 
 export default class ParrotPlanPlugin extends Plugin {
     /**
@@ -29,6 +37,21 @@ export default class ParrotPlanPlugin extends Plugin {
         schemeData: RangeSchemeData;
     } | null = null;
 
+    /** 账号信息（独立文件持久化，与主数据隔离） */
+    account: AccountData = {};
+
+    /** 读取账号信息到内存 */
+    async loadAccountData(): Promise<AccountData> {
+        this.account = await loadAccount(this.app);
+        return this.account;
+    }
+
+    /** 保存账号信息 */
+    async saveAccountData(account: AccountData): Promise<void> {
+        this.account = account;
+        await saveAccount(this.app, account);
+    }
+
     async onload() {
         // 初始化 i18n（跟随 Obsidian 界面语言）
         initI18n();
@@ -36,6 +59,9 @@ export default class ParrotPlanPlugin extends Plugin {
         // 初始化日志（清空上一次的日志内容）
         await initLogger(this.app);
         log('插件 onload 开始');
+
+        // 读取账号信息（独立文件）
+        await this.loadAccountData();
 
         // 读取数据
         const rawData: unknown = await this.loadData();
@@ -172,6 +198,22 @@ class ParrotPlanSettingTab extends PluginSettingTab {
             .setName(t('settings.title'))
             .setDesc(t('settings.about'));
 
+        // ===== 账号 =====
+        new Setting(containerEl)
+            .setName(t('settings.account'))
+            .setHeading();
+
+        new Setting(containerEl)
+            .setName(t('settings.accountName'))
+            .setDesc(this.plugin.account.name ?? t('settings.accountNotLoggedIn'))
+            .addButton((btn) => {
+                btn.setButtonText(t('settings.login'))
+                    .setCta()
+                    .onClick(() => {
+                        new LoginModal(this.app, this.plugin, () => this.display()).open();
+                    });
+            });
+
         new Setting(containerEl)
             .setName(t('settings.data'))
             .setHeading();
@@ -204,6 +246,29 @@ class ParrotPlanSettingTab extends PluginSettingTab {
                 render: (setting) => {
                     setting.setName(t('settings.title'));
                     setting.setDesc(t('settings.about'));
+                },
+            },
+            {
+                name: t('settings.account'),
+                searchable: false,
+                render: (setting) => {
+                    setting.setName(t('settings.account')).setHeading();
+                },
+            },
+            {
+                name: t('settings.accountName'),
+                desc: this.plugin.account.name ?? t('settings.accountNotLoggedIn'),
+                render: (setting) => {
+                    setting
+                        .setName(t('settings.accountName'))
+                        .setDesc(this.plugin.account.name ?? t('settings.accountNotLoggedIn'))
+                        .addButton((btn) => {
+                            btn.setButtonText(t('settings.login'))
+                                .setCta()
+                                .onClick(() => {
+                                    new LoginModal(this.app, this.plugin, () => this.display()).open();
+                                });
+                        });
                 },
             },
             {
@@ -274,6 +339,115 @@ class ConfirmModal extends Modal {
     }
 
     onClose() {
+        this.contentEl.empty();
+    }
+}
+
+/** 登录弹窗：获取登录二维码并轮询登录结果 */
+class LoginModal extends Modal {
+    private plugin: ParrotPlanPlugin;
+    private onLoggedIn: () => void;
+    /** 轮询定时器 */
+    private timer?: number;
+    /** 轮询开始时间（用于超时判断） */
+    private startedAt = 0;
+    /** 是否已结束（登录成功或超时），避免重复处理 */
+    private finished = false;
+
+    /** 轮询间隔：3 秒 */
+    private static readonly POLL_INTERVAL = 3000;
+    /** 最长轮询时长：5 分钟 */
+    private static readonly POLL_TIMEOUT = 5 * 60 * 1000;
+
+    constructor(app: App, plugin: ParrotPlanPlugin, onLoggedIn: () => void) {
+        super(app);
+        this.plugin = plugin;
+        this.onLoggedIn = onLoggedIn;
+    }
+
+    onOpen() {
+        const { contentEl } = this;
+        contentEl.empty();
+        contentEl.createEl('h3', { text: t('settings.loginTitle') });
+
+        const statusEl = contentEl.createEl('p', {
+            cls: 'parrot-login-status',
+            text: t('settings.loginLoading'),
+        });
+        const qrWrap = contentEl.createDiv({ cls: 'parrot-login-qr' });
+
+        void this.startLogin(qrWrap, statusEl);
+    }
+
+    /** 创建登录令牌 → 渲染二维码 → 开始轮询 */
+    private async startLogin(qrWrap: HTMLElement, statusEl: HTMLElement): Promise<void> {
+        let token: string;
+        try {
+            const res = await createLoginToken();
+            token = res.token;
+        } catch (err) {
+            log('创建登录令牌失败', err);
+            statusEl.setText(t('settings.loginCreateFailed'));
+            return;
+        }
+
+        // 用 token 生成二维码
+        try {
+            const dataUrl = await QRCode.toDataURL(token, { width: 220, margin: 1 });
+            qrWrap.empty();
+            qrWrap.createEl('img', { attr: { src: dataUrl, alt: 'login qr' } });
+        } catch (err) {
+            log('生成二维码失败', err);
+            statusEl.setText(t('settings.loginQrFailed'));
+            return;
+        }
+
+        statusEl.setText(t('settings.loginScanHint'));
+        this.startedAt = Date.now();
+        this.timer = window.setInterval(() => {
+            void this.poll(token, statusEl);
+        }, LoginModal.POLL_INTERVAL);
+    }
+
+    /** 轮询登录结果 */
+    private async poll(token: string, statusEl: HTMLElement): Promise<void> {
+        if (this.finished) return;
+        // 超时判断
+        if (Date.now() - this.startedAt > LoginModal.POLL_TIMEOUT) {
+            this.finish();
+            statusEl.setText(t('settings.loginTimeout'));
+            return;
+        }
+        try {
+            const res = await checkLoginToken(token);
+            if (res.loggedIn) {
+                this.finish();
+                await this.plugin.saveAccountData({
+                    token,
+                    name: res.name,
+                });
+                statusEl.setText(t('settings.loginSuccess'));
+                new Notice(t('settings.loginSuccess'));
+                this.onLoggedIn();
+                this.close();
+            }
+        } catch (err) {
+            // 单次轮询失败不终止，等待下次轮询
+            log('轮询登录结果失败', err);
+        }
+    }
+
+    /** 结束轮询 */
+    private finish(): void {
+        this.finished = true;
+        if (this.timer !== undefined) {
+            window.clearInterval(this.timer);
+            this.timer = undefined;
+        }
+    }
+
+    onClose() {
+        this.finish();
         this.contentEl.empty();
     }
 }

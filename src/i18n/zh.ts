@@ -84,6 +84,17 @@ export const zh = {
     'settings.clearDataDone': '数据已清空',
     'settings.confirm': '确认',
     'settings.cancel': '取消',
+    'settings.account': '账号',
+    'settings.accountName': '当前账号',
+    'settings.accountNotLoggedIn': '未登录',
+    'settings.login': '登录',
+    'settings.loginTitle': '扫码登录',
+    'settings.loginLoading': '正在获取登录二维码…',
+    'settings.loginScanHint': '请使用手机扫描二维码完成登录',
+    'settings.loginSuccess': '登录成功',
+    'settings.loginTimeout': '二维码已过期，请重新登录',
+    'settings.loginCreateFailed': '获取登录二维码失败，请稍后重试',
+    'settings.loginQrFailed': '生成二维码失败，请稍后重试',
 
     // 全天事件
     'allday.label': '全天',
