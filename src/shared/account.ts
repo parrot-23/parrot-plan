@@ -1,4 +1,5 @@
 import { requestUrl, type App } from 'obsidian';
+import { log } from './logger';
 
 /**
  * 账号模块：封装登录相关的服务器请求与账号数据结构。
@@ -63,11 +64,20 @@ interface CheckLoginTokenResponse {
 
 /** 创建登录令牌：返回 token 与过期时间 */
 export async function createLoginToken(): Promise<{ token: string; expireTime?: number }> {
+    const url = `${baseUrl()}/login/create`;
+    const body = { type: 'createLoginToken' };
+    log('请求 createLoginToken', { url, body });
     const res = await requestUrl({
-        url: `${baseUrl()}/login/create`,
+        url,
         method: 'POST',
-        contentType: 'application/json',
-        body: JSON.stringify({ type: 'createLoginToken' }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+        throw: false,
+    });
+    log('createLoginToken 响应', {
+        status: res.status,
+        text: res.text,
+        json: res.json,
     });
     const data = res.json as CreateLoginTokenResponse;
     if (!data || !data.token) {
@@ -78,11 +88,19 @@ export async function createLoginToken(): Promise<{ token: string; expireTime?: 
 
 /** 检查登录令牌：返回是否已登录及账号名称 */
 export async function checkLoginToken(token: string): Promise<{ loggedIn: boolean; name?: string }> {
+    const url = `${baseUrl()}/login/check`;
+    const body = { type: 'checkLoginToken', token };
     const res = await requestUrl({
-        url: `${baseUrl()}/login/check`,
+        url,
         method: 'POST',
-        contentType: 'application/json',
-        body: JSON.stringify({ type: 'checkLoginToken', token }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+        throw: false,
+    });
+    log('checkLoginToken 响应', {
+        status: res.status,
+        text: res.text,
+        json: res.json,
     });
     const data = res.json as CheckLoginTokenResponse;
     if (!data) return { loggedIn: false };
