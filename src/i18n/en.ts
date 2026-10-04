@@ -136,6 +136,11 @@ export const en: I18nMessages = {
     'eventCopy.copied': 'Copied {count} event(s)',
     'eventCopy.emptyClipboard': 'Clipboard is empty, copy a day first',
     'eventCopy.pasted': 'Pasted {count} event(s)',
+    'eventCopy.copyWeek': 'Copy week events',
+    'eventCopy.pasteWeek': 'Paste week events',
+    'eventCopy.pasteWeekTitle': 'Paste week events',
+    'eventCopy.weekLabel': 'Year {year}, Week {week}',
+    'eventCopy.weekUnknown': 'Unknown week',
 
     // Time block
     'range.title': 'Time Block',

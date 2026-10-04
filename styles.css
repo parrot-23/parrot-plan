@@ -1974,6 +1974,34 @@
     font-size: 13px;
 }
 
+/* 粘贴全周弹窗：来源周 → 目标周 */
+.event-copy-week-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+    padding: 10px 12px;
+    border-radius: 6px;
+    background: var(--background-secondary);
+}
+
+.event-copy-week-side {
+    flex: 1;
+    min-width: 0;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-normal);
+    text-align: center;
+    word-break: break-word;
+}
+
+.event-copy-week-arrow {
+    flex-shrink: 0;
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--interactive-accent);
+}
+
 /* 年 / 周切换 */
 .week-nav {
     display: flex;

@@ -77,6 +77,10 @@ export class WeekScheduleView extends ItemView {
     private clipboardEvents: Omit<EventBlock, 'id' | 'day' | 'weekKey'>[] | null = null;
     /** 剪贴板来源：周键 + 星期几（1=周一 ... 7=周日），用于粘贴弹窗提示 */
     private clipboardSource: { weekKey: WeekKey; day: number } | null = null;
+    /** 全周事件剪贴板：暂存「复制全周事件」的事件模板（保留 day，不含 id/weekKey） */
+    private clipboardWeekEvents: Omit<EventBlock, 'id' | 'weekKey'>[] | null = null;
+    /** 全周剪贴板来源周键，用于粘贴弹窗提示 */
+    private clipboardWeekSource: WeekKey | null = null;
 
     // Obsidian 旧 API：ItemView 构造函数只接受 leaf
     constructor(leaf: WorkspaceLeaf, plugin: Plugin, data: WeekRangeData, templateData: DayTemplateData, categoryData: TimeBlockCategoryData,
@@ -720,6 +724,34 @@ export class WeekScheduleView extends ItemView {
             }).open();
         };
 
+        // 全周事件复制 / 粘贴
+        const copyWeekBtn = copyBar.createEl('button', {
+            text: t('eventCopy.copyWeek'),
+            cls: 'event-copy-btn',
+        });
+        copyWeekBtn.onclick = () => {
+            this.copyWeekEvents();
+        };
+
+        const pasteWeekBtn = copyBar.createEl('button', {
+            text: t('eventCopy.pasteWeek'),
+            cls: 'event-copy-btn',
+        });
+        pasteWeekBtn.onclick = () => {
+            if (!this.clipboardWeekEvents || this.clipboardWeekEvents.length === 0) {
+                new Notice(t('eventCopy.emptyClipboard'));
+                return;
+            }
+            new PasteWeekEventsModal(
+                this.app,
+                this.clipboardWeekSource,
+                this.currentWeekKey,
+                () => {
+                    void this.pasteWeekEvents();
+                },
+            ).open();
+        };
+
         // 图例（日历顶部：不显示配置按钮）
         const legendContainer = toolbar.createDiv({ cls: 'legend-container' });
         renderTimeBlockCategoryLegend(
@@ -800,6 +832,39 @@ export class WeekScheduleView extends ItemView {
                 });
                 added++;
             }
+        }
+        await this.save();
+        await this.onOpen();
+        new Notice(t('eventCopy.pasted', { count: added }));
+    }
+
+    /** 复制当前周的全部事件到全周剪贴板（保留 day，粘贴时按原星期几还原） */
+    private copyWeekEvents() {
+        const weekEvents = this.events.filter(ev => ev.weekKey === this.currentWeekKey);
+        if (weekEvents.length === 0) {
+            new Notice(t('eventCopy.nothingToCopy'));
+            return;
+        }
+        // 暂存事件模板（去掉 id / weekKey，保留 day）
+        this.clipboardWeekEvents = weekEvents.map(({ id, weekKey: _w, ...rest }) => rest);
+        this.clipboardWeekSource = this.currentWeekKey;
+        new Notice(t('eventCopy.copied', { count: weekEvents.length }));
+    }
+
+    /** 将全周剪贴板事件粘贴到当前周（按原星期几还原，保留源事件，可多次粘贴） */
+    private async pasteWeekEvents() {
+        if (!this.clipboardWeekEvents || this.clipboardWeekEvents.length === 0) {
+            new Notice(t('eventCopy.emptyClipboard'));
+            return;
+        }
+        let added = 0;
+        for (const tpl of this.clipboardWeekEvents) {
+            this.events.push({
+                ...tpl,
+                id: `ev_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+                weekKey: this.currentWeekKey,
+            });
+            added++;
         }
         await this.save();
         await this.onOpen();
@@ -1174,6 +1239,59 @@ class PasteDayEventsModal extends Modal {
                         return;
                     }
                     this.onConfirm(Array.from(selectedDays));
+                    this.close();
+                })
+            )
+            .addButton(btn => btn
+                .setButtonText(t('common.cancel'))
+                .onClick(() => this.close())
+            );
+    }
+
+    onClose() { this.contentEl.empty(); }
+}
+
+/** 粘贴全周事件弹窗：显示「来源周 → 复制到 → 当前周」，确认后生效 */
+class PasteWeekEventsModal extends Modal {
+    constructor(
+        app: App,
+        /** 来源周键 */
+        private sourceWeekKey: WeekKey | null,
+        /** 目标周键（当前周） */
+        private targetWeekKey: WeekKey,
+        private onConfirm: () => void,
+    ) {
+        super(app);
+    }
+
+    onOpen() {
+        const { contentEl } = this;
+        contentEl.empty();
+        contentEl.createEl('h3', { text: t('eventCopy.pasteWeekTitle') });
+
+        const source = this.sourceWeekKey ? parseWeekKey(this.sourceWeekKey) : null;
+        const target = parseWeekKey(this.targetWeekKey);
+
+        // 来源周 → 复制到 → 当前周
+        const row = contentEl.createDiv({ cls: 'event-copy-week-row' });
+        row.createDiv({
+            cls: 'event-copy-week-side',
+            text: source
+                ? t('eventCopy.weekLabel', { year: source.year, week: source.week })
+                : t('eventCopy.weekUnknown'),
+        });
+        row.createDiv({ cls: 'event-copy-week-arrow', text: '→' });
+        row.createDiv({
+            cls: 'event-copy-week-side',
+            text: t('eventCopy.weekLabel', { year: target.year, week: target.week }),
+        });
+
+        new Setting(contentEl)
+            .addButton(btn => btn
+                .setButtonText(t('common.confirm'))
+                .setCta()
+                .onClick(() => {
+                    this.onConfirm();
                     this.close();
                 })
             )
