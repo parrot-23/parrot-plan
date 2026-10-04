@@ -124,8 +124,8 @@ export const zh = {
     'event.titleRequired': '标题不能为空',
 
     // 事件复制 / 粘贴
-    'eventCopy.copy': '复制当天事件',
-    'eventCopy.paste': '粘贴事件',
+    'eventCopy.copy': '复制一天事件',
+    'eventCopy.paste': '粘贴一天事件',
     'eventCopy.copyTitle': '复制哪一天的全部事件',
     'eventCopy.pasteTitle': '粘贴到哪几天',
     'eventCopy.sourceHint': '当前复制的是：{year} 年 第 {week} 周 {day}',
@@ -134,11 +134,12 @@ export const zh = {
     'eventCopy.copied': '已复制 {count} 个事件',
     'eventCopy.emptyClipboard': '剪贴板为空，请先复制某天事件',
     'eventCopy.pasted': '已粘贴 {count} 个事件',
-    'eventCopy.copyWeek': '复制全周事件',
-    'eventCopy.pasteWeek': '粘贴全周事件',
-    'eventCopy.pasteWeekTitle': '粘贴全周事件',
+    'eventCopy.copyWeek': '复制本周事件',
+    'eventCopy.pasteWeek': '粘贴一周事件',
+    'eventCopy.pasteWeekTitle': '粘贴一周事件',
     'eventCopy.weekLabel': '{year} 年 第 {week} 周',
     'eventCopy.weekUnknown': '未知周',
+    'eventCopy.moreTools': '更多工具',
 
     // 时间区块
     'range.title': '时间区块',

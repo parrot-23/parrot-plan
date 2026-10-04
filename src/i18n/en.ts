@@ -127,7 +127,7 @@ export const en: I18nMessages = {
 
     // Event copy / paste
     'eventCopy.copy': 'Copy Day Events',
-    'eventCopy.paste': 'Paste Events',
+    'eventCopy.paste': 'Paste Day Events',
     'eventCopy.copyTitle': 'Copy all events from which day',
     'eventCopy.pasteTitle': 'Paste to which days',
     'eventCopy.sourceHint': 'Currently copied from: {year} W{week} {day}',
@@ -136,11 +136,12 @@ export const en: I18nMessages = {
     'eventCopy.copied': 'Copied {count} event(s)',
     'eventCopy.emptyClipboard': 'Clipboard is empty, copy a day first',
     'eventCopy.pasted': 'Pasted {count} event(s)',
-    'eventCopy.copyWeek': 'Copy week events',
-    'eventCopy.pasteWeek': 'Paste week events',
-    'eventCopy.pasteWeekTitle': 'Paste week events',
+    'eventCopy.copyWeek': 'Copy Week Events',
+    'eventCopy.pasteWeek': 'Paste Week Events',
+    'eventCopy.pasteWeekTitle': 'Paste Week Events',
     'eventCopy.weekLabel': 'Year {year}, Week {week}',
     'eventCopy.weekUnknown': 'Unknown week',
+    'eventCopy.moreTools': 'More Tools',
 
     // Time block
     'range.title': 'Time Block',

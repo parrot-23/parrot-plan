@@ -1941,6 +1941,65 @@
     gap: 6px;
 }
 
+/* 「更多工具」按钮 + 下拉面板 */
+.more-tools-wrap {
+    position: relative;
+}
+
+.more-tools-btn {
+    padding: 6px 10px;
+    border-radius: 4px;
+    border: 1px solid var(--background-modifier-border);
+    background: var(--interactive-normal);
+    color: var(--text-normal);
+    cursor: pointer;
+    font-size: 13px;
+    white-space: nowrap;
+}
+
+.more-tools-btn:hover {
+    background: var(--interactive-hover);
+}
+
+.more-tools-btn.is-active {
+    background: var(--interactive-accent);
+    color: var(--text-on-accent);
+    border-color: var(--interactive-accent);
+}
+
+.more-tools-panel {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    z-index: 100;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 160px;
+    padding: 6px;
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 6px;
+    background: var(--background-primary);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.more-tools-item {
+    width: 100%;
+    padding: 6px 10px;
+    border-radius: 4px;
+    border: none;
+    background: transparent;
+    color: var(--text-normal);
+    cursor: pointer;
+    font-size: 13px;
+    text-align: left;
+    white-space: nowrap;
+}
+
+.more-tools-item:hover {
+    background: var(--interactive-hover);
+}
+
 /* 事件复制 / 粘贴栏 */
 .event-copy-bar {
     display: flex;

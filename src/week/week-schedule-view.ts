@@ -81,6 +81,8 @@ export class WeekScheduleView extends ItemView {
     private clipboardWeekEvents: Omit<EventBlock, 'id' | 'weekKey'>[] | null = null;
     /** 全周剪贴板来源周键，用于粘贴弹窗提示 */
     private clipboardWeekSource: WeekKey | null = null;
+    /** 「更多工具」下拉面板是否展开 */
+    private moreToolsOpen = false;
 
     // Obsidian 旧 API：ItemView 构造函数只接受 leaf
     constructor(leaf: WorkspaceLeaf, plugin: Plugin, data: WeekRangeData, templateData: DayTemplateData, categoryData: TimeBlockCategoryData,
@@ -661,24 +663,96 @@ export class WeekScheduleView extends ItemView {
 
         // 时间区间设置按钮 + 当前方案下拉框
         const schemeBar = toolbar.createDiv({ cls: 'range-scheme-bar' });
-        const schemeBtn = schemeBar.createEl('button', {
-            text: t('rangeScheme.open'),
-            cls: 'range-scheme-open-btn',
+
+        // 「更多工具」按钮 + 下拉面板
+        const moreToolsWrap = schemeBar.createDiv({ cls: 'more-tools-wrap' });
+        const moreToolsBtn = moreToolsWrap.createEl('button', {
+            text: t('eventCopy.moreTools'),
+            cls: 'more-tools-btn',
         });
-        schemeBtn.onclick = () => {
-            new RangeSchemeModal(
-                this.app,
-                this.timeBlockCategoryData,
-                this.schemeData,
-                this,
-                (templateId, targetDays) => this.applyTemplate(templateId, targetDays),
-                () => this.save(),
-                () => {
-                    void this.save();
-                    void this.onOpen();
-                },
-            ).open();
+        if (this.moreToolsOpen) moreToolsBtn.addClass('is-active');
+        moreToolsBtn.onclick = () => {
+            this.moreToolsOpen = !this.moreToolsOpen;
+            void this.onOpen();
         };
+
+        // 下拉面板：每行一个按钮
+        if (this.moreToolsOpen) {
+            const panel = moreToolsWrap.createDiv({ cls: 'more-tools-panel' });
+
+            // 时间区间设置
+            const schemeBtn = panel.createEl('button', {
+                text: t('rangeScheme.open'),
+                cls: 'more-tools-item',
+            });
+            schemeBtn.onclick = () => {
+                new RangeSchemeModal(
+                    this.app,
+                    this.timeBlockCategoryData,
+                    this.schemeData,
+                    this,
+                    (templateId, targetDays) => this.applyTemplate(templateId, targetDays),
+                    () => this.save(),
+                    () => {
+                        void this.save();
+                        void this.onOpen();
+                    },
+                ).open();
+            };
+
+            // 复制一天事件
+            const copyBtn = panel.createEl('button', {
+                text: t('eventCopy.copy'),
+                cls: 'more-tools-item',
+            });
+            copyBtn.onclick = () => {
+                new CopyDayEventsModal(this.app, (day) => this.copyDayEvents(day)).open();
+            };
+
+            // 粘贴一天事件
+            const pasteBtn = panel.createEl('button', {
+                text: t('eventCopy.paste'),
+                cls: 'more-tools-item',
+            });
+            pasteBtn.onclick = () => {
+                if (!this.clipboardEvents || this.clipboardEvents.length === 0) {
+                    new Notice(t('eventCopy.emptyClipboard'));
+                    return;
+                }
+                new PasteDayEventsModal(this.app, this.clipboardSource, (days) => {
+                    void this.pasteEventsToDays(days);
+                }).open();
+            };
+
+            // 复制本周事件
+            const copyWeekBtn = panel.createEl('button', {
+                text: t('eventCopy.copyWeek'),
+                cls: 'more-tools-item',
+            });
+            copyWeekBtn.onclick = () => {
+                this.copyWeekEvents();
+            };
+
+            // 粘贴一周事件
+            const pasteWeekBtn = panel.createEl('button', {
+                text: t('eventCopy.pasteWeek'),
+                cls: 'more-tools-item',
+            });
+            pasteWeekBtn.onclick = () => {
+                if (!this.clipboardWeekEvents || this.clipboardWeekEvents.length === 0) {
+                    new Notice(t('eventCopy.emptyClipboard'));
+                    return;
+                }
+                new PasteWeekEventsModal(
+                    this.app,
+                    this.clipboardWeekSource,
+                    this.currentWeekKey,
+                    () => {
+                        void this.pasteWeekEvents();
+                    },
+                ).open();
+            };
+        }
 
         // 当前时间区间方案下拉框（至少存在默认方案，无需「未选择方案」选项）
         const schemeSelect = schemeBar.createEl('select', { cls: 'range-scheme-select' });
@@ -697,59 +771,6 @@ export class WeekScheduleView extends ItemView {
                 await this.save();
                 await this.onOpen();
             })();
-        };
-
-        // 事件复制 / 粘贴（按天）
-        const copyBar = toolbar.createDiv({ cls: 'event-copy-bar' });
-
-        const copyBtn = copyBar.createEl('button', {
-            text: t('eventCopy.copy'),
-            cls: 'event-copy-btn',
-        });
-        copyBtn.onclick = () => {
-            new CopyDayEventsModal(this.app, (day) => this.copyDayEvents(day)).open();
-        };
-
-        const pasteBtn = copyBar.createEl('button', {
-            text: t('eventCopy.paste'),
-            cls: 'event-copy-btn',
-        });
-        pasteBtn.onclick = () => {
-            if (!this.clipboardEvents || this.clipboardEvents.length === 0) {
-                new Notice(t('eventCopy.emptyClipboard'));
-                return;
-            }
-            new PasteDayEventsModal(this.app, this.clipboardSource, (days) => {
-                void this.pasteEventsToDays(days);
-            }).open();
-        };
-
-        // 全周事件复制 / 粘贴
-        const copyWeekBtn = copyBar.createEl('button', {
-            text: t('eventCopy.copyWeek'),
-            cls: 'event-copy-btn',
-        });
-        copyWeekBtn.onclick = () => {
-            this.copyWeekEvents();
-        };
-
-        const pasteWeekBtn = copyBar.createEl('button', {
-            text: t('eventCopy.pasteWeek'),
-            cls: 'event-copy-btn',
-        });
-        pasteWeekBtn.onclick = () => {
-            if (!this.clipboardWeekEvents || this.clipboardWeekEvents.length === 0) {
-                new Notice(t('eventCopy.emptyClipboard'));
-                return;
-            }
-            new PasteWeekEventsModal(
-                this.app,
-                this.clipboardWeekSource,
-                this.currentWeekKey,
-                () => {
-                    void this.pasteWeekEvents();
-                },
-            ).open();
         };
 
         // 图例（日历顶部：不显示配置按钮）
