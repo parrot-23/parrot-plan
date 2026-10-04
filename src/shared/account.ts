@@ -2,18 +2,18 @@ import { requestUrl, type App } from 'obsidian';
 
 /**
  * 账号模块：封装登录相关的服务器请求与账号数据结构。
- * 服务器基于腾讯云开发（CloudBase），接口地址由 envId 决定。
+ * 服务器基于腾讯云开发（CloudBase）。
  */
 
-/** 云开发环境 ID（如需切换环境，只改这里） */
-export const CLOUD_ENV_ID = 'cloud1-d1g6azon61dd44c4e';
+/** 接口基础地址（如需切换环境，只改这里） */
+export const CLOUD_BASE_URL = 'https://cloud1-d1g6azon61dd44c4e-1500284813.ap-shanghai.app.tcloudbase.com';
 
 /** 账号数据文件（相对 vault 根目录），与主数据隔离，避免被主数据保存覆盖 */
 const ACCOUNT_FILE = '.obsidian/plugins/parrot-plan/account.json';
 
 /** 接口基础地址 */
 function baseUrl(): string {
-    return `https://${CLOUD_ENV_ID}.service.tcloudbase.com`;
+    return CLOUD_BASE_URL;
 }
 
 /** 账号信息（持久化在独立文件中） */
