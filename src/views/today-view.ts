@@ -551,7 +551,8 @@ export class TodayView {
             const card = col.createDiv({ cls: 'event-card event-card-exec today-event-card' });
             card.setCssProps({
                 '--card-top': `${(ex.start / 120) * 80}px`,
-                '--card-height': `${Math.max((ex.end - ex.start) / 120 * 80, 20)}px`,
+                // 新增执行卡片固定高度 40px
+                '--card-height': '40px',
             });
             const item = ex.inboxId
                 ? this.inboxData.items.find(i => i.id === ex.inboxId && !i.removed)
