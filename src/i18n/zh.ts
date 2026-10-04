@@ -88,6 +88,7 @@ export const zh = {
     'settings.accountName': '当前账号',
     'settings.accountNotLoggedIn': '未登录',
     'settings.login': '登录',
+    'settings.loggedIn': '已登录',
     'settings.loginTitle': '扫码登录',
     'settings.loginLoading': '正在获取登录二维码…',
     'settings.loginScanHint': '请使用手机扫描二维码完成登录',

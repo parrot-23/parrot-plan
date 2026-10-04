@@ -90,6 +90,7 @@ export const en: I18nMessages = {
     'settings.accountName': 'Current account',
     'settings.accountNotLoggedIn': 'Not logged in',
     'settings.login': 'Log in',
+    'settings.loggedIn': 'Logged in',
     'settings.loginTitle': 'Scan to log in',
     'settings.loginLoading': 'Fetching login QR code…',
     'settings.loginScanHint': 'Scan the QR code with your phone to log in',

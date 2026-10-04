@@ -21,8 +21,8 @@ function baseUrl(): string {
 export interface AccountData {
     /** 登录令牌 */
     token?: string;
-    /** 账号名称（登录成功后由服务器返回，暂存） */
-    name?: string;
+    /** 用户 ID（登录成功后由服务器返回） */
+    userId?: string;
     /** 令牌过期时间（毫秒时间戳） */
     expireTime?: number;
 }
@@ -53,12 +53,10 @@ interface CreateLoginTokenResponse {
 /** check 接口返回 */
 interface CheckLoginTokenResponse {
     success?: boolean;
-    /** 登录是否已完成 */
-    loggedIn?: boolean;
-    /** 账号名称（不同后端字段名可能不同，做兼容） */
-    name?: string;
-    nickname?: string;
-    userName?: string;
+    /** 登录状态：pending（待扫码）/ confirmed（已确认登录） */
+    status?: string;
+    /** 登录成功后的用户 ID */
+    userId?: string;
     [key: string]: unknown;
 }
 
@@ -86,8 +84,8 @@ export async function createLoginToken(): Promise<{ token: string; expireTime?: 
     return { token: data.token, expireTime: data.expireTime };
 }
 
-/** 检查登录令牌：返回是否已登录及账号名称 */
-export async function checkLoginToken(token: string): Promise<{ loggedIn: boolean; name?: string }> {
+/** 检查登录令牌：返回是否已登录及用户 ID */
+export async function checkLoginToken(token: string): Promise<{ loggedIn: boolean; userId?: string }> {
     const url = `${baseUrl()}/login/check`;
     const body = { type: 'checkLoginToken', token };
     const res = await requestUrl({
@@ -104,8 +102,7 @@ export async function checkLoginToken(token: string): Promise<{ loggedIn: boolea
     });
     const data = res.json as CheckLoginTokenResponse;
     if (!data) return { loggedIn: false };
-    const name = data.name ?? data.nickname ?? data.userName;
-    // 兼容多种成功标识：success / loggedIn 任一为真即视为登录成功
-    const loggedIn = data.loggedIn === true || data.success === true;
-    return { loggedIn, name };
+    // 登录成功：status 为 confirmed，且返回了 userId
+    const loggedIn = data.status === 'confirmed' && !!data.userId;
+    return { loggedIn, userId: data.userId };
 }

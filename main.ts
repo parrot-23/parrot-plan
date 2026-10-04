@@ -203,12 +203,14 @@ class ParrotPlanSettingTab extends PluginSettingTab {
             .setName(t('settings.account'))
             .setHeading();
 
+        const loggedIn = !!this.plugin.account.userId;
         new Setting(containerEl)
             .setName(t('settings.accountName'))
-            .setDesc(this.plugin.account.name ?? t('settings.accountNotLoggedIn'))
+            .setDesc(this.plugin.account.userId ?? t('settings.accountNotLoggedIn'))
             .addButton((btn) => {
-                btn.setButtonText(t('settings.login'))
+                btn.setButtonText(loggedIn ? t('settings.loggedIn') : t('settings.login'))
                     .setCta()
+                    .setDisabled(loggedIn)
                     .onClick(() => {
                         new LoginModal(this.app, this.plugin, () => this.display()).open();
                     });
@@ -257,14 +259,16 @@ class ParrotPlanSettingTab extends PluginSettingTab {
             },
             {
                 name: t('settings.accountName'),
-                desc: this.plugin.account.name ?? t('settings.accountNotLoggedIn'),
+                desc: this.plugin.account.userId ?? t('settings.accountNotLoggedIn'),
                 render: (setting) => {
+                    const loggedIn = !!this.plugin.account.userId;
                     setting
                         .setName(t('settings.accountName'))
-                        .setDesc(this.plugin.account.name ?? t('settings.accountNotLoggedIn'))
+                        .setDesc(this.plugin.account.userId ?? t('settings.accountNotLoggedIn'))
                         .addButton((btn) => {
-                            btn.setButtonText(t('settings.login'))
+                            btn.setButtonText(loggedIn ? t('settings.loggedIn') : t('settings.login'))
                                 .setCta()
+                                .setDisabled(loggedIn)
                                 .onClick(() => {
                                     new LoginModal(this.app, this.plugin, () => this.display()).open();
                                 });
@@ -424,7 +428,7 @@ class LoginModal extends Modal {
                 this.finish();
                 await this.plugin.saveAccountData({
                     token,
-                    name: res.name,
+                    userId: res.userId,
                 });
                 statusEl.setText(t('settings.loginSuccess'));
                 new Notice(t('settings.loginSuccess'));
