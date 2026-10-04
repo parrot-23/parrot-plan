@@ -664,8 +664,41 @@ export class WeekScheduleView extends ItemView {
         // 时间区间设置按钮 + 当前方案下拉框
         const schemeBar = toolbar.createDiv({ cls: 'range-scheme-bar' });
 
-        // 「更多工具」按钮 + 下拉面板
-        const moreToolsWrap = schemeBar.createDiv({ cls: 'more-tools-wrap' });
+        // 当前时间区间方案下拉框（至少存在默认方案，无需「未选择方案」选项）
+        const schemeSelect = schemeBar.createEl('select', { cls: 'range-scheme-select' });
+        for (const scheme of this.schemeData.schemes) {
+            schemeSelect.createEl('option', { text: scheme.name, value: scheme.id });
+        }
+        // 未激活时默认选中默认方案
+        const activeId = this.schemeData.activeSchemeId
+            ?? this.schemeData.defaultSchemeId
+            ?? this.schemeData.schemes[0]?.id
+            ?? '';
+        schemeSelect.value = activeId;
+        schemeSelect.onchange = () => {
+            this.schemeData.activeSchemeId = schemeSelect.value || undefined;
+            void (async () => {
+                await this.save();
+                await this.onOpen();
+            })();
+        };
+
+        // 图例（日历顶部：不显示配置按钮）
+        const legendContainer = toolbar.createDiv({ cls: 'legend-container' });
+        renderTimeBlockCategoryLegend(
+            this.app,
+            legendContainer,
+            this.timeBlockCategoryData,
+            () => {
+                void this.onOpen();
+            },
+            undefined,
+            undefined,
+            false,
+        );
+
+        // 「更多工具」按钮 + 下拉面板（放在工具栏最后，始终钉在最右边）
+        const moreToolsWrap = toolbar.createDiv({ cls: 'more-tools-wrap' });
         const moreToolsBtn = moreToolsWrap.createEl('button', {
             text: t('eventCopy.moreTools'),
             cls: 'more-tools-btn',
@@ -753,39 +786,6 @@ export class WeekScheduleView extends ItemView {
                 ).open();
             };
         }
-
-        // 当前时间区间方案下拉框（至少存在默认方案，无需「未选择方案」选项）
-        const schemeSelect = schemeBar.createEl('select', { cls: 'range-scheme-select' });
-        for (const scheme of this.schemeData.schemes) {
-            schemeSelect.createEl('option', { text: scheme.name, value: scheme.id });
-        }
-        // 未激活时默认选中默认方案
-        const activeId = this.schemeData.activeSchemeId
-            ?? this.schemeData.defaultSchemeId
-            ?? this.schemeData.schemes[0]?.id
-            ?? '';
-        schemeSelect.value = activeId;
-        schemeSelect.onchange = () => {
-            this.schemeData.activeSchemeId = schemeSelect.value || undefined;
-            void (async () => {
-                await this.save();
-                await this.onOpen();
-            })();
-        };
-
-        // 图例（日历顶部：不显示配置按钮）
-        const legendContainer = toolbar.createDiv({ cls: 'legend-container' });
-        renderTimeBlockCategoryLegend(
-            this.app,
-            legendContainer,
-            this.timeBlockCategoryData,
-            () => {
-                void this.onOpen();
-            },
-            undefined,
-            undefined,
-            false,
-        );
     }
 
     /** 获取当前激活方案（未激活时回退到默认方案） */

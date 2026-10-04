@@ -1944,6 +1944,8 @@
 /* 「更多工具」按钮 + 下拉面板 */
 .more-tools-wrap {
     position: relative;
+    /* 始终钉在工具栏最右边 */
+    margin-left: auto;
 }
 
 .more-tools-btn {
@@ -1970,7 +1972,7 @@
 .more-tools-panel {
     position: absolute;
     top: calc(100% + 4px);
-    left: 0;
+    right: 0;
     z-index: 100;
     display: flex;
     flex-direction: column;
