@@ -84,8 +84,6 @@ export class WeekScheduleView extends ItemView {
     private clipboardWeekSource: WeekKey | null = null;
     /** 「更多工具」下拉面板是否展开 */
     private moreToolsOpen = false;
-    /** 是否显示执行情况图标（工具栏按钮切换） */
-    private showExecutionStatus = false;
     /** 已标记为「已制定周计划」的周键列表（与年视图联动） */
     plannedWeeks: string[] = [];
 
@@ -533,8 +531,8 @@ export class WeekScheduleView extends ItemView {
                     '--card-bg': '#eeeeee88',
                 });
 
-                // 执行情况图标（仅按钮激活时显示，叠加在卡片左上角，不改变卡片本身）
-                if (this.showExecutionStatus) {
+                // 执行情况图标（当前周已制定周计划时显示，叠加在卡片左上角，不改变卡片本身）
+                if (this.plannedWeeks.includes(this.currentWeekKey)) {
                     const status = getEventStatus(ev, this.executions);
                     card.createDiv({
                         cls: `event-status-icon-badge is-${status}`,
@@ -719,18 +717,6 @@ export class WeekScheduleView extends ItemView {
                 await this.onOpen();
             })();
         };
-
-        // 显示执行情况按钮（切换事件块上的执行状态图标）
-        const statusBtn = toolbar.createEl('button', {
-            text: t('week.showExecutionStatus'),
-            cls: 'exec-status-toggle-btn',
-        });
-        if (this.showExecutionStatus) statusBtn.addClass('is-active');
-        statusBtn.onclick = () => {
-            this.showExecutionStatus = !this.showExecutionStatus;
-            void this.onOpen();
-        };
-
 
         // 图例（日历顶部：不显示配置按钮）
         const legendContainer = toolbar.createDiv({ cls: 'legend-container' });

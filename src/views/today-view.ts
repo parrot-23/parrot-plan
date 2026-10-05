@@ -35,6 +35,8 @@ export class TodayView {
     private timer?: number;
     /** 时间轴上被选中的事件 id（用于在中心方框展示详情） */
     private selectedEventId?: string;
+    /** 时间轴上被选中的「新增」执行记录 id（与计划事件选中互斥） */
+    private selectedExecId?: string;
     /** 上一次渲染时任务面板选中的任务 id（用于检测选中变化） */
     private lastSelectedItemId?: string;
     /** 是否处于「替换计划」模式 */
@@ -61,6 +63,9 @@ export class TodayView {
     async renderInto(container: HTMLElement): Promise<void> {
         this.container = container;
         this.clearTimer();
+        // 保存时间轴滚动位置，重建 DOM 后恢复，避免刷新时滚动条重置
+        const prevScrollTop = container
+            .querySelector('.today-timeline-panel')?.scrollTop ?? 0;
         container.empty();
         container.addClass('today-view');
 
@@ -68,6 +73,7 @@ export class TodayView {
         if (this.inboxData.selectedId !== this.lastSelectedItemId) {
             this.lastSelectedItemId = this.inboxData.selectedId;
             this.selectedEventId = undefined;
+            this.selectedExecId = undefined;
         }
 
         // ===== 左侧：任务面板 =====
@@ -105,6 +111,8 @@ export class TodayView {
         // ===== 右侧：当天时间轴 =====
         const timelinePanel = container.createDiv({ cls: 'today-timeline-panel' });
         this.renderTimeline(timelinePanel);
+        // 恢复时间轴滚动位置
+        timelinePanel.scrollTop = prevScrollTop;
     }
 
     /** 重新渲染自身 */
@@ -203,12 +211,19 @@ export class TodayView {
         const selectedEvent = this.selectedEventId
             ? this.getEvents().find(ev => ev.id === this.selectedEventId)
             : undefined;
+        const selectedExec = this.selectedExecId
+            ? this.getExecutions().find(ex => ex.id === this.selectedExecId)
+            : undefined;
         const selectedItem = this.inboxData.selectedId
             ? this.inboxData.items.find(i => i.id === this.inboxData.selectedId && !i.removed)
             : undefined;
 
         if (selectedEvent) {
             this.renderEventDetail(body, selectedEvent);
+            return;
+        }
+        if (selectedExec) {
+            this.renderExecDetail(body, selectedExec);
             return;
         }
         if (selectedItem) {
@@ -224,6 +239,9 @@ export class TodayView {
         const selectedEvent = this.getSelectedEvent();
         const selectedItem = this.getSelectedItem();
         const row = panel.createDiv({ cls: 'today-action-row' });
+
+        // 选中「新增」执行记录：不显示任何操作按钮
+        if (this.selectedExecId) return;
 
         // 替换模式：确认替换 / 取消替换
         if (this.replaceMode) {
@@ -247,23 +265,26 @@ export class TodayView {
             return;
         }
 
-        // 选中时间轴事件：执行计划 / 替换计划
+        // 选中时间轴事件：仅「计划」状态显示「执行计划 / 替换计划」按钮
         if (selectedEvent) {
-            const execBtn = row.createEl('button', {
-                cls: 'today-action-btn',
-                text: t('today.execPlanned'),
-            });
-            execBtn.onclick = () => {
-                void this.executePlannedEvent();
-            };
+            const status = getEventStatus(selectedEvent, this.getExecutions());
+            if (status === 'planned') {
+                const execBtn = row.createEl('button', {
+                    cls: 'today-action-btn',
+                    text: t('today.execPlanned'),
+                });
+                execBtn.onclick = () => {
+                    void this.executePlannedEvent();
+                };
 
-            const replaceBtn = row.createEl('button', {
-                cls: 'today-action-btn',
-                text: t('today.replacePlanned'),
-            });
-            replaceBtn.onclick = () => {
-                this.startReplace();
-            };
+                const replaceBtn = row.createEl('button', {
+                    cls: 'today-action-btn',
+                    text: t('today.replacePlanned'),
+                });
+                replaceBtn.onclick = () => {
+                    this.startReplace();
+                };
+            }
             return;
         }
 
@@ -468,6 +489,34 @@ export class TodayView {
         }
     }
 
+    /** 展示「新增」执行记录详情 */
+    private renderExecDetail(body: HTMLElement, ex: ExecutionRecord) {
+        const item = ex.inboxId
+            ? this.inboxData.items.find(i => i.id === ex.inboxId && !i.removed)
+            : undefined;
+        body.createDiv({ cls: 'today-detail-name', text: item?.title ?? t('today.statusAdded') });
+
+        const row = body.createDiv({ cls: 'today-detail-row' });
+        row.createSpan({ cls: 'today-detail-label', text: `${t('today.timeRange')}:` });
+        row.createSpan({ text: `${formatMinutes(ex.start)} - ${formatMinutes(ex.end)}` });
+
+        const cat = item?.categoryId
+            ? this.categoryData.categories.find(c => c.id === item.categoryId)
+            : undefined;
+        if (cat) {
+            const catRow = body.createDiv({ cls: 'today-detail-row' });
+            catRow.createSpan({ cls: 'today-detail-label', text: `${t('today.category')}:` });
+            const dot = catRow.createSpan({ cls: 'inbox-category-dot' });
+            dot.setCssProps({ '--dot-color': cat.color });
+            catRow.createSpan({ text: cat.label });
+        }
+
+        if (item) {
+            body.createDiv({ cls: 'today-detail-desc' })
+                .setText(item.description || t('today.noDescription'));
+        }
+    }
+
     /** 渲染当天时间轴（时间刻度 + 今天的计划事件 + 当前时刻红线） */
     private renderTimeline(panel: HTMLElement) {
         const timeline = panel.createDiv({ cls: 'today-timeline' });
@@ -529,15 +578,16 @@ export class TodayView {
             });
             card.setText(ev.title);
 
-            // 左侧状态气泡
-            this.renderStatusBubble(card, getEventStatus(ev, this.getExecutions()));
+            // 左侧状态气泡（点击气泡等同于点击卡片）
+            this.renderStatusBubble(card, getEventStatus(ev, this.getExecutions()), () => {
+                this.toggleEventSelection(ev.id);
+            });
 
             // 点击事件卡片 → 在中心方框展示详情（再次点击取消选中）
             if (this.selectedEventId === ev.id) card.addClass('is-selected');
             card.onclick = (e) => {
                 e.stopPropagation();
-                this.selectedEventId = this.selectedEventId === ev.id ? undefined : ev.id;
-                void this.refresh();
+                this.toggleEventSelection(ev.id);
             };
         }
 
@@ -567,18 +617,49 @@ export class TodayView {
             });
             card.setText(item?.title ?? t('today.statusAdded'));
 
-            this.renderStatusBubble(card, 'added');
+            this.renderStatusBubble(card, 'added', () => {
+                this.toggleExecSelection(ex.id);
+            });
+
+            // 点击「新增」卡片 → 在中心方框展示详情（再次点击取消选中）
+            if (this.selectedExecId === ex.id) card.addClass('is-selected');
+            card.onclick = (e) => {
+                e.stopPropagation();
+                this.toggleExecSelection(ex.id);
+            };
         }
     }
 
+    /** 切换计划事件选中状态（再次点击取消） */
+    private toggleEventSelection(eventId: string): void {
+        this.selectedEventId = this.selectedEventId === eventId ? undefined : eventId;
+        this.selectedExecId = undefined;
+        void this.refresh();
+    }
+
+    /** 切换「新增」执行记录选中状态（再次点击取消） */
+    private toggleExecSelection(execId: string): void {
+        this.selectedExecId = this.selectedExecId === execId ? undefined : execId;
+        this.selectedEventId = undefined;
+        void this.refresh();
+    }
+
     /** 在事件区块左侧渲染状态气泡（emoji + 文字，不使用颜色分类） */
-    private renderStatusBubble(card: HTMLElement, status: EventStatus) {
+    private renderStatusBubble(card: HTMLElement, status: EventStatus, onClick?: () => void) {
         const bubble = card.createDiv({ cls: `event-status-bubble is-${status}` });
         bubble.createSpan({ cls: 'event-status-icon', text: EVENT_STATUS_EMOJI[status] });
         bubble.createSpan({
             cls: 'event-status-label',
             text: t(EVENT_STATUS_LABEL_KEY[status] as Parameters<typeof t>[0]),
         });
+        // 点击气泡等同于点击卡片（选中/取消选中）
+        if (onClick) {
+            bubble.addClass('is-clickable');
+            bubble.onclick = (e) => {
+                e.stopPropagation();
+                onClick();
+            };
+        }
     }
 
     /** 清理定时器 */
