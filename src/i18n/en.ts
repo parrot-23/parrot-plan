@@ -25,9 +25,9 @@ export const en: I18nMessages = {
     'view.title': 'Week Schedule',
 
     // Main navigation (tab button group)
-    'nav.year': 'Year',
+    'nav.year': 'Year Plan',
     'nav.week': 'Week Plan',
-    'nav.today': 'Today',
+    'nav.today': 'Today Todo',
     'nav.swimlane': 'Swimlane',
     'nav.achievement': 'Achievements',
     'nav.placeholder': 'This is the "{name}" page',
@@ -58,7 +58,7 @@ export const en: I18nMessages = {
     'today.replaceCancel': 'Cancel replace',
     'today.statusPlanned': 'Planned',
     'today.statusExecuted': 'Executed',
-    'today.statusChanged': 'Changed',
+    'today.statusChanged': 'Replaced',
     'today.statusAdded': 'Added',
 
     // Year view

@@ -23,9 +23,9 @@ export const zh = {
     'view.title': '周日程',
 
     // 主导航（tab 按钮组）
-    'nav.year': '年',
+    'nav.year': '年计划',
     'nav.week': '周计划',
-    'nav.today': '当日执行',
+    'nav.today': '日执行',
     'nav.swimlane': '泳道图',
     'nav.achievement': '成就榜单',
     'nav.placeholder': '当前是「{name}」页面',
@@ -55,9 +55,9 @@ export const zh = {
     'today.replaceConfirm': '确认替换',
     'today.replaceCancel': '取消替换',
     'today.statusPlanned': '计划',
-    'today.statusExecuted': '已执行计划',
-    'today.statusChanged': '变更计划',
-    'today.statusAdded': '新增执行',
+    'today.statusExecuted': '已执行',
+    'today.statusChanged': '替换',
+    'today.statusAdded': '新增',
 
     // 年视图
     'year.weekLabel': '第{week}周',

@@ -577,7 +577,7 @@ export class TodayView {
         return executed ? 'executed' : 'planned';
     }
 
-    /** 在事件区块左侧渲染状态气泡 */
+    /** 在事件区块左侧渲染状态气泡（emoji + 文字，不使用颜色分类） */
     private renderStatusBubble(card: HTMLElement, status: 'planned' | 'executed' | 'changed' | 'added') {
         const labels: Record<typeof status, string> = {
             planned: t('today.statusPlanned'),
@@ -585,8 +585,15 @@ export class TodayView {
             changed: t('today.statusChanged'),
             added: t('today.statusAdded'),
         };
+        const emojis: Record<typeof status, string> = {
+            planned: '🎯',
+            executed: '✅',
+            changed: '🔀',
+            added: '➕',
+        };
         const bubble = card.createDiv({ cls: `event-status-bubble is-${status}` });
-        bubble.setText(labels[status]);
+        bubble.createSpan({ cls: 'event-status-icon', text: emojis[status] });
+        bubble.createSpan({ cls: 'event-status-label', text: labels[status] });
     }
 
     /** 清理定时器 */

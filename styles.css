@@ -1692,38 +1692,34 @@
     padding-left: 46px;
 }
 
-/* 事件状态气泡：贴在区块内部左侧 */
+/* 事件状态气泡：贴在区块内部左侧（图标 + 文字，不使用颜色分类） */
 .event-status-bubble {
     position: absolute;
     left: 0;
     top: 4px;
     margin-left: -50px;
     transform: translateY(-50%);
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
     padding: 1px 5px;
     border-radius: 8px;
-    font-size: 10px;
+    font-size: 12px;
+    font-weight: bold;
+    border: 1px solid #d3d3d3;
     line-height: 1.4;
     white-space: nowrap;
-    color: #ffffff;
-    background-color: #888888;
+    color: var(--text-muted);
+    background-color: var(--background-secondary);
     pointer-events: none;
     z-index: 1;
 }
 
-.event-status-bubble.is-planned {
-    background-color: #4c8dff;
-}
-
-.event-status-bubble.is-executed {
-    background-color: #43b581;
-}
-
-.event-status-bubble.is-changed {
-    background-color: #f2a65a;
-}
-
-.event-status-bubble.is-added {
-    background-color: #9b6dff;
+.event-status-bubble .event-status-icon {
+    display: inline-flex;
+    align-items: center;
+    font-size: 11px;
+    line-height: 1;
 }
 
 /* 非计划执行记录区块：虚线边框以示区分 */

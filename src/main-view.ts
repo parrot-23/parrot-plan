@@ -21,13 +21,13 @@ export const VIEW_TYPE_MAIN = 'parrot-plan-main-view';
 /** 主导航 tab 标识 */
 type NavTab = 'year' | 'week' | 'today' | 'swimlane' | 'achievement';
 
-/** 主导航按钮定义 */
-const NAV_TABS: { id: NavTab; label: string }[] = [
-    { id: 'year', label: t('nav.year') },
-    { id: 'week', label: t('nav.week') },
-    { id: 'today', label: t('nav.today') },
-    { id: 'swimlane', label: t('nav.swimlane') },
-    { id: 'achievement', label: t('nav.achievement') },
+/** 主导航按钮定义（label 存 i18n key，渲染时再求值，避免模块加载时语言未初始化） */
+const NAV_TABS: { id: NavTab; labelKey: 'nav.year' | 'nav.week' | 'nav.today' | 'nav.swimlane' | 'nav.achievement' }[] = [
+    { id: 'year', labelKey: 'nav.year' },
+    { id: 'week', labelKey: 'nav.week' },
+    { id: 'today', labelKey: 'nav.today' },
+    { id: 'swimlane', labelKey: 'nav.swimlane' },
+    { id: 'achievement', labelKey: 'nav.achievement' },
 ];
 
 /**
@@ -128,7 +128,7 @@ export class MainView extends ItemView {
         const nav = root.createDiv({ cls: 'parrot-plan-nav' });
         for (const tab of NAV_TABS) {
             const btn = nav.createEl('button', {
-                text: tab.label,
+                text: t(tab.labelKey),
                 cls: 'parrot-plan-nav-btn',
             });
             if (tab.id === this.activeTab) btn.addClass('is-active');
@@ -181,7 +181,7 @@ export class MainView extends ItemView {
         // 其余页面：占位
         const tab = NAV_TABS.find(t => t.id === this.activeTab)!;
         const placeholder = this.contentRoot.createDiv({ cls: 'parrot-plan-placeholder' });
-        placeholder.setText(t('nav.placeholder', { name: tab.label }));
+        placeholder.setText(t('nav.placeholder', { name: t(tab.labelKey) }));
     }
 
     async onClose() {

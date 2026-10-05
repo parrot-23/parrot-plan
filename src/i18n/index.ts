@@ -1,4 +1,5 @@
 // i18n 入口：语言检测 + t() 函数
+import { moment } from 'obsidian';
 import { zh, type I18nMessages } from './zh';
 import { en } from './en';
 
@@ -6,16 +7,55 @@ type Lang = 'zh' | 'en';
 
 let currentLang: Lang = 'en';
 
+/** 语言检测的原始信息（用于调试日志） */
+export interface LangDebugInfo {
+    momentLocale: string;
+    localStorageLanguage: string | null;
+    navigatorLanguage: string;
+    detected: Lang;
+}
+
+let lastDebugInfo: LangDebugInfo = {
+    momentLocale: '',
+    localStorageLanguage: null,
+    navigatorLanguage: '',
+    detected: 'en',
+};
+
 /** 检测 Obsidian 界面语言 */
 function detectLang(): Lang {
+    let momentLocale = '';
+    let localStorageLanguage: string | null = null;
+    const navigatorLanguage = typeof navigator !== 'undefined' ? navigator.language : '';
+
+    // 优先用 Obsidian 内置 moment 的 locale（跟随界面语言，最可靠）
     try {
-        const lang = localStorage.getItem('language');
-        if (lang === 'zh' || lang === 'zh-cn' || lang === 'zh-CN') return 'zh';
-        if (lang === 'en' || lang === 'en-US' || lang === 'en-us') return 'en';
+        momentLocale = moment.locale();
     } catch {
-        // 忽略，使用默认英文
+        // 忽略
     }
-    return 'en';
+    // 兜底：读取 localStorage 的 language 键
+    try {
+        localStorageLanguage = localStorage.getItem('language');
+    } catch {
+        // 忽略
+    }
+
+    let detected: Lang = 'en';
+    const candidates = [momentLocale, localStorageLanguage ?? '', navigatorLanguage];
+    for (const c of candidates) {
+        const v = c.toLowerCase();
+        if (v.startsWith('zh')) { detected = 'zh'; break; }
+        if (v.startsWith('en')) { detected = 'en'; break; }
+    }
+
+    lastDebugInfo = { momentLocale, localStorageLanguage, navigatorLanguage, detected };
+    return detected;
+}
+
+/** 获取最近一次语言检测的原始信息（用于调试） */
+export function getLangDebugInfo(): LangDebugInfo {
+    return lastDebugInfo;
 }
 
 /** 初始化语言（在插件 onload 时调用一次） */
