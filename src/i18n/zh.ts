@@ -98,7 +98,7 @@ export const zh = {
     'settings.loggedIn': '已登录',
     'settings.loginTitle': '扫码登录',
     'settings.loginLoading': '正在获取登录二维码…',
-    'settings.loginScanHint': '请使用手机扫描二维码完成登录',
+    'settings.loginScanHint': '请使用微信小程序扫描二维码完成登录(五分钟内有效)',
     'settings.loginSuccess': '登录成功',
     'settings.loginTimeout': '二维码已过期，请重新登录',
     'settings.loginCreateFailed': '获取登录二维码失败，请稍后重试',

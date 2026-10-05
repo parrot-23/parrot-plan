@@ -100,7 +100,7 @@ export const en: I18nMessages = {
     'settings.loggedIn': 'Logged in',
     'settings.loginTitle': 'Scan to log in',
     'settings.loginLoading': 'Fetching login QR code…',
-    'settings.loginScanHint': 'Scan the QR code with your phone to log in',
+    'settings.loginScanHint': 'Scan the QR code with WeChat Mini Program to log in (5 minutes valid)',
     'settings.loginSuccess': 'Logged in successfully',
     'settings.loginTimeout': 'QR code expired, please log in again',
     'settings.loginCreateFailed': 'Failed to fetch login QR code, please try again later',

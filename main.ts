@@ -272,6 +272,20 @@ class ParrotPlanSettingTab extends PluginSettingTab {
                 },
             },
             {
+                name: t('settings.wechatMiniProgram'),
+                desc: t('settings.wechatMiniProgramDesc'),
+                render: (setting) => {
+                    setting
+                        .setName(t('settings.wechatMiniProgram'))
+                        .setDesc(t('settings.wechatMiniProgramDesc'));
+                    const thumb = setting.controlEl.createEl('img', {
+                        cls: 'parrot-wechat-qr-thumb',
+                        attr: { src: getWechatQrPath(this.app), alt: t('settings.wechatMiniProgram') },
+                    });
+                    thumb.onclick = () => new QrCodeModal(this.app).open();
+                },
+            },
+            {
                 name: t('settings.accountName'),
                 desc: this.plugin.account.userId ?? t('settings.accountNotLoggedIn'),
                 render: (setting) => {
@@ -287,20 +301,6 @@ class ParrotPlanSettingTab extends PluginSettingTab {
                                     new LoginModal(this.app, this.plugin, () => this.display()).open();
                                 });
                         });
-                },
-            },
-            {
-                name: t('settings.wechatMiniProgram'),
-                desc: t('settings.wechatMiniProgramDesc'),
-                render: (setting) => {
-                    setting
-                        .setName(t('settings.wechatMiniProgram'))
-                        .setDesc(t('settings.wechatMiniProgramDesc'));
-                    const thumb = setting.controlEl.createEl('img', {
-                        cls: 'parrot-wechat-qr-thumb',
-                        attr: { src: getWechatQrPath(this.app), alt: t('settings.wechatMiniProgram') },
-                    });
-                    thumb.onclick = () => new QrCodeModal(this.app).open();
                 },
             },
             {
