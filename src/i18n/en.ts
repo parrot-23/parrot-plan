@@ -105,6 +105,10 @@ export const en: I18nMessages = {
     'settings.loginTimeout': 'QR code expired, please log in again',
     'settings.loginCreateFailed': 'Failed to fetch login QR code, please try again later',
     'settings.loginQrFailed': 'Failed to generate QR code, please try again later',
+    'settings.wechatMiniProgram': 'WeChat Mini Program',
+    'settings.wechatMiniProgramDesc': 'Scan to open the WeChat Mini Program',
+    'settings.wechatMiniProgramTitle': 'WeChat Mini Program',
+    'settings.wechatMiniProgramHint': 'Scan the QR code with WeChat to open the Mini Program',
 
     // All-day events
     'allday.label': 'All day',

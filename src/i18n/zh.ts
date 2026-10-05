@@ -103,6 +103,10 @@ export const zh = {
     'settings.loginTimeout': '二维码已过期，请重新登录',
     'settings.loginCreateFailed': '获取登录二维码失败，请稍后重试',
     'settings.loginQrFailed': '生成二维码失败，请稍后重试',
+    'settings.wechatMiniProgram': '微信小程序',
+    'settings.wechatMiniProgramDesc': '扫码进入微信小程序',
+    'settings.wechatMiniProgramTitle': '微信小程序',
+    'settings.wechatMiniProgramHint': '请使用微信扫描二维码进入小程序',
 
     // 全天事件
     'allday.label': '全天',

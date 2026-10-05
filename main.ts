@@ -149,7 +149,8 @@ export default class ParrotPlanPlugin extends Plugin {
                 const { workspace } = this.app;
                 let leaf = workspace.getLeavesOfType(VIEW_TYPE_MAIN)[0];
                 if (!leaf) {
-                    leaf = workspace.getRightLeaf(false)!;
+                    // 在主编辑区新建标签页打开（而非右侧边栏）
+                    leaf = workspace.getLeaf('tab');
                     await leaf.setViewState({ type: VIEW_TYPE_MAIN });
                 }
                 await workspace.revealLeaf(leaf);
@@ -219,6 +220,16 @@ class ParrotPlanSettingTab extends PluginSettingTab {
                     });
             });
 
+        // 微信小程序：右侧二维码缩略图，点击弹窗放大
+        const wechatSetting = new Setting(containerEl)
+            .setName(t('settings.wechatMiniProgram'))
+            .setDesc(t('settings.wechatMiniProgramDesc'));
+        const thumb = wechatSetting.controlEl.createEl('img', {
+            cls: 'parrot-wechat-qr-thumb',
+            attr: { src: getWechatQrPath(this.app), alt: t('settings.wechatMiniProgram') },
+        });
+        thumb.onclick = () => new QrCodeModal(this.app).open();
+
         new Setting(containerEl)
             .setName(t('settings.data'))
             .setHeading();
@@ -279,6 +290,20 @@ class ParrotPlanSettingTab extends PluginSettingTab {
                 },
             },
             {
+                name: t('settings.wechatMiniProgram'),
+                desc: t('settings.wechatMiniProgramDesc'),
+                render: (setting) => {
+                    setting
+                        .setName(t('settings.wechatMiniProgram'))
+                        .setDesc(t('settings.wechatMiniProgramDesc'));
+                    const thumb = setting.controlEl.createEl('img', {
+                        cls: 'parrot-wechat-qr-thumb',
+                        attr: { src: getWechatQrPath(this.app), alt: t('settings.wechatMiniProgram') },
+                    });
+                    thumb.onclick = () => new QrCodeModal(this.app).open();
+                },
+            },
+            {
                 name: t('settings.data'),
                 searchable: false,
                 render: (setting) => {
@@ -310,6 +335,35 @@ class ParrotPlanSettingTab extends PluginSettingTab {
                 },
             },
         ];
+    }
+}
+
+/** 微信小程序二维码图片相对 vault 的路径 */
+const WECHAT_QR_PATH = '.obsidian/plugins/parrot-plan/src/images/qrcode.jpg';
+
+/** 获取微信小程序二维码的可访问 URL */
+function getWechatQrPath(app: App): string {
+    return app.vault.adapter.getResourcePath(WECHAT_QR_PATH);
+}
+
+/** 微信小程序二维码弹窗：展示放大的二维码图片 */
+class QrCodeModal extends Modal {
+    onOpen() {
+        const { contentEl } = this;
+        contentEl.empty();
+        contentEl.createEl('h3', { text: t('settings.wechatMiniProgramTitle') });
+        const wrap = contentEl.createDiv({ cls: 'parrot-wechat-qr-modal' });
+        wrap.createEl('img', {
+            attr: { src: getWechatQrPath(this.app), alt: t('settings.wechatMiniProgram') },
+        });
+        contentEl.createEl('p', {
+            cls: 'parrot-wechat-qr-hint',
+            text: t('settings.wechatMiniProgramHint'),
+        });
+    }
+
+    onClose() {
+        this.contentEl.empty();
     }
 }
 

@@ -2160,5 +2160,39 @@
     margin: 0;
 }
 
+/* ===== 微信小程序二维码 ===== */
+.parrot-wechat-qr-thumb {
+    width: 40px;
+    height: 40px;
+    border-radius: 4px;
+    background: #ffffff;
+    padding: 2px;
+    cursor: pointer;
+    object-fit: contain;
+}
+
+.parrot-wechat-qr-modal {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin: 12px 0;
+}
+
+.parrot-wechat-qr-modal img {
+    width: 240px;
+    height: 240px;
+    border-radius: 6px;
+    background: #ffffff;
+    padding: 6px;
+    object-fit: contain;
+}
+
+.parrot-wechat-qr-hint {
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 13px;
+    margin: 0;
+}
+
 
 
