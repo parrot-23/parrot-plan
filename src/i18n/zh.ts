@@ -63,6 +63,12 @@ export const zh = {
     'today.statTotalDoneLabel': '计划总数 / 已完成',
     'today.statBreakdownLabel': '待执行 / 已执行 / 替换',
     'today.statAddedLabel': '新增',
+    'today.weekGoalTitle': '周目标',
+    'today.weekGoalEmpty': '本周暂无计划事件',
+    'today.weekGoalDuration': '共计时长 / 已执行时长',
+    'today.weekGoalCount': 'x {count}',
+    'today.dayGoalTitle': '日目标',
+    'today.dayGoalEmpty': '今日暂无计划事件',
 
     // 年视图
     'year.weekLabel': '第{week}周',

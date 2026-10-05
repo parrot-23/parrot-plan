@@ -65,6 +65,12 @@ export const en: I18nMessages = {
     'today.statTotalDoneLabel': 'Total / Done',
     'today.statBreakdownLabel': 'Pending / Executed / Replaced',
     'today.statAddedLabel': 'Added',
+    'today.weekGoalTitle': 'Week Goals',
+    'today.weekGoalEmpty': 'No planned events this week',
+    'today.weekGoalDuration': 'Total / Executed duration',
+    'today.weekGoalCount': 'x {count}',
+    'today.dayGoalTitle': 'Day Goals',
+    'today.dayGoalEmpty': 'No planned events today',
 
     // Year view
     'year.weekLabel': 'Week {week}',
