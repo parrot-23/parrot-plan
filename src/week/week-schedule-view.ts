@@ -14,6 +14,7 @@ import { renderWeekGrid } from '../shared/week-grid';
 import { RangeSchemeModal } from './range-scheme-modal';
 import { t, getWeekDays } from '../i18n';
 import { log } from '../shared/logger';
+import { EVENT_STATUS_EMOJI, getEventStatus } from '../shared/event-status';
 
 export const VIEW_TYPE_WEEK = 'week-schedule-view';
 
@@ -83,6 +84,8 @@ export class WeekScheduleView extends ItemView {
     private clipboardWeekSource: WeekKey | null = null;
     /** 「更多工具」下拉面板是否展开 */
     private moreToolsOpen = false;
+    /** 是否显示执行情况图标（工具栏按钮切换） */
+    private showExecutionStatus = false;
 
     // Obsidian 旧 API：ItemView 构造函数只接受 leaf
     constructor(leaf: WorkspaceLeaf, plugin: Plugin, data: WeekRangeData, templateData: DayTemplateData, categoryData: TimeBlockCategoryData,
@@ -524,6 +527,15 @@ export class WeekScheduleView extends ItemView {
                     '--card-bg': '#eeeeee88',
                 });
 
+                // 执行情况图标（仅按钮激活时显示，叠加在卡片左上角，不改变卡片本身）
+                if (this.showExecutionStatus) {
+                    const status = getEventStatus(ev, this.executions);
+                    card.createDiv({
+                        cls: `event-status-icon-badge is-${status}`,
+                        text: EVENT_STATUS_EMOJI[status],
+                    });
+                }
+
                 // ===== 右上角 × 删除按钮 =====
                 const delBtn = card.createDiv({ cls: 'event-delete-btn' });
                 delBtn.setText('×');
@@ -696,6 +708,17 @@ export class WeekScheduleView extends ItemView {
             undefined,
             false,
         );
+
+        // 显示执行情况按钮（切换事件块上的执行状态图标）
+        const statusBtn = toolbar.createEl('button', {
+            text: t('week.showExecutionStatus'),
+            cls: 'exec-status-toggle-btn',
+        });
+        if (this.showExecutionStatus) statusBtn.addClass('is-active');
+        statusBtn.onclick = () => {
+            this.showExecutionStatus = !this.showExecutionStatus;
+            void this.onOpen();
+        };
 
         // 「更多工具」按钮 + 下拉面板（放在工具栏最后，始终钉在最右边）
         const moreToolsWrap = toolbar.createDiv({ cls: 'more-tools-wrap' });

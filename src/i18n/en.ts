@@ -20,6 +20,7 @@ export const en: I18nMessages = {
     'week.friday': 'Fri',
     'week.saturday': 'Sat',
     'week.sunday': 'Sun',
+    'week.showExecutionStatus': 'Show execution status',
 
     // View
     'view.title': 'Week Schedule',

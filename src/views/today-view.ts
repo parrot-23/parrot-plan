@@ -7,6 +7,7 @@ import { renderTaskPanel } from '../shared/task-panel';
 import { getCurrentDayKey, getCurrentWeekKey, makeDayKeyFromWeek } from '../week/timeblock-data';
 import type { EventBlock, ExecutionRecord } from '../week/week-schedule-view';
 import { getWeekDays, t } from '../i18n';
+import { EVENT_STATUS_EMOJI, EVENT_STATUS_LABEL_KEY, getEventStatus, type EventStatus } from '../shared/event-status';
 
 /** 把分钟数格式化为 HH:MM */
 function formatMinutes(minutes: number): string {
@@ -529,7 +530,7 @@ export class TodayView {
             card.setText(ev.title);
 
             // 左侧状态气泡
-            this.renderStatusBubble(card, this.getEventStatus(ev));
+            this.renderStatusBubble(card, getEventStatus(ev, this.getExecutions()));
 
             // 点击事件卡片 → 在中心方框展示详情（再次点击取消选中）
             if (this.selectedEventId === ev.id) card.addClass('is-selected');
@@ -570,30 +571,14 @@ export class TodayView {
         }
     }
 
-    /** 计算计划事件的状态：变更计划 > 已执行计划 > 计划 */
-    private getEventStatus(ev: EventBlock): 'planned' | 'executed' | 'changed' {
-        if (ev.replacedFromInboxId) return 'changed';
-        const executed = this.getExecutions().some(ex => ex.eventId === ev.id);
-        return executed ? 'executed' : 'planned';
-    }
-
     /** 在事件区块左侧渲染状态气泡（emoji + 文字，不使用颜色分类） */
-    private renderStatusBubble(card: HTMLElement, status: 'planned' | 'executed' | 'changed' | 'added') {
-        const labels: Record<typeof status, string> = {
-            planned: t('today.statusPlanned'),
-            executed: t('today.statusExecuted'),
-            changed: t('today.statusChanged'),
-            added: t('today.statusAdded'),
-        };
-        const emojis: Record<typeof status, string> = {
-            planned: '🎯',
-            executed: '✅',
-            changed: '🔀',
-            added: '➕',
-        };
+    private renderStatusBubble(card: HTMLElement, status: EventStatus) {
         const bubble = card.createDiv({ cls: `event-status-bubble is-${status}` });
-        bubble.createSpan({ cls: 'event-status-icon', text: emojis[status] });
-        bubble.createSpan({ cls: 'event-status-label', text: labels[status] });
+        bubble.createSpan({ cls: 'event-status-icon', text: EVENT_STATUS_EMOJI[status] });
+        bubble.createSpan({
+            cls: 'event-status-label',
+            text: t(EVENT_STATUS_LABEL_KEY[status] as Parameters<typeof t>[0]),
+        });
     }
 
     /** 清理定时器 */
