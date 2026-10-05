@@ -136,14 +136,125 @@ export class TodayView {
         return hasTimedEvent ? 'timed' : 'allday';
     }
 
-    /** 渲染今天的年月日方框 */
+    /** 渲染今天的年月日方框 + 右侧日目标完成情况 */
     private renderDateBox(panel: HTMLElement) {
         const now = new Date();
         const box = panel.createDiv({ cls: 'today-date-box' });
-        box.createDiv({ cls: 'today-date-year', text: `${now.getFullYear()}` });
-        box.createDiv({ cls: 'today-date-md' })
+
+        // 左侧：日期
+        const dateSide = box.createDiv({ cls: 'today-date-side' });
+        dateSide.createDiv({ cls: 'today-date-year', text: `${now.getFullYear()}` });
+        dateSide.createDiv({ cls: 'today-date-md' })
             .setText(`${String(now.getMonth() + 1).padStart(2, '0')} / ${String(now.getDate()).padStart(2, '0')}`);
-        box.createDiv({ cls: 'today-date-weekday', text: getWeekDays()[(now.getDay() + 6) % 7] });
+        dateSide.createDiv({ cls: 'today-date-weekday', text: getWeekDays()[(now.getDay() + 6) % 7] });
+
+        // 右侧：日目标完成情况（大卡片 + 两张小卡片）
+        const stats = this.computeDayStats();
+        const statsSide = box.createDiv({ cls: 'today-date-stats' });
+
+        // 左侧大卡片：计划总数 / 已完成
+        const doneRatio = stats.total > 0 ? stats.executed / stats.total : 0;
+        this.renderStatCard(statsSide, {
+            label: t('today.statTotalDoneLabel'),
+            values: [
+                { text: String(stats.total), cls: 'is-total' },
+                { text: String(stats.executed), cls: 'is-done' },
+            ],
+            ratio: doneRatio,
+            barCls: 'is-done',
+            size: 'large',
+        });
+
+        // 右侧：上下两张小卡片
+        const smallCol = statsSide.createDiv({ cls: 'today-stat-small-col' });
+
+        // 右上：计划中 / 已执行 / 替换
+        const breakdownTotal = stats.planned + stats.executed + stats.changed;
+        this.renderStatCard(smallCol, {
+            label: t('today.statBreakdownLabel'),
+            values: [
+                { text: String(stats.planned), cls: 'is-planned' },
+                { text: String(stats.executed), cls: 'is-executed' },
+                { text: String(stats.changed), cls: 'is-changed' },
+            ],
+            ratio: breakdownTotal > 0 ? stats.executed / breakdownTotal : 0,
+            barCls: 'is-executed',
+            size: 'small',
+        });
+
+        // 右下：新增
+        this.renderStatCard(smallCol, {
+            label: t('today.statAddedLabel'),
+            values: [{ text: String(stats.added), cls: 'is-added' }],
+            ratio: stats.added > 0 ? 1 : 0,
+            barCls: 'is-added',
+            size: 'small',
+        });
+    }
+
+    /** 渲染单张统计卡片（标签 + 数值 + 进度条） */
+    private renderStatCard(
+        parent: HTMLElement,
+        opts: {
+            label: string;
+            values: { text: string; cls: string }[];
+            ratio: number;
+            barCls: string;
+            size: 'large' | 'small';
+        },
+    ) {
+        const card = parent.createDiv({ cls: `today-stat-card is-${opts.size}` });
+        card.createDiv({ cls: 'today-stat-label', text: opts.label });
+
+        const valueRow = card.createDiv({ cls: 'today-stat-values' });
+        opts.values.forEach((v, i) => {
+            if (i > 0) valueRow.createSpan({ cls: 'today-stat-sep', text: '/' });
+            valueRow.createSpan({ cls: `today-stat-value ${v.cls}`, text: v.text });
+        });
+
+        const bar = card.createDiv({ cls: 'today-stat-bar' });
+        const fill = bar.createDiv({ cls: `today-stat-bar-fill ${opts.barCls}` });
+        const pct = Math.max(0, Math.min(1, opts.ratio)) * 100;
+        fill.setCssProps({ '--stat-fill': `${pct}%` });
+    }
+
+    /** 统计今天的日目标完成情况（含全天事件） */
+    private computeDayStats(): {
+        total: number;
+        planned: number;
+        executed: number;
+        changed: number;
+        added: number;
+    } {
+        const now = new Date();
+        const todayDay = (now.getDay() + 6) % 7 + 1;
+        const weekKey = getCurrentWeekKey();
+        const executions = this.getExecutions();
+
+        // 今天的计划事件（含全天）
+        const events = this.getEvents().filter(ev =>
+            ev.day === todayDay && ev.weekKey === weekKey,
+        );
+
+        let planned = 0;
+        let executed = 0;
+        let changed = 0;
+        for (const ev of events) {
+            const status = getEventStatus(ev, executions);
+            if (status === 'changed') changed++;
+            else if (status === 'executed') executed++;
+            else planned++;
+        }
+
+        // 非计划执行记录（新增）
+        const plannedEventIds = new Set(events.map(ev => ev.id));
+        const added = executions.filter(ex =>
+            ex.day === todayDay
+            && ex.weekKey === weekKey
+            && !(ex.eventId && plannedEventIds.has(ex.eventId)),
+        ).length;
+
+        return { total: events.length, planned, executed, changed, added };
     }
 
     /** 渲染任务层级方框（展示当前任务的所有父级任务树） */

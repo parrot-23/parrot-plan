@@ -59,6 +59,9 @@ export const zh = {
     'today.statusExecuted': '已执行',
     'today.statusChanged': '替换',
     'today.statusAdded': '新增',
+    'today.statTotalDoneLabel': '计划总数 / 已完成',
+    'today.statBreakdownLabel': '待执行 / 已执行 / 替换',
+    'today.statAddedLabel': '新增',
 
     // 年视图
     'year.weekLabel': '第{week}周',
