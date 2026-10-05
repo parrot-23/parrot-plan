@@ -33,6 +33,8 @@ export default class ParrotPlanPlugin extends Plugin {
         executions: ExecutionRecord[];
         inboxData: InboxData;
         schemeData: RangeSchemeData;
+        /** 已标记为「已制定周计划」的周键列表（如 ["2026-W41"]） */
+        plannedWeeks: string[];
     } | null = null;
 
     /** 账号信息（随主数据一起持久化） */
@@ -101,6 +103,10 @@ export default class ParrotPlanPlugin extends Plugin {
         const initialSchemeData = (savedData.schemeData ?? { schemes: [] }) as RangeSchemeData;
         // 兼容旧数据：确保默认方案始终存在且位于首位
         ensureDefaultScheme(initialSchemeData, t('rangeScheme.defaultName'));
+        // 已制定周计划的周键列表（兼容旧数据：默认空数组）
+        const initialPlannedWeeks = Array.isArray(savedData.plannedWeeks)
+            ? savedData.plannedWeeks as string[]
+            : [];
 
         // 存入插件实例，作为唯一数据源（视图重建时从这里读取最新数据）
         this.data = {
@@ -111,6 +117,7 @@ export default class ParrotPlanPlugin extends Plugin {
             executions: (savedData.executions ?? []) as ExecutionRecord[],
             inboxData: initialInboxData,
             schemeData: initialSchemeData,
+            plannedWeeks: initialPlannedWeeks,
         };
 
         // 注册视图
@@ -124,7 +131,7 @@ export default class ParrotPlanPlugin extends Plugin {
                     executions: d.executions.length,
                 });
                 return new MainView(leaf, this, d.weekRange, d.templateData, d.categoryData,
-                    d.events, d.executions, d.inboxData, d.schemeData,
+                    d.events, d.executions, d.inboxData, d.schemeData, d.plannedWeeks,
                 );
             }
         );

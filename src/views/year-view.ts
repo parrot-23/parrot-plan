@@ -19,6 +19,8 @@ export class YearView {
     private save: () => Promise<void>;
     /** 未选中任务时点击周格子 → 跳转到该周的周计划 */
     private onJumpToWeek?: (weekKey: string) => void;
+    /** 获取已制定周计划的周键列表（与周计划视图联动） */
+    private getPlannedWeeks?: () => string[];
     /** 当前渲染容器（用于自刷新） */
     private container?: HTMLElement;
 
@@ -28,12 +30,14 @@ export class YearView {
         categoryData: TimeBlockCategoryData,
         save: () => Promise<void>,
         onJumpToWeek?: (weekKey: string) => void,
+        getPlannedWeeks?: () => string[],
     ) {
         this.app = app;
         this.inboxData = inboxData;
         this.categoryData = categoryData;
         this.save = save;
         this.onJumpToWeek = onJumpToWeek;
+        this.getPlannedWeeks = getPlannedWeeks;
     }
 
     async renderInto(container: HTMLElement): Promise<void> {
@@ -65,6 +69,7 @@ export class YearView {
         const calendarPanel = container.createDiv({ cls: 'year-calendar-panel' });
         renderYearWeekGrid(calendarPanel, {
             assignedTasks: this.buildAssignedTasks(),
+            plannedWeeks: this.getPlannedWeeks?.() ?? [],
             onWeekClick: (week, year) => {
                 void this.onWeekClick(week, year);
             },

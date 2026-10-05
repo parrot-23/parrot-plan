@@ -86,6 +86,8 @@ export class WeekScheduleView extends ItemView {
     private moreToolsOpen = false;
     /** 是否显示执行情况图标（工具栏按钮切换） */
     private showExecutionStatus = false;
+    /** 已标记为「已制定周计划」的周键列表（与年视图联动） */
+    plannedWeeks: string[] = [];
 
     // Obsidian 旧 API：ItemView 构造函数只接受 leaf
     constructor(leaf: WorkspaceLeaf, plugin: Plugin, data: WeekRangeData, templateData: DayTemplateData, categoryData: TimeBlockCategoryData,
@@ -93,6 +95,7 @@ export class WeekScheduleView extends ItemView {
         executions?: ExecutionRecord[],
         inboxData?: InboxData,
         schemeData?: RangeSchemeData,
+        plannedWeeks?: string[],
     ) {
         super(leaf);
         this.plugin = plugin;
@@ -103,6 +106,7 @@ export class WeekScheduleView extends ItemView {
         this.executions = executions ?? [];
         this.inboxData = inboxData ?? DEFAULT_INBOX_DATA;
         this.schemeData = schemeData ?? { schemes: [] };
+        this.plannedWeeks = plannedWeeks ?? [];
         log('WeekScheduleView 构造', {
             events: this.events.length,
             executions: this.executions.length,
@@ -139,6 +143,8 @@ export class WeekScheduleView extends ItemView {
             events: this.events,
             executions: this.executions,
             inboxData: this.inboxData,
+            // 已制定周计划的周键列表（与年视图联动）
+            plannedWeeks: this.plannedWeeks,
             // 账号信息（由插件实例持有，随主数据一起持久化）
             account: (this.plugin as Plugin & { account?: unknown }).account ?? {},
         });
@@ -673,6 +679,25 @@ export class WeekScheduleView extends ItemView {
         // 年 / 周切换
         this.renderWeekNav(toolbar);
 
+        // 已制定周计划按钮（标记当前周，与年视图联动）
+        const plannedBtn = toolbar.createEl('button', {
+            text: t('week.markPlanned'),
+            cls: 'week-planned-toggle-btn',
+        });
+        if (this.plannedWeeks.includes(this.currentWeekKey)) plannedBtn.addClass('is-active');
+        plannedBtn.onclick = () => {
+            void (async () => {
+                const idx = this.plannedWeeks.indexOf(this.currentWeekKey);
+                if (idx >= 0) {
+                    this.plannedWeeks.splice(idx, 1);
+                } else {
+                    this.plannedWeeks.push(this.currentWeekKey);
+                }
+                await this.save();
+                await this.onOpen();
+            })();
+        };
+
         // 时间区间设置按钮 + 当前方案下拉框
         const schemeBar = toolbar.createDiv({ cls: 'range-scheme-bar' });
 
@@ -695,6 +720,18 @@ export class WeekScheduleView extends ItemView {
             })();
         };
 
+        // 显示执行情况按钮（切换事件块上的执行状态图标）
+        const statusBtn = toolbar.createEl('button', {
+            text: t('week.showExecutionStatus'),
+            cls: 'exec-status-toggle-btn',
+        });
+        if (this.showExecutionStatus) statusBtn.addClass('is-active');
+        statusBtn.onclick = () => {
+            this.showExecutionStatus = !this.showExecutionStatus;
+            void this.onOpen();
+        };
+
+
         // 图例（日历顶部：不显示配置按钮）
         const legendContainer = toolbar.createDiv({ cls: 'legend-container' });
         renderTimeBlockCategoryLegend(
@@ -709,16 +746,6 @@ export class WeekScheduleView extends ItemView {
             false,
         );
 
-        // 显示执行情况按钮（切换事件块上的执行状态图标）
-        const statusBtn = toolbar.createEl('button', {
-            text: t('week.showExecutionStatus'),
-            cls: 'exec-status-toggle-btn',
-        });
-        if (this.showExecutionStatus) statusBtn.addClass('is-active');
-        statusBtn.onclick = () => {
-            this.showExecutionStatus = !this.showExecutionStatus;
-            void this.onOpen();
-        };
 
         // 「更多工具」按钮 + 下拉面板（放在工具栏最后，始终钉在最右边）
         const moreToolsWrap = toolbar.createDiv({ cls: 'more-tools-wrap' });

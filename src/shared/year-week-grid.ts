@@ -1,5 +1,6 @@
 import { t } from '../i18n';
 import { makeWeekKey, getISOWeek, hexToTransparent } from '../week/timeblock-data';
+import { EVENT_STATUS_EMOJI } from './event-status';
 
 /**
  * 周历面板：公共组件。
@@ -16,6 +17,8 @@ export interface YearWeekGridOptions {
     activeWeek?: number;
     /** 各周已分配的任务（周键 → 任务列表），用于在格子内展示 */
     assignedTasks?: Record<string, { title: string; color?: string }[]>;
+    /** 已制定周计划的周键列表，用于在格子左上角显示图标 */
+    plannedWeeks?: string[];
 }
 
 /** 12 个月的固定配色（同一月份始终同色） */
@@ -140,8 +143,16 @@ export function renderYearWeekGrid(
                 monthEl.setCssProps({ '--month-color': MONTH_COLORS[(month - 1) % 12] });
                 cell.createDiv({ cls: 'year-week-cell-week', text: t('year.weekLabel', { week }) });
 
-                // 已分配到该周的任务
+                // 已制定周计划：左上角显示计划图标（与事件状态「计划」图标一致）
                 const weekKey = makeWeekKey(year, week);
+                if (options.plannedWeeks?.includes(weekKey)) {
+                    cell.createDiv({
+                        cls: 'year-week-cell-planned',
+                        text: EVENT_STATUS_EMOJI.planned,
+                    });
+                }
+
+                // 已分配到该周的任务
                 const tasks = options.assignedTasks?.[weekKey] ?? [];
                 if (tasks.length > 0) {
                     const taskList = cell.createDiv({ cls: 'year-week-cell-tasks' });

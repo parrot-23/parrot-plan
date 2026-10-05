@@ -19,6 +19,7 @@ export const zh = {
     'week.saturday': '周六',
     'week.sunday': '周日',
     'week.showExecutionStatus': '显示执行情况',
+    'week.markPlanned': '🎯已制定周计划',
 
     // 视图
     'view.title': '周日程',

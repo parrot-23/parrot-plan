@@ -53,6 +53,7 @@ export class MainView extends ItemView {
         executions: ExecutionRecord[],
         inboxData: InboxData,
         schemeData: RangeSchemeData,
+        plannedWeeks: string[],
     ) {
         super(leaf);
         this.plugin = plugin;
@@ -70,6 +71,7 @@ export class MainView extends ItemView {
             executions,
             inboxData,
             schemeData,
+            plannedWeeks,
         );
         this.yearView = new YearView(
             this.app,
@@ -82,6 +84,7 @@ export class MainView extends ItemView {
                 this.activeTab = 'week';
                 void this.renderContent();
             },
+            () => this.weekView.plannedWeeks,
         );
         this.todayView = new TodayView(
             this.app,
