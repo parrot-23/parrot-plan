@@ -1,13 +1,13 @@
 import { App, Modal, Notice, Plugin, PluginSettingTab, Setting, type SettingDefinitionItem } from 'obsidian';
 
-import type { WeekRangeData, RangeSchemeData } from './src/week/timeblock-data';
-import { getCurrentWeekKey, ensureDefaultScheme } from './src/week/timeblock-data';
-import type { TimeBlockCategoryData } from './src/week/timeblock-category-manager';
-import { ensureUncategorizedCategory } from './src/week/timeblock-category-manager';
-import type { DayTemplateData } from './src/week/template-manager';
+import type { WeekRangeData, RangeSchemeData } from './src/views/week-view/timeblock-data';
+import { getCurrentWeekKey, ensureDefaultScheme } from './src/views/week-view/timeblock-data';
+import type { TimeBlockCategoryData } from './src/views/week-view/timeblock-category-manager';
+import { ensureUncategorizedCategory } from './src/views/week-view/timeblock-category-manager';
+import type { DayTemplateData } from './src/views/week-view/template-manager';
 
-import { DEFAULT_WEEK_RANGE } from './src/week/timeblock-data';
-import type { EventBlock, ExecutionRecord } from './src/week/week-schedule-view';
+import { DEFAULT_WEEK_RANGE } from './src/views/week-view/timeblock-data';
+import type { EventBlock, ExecutionRecord } from './src/views/week-view/week-schedule-view';
 import { DEFAULT_INBOX_DATA, type InboxData } from './src/shared/task-panel';
 import { VIEW_TYPE_MAIN, MainView } from './src/main-view';
 import { initI18n, t, getLangDebugInfo } from './src/i18n';

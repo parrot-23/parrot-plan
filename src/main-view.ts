@@ -1,15 +1,15 @@
 import { ItemView, WorkspaceLeaf } from 'obsidian';
 import type { Plugin } from 'obsidian';
 
-import type { WeekRangeData, RangeSchemeData } from './week/timeblock-data';
-import type { TimeBlockCategoryData } from './week/timeblock-category-manager';
-import type { DayTemplateData } from './week/template-manager';
+import type { WeekRangeData, RangeSchemeData } from './views/week-view/timeblock-data';
+import type { TimeBlockCategoryData } from './views/week-view/timeblock-category-manager';
+import type { DayTemplateData } from './views/week-view/template-manager';
 import type { InboxData } from './shared/task-panel';
 import {
     WeekScheduleView,
     type EventBlock,
     type ExecutionRecord,
-} from './week/week-schedule-view';
+} from './views/week-view/week-schedule-view';
 import { YearView } from './views/year-view';
 import { TodayView } from './views/today-view';
 import { SwimlaneView } from './views/swimlane-view';

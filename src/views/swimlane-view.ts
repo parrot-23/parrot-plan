@@ -1,10 +1,10 @@
 import type { App } from 'obsidian';
 
-import type { TimeBlockCategoryData } from '../week/timeblock-category-manager';
+import type { TimeBlockCategoryData } from './week-view/timeblock-category-manager';
 import type { InboxData } from '../shared/task-panel';
 import { renderTaskPanel } from '../shared/task-panel';
-import type { ExecutionRecord } from '../week/week-schedule-view';
-import { parseWeekKey } from '../week/timeblock-data';
+import type { ExecutionRecord } from './week-view/week-schedule-view';
+import { parseWeekKey } from './week-view/timeblock-data';
 import { t } from '../i18n';
 
 /**

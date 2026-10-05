@@ -1,11 +1,11 @@
 import type { App } from 'obsidian';
 import { Notice } from 'obsidian';
 
-import type { TimeBlockCategoryData } from '../week/timeblock-category-manager';
+import type { TimeBlockCategoryData } from './week-view/timeblock-category-manager';
 import type { InboxData } from '../shared/task-panel';
 import { renderTaskPanel } from '../shared/task-panel';
 import { renderYearWeekGrid } from '../shared/year-week-grid';
-import { makeWeekKey } from '../week/timeblock-data';
+import { makeWeekKey } from './week-view/timeblock-data';
 import { t } from '../i18n';
 
 /**

@@ -1,6 +1,6 @@
 import { App, Modal, Setting, Notice } from 'obsidian';
 import type { TimeBlockCategoryId } from './timeblock-data';
-import { t } from '../i18n';
+import { t } from '../../i18n';
 
 
 export interface TimeBlockCategory {

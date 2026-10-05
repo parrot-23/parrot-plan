@@ -1,11 +1,11 @@
 import type { App } from 'obsidian';
 import { Notice } from 'obsidian';
 
-import type { TimeBlockCategoryData } from '../week/timeblock-category-manager';
+import type { TimeBlockCategoryData } from './week-view/timeblock-category-manager';
 import type { InboxData, InboxItem } from '../shared/task-panel';
 import { renderTaskPanel } from '../shared/task-panel';
-import { getCurrentDayKey, getCurrentWeekKey, makeDayKeyFromWeek } from '../week/timeblock-data';
-import type { EventBlock, ExecutionRecord } from '../week/week-schedule-view';
+import { getCurrentDayKey, getCurrentWeekKey, makeDayKeyFromWeek } from './week-view/timeblock-data';
+import type { EventBlock, ExecutionRecord } from './week-view/week-schedule-view';
 import { getWeekDays, t } from '../i18n';
 import { EVENT_STATUS_EMOJI, EVENT_STATUS_LABEL_KEY, getEventStatus, type EventStatus } from '../shared/event-status';
 

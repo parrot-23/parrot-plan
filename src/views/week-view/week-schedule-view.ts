@@ -8,13 +8,13 @@ import type { TimeBlockCategoryData } from './timeblock-category-manager';
 import type { DayTemplateData } from './template-manager';
 import { renderTimeBlockCategoryLegend } from './timeblock-category-manager';
 import { renderDayTemplateRow } from './template-manager';
-import { renderTaskPanel, DEFAULT_INBOX_DATA, type InboxData } from '../shared/task-panel';
-import type { InboxItem } from '../shared/task-panel';
-import { renderWeekGrid } from '../shared/week-grid';
+import { renderTaskPanel, DEFAULT_INBOX_DATA, type InboxData } from '../../shared/task-panel';
+import type { InboxItem } from '../../shared/task-panel';
+import { renderWeekGrid } from '../../shared/week-grid';
 import { RangeSchemeModal } from './range-scheme-modal';
-import { t, getWeekDays } from '../i18n';
-import { log } from '../shared/logger';
-import { EVENT_STATUS_EMOJI, getEventStatus } from '../shared/event-status';
+import { t, getWeekDays } from '../../i18n';
+import { log } from '../../shared/logger';
+import { EVENT_STATUS_EMOJI, getEventStatus } from '../../shared/event-status';
 
 export const VIEW_TYPE_WEEK = 'week-schedule-view';
 

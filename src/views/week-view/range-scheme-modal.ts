@@ -5,9 +5,9 @@ import { renderTimeBlockCategoryLegend } from './timeblock-category-manager';
 import type { RangeSchemeData, RangeScheme } from './timeblock-data';
 import { hexToTransparent, DEFAULT_SCHEME_ID, ensureDefaultScheme } from './timeblock-data';
 import { renderTemplatePanel, type TemplateViewContext } from './template-manager';
-import { renderWeekGrid } from '../shared/week-grid';
+import { renderWeekGrid } from '../../shared/week-grid';
 import { RangeEditModal } from './week-schedule-view';
-import { t } from '../i18n';
+import { t } from '../../i18n';
 
 /**
  * 时间区间设置窗口。

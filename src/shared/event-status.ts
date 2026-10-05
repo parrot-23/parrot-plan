@@ -1,4 +1,4 @@
-import type { EventBlock, ExecutionRecord } from '../week/week-schedule-view';
+import type { EventBlock, ExecutionRecord } from '../views/week-view/week-schedule-view';
 
 /**
  * 事件执行状态：日执行时间轴与周计划视图共用。

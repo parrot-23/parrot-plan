@@ -1,5 +1,5 @@
 import { App, Modal, Setting, Notice } from 'obsidian';
-import type { TimeBlockCategoryData } from '../week/timeblock-category-manager';
+import type { TimeBlockCategoryData } from '../views/week-view/timeblock-category-manager';
 import { t } from '../i18n';
 
 /**
