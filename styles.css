@@ -1765,6 +1765,12 @@
     line-height: 1;
 }
 
+/* 可点击的状态气泡：点击等同于点击卡片 */
+.event-status-bubble.is-clickable {
+    pointer-events: auto;
+    cursor: pointer;
+}
+
 /* 非计划执行记录区块：虚线边框以示区分 */
 .event-card-exec {
     border-top-style: dashed;
