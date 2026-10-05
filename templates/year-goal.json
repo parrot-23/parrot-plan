@@ -1,0 +1,22 @@
+{
+  "id": "year-goal",
+  "name": "年度目标",
+  "mode": "fixed",
+  "description": "填写一次后固定展示",
+  "fields": [
+    {
+      "key": "goal",
+      "label": "年度目标",
+      "type": "textarea",
+      "required": true,
+      "placeholder": "今年最重要的目标是什么？"
+    },
+    {
+      "key": "keyword",
+      "label": "关键词",
+      "type": "text",
+      "required": false,
+      "placeholder": "用一个词概括今年"
+    }
+  ]
+}

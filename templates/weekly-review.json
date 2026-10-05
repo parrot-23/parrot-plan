@@ -1,0 +1,23 @@
+{
+  "id": "weekly-review",
+  "name": "每周复盘",
+  "mode": "periodic",
+  "period": "week",
+  "description": "每周记录一次复盘",
+  "fields": [
+    {
+      "key": "done",
+      "label": "本周完成",
+      "type": "textarea",
+      "required": false,
+      "placeholder": "本周完成了哪些事？"
+    },
+    {
+      "key": "improve",
+      "label": "待改进",
+      "type": "textarea",
+      "required": false,
+      "placeholder": "下周要改进什么？"
+    }
+  ]
+}

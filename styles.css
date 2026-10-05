@@ -2366,5 +2366,260 @@
     margin: 0;
 }
 
+/* ===== 工作台视图 ===== */
+.workbench-view {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    padding: 12px;
+    box-sizing: border-box;
+    overflow-y: auto;
+}
+
+.wb-toolbar {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+}
+
+.wb-toolbar-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text-normal);
+}
+
+.wb-add-btn {
+    position: relative;
+    padding: 6px 12px;
+    border-radius: 4px;
+    border: 1px solid var(--background-modifier-border);
+    background: var(--interactive-accent);
+    color: var(--text-on-accent);
+    cursor: pointer;
+    font-size: 13px;
+}
+
+.wb-add-btn:hover {
+    filter: brightness(1.05);
+}
+
+.wb-add-menu {
+    position: absolute;
+    top: calc(100% + 4px);
+    right: 0;
+    z-index: 100;
+    min-width: 160px;
+    padding: 6px;
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 6px;
+    background: var(--background-primary);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.wb-add-menu-item {
+    padding: 6px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 13px;
+    color: var(--text-normal);
+}
+
+.wb-add-menu-item:hover {
+    background: var(--interactive-hover);
+}
+
+.wb-empty {
+    padding: 40px;
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 14px;
+}
+
+.wb-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 12px;
+}
+
+.wb-card {
+    position: relative;
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 8px;
+    background: var(--background-secondary);
+    padding: 12px;
+    box-sizing: border-box;
+}
+
+.wb-card-header {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+}
+
+.wb-card-delete {
+    width: 22px;
+    height: 22px;
+    padding: 0;
+    border: none;
+    border-radius: 4px;
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-size: 16px;
+    line-height: 1;
+}
+
+.wb-card-delete:hover {
+    background: var(--background-modifier-error);
+    color: var(--text-on-accent);
+}
+
+.wb-card-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-normal);
+    margin-bottom: 8px;
+    padding-right: 24px;
+}
+
+.wb-card-content {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.wb-card-body {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.wb-card-action {
+    align-self: flex-start;
+    padding: 4px 10px;
+    border-radius: 4px;
+    border: 1px solid var(--background-modifier-border);
+    background: var(--interactive-normal);
+    color: var(--text-normal);
+    cursor: pointer;
+    font-size: 12px;
+}
+
+.wb-card-action:hover {
+    background: var(--interactive-hover);
+}
+
+/* 表单字段 */
+.wb-field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.wb-field-label {
+    font-size: 12px;
+    color: var(--text-muted);
+}
+
+.wb-field-input {
+    padding: 6px 8px;
+    border-radius: 4px;
+    border: 1px solid var(--background-modifier-border);
+    background: var(--background-primary);
+    color: var(--text-normal);
+    font-size: 13px;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.wb-field-input:focus {
+    border-color: var(--interactive-accent);
+    outline: none;
+}
+
+.wb-field-checkbox {
+    width: 16px;
+    height: 16px;
+}
+
+.wb-field.is-error .wb-field-input {
+    border-color: var(--background-modifier-error);
+}
+
+.wb-field-readonly .wb-field-value {
+    font-size: 13px;
+    color: var(--text-normal);
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.wb-form-submit {
+    align-self: flex-start;
+    padding: 6px 14px;
+    border-radius: 4px;
+    border: none;
+    background: var(--interactive-accent);
+    color: var(--text-on-accent);
+    cursor: pointer;
+    font-size: 13px;
+}
+
+.wb-form-submit:hover {
+    filter: brightness(1.05);
+}
+
+/* 统计卡片 */
+.wb-stat-row {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    padding: 4px 0;
+}
+
+.wb-stat-label {
+    font-size: 13px;
+    color: var(--text-muted);
+}
+
+.wb-stat-value {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text-normal);
+}
+
+/* 历史记录 */
+.wb-card-history {
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px solid var(--background-modifier-border);
+}
+
+.wb-card-history-title {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-bottom: 4px;
+}
+
+.wb-card-history-item {
+    display: flex;
+    flex-direction: row;
+    gap: 8px;
+    padding: 2px 0;
+    font-size: 12px;
+}
+
+.wb-card-history-key {
+    flex-shrink: 0;
+    color: var(--text-accent);
+}
+
+.wb-card-history-val {
+    color: var(--text-muted);
+    word-break: break-word;
+}
+
 
 

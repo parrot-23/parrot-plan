@@ -10,6 +10,7 @@ import { DEFAULT_WEEK_RANGE } from './src/views/week-view/timeblock-data';
 import type { EventBlock, ExecutionRecord } from './src/views/week-view/week-schedule-view';
 import { DEFAULT_INBOX_DATA, type InboxData } from './src/shared/task-panel';
 import { VIEW_TYPE_MAIN, MainView } from './src/main-view';
+import { defaultWorkbenchData, type WorkbenchData } from './src/workbench/data/card-data';
 import { initI18n, t, getLangDebugInfo } from './src/i18n';
 import { initLogger, log } from './src/shared/logger';
 import {
@@ -35,6 +36,8 @@ export default class ParrotPlanPlugin extends Plugin {
         schemeData: RangeSchemeData;
         /** 已标记为「已制定周计划」的周键列表（如 ["2026-W41"]） */
         plannedWeeks: string[];
+        /** 工作台卡片数据 */
+        workbench: WorkbenchData;
     } | null = null;
 
     /** 账号信息（随主数据一起持久化） */
@@ -107,6 +110,10 @@ export default class ParrotPlanPlugin extends Plugin {
         const initialPlannedWeeks = Array.isArray(savedData.plannedWeeks)
             ? savedData.plannedWeeks as string[]
             : [];
+        // 工作台卡片数据（兼容旧数据：默认空）
+        const initialWorkbench = (savedData.workbench && typeof savedData.workbench === 'object')
+            ? savedData.workbench as WorkbenchData
+            : defaultWorkbenchData();
 
         // 存入插件实例，作为唯一数据源（视图重建时从这里读取最新数据）
         this.data = {
@@ -118,6 +125,7 @@ export default class ParrotPlanPlugin extends Plugin {
             inboxData: initialInboxData,
             schemeData: initialSchemeData,
             plannedWeeks: initialPlannedWeeks,
+            workbench: initialWorkbench,
         };
 
         // 注册视图
@@ -131,7 +139,7 @@ export default class ParrotPlanPlugin extends Plugin {
                     executions: d.executions.length,
                 });
                 return new MainView(leaf, this, d.weekRange, d.templateData, d.categoryData,
-                    d.events, d.executions, d.inboxData, d.schemeData, d.plannedWeeks,
+                    d.events, d.executions, d.inboxData, d.schemeData, d.plannedWeeks, d.workbench,
                 );
             }
         );

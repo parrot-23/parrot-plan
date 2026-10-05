@@ -30,6 +30,7 @@ export const en: I18nMessages = {
     'nav.week': 'Week Plan',
     'nav.today': 'Today Todo',
     'nav.swimlane': 'Swimlane',
+    'nav.workbench': 'Workbench',
     'nav.achievement': 'Achievements',
     'nav.placeholder': 'This is the "{name}" page',
 
@@ -230,4 +231,10 @@ export const en: I18nMessages = {
     'inbox.projectFocusBtn': 'By Project',
     'inbox.projectFocus': 'Project Layout',
     'inbox.projectFocusNeedSelect': 'Select a task first, then arrange by project',
+
+    // Workbench
+    'workbench.title': 'Workbench',
+    'workbench.addCard': 'Add Card',
+    'workbench.empty': 'No cards yet. Click "Add Card" to start.',
+    'workbench.cardAdded': 'Card "{name}" added',
 };

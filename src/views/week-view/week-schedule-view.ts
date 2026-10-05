@@ -143,6 +143,8 @@ export class WeekScheduleView extends ItemView {
             inboxData: this.inboxData,
             // 已制定周计划的周键列表（与年视图联动）
             plannedWeeks: this.plannedWeeks,
+            // 工作台卡片数据（由插件实例持有）
+            workbench: (this.plugin as Plugin & { data?: { workbench?: unknown } }).data?.workbench ?? { instances: [] },
             // 账号信息（由插件实例持有，随主数据一起持久化）
             account: (this.plugin as Plugin & { account?: unknown }).account ?? {},
         });

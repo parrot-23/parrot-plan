@@ -28,6 +28,7 @@ export const zh = {
     'nav.week': '周计划',
     'nav.today': '日执行',
     'nav.swimlane': '泳道图',
+    'nav.workbench': '工作台',
     'nav.achievement': '成就榜单',
     'nav.placeholder': '当前是「{name}」页面',
 
@@ -228,6 +229,12 @@ export const zh = {
     'inbox.projectFocusBtn': '按项目排布',
     'inbox.projectFocus': '项目排布',
     'inbox.projectFocusNeedSelect': '请先选中一个任务，再按项目排布',
+
+    // 工作台
+    'workbench.title': '工作台',
+    'workbench.addCard': '添加卡片',
+    'workbench.empty': '暂无卡片，点击「添加卡片」开始',
+    'workbench.cardAdded': '已添加卡片「{name}」',
 };
 
 export type I18nMessages = typeof zh;

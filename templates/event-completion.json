@@ -1,0 +1,9 @@
+{
+  "id": "event-completion",
+  "name": "事件完成率",
+  "mode": "stats",
+  "description": "展示计划事件完成情况",
+  "source": {
+    "type": "event-completion"
+  }
+}

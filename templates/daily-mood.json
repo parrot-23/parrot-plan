@@ -1,0 +1,23 @@
+{
+  "id": "daily-mood",
+  "name": "每日心情",
+  "mode": "periodic",
+  "period": "day",
+  "description": "每天记录一次心情",
+  "fields": [
+    {
+      "key": "mood",
+      "label": "心情",
+      "type": "select",
+      "options": ["😄 开心", "😐 平静", "😞 低落", "😡 烦躁"],
+      "required": true
+    },
+    {
+      "key": "note",
+      "label": "备注",
+      "type": "textarea",
+      "required": false,
+      "placeholder": "今天发生了什么？"
+    }
+  ]
+}

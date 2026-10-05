@@ -13,20 +13,23 @@ import {
 import { YearView } from './views/year-view';
 import { TodayView } from './views/today-view';
 import { SwimlaneView } from './views/swimlane-view';
+import { WorkbenchView } from './workbench/workbench-view';
+import type { WorkbenchData } from './workbench/data/card-data';
 import { t } from './i18n';
 import { log } from './shared/logger';
 
 export const VIEW_TYPE_MAIN = 'parrot-plan-main-view';
 
 /** 主导航 tab 标识 */
-type NavTab = 'year' | 'week' | 'today' | 'swimlane' | 'achievement';
+type NavTab = 'year' | 'week' | 'today' | 'swimlane' | 'workbench' | 'achievement';
 
 /** 主导航按钮定义（label 存 i18n key，渲染时再求值，避免模块加载时语言未初始化） */
-const NAV_TABS: { id: NavTab; labelKey: 'nav.year' | 'nav.week' | 'nav.today' | 'nav.swimlane' | 'nav.achievement' }[] = [
+const NAV_TABS: { id: NavTab; labelKey: 'nav.year' | 'nav.week' | 'nav.today' | 'nav.swimlane' | 'nav.workbench' | 'nav.achievement' }[] = [
     { id: 'year', labelKey: 'nav.year' },
     { id: 'week', labelKey: 'nav.week' },
     { id: 'today', labelKey: 'nav.today' },
     { id: 'swimlane', labelKey: 'nav.swimlane' },
+    { id: 'workbench', labelKey: 'nav.workbench' },
     { id: 'achievement', labelKey: 'nav.achievement' },
 ];
 
@@ -40,6 +43,7 @@ export class MainView extends ItemView {
     private yearView: YearView;
     private todayView: TodayView;
     private swimlaneView: SwimlaneView;
+    private workbenchView: WorkbenchView;
     private activeTab: NavTab = 'week';
     private contentRoot!: HTMLElement;
 
@@ -54,6 +58,7 @@ export class MainView extends ItemView {
         inboxData: InboxData,
         schemeData: RangeSchemeData,
         plannedWeeks: string[],
+        workbenchData: WorkbenchData,
     ) {
         super(leaf);
         this.plugin = plugin;
@@ -100,6 +105,14 @@ export class MainView extends ItemView {
             this.weekView.timeBlockCategoryData,
             () => this.weekView.save(),
             () => this.weekView.executions,
+        );
+        this.workbenchView = new WorkbenchView(
+            this.app,
+            workbenchData,
+            () => this.weekView.save(),
+            () => this.weekView.events,
+            () => this.weekView.executions,
+            () => this.weekView.inboxData.items,
         );
     }
 
@@ -178,6 +191,11 @@ export class MainView extends ItemView {
 
         if (this.activeTab === 'swimlane') {
             await this.swimlaneView.renderInto(this.contentRoot);
+            return;
+        }
+
+        if (this.activeTab === 'workbench') {
+            await this.workbenchView.renderInto(this.contentRoot);
             return;
         }
 
