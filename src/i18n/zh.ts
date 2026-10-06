@@ -134,6 +134,7 @@ export const zh = {
     // 事件层
     'event.scheduled': '已排入"{title}"',
     'event.alreadyScheduled': '"{title}"当天已排入，无需重复添加',
+    'event.weekPlannedLocked': '本周计划已制定，不允许修改',
     'event.edit': '编辑事件',
     'event.create': '新建事件',
     'event.title': '标题',

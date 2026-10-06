@@ -136,6 +136,7 @@ export const en: I18nMessages = {
     // Event layer
     'event.scheduled': 'Scheduled "{title}"',
     'event.alreadyScheduled': '"{title}" is already scheduled for that day',
+    'event.weekPlannedLocked': 'This week is already planned and cannot be modified',
     'event.edit': 'Edit Event',
     'event.create': 'New Event',
     'event.title': 'Title',

@@ -448,6 +448,12 @@ export class WeekScheduleView extends ItemView {
                 const target = e.target as HTMLElement;
                 if (target.closest('.event-card')) return;
 
+                // 已制定周计划时计划已固定，不允许再创建计划
+                if (this.plannedWeeks.includes(this.currentWeekKey)) {
+                    new Notice(t('event.weekPlannedLocked'));
+                    return;
+                }
+
                 const rect = col.getBoundingClientRect();
                 const y = e.clientY - rect.top;
                 // 限制在一天范围内（列可能被拉伸到高于 24 小时的高度）
@@ -541,17 +547,19 @@ export class WeekScheduleView extends ItemView {
                     });
                 }
 
-                // ===== 右上角 × 删除按钮 =====
-                const delBtn = card.createDiv({ cls: 'event-delete-btn' });
-                delBtn.setText('×');
-                delBtn.onclick = async (e) => {
-                    e.stopPropagation();
-                    // 原地删除，保持数组引用不变（插件持有同一引用）
-                    const idx = this.events.findIndex(x => x.id === ev.id);
-                    if (idx >= 0) this.events.splice(idx, 1);
-                    await this.save();
-                    await this.onOpen();
-                };
+                // ===== 右上角 × 删除按钮（已制定周计划激活时计划已固定，不允许删除，故不显示） =====
+                if (!this.plannedWeeks.includes(this.currentWeekKey)) {
+                    const delBtn = card.createDiv({ cls: 'event-delete-btn' });
+                    delBtn.setText('×');
+                    delBtn.onclick = async (e) => {
+                        e.stopPropagation();
+                        // 原地删除，保持数组引用不变（插件持有同一引用）
+                        const idx = this.events.findIndex(x => x.id === ev.id);
+                        if (idx >= 0) this.events.splice(idx, 1);
+                        await this.save();
+                        await this.onOpen();
+                    };
+                }
 
                 card.onclick = (e) => {
                     e.stopPropagation();
