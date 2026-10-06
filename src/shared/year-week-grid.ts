@@ -1,6 +1,6 @@
 import { t } from '../i18n';
 import { makeWeekKey, getISOWeek, hexToTransparent } from '../views/week-view/timeblock-data';
-import { EVENT_STATUS_EMOJI } from './event-status';
+import { EVENT_STATUS_EMOJI } from '../datatypes/domain';
 
 /**
  * 周历面板：公共组件。

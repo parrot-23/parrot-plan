@@ -1,43 +1,14 @@
 import { App, Modal, Setting, Notice } from 'obsidian';
 import type { TimeBlockCategoryData } from '../views/week-view/timeblock-category-manager';
 import { t } from '../i18n';
+import type { InboxItem, InboxData } from '../datatypes/domain';
+import { DEFAULT_INBOX_DATA } from '../datatypes/domain';
 
 /**
  * 任务面板：公共组件。
  * 多个视图（年视图、周计划、当日执行等）都会使用，
  * 本文件管理任务面板自身的全部信息与渲染逻辑。
  */
-
-export interface InboxItem {
-    id: string;
-    title: string;
-    description: string;
-    categoryId?: string;
-    createdAt: number;
-    /** 父任务 id（无则为顶层任务），支持无限层级子任务 */
-    parentId?: string;
-    /** 已分配到的周键列表（如 ['2026-W40']），可分配到多个周 */
-    assignedWeekKeys?: string[];
-    /** 已分配到的日期列表（如 ['2026-10-02']），可分配到多天 */
-    assignedDayKeys?: string[];
-    /** 已从收集盒移除（不再显示，但数据保留，可查历史） */
-    removed?: boolean;
-}
-
-export interface InboxData {
-    items: InboxItem[];
-    selectedId?: string;
-    /** 已折叠的任务 id（其子任务不显示） */
-    collapsedIds?: string[];
-    /** 是否只看本周目标（持久化） */
-    weekGoalOnly?: boolean;
-    /** 项目聚焦：仅显示该任务及其所有子任务（持久化，用于「按项目排布」） */
-    projectFocusId?: string;
-}
-
-export const DEFAULT_INBOX_DATA: InboxData = {
-    items: [],
-};
 
 /** 子任务最大嵌套层数（顶层为第 1 层） */
 export const MAX_INBOX_DEPTH = 7;

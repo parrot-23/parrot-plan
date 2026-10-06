@@ -1,8 +1,8 @@
 // DataProvider 工厂：从插件持有的数据构建统一数据提供者。
 // 统计图卡片通过 provider 读取完整类型的领域数据，避免弱类型回调丢失字段。
 
-import type { EventBlock, ExecutionRecord } from '../../views/week-view/week-schedule-view';
-import type { InboxItem } from '../../shared/task-panel';
+import type { EventBlock, ExecutionRecord } from '../../datatypes/domain';
+import type { InboxItem } from '../../datatypes/domain';
 import type { DataProvider } from '../../datatypes/chart';
 
 /**

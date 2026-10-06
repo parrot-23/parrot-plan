@@ -7,8 +7,8 @@ import { ensureUncategorizedCategory } from './src/views/week-view/timeblock-cat
 import type { DayTemplateData } from './src/views/week-view/template-manager';
 
 import { DEFAULT_WEEK_RANGE } from './src/views/week-view/timeblock-data';
-import type { EventBlock, ExecutionRecord } from './src/views/week-view/week-schedule-view';
-import { DEFAULT_INBOX_DATA, type InboxData } from './src/shared/task-panel';
+import type { EventBlock, ExecutionRecord } from './src/datatypes/domain';
+import { DEFAULT_INBOX_DATA, type InboxData } from './src/datatypes/domain';
 import { VIEW_TYPE_MAIN, MainView } from './src/main-view';
 import { defaultWorkbenchData, type WorkbenchData } from './src/datatypes/card';
 import { initI18n, t, getLangDebugInfo } from './src/i18n';

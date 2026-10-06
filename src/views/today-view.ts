@@ -2,12 +2,12 @@ import type { App } from 'obsidian';
 import { Notice } from 'obsidian';
 
 import type { TimeBlockCategoryData } from './week-view/timeblock-category-manager';
-import type { InboxData, InboxItem } from '../shared/task-panel';
+import type { InboxData, InboxItem } from '../datatypes/domain';
 import { renderTaskPanel } from '../shared/task-panel';
 import { getCurrentDayKey, getCurrentWeekKey, makeDayKeyFromWeek } from './week-view/timeblock-data';
-import type { EventBlock, ExecutionRecord } from './week-view/week-schedule-view';
+import type { EventBlock, ExecutionRecord } from '../datatypes/domain';
 import { getWeekDays, t } from '../i18n';
-import { EVENT_STATUS_EMOJI, EVENT_STATUS_LABEL_KEY, getEventStatus, type EventStatus } from '../shared/event-status';
+import { EVENT_STATUS_EMOJI, EVENT_STATUS_LABEL_KEY, getEventStatus, type EventStatus } from '../datatypes/domain';
 
 /** 把分钟数格式化为 HH:MM */
 function formatMinutes(minutes: number): string {

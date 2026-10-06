@@ -4,7 +4,7 @@
 
 import type { CardSource } from '../../datatypes/form';
 import type { DataProvider, StatItem, ChartSeries, ChartDatum } from '../../datatypes/chart';
-import { getEventStatus } from '../../shared/event-status';
+import { getEventStatus } from '../../datatypes/domain';
 import { makeDayKeyFromWeek } from '../../views/week-view/timeblock-data';
 
 /** 聚合结果：数字指标 + 可选图表序列 */

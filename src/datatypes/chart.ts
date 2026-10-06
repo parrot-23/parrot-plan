@@ -2,8 +2,8 @@
 // 这里只定义「读取契约」，不复制数据；真实数据仍由插件持有，
 // 通过 DataProvider 以完整类型暴露给统计视图，保证统计口径精确。
 
-import type { EventBlock, ExecutionRecord } from '../views/week-view/week-schedule-view';
-import type { InboxItem } from '../shared/task-panel';
+import type { EventBlock, ExecutionRecord } from './domain';
+import type { InboxItem } from './domain';
 
 /** 计划事件（复用周计划视图的真实类型，保证字段完整） */
 export type PlanEvent = EventBlock;

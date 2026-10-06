@@ -4,12 +4,9 @@ import type { Plugin } from 'obsidian';
 import type { WeekRangeData, RangeSchemeData } from './views/week-view/timeblock-data';
 import type { TimeBlockCategoryData } from './views/week-view/timeblock-category-manager';
 import type { DayTemplateData } from './views/week-view/template-manager';
-import type { InboxData } from './shared/task-panel';
-import {
-    WeekScheduleView,
-    type EventBlock,
-    type ExecutionRecord,
-} from './views/week-view/week-schedule-view';
+import type { InboxData } from './datatypes/domain';
+import { WeekScheduleView } from './views/week-view/week-schedule-view';
+import type { EventBlock, ExecutionRecord } from './datatypes/domain';
 import { YearView } from './views/year-view';
 import { TodayView } from './views/today-view';
 import { SwimlaneView } from './views/swimlane-view';

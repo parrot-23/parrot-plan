@@ -8,49 +8,16 @@ import type { TimeBlockCategoryData } from './timeblock-category-manager';
 import type { DayTemplateData } from './template-manager';
 import { renderTimeBlockCategoryLegend } from './timeblock-category-manager';
 import { renderDayTemplateRow } from './template-manager';
-import { renderTaskPanel, DEFAULT_INBOX_DATA, type InboxData } from '../../shared/task-panel';
-import type { InboxItem } from '../../shared/task-panel';
+import { renderTaskPanel } from '../../shared/task-panel';
+import { DEFAULT_INBOX_DATA, type InboxData, type InboxItem } from '../../datatypes/domain';
 import { renderWeekGrid } from '../../shared/week-grid';
 import { RangeSchemeModal } from './range-scheme-modal';
 import { t, getWeekDays } from '../../i18n';
 import { log } from '../../shared/logger';
-import { EVENT_STATUS_EMOJI, getEventStatus } from '../../shared/event-status';
+import { EVENT_STATUS_EMOJI, getEventStatus } from '../../datatypes/domain';
+import type { EventBlock, ExecutionRecord } from '../../datatypes/domain';
 
 export const VIEW_TYPE_WEEK = 'week-schedule-view';
-
-
-export interface EventBlock {
-    id: string;
-    day: number;
-    start: number;
-    end: number;
-    title: string;
-    categoryId?: string;
-    /** 来源收集盒任务 id（手动新建的事件无此字段） */
-    inboxId?: string;
-    /** 被「替换计划」修改前的原任务 id（用于标记「变更计划」状态） */
-    replacedFromInboxId?: string;
-    /** 全天事件（start=0, end=1440） */
-    allDay?: boolean;
-    completed?: boolean;
-    notePath?: string;
-    /** 所属周键（如 2026-W40） */
-    weekKey?: WeekKey;
-}
-
-export interface ExecutionRecord {
-    id: string;
-    eventId?: string;
-    /** 来源收集盒任务 id（与事件一致，便于按任务聚合） */
-    inboxId?: string;
-    day: number;
-    start: number;
-    end: number;
-    note?: string;
-    /** 所属周键（如 2026-W40） */
-    weekKey?: WeekKey;
-}
-
 
 export class WeekScheduleView extends ItemView {
     plugin: Plugin;

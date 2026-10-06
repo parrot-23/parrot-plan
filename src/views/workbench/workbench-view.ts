@@ -8,8 +8,8 @@ import { loadAllTemplates } from '../../cardmake/data/template-loader';
 import { getCardRenderer } from '../../cardmake/cards/card-registry';
 import type { CardRenderContext } from '../../datatypes/renderer';
 import { createDataProvider } from '../../cardmake/data/provider';
-import type { EventBlock, ExecutionRecord } from '../week-view/week-schedule-view';
-import type { InboxItem } from '../../shared/task-panel';
+import type { EventBlock, ExecutionRecord } from '../../datatypes/domain';
+import type { InboxItem } from '../../datatypes/domain';
 import { t } from '../../i18n';
 
 /**
