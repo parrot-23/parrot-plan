@@ -47,11 +47,7 @@ export function log(...args: unknown[]): void {
     const time = new Date().toISOString();
     const line = `[${time}] ${args.map(formatArg).join(' ')}\n`;
     // 异步追加，不阻塞调用方
-    (async () => {
-        try {
-            await appRef!.vault.adapter.append(getLogFile(appRef!), line);
-        } catch {
-            // 忽略写入错误
-        }
-    })();
+    appRef.vault.adapter.append(getLogFile(appRef), line).catch(() => {
+        // 忽略写入错误
+    });
 }
