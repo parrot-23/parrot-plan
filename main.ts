@@ -1,4 +1,4 @@
-import { App, Modal, Notice, Plugin, PluginSettingTab, Setting, type SettingDefinitionItem } from 'obsidian';
+import { App, Modal, Notice, Plugin, PluginSettingTab, type SettingDefinitionItem } from 'obsidian';
 
 import type { WeekRangeData, RangeSchemeData } from './src/views/week-view/timeblock-data';
 import { getCurrentWeekKey, ensureDefaultScheme } from './src/views/week-view/timeblock-data';
@@ -208,74 +208,9 @@ class ParrotPlanSettingTab extends PluginSettingTab {
         this.plugin = plugin;
     }
 
-    /** 刷新设置页：新版用 update()，旧版（无 update）回退到 display() */
+    /** 刷新设置页 */
     private refresh(): void {
-        if (typeof this.update === 'function') {
-            this.update();
-        } else {
-            this.display();
-        }
-    }
-
-    /** 传统设置页渲染（兼容 Obsidian 1.13 以下版本） */
-    display(): void {
-        const { containerEl } = this;
-        containerEl.empty();
-
-        new Setting(containerEl)
-            .setName(t('settings.title'))
-            .setDesc(t('settings.about'));
-
-        // ===== 账号 =====
-        new Setting(containerEl)
-            .setName(t('settings.account'))
-            .setHeading();
-
-        const loggedIn = !!this.plugin.account.userId;
-        new Setting(containerEl)
-            .setName(t('settings.accountName'))
-            .setDesc(this.plugin.account.userId ?? t('settings.accountNotLoggedIn'))
-            .addButton((btn) => {
-                btn.setButtonText(loggedIn ? t('settings.loggedIn') : t('settings.login'))
-                    .setCta()
-                    .setDisabled(loggedIn)
-                    .onClick(() => {
-                        new LoginModal(this.app, this.plugin, () => this.refresh()).open();
-                    });
-            });
-
-        // 微信小程序：右侧二维码缩略图，点击弹窗放大
-        const wechatSetting = new Setting(containerEl)
-            .setName(t('settings.wechatMiniProgram'))
-            .setDesc(t('settings.wechatMiniProgramDesc'));
-        const thumb = wechatSetting.controlEl.createEl('img', {
-            cls: 'parrot-wechat-qr-thumb',
-            attr: { src: getWechatQrPath(this.app), alt: t('settings.wechatMiniProgram') },
-        });
-        thumb.onclick = () => new QrCodeModal(this.app).open();
-
-        new Setting(containerEl)
-            .setName(t('settings.data'))
-            .setHeading();
-
-        new Setting(containerEl)
-            .setName(t('settings.clearData'))
-            .setDesc(t('settings.clearDataDesc'))
-            .addButton((btn) => {
-                btn.setButtonText(t('settings.clearData'))
-                    .setDestructive()
-                    .onClick(() => {
-                        new ConfirmModal(
-                            this.app,
-                            t('settings.clearDataConfirm'),
-                            t('settings.clearDataConfirmDesc'),
-                            async () => {
-                                await this.plugin.clearAllData();
-                                new Notice(t('settings.clearDataDone'));
-                            },
-                        ).open();
-                    });
-            });
+        this.update();
     }
 
     getSettingDefinitions(): SettingDefinitionItem[] {
