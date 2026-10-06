@@ -115,7 +115,7 @@ export class WorkbenchView {
                 document.removeEventListener('click', close);
             }
         };
-        setTimeout(() => document.addEventListener('click', close), 0);
+        window.setTimeout(() => document.addEventListener('click', close), 0);
     }
 
     /** 添加一张卡片实例 */

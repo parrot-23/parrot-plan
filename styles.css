@@ -322,9 +322,8 @@
     overflow: hidden;
     background: var(--background-primary);
     border-bottom: 1px solid var(--background-modifier-border);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-    /* 裁掉向上溢出的阴影，避免盖住上方全天行 */
-    clip-path: inset(0 -20px -20px -20px);
+    /* 阴影仅向下扩散（负 spread 抵消向上溢出），避免盖住上方全天行，无需 clip-path */
+    box-shadow: 0 4px 12px -8px rgba(0, 0, 0, 0.15);
     z-index: 20;
     transition: height 0.15s ease;
 }
@@ -2174,7 +2173,8 @@
 
 /* ===== 时间区间设置窗口 ===== */
 /* 直接撑开 Obsidian 弹窗容器，保证能容纳左侧图例 + 日历 */
-.modal:has(.range-scheme-modal) {
+/* 由 RangeSchemeModal.onOpen 给 modalEl 添加 is-range-scheme-modal 类，避免使用 :has */
+.modal.is-range-scheme-modal {
     width: 760px;
     max-width: 90vw;
 }

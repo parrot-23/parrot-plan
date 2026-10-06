@@ -1,7 +1,5 @@
 // stats 模式渲染器：定义数据来源，展示统计信息。
 import type { CardRenderer, CardRenderContext } from './card-types';
-import type { CardTemplate } from '../form-engine/types';
-import type { CardInstance } from '../data/card-data';
 
 export const statsCardRenderer: CardRenderer = {
     render(container, instance, template, ctx) {

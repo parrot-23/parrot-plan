@@ -388,7 +388,7 @@ export class ConfirmDeleteModal extends Modal {
         new Setting(contentEl)
             .addButton(btn => btn
                 .setButtonText(t('common.delete'))
-                .setWarning()
+                .setDestructive()
                 .setCta()
                 .onClick(() => {
                     void this.onConfirm();

@@ -65,11 +65,6 @@ function getChildren(inboxData: InboxData, parentId: string | undefined): InboxI
     return getVisibleItems(inboxData).filter(i => i.parentId === parentId);
 }
 
-/** 判断某任务是否有子任务 */
-function hasChildren(inboxData: InboxData, id: string): boolean {
-    return getVisibleItems(inboxData).some(i => i.parentId === id);
-}
-
 /** 递归收集某任务及其所有后代 id */
 function collectDescendantIds(inboxData: InboxData, id: string): string[] {
     const result: string[] = [];
@@ -537,7 +532,7 @@ class ConfirmDeleteInboxModal extends Modal {
         new Setting(contentEl)
             .addButton(btn => btn
                 .setButtonText(t('common.delete'))
-                .setWarning()
+                .setDestructive()
                 .setCta()
                 .onClick(async () => {
                     await this.onConfirm();

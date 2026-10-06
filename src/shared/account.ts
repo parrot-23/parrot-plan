@@ -56,7 +56,7 @@ export async function createLoginToken(): Promise<{ token: string; expireTime?: 
     log('createLoginToken 响应', {
         status: res.status,
         text: res.text,
-        json: res.json,
+        json: res.json as unknown,
     });
     const data = res.json as CreateLoginTokenResponse;
     if (!data || !data.token) {
@@ -79,7 +79,7 @@ export async function checkLoginToken(token: string): Promise<{ loggedIn: boolea
     log('checkLoginToken 响应', {
         status: res.status,
         text: res.text,
-        json: res.json,
+        json: res.json as unknown,
     });
     const data = res.json as CheckLoginTokenResponse;
     if (!data) return { loggedIn: false };

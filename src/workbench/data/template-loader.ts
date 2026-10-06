@@ -2,8 +2,10 @@
 import type { App } from 'obsidian';
 import type { CardTemplate } from '../form-engine/types';
 
-/** 模板目录（相对 vault 根，插件根目录下） */
-const TEMPLATE_DIR = '.obsidian/plugins/parrot-plan/templates';
+/** 模板目录（相对 vault 根，插件根目录下；配置目录由用户自定义，需用 configDir） */
+function getTemplateDir(app: App): string {
+    return `${app.vault.configDir}/plugins/parrot-plan/templates`;
+}
 
 /** 模板缓存：id → 模板 */
 const cache = new Map<string, CardTemplate>();
@@ -16,7 +18,7 @@ export async function loadAllTemplates(app: App): Promise<CardTemplate[]> {
     const adapter = app.vault.adapter;
     let files: string[];
     try {
-        files = await adapter.list(TEMPLATE_DIR).then((r) => r.files);
+        files = await adapter.list(getTemplateDir(app)).then((r) => r.files);
     } catch {
         return [];
     }

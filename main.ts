@@ -73,7 +73,7 @@ export default class ParrotPlanPlugin extends Plugin {
             rawData && typeof rawData === 'object' ? rawData as Record<string, unknown> : {};
 
         // 读取账号信息（随主数据一起存储）
-        this.account = (savedData.account ?? {}) as AccountData;
+        this.account = savedData.account ?? {};
 
         const defaultCategories: TimeBlockCategoryData = {
             categories: [
@@ -208,6 +208,15 @@ class ParrotPlanSettingTab extends PluginSettingTab {
         this.plugin = plugin;
     }
 
+    /** 刷新设置页：新版用 update()，旧版（无 update）回退到 display() */
+    private refresh(): void {
+        if (typeof this.update === 'function') {
+            this.update();
+        } else {
+            this.display();
+        }
+    }
+
     /** 传统设置页渲染（兼容 Obsidian 1.13 以下版本） */
     display(): void {
         const { containerEl } = this;
@@ -231,7 +240,7 @@ class ParrotPlanSettingTab extends PluginSettingTab {
                     .setCta()
                     .setDisabled(loggedIn)
                     .onClick(() => {
-                        new LoginModal(this.app, this.plugin, () => this.display()).open();
+                        new LoginModal(this.app, this.plugin, () => this.refresh()).open();
                     });
             });
 
@@ -254,7 +263,7 @@ class ParrotPlanSettingTab extends PluginSettingTab {
             .setDesc(t('settings.clearDataDesc'))
             .addButton((btn) => {
                 btn.setButtonText(t('settings.clearData'))
-                    .setWarning()
+                    .setDestructive()
                     .onClick(() => {
                         new ConfirmModal(
                             this.app,
@@ -313,7 +322,7 @@ class ParrotPlanSettingTab extends PluginSettingTab {
                                 .setCta()
                                 .setDisabled(loggedIn)
                                 .onClick(() => {
-                                    new LoginModal(this.app, this.plugin, () => this.display()).open();
+                                    new LoginModal(this.app, this.plugin, () => this.refresh()).open();
                                 });
                         });
                 },
@@ -334,7 +343,7 @@ class ParrotPlanSettingTab extends PluginSettingTab {
                         .setDesc(t('settings.clearDataDesc'))
                         .addButton((btn) => {
                             btn.setButtonText(t('settings.clearData'))
-                                .setWarning()
+                                .setDestructive()
                                 .onClick(() => {
                                     new ConfirmModal(
                                         this.app,
@@ -353,12 +362,10 @@ class ParrotPlanSettingTab extends PluginSettingTab {
     }
 }
 
-/** 微信小程序二维码图片相对 vault 的路径 */
-const WECHAT_QR_PATH = '.obsidian/plugins/parrot-plan/src/images/qrcode.jpg';
-
-/** 获取微信小程序二维码的可访问 URL */
+/** 微信小程序二维码图片相对 vault 的路径（配置目录由用户自定义，需用 configDir） */
 function getWechatQrPath(app: App): string {
-    return app.vault.adapter.getResourcePath(WECHAT_QR_PATH);
+    const path = `${app.vault.configDir}/plugins/parrot-plan/src/images/qrcode.jpg`;
+    return app.vault.adapter.getResourcePath(path);
 }
 
 /** 微信小程序二维码弹窗：展示放大的二维码图片 */

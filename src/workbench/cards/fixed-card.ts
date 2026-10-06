@@ -1,7 +1,5 @@
 // fixed 模式渲染器：用户填写一次后完全固定展示。
-import type { CardRenderer, CardRenderContext } from './card-types';
-import type { CardTemplate } from '../form-engine/types';
-import type { CardInstance } from '../data/card-data';
+import type { CardRenderer } from './card-types';
 import { renderForm, renderFormReadonly } from '../form-engine/form-renderer';
 
 export const fixedCardRenderer: CardRenderer = {

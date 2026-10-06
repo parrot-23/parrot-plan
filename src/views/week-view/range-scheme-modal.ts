@@ -52,6 +52,8 @@ export class RangeSchemeModal extends Modal {
         if (prevScroll) this.savedScrollTop = prevScroll.scrollTop;
         contentEl.empty();
         contentEl.addClass('range-scheme-modal');
+        // 给弹窗容器加类名以撑开宽度（替代 :has 选择器）
+        this.modalEl.addClass('is-range-scheme-modal');
 
         // ===== 顶部：当前方案名称 / 方案管理 =====
         const header = contentEl.createDiv({ cls: 'range-scheme-header' });

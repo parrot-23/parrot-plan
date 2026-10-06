@@ -6,8 +6,10 @@ import type { App } from 'obsidian';
  * - 之后调用 log() 追加写入。
  */
 
-/** 日志文件相对 vault 根目录的路径 */
-const LOG_FILE = '.obsidian/plugins/parrot-plan/parrot-plan.log';
+/** 日志文件相对 vault 根目录的路径（配置目录由用户自定义，需用 configDir） */
+function getLogFile(app: App): string {
+    return `${app.vault.configDir}/plugins/parrot-plan/parrot-plan.log`;
+}
 
 let appRef: App | null = null;
 
@@ -29,7 +31,7 @@ function formatArg(arg: unknown): string {
 export async function initLogger(app: App): Promise<void> {
     appRef = app;
     try {
-        await app.vault.adapter.write(LOG_FILE, '');
+        await app.vault.adapter.write(getLogFile(app), '');
     } catch {
         // 写入失败时静默降级，不影响插件运行
         appRef = null;
@@ -45,9 +47,9 @@ export function log(...args: unknown[]): void {
     const time = new Date().toISOString();
     const line = `[${time}] ${args.map(formatArg).join(' ')}\n`;
     // 异步追加，不阻塞调用方
-    void (async () => {
+    (async () => {
         try {
-            await appRef!.vault.adapter.append(LOG_FILE, line);
+            await appRef!.vault.adapter.append(getLogFile(appRef!), line);
         } catch {
             // 忽略写入错误
         }
