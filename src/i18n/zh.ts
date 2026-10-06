@@ -238,6 +238,24 @@ export const zh = {
     'inbox.projectFocus': '项目排布',
     'inbox.projectFocusNeedSelect': '请先选中一个任务，再按项目排布',
 
+    // 板块（任务内层结构）
+    'section.title': '板块',
+    'section.add': '添加板块',
+    'section.type': '类型',
+    'section.typeChecklist': '清单',
+    'section.typeSteps': '步骤',
+    'section.typeHabit': '打卡',
+    'section.name': '板块名称',
+    'section.namePlaceholder': '如：待办清单',
+    'section.addItem': '添加条目',
+    'section.itemPlaceholder': '条目内容',
+    'section.empty': '暂无板块，点击「添加板块」开始',
+    'section.deleteConfirm': '确定删除板块「{title}」？',
+    'section.stepTodo': '待办',
+    'section.stepDoing': '进行中',
+    'section.stepDone': '已完成',
+    'section.habitToday': '今日打卡',
+
     // 工作台
     'workbench.title': '工作台',
     'workbench.addCard': '添加卡片',

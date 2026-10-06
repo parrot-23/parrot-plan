@@ -2879,5 +2879,177 @@
     font-size: 12px;
 }
 
+/* ===== 板块（任务内层结构）===== */
+/* 任务面板中的板块摘要 chip */
+.inbox-item-sections {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-top: 4px;
+}
+
+.inbox-section-chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 1px 6px;
+    border-radius: 3px;
+    background: var(--background-modifier-hover);
+    color: var(--text-muted);
+    font-size: 10px;
+    line-height: 1.4;
+}
+
+/* 详情弹窗中的板块编辑区 */
+.section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin: 12px 0 6px;
+    padding-top: 12px;
+    border-top: 1px solid var(--background-modifier-border);
+}
+
+.section-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-normal);
+}
+
+.section-add-btn {
+    padding: 4px 10px;
+    border-radius: 4px;
+    border: 1px solid var(--background-modifier-border);
+    background: var(--interactive-normal);
+    color: var(--text-normal);
+    cursor: pointer;
+    font-size: 12px;
+}
+
+.section-add-btn:hover {
+    background: var(--interactive-hover);
+}
+
+.section-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.section-empty {
+    padding: 12px;
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 12px;
+    font-style: italic;
+}
+
+.section-item {
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 6px;
+    padding: 8px;
+    background: var(--background-secondary);
+}
+
+.section-item-head {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 6px;
+}
+
+.section-item-type {
+    flex-shrink: 0;
+    padding: 1px 6px;
+    border-radius: 3px;
+    background: var(--interactive-accent);
+    color: var(--text-on-accent);
+    font-size: 10px;
+}
+
+.section-item-name {
+    flex: 1;
+    min-width: 0;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-normal);
+    word-break: break-word;
+}
+
+.section-item-del {
+    flex-shrink: 0;
+    width: 20px;
+    height: 20px;
+    padding: 0;
+    border: none;
+    border-radius: 4px;
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-size: 12px;
+    line-height: 1;
+}
+
+.section-item-del:hover {
+    background: var(--background-modifier-error);
+    color: var(--text-on-accent);
+}
+
+.section-items {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.section-item-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.section-item-row input[type='checkbox'] {
+    flex-shrink: 0;
+    width: 14px;
+    height: 14px;
+}
+
+.section-item-text {
+    flex: 1;
+    min-width: 0;
+    padding: 3px 6px;
+    border-radius: 4px;
+    border: 1px solid var(--background-modifier-border);
+    background: var(--background-primary);
+    color: var(--text-normal);
+    font-size: 12px;
+}
+
+.section-step-status {
+    flex-shrink: 0;
+    padding: 2px 4px;
+    border-radius: 4px;
+    border: 1px solid var(--background-modifier-border);
+    background: var(--background-primary);
+    color: var(--text-normal);
+    font-size: 12px;
+}
+
+.section-add-item-btn {
+    align-self: flex-start;
+    margin-top: 4px;
+    padding: 3px 8px;
+    border-radius: 4px;
+    border: 1px dashed var(--background-modifier-border);
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-size: 11px;
+}
+
+.section-add-item-btn:hover {
+    background: var(--background-modifier-hover);
+    color: var(--text-normal);
+}
+
 
 

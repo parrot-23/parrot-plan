@@ -1,7 +1,7 @@
 import { App, Modal, Setting, Notice } from 'obsidian';
 import type { TimeBlockCategoryData } from '../views/week-view/timeblock-category-manager';
 import { t } from '../i18n';
-import type { InboxItem, InboxData } from '../datatypes/domain';
+import type { InboxItem, InboxData, Section, SectionType, ChecklistData, StepsData, HabitData } from '../datatypes/domain';
 import { DEFAULT_INBOX_DATA } from '../datatypes/domain';
 
 /**
@@ -206,6 +206,7 @@ export function renderTaskPanel(
                     item.title = updated.title;
                     item.description = updated.description;
                     item.categoryId = updated.categoryId;
+                    item.sections = updated.sections;
                     if (onUpdate) await onUpdate(item);
                     renderList();
                     onRefresh();
@@ -291,6 +292,20 @@ export function renderTaskPanel(
         if (item.description) {
             itemEl.createDiv({ cls: 'inbox-item-desc' })
                 .setText(item.description);
+        }
+
+        // 展示板块摘要（只读，编辑在详情弹窗中）
+        if (item.sections && item.sections.length > 0) {
+            const sectionsEl = itemEl.createDiv({ cls: 'inbox-item-sections' });
+            for (const section of item.sections) {
+                const chip = sectionsEl.createSpan({ cls: 'inbox-section-chip' });
+                const typeLabel = section.type === 'checklist'
+                    ? t('section.typeChecklist')
+                    : section.type === 'steps'
+                        ? t('section.typeSteps')
+                        : t('section.typeHabit');
+                chip.setText(`${typeLabel}${section.title ? '·' + section.title : ''}`);
+            }
         }
 
         // 点击选中/取消（以 inboxData.selectedId 为准，避免宿主刷新后本地状态失效）
@@ -521,22 +536,29 @@ class ConfirmDeleteInboxModal extends Modal {
     }
 }
 
-// ===== 任务详情弹窗（查看/编辑标题、描述、分类）=====
+// ===== 任务详情弹窗（查看/编辑标题、描述、分类、板块）=====
 class InboxDetailModal extends Modal {
     private title: string;
     private description: string;
     private categoryId: string;
+    /** 板块的本地副本（编辑期间操作，保存时写回） */
+    private sections: Section[];
 
     constructor(
         app: App,
         private item: InboxItem,
         private categoryData: TimeBlockCategoryData,
-        private onSave: (updated: { title: string; description: string; categoryId?: string }) => void | Promise<void>,
+        private onSave: (updated: { title: string; description: string; categoryId?: string; sections?: Section[] }) => void | Promise<void>,
     ) {
         super(app);
         this.title = item.title;
         this.description = item.description;
         this.categoryId = item.categoryId ?? '';
+        // 深拷贝板块，避免编辑时直接改动原数据（取消时不生效）
+        this.sections = (item.sections ?? []).map(s => ({
+            ...s,
+            data: JSON.parse(JSON.stringify(s.data)),
+        }));
     }
 
     onOpen() {
@@ -571,6 +593,18 @@ class InboxDetailModal extends Modal {
                     .onChange(val => this.categoryId = val);
             });
 
+        // ===== 板块编辑区 =====
+        const sectionHeader = contentEl.createDiv({ cls: 'section-header' });
+        sectionHeader.createSpan({ text: t('section.title'), cls: 'section-title' });
+        const addSectionBtn = sectionHeader.createEl('button', {
+            cls: 'section-add-btn',
+            text: t('section.add'),
+        });
+        addSectionBtn.onclick = () => this.openAddSectionModal();
+
+        const sectionList = contentEl.createDiv({ cls: 'section-list' });
+        this.renderSections(sectionList);
+
         new Setting(contentEl)
             .addButton(btn => btn
                 .setButtonText(t('common.save'))
@@ -583,6 +617,168 @@ class InboxDetailModal extends Modal {
             );
     }
 
+    /** 渲染板块列表（编辑态） */
+    private renderSections(container: HTMLElement) {
+        container.empty();
+        if (this.sections.length === 0) {
+            container.createDiv({ cls: 'section-empty', text: t('section.empty') });
+            return;
+        }
+        for (const section of this.sections) {
+            const el = container.createDiv({ cls: 'section-item' });
+            const head = el.createDiv({ cls: 'section-item-head' });
+            const typeLabel = this.sectionTypeLabel(section.type);
+            head.createSpan({ cls: 'section-item-type', text: typeLabel });
+            head.createSpan({ cls: 'section-item-name', text: section.title || typeLabel });
+
+            const delBtn = head.createEl('button', { cls: 'section-item-del', text: '🗑️' });
+            delBtn.onclick = () => {
+                this.sections = this.sections.filter(s => s.id !== section.id);
+                this.renderSections(container);
+            };
+
+            // 各类型条目编辑
+            this.renderSectionItems(el, section, container);
+        }
+    }
+
+    /** 渲染某板块的条目编辑区 */
+    private renderSectionItems(el: HTMLElement, section: Section, container: HTMLElement) {
+        const itemsEl = el.createDiv({ cls: 'section-items' });
+
+        if (section.type === 'checklist') {
+            const data = section.data as ChecklistData;
+            for (const item of data.items) {
+                const row = itemsEl.createDiv({ cls: 'section-item-row' });
+                const cb = row.createEl('input', { type: 'checkbox' });
+                cb.checked = item.done;
+                cb.onchange = () => { item.done = cb.checked; };
+                const text = row.createEl('input', { type: 'text', cls: 'section-item-text' });
+                text.value = item.text;
+                text.onchange = () => { item.text = text.value; };
+                const del = row.createEl('button', { cls: 'section-item-del', text: '✕' });
+                del.onclick = () => {
+                    data.items = data.items.filter(i => i.id !== item.id);
+                    this.renderSections(container);
+                };
+            }
+        } else if (section.type === 'steps') {
+            const data = section.data as StepsData;
+            for (const item of data.items) {
+                const row = itemsEl.createDiv({ cls: 'section-item-row' });
+                const sel = row.createEl('select', { cls: 'section-step-status' });
+                const statuses: Array<{ v: 'todo' | 'doing' | 'done'; label: string }> = [
+                    { v: 'todo', label: t('section.stepTodo') },
+                    { v: 'doing', label: t('section.stepDoing') },
+                    { v: 'done', label: t('section.stepDone') },
+                ];
+                for (const s of statuses) {
+                    const opt = sel.createEl('option', { text: s.label, value: s.v });
+                    if (item.status === s.v) opt.selected = true;
+                }
+                sel.onchange = () => { item.status = sel.value as 'todo' | 'doing' | 'done'; };
+                const text = row.createEl('input', { type: 'text', cls: 'section-item-text' });
+                text.value = item.text;
+                text.onchange = () => { item.text = text.value; };
+                const del = row.createEl('button', { cls: 'section-item-del', text: '✕' });
+                del.onclick = () => {
+                    data.items = data.items.filter(i => i.id !== item.id);
+                    this.renderSections(container);
+                };
+            }
+        } else if (section.type === 'habit') {
+            const data = section.data as HabitData;
+            for (const item of data.items) {
+                const row = itemsEl.createDiv({ cls: 'section-item-row' });
+                const text = row.createEl('input', { type: 'text', cls: 'section-item-text' });
+                text.value = item.text;
+                text.onchange = () => { item.text = text.value; };
+                const del = row.createEl('button', { cls: 'section-item-del', text: '✕' });
+                del.onclick = () => {
+                    data.items = data.items.filter(i => i.id !== item.id);
+                    this.renderSections(container);
+                };
+            }
+        }
+
+        // 添加条目按钮
+        const addBtn = itemsEl.createEl('button', { cls: 'section-add-item-btn', text: t('section.addItem') });
+        addBtn.onclick = () => {
+            this.addItemToSection(section);
+            this.renderSections(container);
+        };
+    }
+
+    /** 向板块添加一个空条目 */
+    private addItemToSection(section: Section) {
+        const id = `sec_item_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+        if (section.type === 'checklist') {
+            (section.data as ChecklistData).items.push({ id, text: '', done: false });
+        } else if (section.type === 'steps') {
+            (section.data as StepsData).items.push({ id, text: '', status: 'todo' });
+        } else if (section.type === 'habit') {
+            (section.data as HabitData).items.push({ id, text: '' });
+        }
+    }
+
+    /** 打开「添加板块」弹窗 */
+    private openAddSectionModal() {
+        const modal = new Modal(this.app);
+        let type: SectionType = 'checklist';
+        let name = '';
+        modal.onOpen = () => {
+            const { contentEl } = modal;
+            contentEl.empty();
+            contentEl.createEl('h3', { text: t('section.add') });
+
+            new Setting(contentEl)
+                .setName(t('section.type'))
+                .addDropdown(drop => {
+                    drop.addOption('checklist', t('section.typeChecklist'));
+                    drop.addOption('steps', t('section.typeSteps'));
+                    drop.addOption('habit', t('section.typeHabit'));
+                    drop.setValue('checklist')
+                        .onChange(val => type = val as SectionType);
+                });
+
+            new Setting(contentEl)
+                .setName(t('section.name'))
+                .addText(text => {
+                    text.setPlaceholder(t('section.namePlaceholder'))
+                        .onChange(val => name = val);
+                });
+
+            new Setting(contentEl)
+                .addButton(btn => btn
+                    .setButtonText(t('common.add'))
+                    .setCta()
+                    .onClick(() => {
+                        const id = `sec_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+                        const data: ChecklistData | StepsData | HabitData =
+                            type === 'checklist' ? { items: [] }
+                            : type === 'steps' ? { items: [] }
+                            : { items: [] };
+                        this.sections.push({ id, type, title: name.trim() || undefined, data });
+                        modal.close();
+                        // 重新渲染板块列表
+                        const list = this.contentEl.querySelector('.section-list');
+                        if (list) this.renderSections(list as HTMLElement);
+                    })
+                )
+                .addButton(btn => btn
+                    .setButtonText(t('common.cancel'))
+                    .onClick(() => modal.close())
+                );
+        };
+        modal.open();
+    }
+
+    private sectionTypeLabel(type: SectionType): string {
+        if (type === 'checklist') return t('section.typeChecklist');
+        if (type === 'steps') return t('section.typeSteps');
+        return t('section.typeHabit');
+    }
+
     private submit() {
         if (!this.title.trim()) {
             new Notice(t('inbox.nameRequired'));
@@ -593,6 +789,7 @@ class InboxDetailModal extends Modal {
                 title: this.title.trim(),
                 description: this.description.trim(),
                 categoryId: this.categoryId || undefined,
+                sections: this.sections,
             });
             this.close();
         })();

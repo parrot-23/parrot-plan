@@ -240,6 +240,24 @@ export const en: I18nMessages = {
     'inbox.projectFocus': 'Project Layout',
     'inbox.projectFocusNeedSelect': 'Select a task first, then arrange by project',
 
+    // Sections (inner structure of a task)
+    'section.title': 'Sections',
+    'section.add': 'Add Section',
+    'section.type': 'Type',
+    'section.typeChecklist': 'Checklist',
+    'section.typeSteps': 'Steps',
+    'section.typeHabit': 'Habit',
+    'section.name': 'Section Name',
+    'section.namePlaceholder': 'e.g. To-do list',
+    'section.addItem': 'Add Item',
+    'section.itemPlaceholder': 'Item content',
+    'section.empty': 'No sections yet. Click "Add Section" to start.',
+    'section.deleteConfirm': 'Delete section "{title}"?',
+    'section.stepTodo': 'To-do',
+    'section.stepDoing': 'In progress',
+    'section.stepDone': 'Done',
+    'section.habitToday': 'Check in today',
+
     // Workbench
     'workbench.title': 'Workbench',
     'workbench.addCard': 'Add Card',

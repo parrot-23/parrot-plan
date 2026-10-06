@@ -53,6 +53,57 @@ export interface InboxItem {
     assignedDayKeys?: string[];
     /** 已从收集盒移除（不再显示，但数据保留，可查历史） */
     removed?: boolean;
+    /** 板块：任务内部的结构化内容（可选，旧任务无此字段） */
+    sections?: Section[];
+}
+
+/** 板块类型：清单 / 步骤 / 打卡 */
+export type SectionType = 'checklist' | 'steps' | 'habit';
+
+/** 清单项（可勾选） */
+export interface ChecklistItem {
+    id: string;
+    text: string;
+    done: boolean;
+}
+
+/** 步骤项（有序、有状态） */
+export interface StepItem {
+    id: string;
+    text: string;
+    /** 步骤状态：待办 / 进行中 / 已完成 */
+    status: 'todo' | 'doing' | 'done';
+}
+
+/** 打卡项（周期性，按日期记录） */
+export interface HabitItem {
+    id: string;
+    text: string;
+    /** 已打卡的日期列表（如 ['2026-10-07']） */
+    checkedDays?: string[];
+}
+
+/** 清单板块数据 */
+export interface ChecklistData {
+    items: ChecklistItem[];
+}
+
+/** 步骤板块数据 */
+export interface StepsData {
+    items: StepItem[];
+}
+
+/** 打卡板块数据 */
+export interface HabitData {
+    items: HabitItem[];
+}
+
+/** 板块：任务内部的结构化内容 */
+export interface Section {
+    id: string;
+    type: SectionType;
+    title?: string;
+    data: ChecklistData | StepsData | HabitData;
 }
 
 /** 收集盒数据容器 */
