@@ -7,6 +7,9 @@ import type { CardInstance, WorkbenchData } from './data/card-data';
 import { loadAllTemplates } from './data/template-loader';
 import { getCardRenderer } from './cards/card-registry';
 import type { CardRenderContext } from './cards/card-types';
+import { createDataProvider } from './data-sources/provider';
+import type { EventBlock, ExecutionRecord } from '../views/week-view/week-schedule-view';
+import type { InboxItem } from '../shared/task-panel';
 import { t } from '../i18n';
 
 /**
@@ -18,11 +21,11 @@ export class WorkbenchView {
     private workbenchData: WorkbenchData;
     private save: () => Promise<void>;
     /** 获取全部事件（stats 统计用） */
-    private getEvents: () => { completed?: boolean; weekKey?: string; day?: number }[];
+    private getEvents: () => EventBlock[];
     /** 获取全部执行记录（stats 统计用） */
-    private getExecutions: () => { weekKey?: string; day?: number }[];
+    private getExecutions: () => ExecutionRecord[];
     /** 获取收集盒任务（stats 统计用） */
-    private getInboxItems: () => { removed?: boolean }[];
+    private getInboxItems: () => InboxItem[];
     /** 当前渲染容器（用于自刷新） */
     private container?: HTMLElement;
     /** 已加载的模板列表 */
@@ -32,9 +35,9 @@ export class WorkbenchView {
         app: App,
         workbenchData: WorkbenchData,
         save: () => Promise<void>,
-        getEvents: () => { completed?: boolean; weekKey?: string; day?: number }[],
-        getExecutions: () => { weekKey?: string; day?: number }[],
-        getInboxItems: () => { removed?: boolean }[],
+        getEvents: () => EventBlock[],
+        getExecutions: () => ExecutionRecord[],
+        getInboxItems: () => InboxItem[],
     ) {
         this.app = app;
         this.workbenchData = workbenchData;
@@ -90,9 +93,7 @@ export class WorkbenchView {
                 app: this.app,
                 save: this.save,
                 refresh: () => void this.renderInto(container),
-                getEvents: this.getEvents,
-                getExecutions: this.getExecutions,
-                getInboxItems: this.getInboxItems,
+                provider: createDataProvider(this.getEvents, this.getExecutions, this.getInboxItems),
             };
             renderer.render(body, instance, template, ctx);
         }

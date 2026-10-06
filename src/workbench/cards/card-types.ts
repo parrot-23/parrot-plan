@@ -3,6 +3,7 @@
 import type { App } from 'obsidian';
 import type { CardTemplate } from '../form-engine/types';
 import type { CardInstance } from '../data/card-data';
+import type { DataProvider } from '../data-sources/types';
 
 /** 渲染器上下文：提供数据访问与保存回调 */
 export interface CardRenderContext {
@@ -11,12 +12,8 @@ export interface CardRenderContext {
     save: () => Promise<void>;
     /** 刷新当前卡片（重新渲染） */
     refresh: () => void;
-    /** 获取全部事件（stats 模式统计用） */
-    getEvents: () => { completed?: boolean; weekKey?: string; day?: number }[];
-    /** 获取全部执行记录（stats 模式统计用） */
-    getExecutions: () => { weekKey?: string; day?: number }[];
-    /** 获取收集盒任务（stats 模式统计用） */
-    getInboxItems: () => { removed?: boolean }[];
+    /** 统一数据提供者（stats 模式统计用，返回完整类型数据） */
+    provider: DataProvider;
 }
 
 /** 卡片渲染器：把一张卡片实例渲染到容器 */

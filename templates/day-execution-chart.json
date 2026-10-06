@@ -1,0 +1,14 @@
+{
+  "id": "day-execution-chart",
+  "name": "日执行统计",
+  "mode": "stats",
+  "description": "按天统计执行次数（柱状图）",
+  "source": {
+    "type": "execution-summary",
+    "chart": "bar",
+    "params": {
+      "dimension": "day",
+      "metric": "count"
+    }
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "id": "category-distribution",
+  "name": "分类占比",
+  "mode": "stats",
+  "description": "按分类统计执行记录占比（环形图）",
+  "source": {
+    "type": "category-distribution",
+    "chart": "donut",
+    "params": {
+      "target": "execution",
+      "metric": "count"
+    }
+  }
+}

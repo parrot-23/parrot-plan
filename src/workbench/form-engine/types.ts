@@ -34,12 +34,17 @@ export interface FieldSchema {
     placeholder?: string;
 }
 
+/** 图表类型 */
+export type ChartType = 'bar' | 'line' | 'pie' | 'donut';
+
 /** stats 模式的数据来源定义 */
 export interface CardSource {
     /** 来源类型（内置数据源标识） */
     type: string;
     /** 来源参数（如统计范围、聚合方式） */
     params?: Record<string, unknown>;
+    /** 图表类型（缺省时仅展示数字卡，不绘制图表） */
+    chart?: ChartType;
 }
 
 /** 表单模板（一个 JSON 文件对应一个模板） */

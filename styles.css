@@ -2777,5 +2777,107 @@
     word-break: break-word;
 }
 
+/* 统计图表 */
+.wb-chart-wrap {
+    margin-top: 8px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+}
+
+.wb-chart-svg {
+    display: block;
+    max-width: 100%;
+}
+
+.wb-chart-bar {
+    fill: var(--interactive-accent);
+    opacity: 0.85;
+}
+
+.wb-chart-bar:hover {
+    opacity: 1;
+}
+
+.wb-chart-line {
+    fill: none;
+    stroke: var(--interactive-accent);
+    stroke-width: 2;
+}
+
+.wb-chart-dot {
+    fill: var(--interactive-accent);
+}
+
+.wb-chart-label {
+    font-size: 9px;
+    fill: var(--text-muted);
+}
+
+.wb-chart-slice {
+    stroke: var(--background-secondary);
+    stroke-width: 1;
+}
+
+/* 饼图/环形图扇区配色（按索引循环） */
+.wb-chart-slice:nth-child(1) { fill: #4c8dff; }
+.wb-chart-slice:nth-child(2) { fill: #43b581; }
+.wb-chart-slice:nth-child(3) { fill: #f2a65a; }
+.wb-chart-slice:nth-child(4) { fill: #e06c75; }
+.wb-chart-slice:nth-child(5) { fill: #c678dd; }
+.wb-chart-slice:nth-child(6) { fill: #56b6c2; }
+.wb-chart-slice:nth-child(7) { fill: #d19a66; }
+.wb-chart-slice:nth-child(8) { fill: #98c379; }
+
+.wb-chart-legend {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    width: 100%;
+    margin-top: 4px;
+}
+
+.wb-chart-legend-item {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+}
+
+.wb-chart-legend-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 2px;
+    flex-shrink: 0;
+}
+
+.wb-chart-legend-item:nth-child(1) .wb-chart-legend-dot { background: #4c8dff; }
+.wb-chart-legend-item:nth-child(2) .wb-chart-legend-dot { background: #43b581; }
+.wb-chart-legend-item:nth-child(3) .wb-chart-legend-dot { background: #f2a65a; }
+.wb-chart-legend-item:nth-child(4) .wb-chart-legend-dot { background: #e06c75; }
+.wb-chart-legend-item:nth-child(5) .wb-chart-legend-dot { background: #c678dd; }
+.wb-chart-legend-item:nth-child(6) .wb-chart-legend-dot { background: #56b6c2; }
+.wb-chart-legend-item:nth-child(7) .wb-chart-legend-dot { background: #d19a66; }
+.wb-chart-legend-item:nth-child(8) .wb-chart-legend-dot { background: #98c379; }
+
+.wb-chart-legend-label {
+    flex: 1;
+    color: var(--text-normal);
+    word-break: break-word;
+}
+
+.wb-chart-legend-value {
+    color: var(--text-muted);
+}
+
+.wb-chart-empty {
+    padding: 12px;
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 12px;
+}
+
 
 

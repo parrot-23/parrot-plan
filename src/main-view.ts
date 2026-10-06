@@ -173,6 +173,8 @@ export class MainView extends ItemView {
         });
 
         this.contentRoot.empty();
+        // 清除上一次视图残留在共享容器上的视图类，避免多个视图样式叠加导致布局错乱
+        this.contentRoot.removeClass('today-view', 'year-view', 'swimlane-view', 'workbench-view');
 
         if (this.activeTab === 'week') {
             await this.weekView.renderInto(this.contentRoot);
