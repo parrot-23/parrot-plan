@@ -1,5 +1,5 @@
 // 卡片数据模型：卡片实例（用户填写的结果）与模板分离存储。
-import type { CardMode, CardSource, FormValues } from '../form-engine/types';
+import type { CardMode, CardSource, FormValues } from './form';
 
 /** 周期填写记录（periodic 模式） */
 export interface CardRecord {

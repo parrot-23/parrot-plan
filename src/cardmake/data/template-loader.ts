@@ -1,6 +1,6 @@
 // 模板加载器：从插件根目录 templates/ 目录读取模板 JSON。
 import type { App } from 'obsidian';
-import type { CardTemplate } from '../form-engine/types';
+import type { CardTemplate } from '../../datatypes/form';
 
 /** 模板目录（相对 vault 根，插件根目录下；配置目录由用户自定义，需用 configDir） */
 function getTemplateDir(app: App): string {

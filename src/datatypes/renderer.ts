@@ -1,9 +1,9 @@
 // 卡片渲染器接口与上下文。
 // 每种卡片模式对应一个渲染器，通过注册表按 mode 分发。
 import type { App } from 'obsidian';
-import type { CardTemplate } from '../form-engine/types';
-import type { CardInstance } from '../data/card-data';
-import type { DataProvider } from '../data-sources/types';
+import type { CardTemplate } from './form';
+import type { CardInstance } from './card';
+import type { DataProvider } from './chart';
 
 /** 渲染器上下文：提供数据访问与保存回调 */
 export interface CardRenderContext {

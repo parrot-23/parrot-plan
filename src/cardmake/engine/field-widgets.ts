@@ -1,5 +1,5 @@
 // 字段输入控件：根据字段类型渲染对应的输入元素，并读写值。
-import type { FieldSchema, FormValues } from './types';
+import type { FieldSchema, FormValues } from '../../datatypes/form';
 
 /**
  * 为单个字段创建输入控件，挂到指定容器。

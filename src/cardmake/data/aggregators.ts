@@ -2,8 +2,8 @@
 // 输出两类结果：数字指标（StatItem[]）与图表序列（ChartSeries），
 // 供 stats 卡片渲染器分别绘制数字卡与图表。
 
-import type { CardSource } from '../form-engine/types';
-import type { DataProvider, StatItem, ChartSeries, ChartDatum } from './types';
+import type { CardSource } from '../../datatypes/form';
+import type { DataProvider, StatItem, ChartSeries, ChartDatum } from '../../datatypes/chart';
 import { getEventStatus } from '../../shared/event-status';
 import { makeDayKeyFromWeek } from '../../views/week-view/timeblock-data';
 

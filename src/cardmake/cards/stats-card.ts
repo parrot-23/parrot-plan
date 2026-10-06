@@ -1,7 +1,7 @@
 // stats 模式渲染器：定义数据来源，展示统计信息（数字卡 + 可选图表）。
-import type { CardRenderer, CardRenderContext } from './card-types';
-import { aggregate } from '../data-sources/aggregators';
-import { renderChart } from './chart-renderer';
+import type { CardRenderer, CardRenderContext } from '../../datatypes/renderer';
+import { aggregate } from '../data/aggregators';
+import { renderChart } from '../engine/chart-renderer';
 
 export const statsCardRenderer: CardRenderer = {
     render(container, instance, template, ctx) {

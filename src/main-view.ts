@@ -13,8 +13,8 @@ import {
 import { YearView } from './views/year-view';
 import { TodayView } from './views/today-view';
 import { SwimlaneView } from './views/swimlane-view';
-import { WorkbenchView } from './workbench/workbench-view';
-import type { WorkbenchData } from './workbench/data/card-data';
+import { WorkbenchView } from './views/workbench/workbench-view';
+import type { WorkbenchData } from './datatypes/card';
 import { t } from './i18n';
 import { log } from './shared/logger';
 

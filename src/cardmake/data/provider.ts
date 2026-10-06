@@ -3,7 +3,7 @@
 
 import type { EventBlock, ExecutionRecord } from '../../views/week-view/week-schedule-view';
 import type { InboxItem } from '../../shared/task-panel';
-import type { DataProvider } from './types';
+import type { DataProvider } from '../../datatypes/chart';
 
 /**
  * 构建数据提供者。

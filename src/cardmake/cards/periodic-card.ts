@@ -1,9 +1,9 @@
 // periodic 模式渲染器：用户按周期反复填写。
-import type { CardRenderer, CardRenderContext } from './card-types';
-import type { CardTemplate } from '../form-engine/types';
-import type { CardInstance } from '../data/card-data';
-import { makePeriodKey } from '../data/card-data';
-import { renderForm, renderFormReadonly } from '../form-engine/form-renderer';
+import type { CardRenderer, CardRenderContext } from '../../datatypes/renderer';
+import type { CardTemplate } from '../../datatypes/form';
+import type { CardInstance } from '../../datatypes/card';
+import { makePeriodKey } from '../../datatypes/card';
+import { renderForm, renderFormReadonly } from '../engine/form-renderer';
 
 export const periodicCardRenderer: CardRenderer = {
     render(container, instance, template, ctx) {

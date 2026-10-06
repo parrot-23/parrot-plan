@@ -2,15 +2,15 @@
 import type { App } from 'obsidian';
 import { Notice } from 'obsidian';
 
-import type { CardTemplate } from './form-engine/types';
-import type { CardInstance, WorkbenchData } from './data/card-data';
-import { loadAllTemplates } from './data/template-loader';
-import { getCardRenderer } from './cards/card-registry';
-import type { CardRenderContext } from './cards/card-types';
-import { createDataProvider } from './data-sources/provider';
-import type { EventBlock, ExecutionRecord } from '../views/week-view/week-schedule-view';
-import type { InboxItem } from '../shared/task-panel';
-import { t } from '../i18n';
+import type { CardTemplate } from '../../datatypes/form';
+import type { CardInstance, WorkbenchData } from '../../datatypes/card';
+import { loadAllTemplates } from '../../cardmake/data/template-loader';
+import { getCardRenderer } from '../../cardmake/cards/card-registry';
+import type { CardRenderContext } from '../../datatypes/renderer';
+import { createDataProvider } from '../../cardmake/data/provider';
+import type { EventBlock, ExecutionRecord } from '../week-view/week-schedule-view';
+import type { InboxItem } from '../../shared/task-panel';
+import { t } from '../../i18n';
 
 /**
  * 工作台视图：与 YearView / TodayView 一致，通过 renderInto 渲染到指定容器。

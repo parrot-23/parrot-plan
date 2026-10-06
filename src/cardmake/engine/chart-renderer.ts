@@ -1,7 +1,7 @@
 // 图表渲染器：纯 SVG 自绘柱状图 / 折线图 / 饼图 / 环形图。
 // 不引入第三方图表库，体积小、可控、无兼容风险。
-import type { ChartType } from '../form-engine/types';
-import type { ChartSeries } from '../data-sources/types';
+import type { ChartType } from '../../datatypes/form';
+import type { ChartSeries } from '../../datatypes/chart';
 
 /** 图表渲染配置 */
 export interface ChartRenderOptions {

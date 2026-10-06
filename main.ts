@@ -10,7 +10,7 @@ import { DEFAULT_WEEK_RANGE } from './src/views/week-view/timeblock-data';
 import type { EventBlock, ExecutionRecord } from './src/views/week-view/week-schedule-view';
 import { DEFAULT_INBOX_DATA, type InboxData } from './src/shared/task-panel';
 import { VIEW_TYPE_MAIN, MainView } from './src/main-view';
-import { defaultWorkbenchData, type WorkbenchData } from './src/workbench/data/card-data';
+import { defaultWorkbenchData, type WorkbenchData } from './src/datatypes/card';
 import { initI18n, t, getLangDebugInfo } from './src/i18n';
 import { initLogger, log } from './src/shared/logger';
 import {
