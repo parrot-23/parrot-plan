@@ -1051,6 +1051,8 @@
     height: var(--card-height, 0);
     border-top: 5px solid var(--card-color, #888888);
     background-color: var(--card-bg, transparent);
+    /* 基础层级：卡片重叠时按 DOM 顺序堆叠 */
+    z-index: 1;
 }
 
 /* 可点击的事件卡片 */
@@ -1959,6 +1961,16 @@
 
 /* 时间轴上被选中的事件卡片 */
 .event-card.is-selected {
+    outline: 2px solid var(--interactive-accent);
+    outline-offset: -1px;
+    /* 选中时浮到所有其他卡片之上，避免被重叠卡片遮挡 */
+    z-index: 10;
+    /* 选中时不透明，避免被下方卡片透出 */
+    background: var(--background-primary);
+}
+
+/* 选中卡片左侧的状态气泡：与卡片使用相同的边框样式 */
+.event-card.is-selected .event-status-bubble {
     outline: 2px solid var(--interactive-accent);
     outline-offset: -1px;
 }
