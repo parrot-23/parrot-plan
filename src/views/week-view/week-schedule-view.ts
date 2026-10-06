@@ -178,7 +178,6 @@ export class WeekScheduleView extends ItemView {
         this.inboxData.selectedId = undefined;
         this.inboxData.collapsedIds = [];
         this.inboxData.weekGoalOnly = false;
-        this.inboxData.dayGoalOnly = false;
 
         this.currentWeekKey = getCurrentWeekKey();
     }

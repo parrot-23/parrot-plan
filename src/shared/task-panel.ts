@@ -31,8 +31,6 @@ export interface InboxData {
     collapsedIds?: string[];
     /** 是否只看本周目标（持久化） */
     weekGoalOnly?: boolean;
-    /** 是否只看当日目标（持久化） */
-    dayGoalOnly?: boolean;
     /** 项目聚焦：仅显示该任务及其所有子任务（持久化，用于「按项目排布」） */
     projectFocusId?: string;
 }
@@ -83,18 +81,6 @@ function collectDescendantIds(inboxData: InboxData, id: string): string[] {
     };
     walk(id);
     return result;
-}
-
-/** 判断某任务自身或其任一后代是否满足条件（用于目标筛选时保留父级链路） */
-function itemOrDescendantMatches(
-    inboxData: InboxData,
-    item: InboxItem,
-    predicate: (target: InboxItem) => boolean,
-): boolean {
-    if (predicate(item)) return true;
-    return getChildren(inboxData, item.id).some(child =>
-        itemOrDescendantMatches(inboxData, child, predicate),
-    );
 }
 
 // ===== 新增弹窗 =====
@@ -201,13 +187,6 @@ class InboxAddModal extends Modal {
 export interface TaskPanelOptions {
     /** 当前周键（提供后显示「周目标」按钮，用于只看本周任务） */
     currentWeekKey?: string;
-    /** 当前日期键（提供后显示「日目标」按钮，用于只看当天任务） */
-    currentDayKey?: string;
-    /**
-     * 日目标分组：返回任务属于「全天目标」还是「时间点目标」。
-     * 提供后，日目标模式会按此自动分组显示。
-     */
-    getDayGoalGroup?: (item: InboxItem) => 'allday' | 'timed';
     /** 是否启用「按项目排布」按钮（仅年视图使用） */
     enableProjectFocus?: boolean;
 }
@@ -223,14 +202,12 @@ export function renderTaskPanel(
     onUpdate?: (item?: InboxItem) => void | Promise<void>,
     options: TaskPanelOptions = {},
 ) {
-    const { currentWeekKey, currentDayKey, getDayGoalGroup, enableProjectFocus } = options;
+    const { currentWeekKey, enableProjectFocus } = options;
     container.empty();
     container.addClass('inbox-panel');
 
     /** 是否只看本周目标（持久化在 inboxData 中） */
     let weekGoalOnly = inboxData.weekGoalOnly ?? false;
-    /** 是否只看当日目标（持久化在 inboxData 中） */
-    let dayGoalOnly = inboxData.dayGoalOnly ?? false;
 
     // ===== 列表区域（可滚动）=====
     const listDiv = container.createDiv({ cls: 'inbox-list' });
@@ -415,47 +392,11 @@ export function renderTaskPanel(
             return;
         }
 
-        // 日目标模式：仅显示分配到当天的任务（含子任务命中时保留父级链路）
-        if (dayGoalOnly && currentDayKey) {
-            const dayKey = currentDayKey;
-            topItems = topItems.filter(i =>
-                itemOrDescendantMatches(inboxData, i, t => t.assignedDayKeys?.includes(dayKey) ?? false),
-            );
-        }
-
         if (topItems.length === 0) {
-            const emptyKey = dayGoalOnly
-                ? 'inbox.emptyDayGoal'
-                : weekGoalOnly
-                    ? 'inbox.emptyWeekGoal'
-                    : 'inbox.empty';
+            const emptyKey = weekGoalOnly
+                ? 'inbox.emptyWeekGoal'
+                : 'inbox.empty';
             listDiv.createDiv({ cls: 'inbox-empty' }).setText(t(emptyKey));
-            return;
-        }
-
-        // 日目标模式 + 提供分组回调：按「全天目标 / 时间点目标」分组显示
-        // 分组依据是「任务自身」是否分配到当天，而非顶层任务，因此子任务可与其父任务分属不同组
-        if (dayGoalOnly && getDayGoalGroup && currentDayKey) {
-            const dayKey = currentDayKey;
-            // 收集所有「自身」分配到当天的任务（任意层级）
-            const assignedItems = getVisibleItems(inboxData).filter(i =>
-                i.assignedDayKeys?.includes(dayKey) ?? false,
-            );
-
-            const allDayItems = assignedItems.filter(i => getDayGoalGroup(i) === 'allday');
-            const timedItems = assignedItems.filter(i => getDayGoalGroup(i) === 'timed');
-
-            const renderGroup = (labelKey: 'inbox.groupAllDay' | 'inbox.groupTimed', items: InboxItem[]) => {
-                if (items.length === 0) return;
-                listDiv.createDiv({ cls: 'inbox-group-header', text: t(labelKey) });
-                for (const item of items) {
-                    // 平铺渲染：每个任务自身独立成项，不再递归子任务（避免重复与跨组）
-                    renderItem(item, 0, false);
-                }
-            };
-
-            renderGroup('inbox.groupAllDay', allDayItems);
-            renderGroup('inbox.groupTimed', timedItems);
             return;
         }
 
@@ -495,28 +436,6 @@ export function renderTaskPanel(
             weekGoalOnly = !weekGoalOnly;
             inboxData.weekGoalOnly = weekGoalOnly;
             weekGoalBtn.toggleClass('is-active', weekGoalOnly);
-            renderList();
-            // 持久化状态
-            void (async () => {
-                if (onUpdate) await onUpdate();
-                onRefresh();
-            })();
-        };
-    }
-
-    // 日目标按钮（仅提供 currentDayKey 时显示）
-    if (currentDayKey) {
-        const dayGoalBtn = headerActions.createEl('button', {
-            cls: 'inbox-week-goal-btn',
-            text: t('inbox.dayGoal'),
-        });
-        dayGoalBtn.toggleClass('is-active', dayGoalOnly);
-        dayGoalBtn.onclick = (e) => {
-            // 阻止冒泡到面板空白处，避免误取消选中
-            e.stopPropagation();
-            dayGoalOnly = !dayGoalOnly;
-            inboxData.dayGoalOnly = dayGoalOnly;
-            dayGoalBtn.toggleClass('is-active', dayGoalOnly);
             renderList();
             // 持久化状态
             void (async () => {

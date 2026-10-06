@@ -106,10 +106,6 @@ export class TodayView {
             async () => {
                 await this.save();
             },
-            {
-                currentDayKey: getCurrentDayKey(),          // 用于「日目标」筛选
-                getDayGoalGroup: (item) => this.getDayGoalGroup(item), // 日目标分组：全天 / 时间点
-            },
         );
 
         // ===== 中间：日期方框 + 任务层级方框 + 任务详情方框 + 操作按钮 =====
@@ -139,22 +135,6 @@ export class TodayView {
     /** 重新渲染自身 */
     private async refresh(): Promise<void> {
         if (this.container) await this.renderInto(this.container);
-    }
-
-    /**
-     * 判断任务属于「全天目标」还是「时间点目标」。
-     * 仅依据该任务「自身」今天是否存在带时间点的事件：有则为「时间点目标」，否则为「全天目标」。
-     */
-    private getDayGoalGroup(item: InboxItem): 'allday' | 'timed' {
-        const now = new Date();
-        const todayDay = (now.getDay() + 6) % 7 + 1;
-        const weekKey = getCurrentWeekKey();
-        const events = this.getEvents();
-
-        const hasTimedEvent = events.some(ev =>
-            ev.inboxId === item.id && ev.weekKey === weekKey && ev.day === todayDay && !ev.allDay,
-        );
-        return hasTimedEvent ? 'timed' : 'allday';
     }
 
     /** 渲染今天的年月日方框 + 右侧日目标完成情况 */
@@ -1000,6 +980,8 @@ export class TodayView {
     private toggleEventSelection(eventId: string): void {
         this.selectedEventId = this.selectedEventId === eventId ? undefined : eventId;
         this.selectedExecId = undefined;
+        // 与左侧任务面板选中互斥：选中时间轴事件时取消左侧选中
+        this.clearInboxSelection();
         void this.refresh();
     }
 
@@ -1007,7 +989,15 @@ export class TodayView {
     private toggleExecSelection(execId: string): void {
         this.selectedExecId = this.selectedExecId === execId ? undefined : execId;
         this.selectedEventId = undefined;
+        // 与左侧任务面板选中互斥：选中时间轴事件时取消左侧选中
+        this.clearInboxSelection();
         void this.refresh();
+    }
+
+    /** 清除左侧任务面板的选中状态（同步 lastSelectedItemId，避免下次渲染误判为选中变化） */
+    private clearInboxSelection(): void {
+        this.inboxData.selectedId = undefined;
+        this.lastSelectedItemId = undefined;
     }
 
     /** 在事件区块左侧渲染状态气泡（emoji + 文字，不使用颜色分类） */
