@@ -1830,6 +1830,46 @@
     font-variant-numeric: tabular-nums;
 }
 
+/* 执行非计划事件方框（点击时间轴触发，占据任务详情方框的位置） */
+.today-addunplanned-picker {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 12px 14px;
+    border: 1px dashed var(--background-modifier-border);
+    border-radius: 8px;
+    background: var(--background-primary);
+    font-size: 14px;
+    color: var(--text-normal);
+    word-break: break-word;
+}
+
+.today-addunplanned-name {
+    font-weight: 600;
+}
+
+.today-addunplanned-hint {
+    font-size: 13px;
+    color: var(--text-faint);
+}
+
+.today-addunplanned-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: var(--text-normal);
+}
+
+.today-addunplanned-range {
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+}
+
+.today-addunplanned-input {
+    width: 72px;
+}
+
 /* 替换任务详情方框（替换模式下显示在任务详情下方） */
 .today-replace-box {
     flex-shrink: 0;
@@ -1942,6 +1982,7 @@
     flex-shrink: 0;
     width: 50px;
     box-sizing: border-box;
+    cursor: pointer;
 }
 
 .today-day-column {

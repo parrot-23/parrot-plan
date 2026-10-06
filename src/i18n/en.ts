@@ -71,6 +71,12 @@ export const en: I18nMessages = {
     'today.weekGoalCount': 'x {count}',
     'today.dayGoalTitle': 'Day Goals',
     'today.dayGoalEmpty': 'No planned events today',
+    'today.addUnplannedTitle': 'Execute Unplanned Event',
+    'today.addUnplannedHint': 'Select a task in the left task panel to execute',
+    'today.addUnplannedDuration': 'Duration',
+    'today.addUnplannedMinutes': 'min',
+    'today.addUnplannedConfirm': 'Confirm',
+    'today.addUnplannedCancel': 'Cancel',
 
     // Year view
     'year.weekLabel': 'Week {week}',

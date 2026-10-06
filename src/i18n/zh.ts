@@ -69,6 +69,12 @@ export const zh = {
     'today.weekGoalCount': 'x {count}',
     'today.dayGoalTitle': '日目标',
     'today.dayGoalEmpty': '今日暂无计划事件',
+    'today.addUnplannedTitle': '执行非计划事件',
+    'today.addUnplannedHint': '请在左侧任务面板中选择要执行的任务',
+    'today.addUnplannedDuration': '时长',
+    'today.addUnplannedMinutes': '分钟',
+    'today.addUnplannedConfirm': '确认新增',
+    'today.addUnplannedCancel': '取消',
 
     // 年视图
     'year.weekLabel': '第{week}周',

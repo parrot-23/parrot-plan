@@ -50,6 +50,12 @@ export class TodayView {
     private replaceMode = false;
     /** 替换模式下锁定的目标事件 id */
     private replaceTargetEventId?: string;
+    /** 是否处于「新增非计划事件」模式（点击时间轴触发） */
+    private addUnplannedMode = false;
+    /** 新增非计划事件的起始分钟（由点击时间轴的位置换算） */
+    private addUnplannedStart = 0;
+    /** 新增非计划事件的时长（分钟，默认 30，可由用户填写） */
+    private addUnplannedDuration = 30;
 
     constructor(
         app: App,
@@ -110,8 +116,11 @@ export class TodayView {
         const centerPanel = container.createDiv({ cls: 'today-center-panel' });
         this.renderDateBox(centerPanel);
         this.renderHierarchyBox(centerPanel);
-        // 未选中任何任务/事件时，在任务详情方框的位置展示「周目标方框」
-        if (this.hasSelection()) {
+        // 新增非计划事件模式：在任务详情方框的位置展示「执行非计划事件方框」
+        if (this.addUnplannedMode) {
+            this.renderAddUnplannedBox(centerPanel);
+        } else if (this.hasSelection()) {
+            // 未选中任何任务/事件时，在任务详情方框的位置展示「周目标方框」
             this.renderDetailBox(centerPanel);
         } else {
             this.renderWeekGoalBox(centerPanel);
@@ -365,6 +374,62 @@ export class TodayView {
     }
 
     /**
+     * 渲染「执行非计划事件方框」（点击时间轴触发，占据任务详情方框的位置）。
+     * 顶部为等待选择任务的提示框，下方为事件时间区间（起始时间由点击位置换算，时长可填写）。
+     */
+    private renderAddUnplannedBox(panel: HTMLElement) {
+        const box = panel.createDiv({ cls: 'today-detail-box today-addunplanned-box' });
+        box.createDiv({ cls: 'today-detail-title', text: t('today.addUnplannedTitle') });
+
+        const body = box.createDiv({ cls: 'today-detail-body' });
+
+        // 顶部：等待选择任务的方框
+        const item = this.getSelectedItem();
+        const picker = body.createDiv({ cls: 'today-addunplanned-picker' });
+        if (item) {
+            const cat = item.categoryId
+                ? this.categoryData.categories.find(c => c.id === item.categoryId)
+                : undefined;
+            if (cat) {
+                const dot = picker.createSpan({ cls: 'inbox-category-dot' });
+                dot.setCssProps({ '--dot-color': cat.color });
+            }
+            picker.createSpan({ cls: 'today-addunplanned-name', text: item.title });
+        } else {
+            picker.createDiv({ cls: 'today-addunplanned-hint', text: t('today.addUnplannedHint') });
+        }
+
+        // 时间区间：起始时间（只读，由点击位置换算）+ 时长（可填写）
+        const start = this.addUnplannedStart;
+        const end = start + this.addUnplannedDuration;
+
+        const rangeRow = body.createDiv({ cls: 'today-addunplanned-row' });
+        rangeRow.createSpan({ cls: 'today-detail-label', text: `${t('today.timeRange')}:` });
+        rangeRow.createSpan({
+            cls: 'today-addunplanned-range',
+            text: `${formatMinutes(start)} - ${formatMinutes(end)}`,
+        });
+
+        const durationRow = body.createDiv({ cls: 'today-addunplanned-row' });
+        durationRow.createSpan({ cls: 'today-detail-label', text: `${t('today.addUnplannedDuration')}:` });
+        const durationInput = durationRow.createEl('input', {
+            cls: 'today-addunplanned-input',
+            type: 'number',
+        });
+        durationInput.value = String(this.addUnplannedDuration);
+        durationInput.min = '5';
+        durationInput.step = '5';
+        durationInput.onchange = () => {
+            const v = Number(durationInput.value);
+            if (Number.isFinite(v) && v > 0) {
+                this.addUnplannedDuration = Math.round(v);
+                void this.refresh();
+            }
+        };
+        durationRow.createSpan({ cls: 'today-detail-label', text: t('today.addUnplannedMinutes') });
+    }
+
+    /**
      * 渲染周目标方框（未选中任何任务/事件时，占据任务详情方框的位置）。
      * 中间用竖线分成左右两栏：左侧「周目标」清单，右侧「日目标」清单，两栏样式一致。
      */
@@ -469,6 +534,28 @@ export class TodayView {
 
         // 选中「新增」执行记录：不显示任何操作按钮
         if (this.selectedExecId) return;
+
+        // 新增非计划事件模式：确认新增 / 取消
+        if (this.addUnplannedMode) {
+            const confirmBtn = row.createEl('button', {
+                cls: 'today-action-btn mod-cta',
+                text: t('today.addUnplannedConfirm'),
+            });
+            // 必须先在左侧选中任务，才能确认新增
+            confirmBtn.disabled = !selectedItem;
+            confirmBtn.onclick = () => {
+                void this.confirmAddUnplanned();
+            };
+
+            const cancelBtn = row.createEl('button', {
+                cls: 'today-action-btn',
+                text: t('today.addUnplannedCancel'),
+            });
+            cancelBtn.onclick = () => {
+                this.cancelAddUnplanned();
+            };
+            return;
+        }
 
         // 替换模式：确认替换 / 取消替换
         if (this.replaceMode) {
@@ -590,6 +677,48 @@ export class TodayView {
             end: totalMinutes,
             weekKey,
         });
+        await this.save();
+        new Notice(t('today.completeDone', { title: item.title }));
+        await this.refresh();
+    }
+
+    /** 进入「新增非计划事件」模式：记录点击时间轴换算出的起始分钟 */
+    private startAddUnplanned(startMinutes: number): void {
+        this.addUnplannedMode = true;
+        this.addUnplannedStart = startMinutes;
+        this.addUnplannedDuration = 30;
+        // 与其它选中状态互斥
+        this.selectedEventId = undefined;
+        this.selectedExecId = undefined;
+        void this.refresh();
+    }
+
+    /** 取消「新增非计划事件」 */
+    private cancelAddUnplanned(): void {
+        this.addUnplannedMode = false;
+        void this.refresh();
+    }
+
+    /** 确认新增非计划事件：用左侧选中任务生成一条执行记录 */
+    private async confirmAddUnplanned(): Promise<void> {
+        const item = this.getSelectedItem();
+        if (!item) return;
+
+        const now = new Date();
+        const todayDay = (now.getDay() + 6) % 7 + 1;
+        const weekKey = getCurrentWeekKey();
+        const start = this.addUnplannedStart;
+        const end = Math.min(24 * 60, start + this.addUnplannedDuration);
+
+        this.getExecutions().push({
+            id: `exec_${Date.now()}`,
+            inboxId: item.id,
+            day: todayDay,
+            start,
+            end,
+            weekKey,
+        });
+        this.addUnplannedMode = false;
         await this.save();
         new Notice(t('today.completeDone', { title: item.title }));
         await this.refresh();
@@ -754,6 +883,16 @@ export class TodayView {
             timeCol.createDiv({ cls: 'time-cell two-hour' })
                 .setText(`${h.toString().padStart(2, '0')}:00`);
         }
+
+        // 点击左侧时间刻度列 → 新增非计划事件（起始时间按点击位置换算，吸附到 5 分钟）
+        timeCol.onclick = (e) => {
+            const rect = timeCol.getBoundingClientRect();
+            const offsetY = e.clientY - rect.top;
+            // 每 80px = 2 小时（120 分钟），即 1px = 1.5 分钟
+            const rawMinutes = (offsetY / 80) * 120;
+            const snapped = Math.max(0, Math.min(24 * 60 - 5, Math.round(rawMinutes / 5) * 5));
+            this.startAddUnplanned(snapped);
+        };
 
         // 当天列
         const col = timeline.createDiv({ cls: 'today-day-column' });
