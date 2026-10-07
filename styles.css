@@ -2330,7 +2330,7 @@
 /* 第三行及以下：板块区域（当前项目的热力活跃图） */
 .swimlane-section-area {
     flex: 1;
-    min-height: 120px;
+    /* min-height: 120px; */
     display: flex;
     flex-direction: column;
     align-items: stretch;
@@ -2341,7 +2341,7 @@
     background: var(--background-secondary);
     padding: 12px;
     box-sizing: border-box;
-    overflow: auto;
+    /* overflow: auto; */
 }
 
 .swimlane-section-placeholder {
