@@ -45,3 +45,19 @@ export interface ChartSeries {
     /** 指标名（用于图例/标题） */
     metricLabel: string;
 }
+
+/** 热力图数据点：某一天的活跃度（GitHub 贡献图风格） */
+export interface HeatmapDatum {
+    /** 日期键（YYYY-MM-DD） */
+    date: string;
+    /** 活跃度数值（如执行时长分钟数） */
+    value: number;
+}
+
+/** 热力图数据集：按天聚合的活跃度，供热力图渲染器绘制 */
+export interface HeatmapSeries {
+    /** 按天数据点列表 */
+    data: HeatmapDatum[];
+    /** 指标名（用于图例/标题） */
+    metricLabel: string;
+}

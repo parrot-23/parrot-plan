@@ -3,7 +3,7 @@
 // 供 stats 卡片渲染器分别绘制数字卡与图表。
 
 import type { CardSource } from '../../datatypes/form';
-import type { DataProvider, StatItem, ChartSeries, ChartDatum } from '../../datatypes/chart';
+import type { DataProvider, StatItem, ChartSeries, ChartDatum, HeatmapSeries } from '../../datatypes/chart';
 import { getEventStatus } from '../../datatypes/domain';
 import { makeDayKeyFromWeek } from '../../views/week-view/timeblock-data';
 
@@ -13,6 +13,8 @@ export interface AggregationResult {
     stats: StatItem[];
     /** 图表序列（柱状/折线/饼图），无图表需求时为空 */
     series?: ChartSeries;
+    /** 热力图序列（GitHub 贡献图风格），无热力图需求时为空 */
+    heatmap?: HeatmapSeries;
 }
 
 /** 按 source.type 聚合数据 */
@@ -28,6 +30,8 @@ export function aggregate(source: CardSource, provider: DataProvider): Aggregati
             return aggregateExecutionSummary(source, provider);
         case 'category-distribution':
             return aggregateCategoryDistribution(source, provider);
+        case 'activity-heatmap':
+            return aggregateActivityHeatmap(source, provider);
         default:
             return { stats: [] };
     }
@@ -142,4 +146,49 @@ function dimensionKey(ex: { weekKey?: string; day?: number }, dimension: string)
         return makeDayKeyFromWeek(ex.weekKey, ex.day);
     }
     return '未知日期';
+}
+
+/**
+ * 热力活跃图：按天聚合执行时长（分钟），输出 GitHub 贡献图风格的热力图序列。
+ * 时间范围：最近一年（365 天）。
+ * 范围过滤：source.params.projectId 指定聚焦项目时，仅统计该项目及其子任务的执行记录。
+ */
+function aggregateActivityHeatmap(source: CardSource, provider: DataProvider): AggregationResult {
+    const metric = (source.params?.metric as string) ?? 'duration';
+    const projectId = source.params?.projectId as string | undefined;
+
+    // 计算聚焦项目及其所有子任务的 id 集合（未指定时统计全部）
+    let visibleIds: Set<string> | undefined;
+    if (projectId) {
+        visibleIds = new Set<string>([projectId]);
+        const walk = (parentId: string) => {
+            for (const t of provider.getTasks()) {
+                if (t.removed || t.parentId !== parentId) continue;
+                visibleIds!.add(t.id);
+                walk(t.id);
+            }
+        };
+        walk(projectId);
+    }
+
+    // 按天聚合执行时长（分钟）
+    const buckets = new Map<string, number>();
+    for (const ex of provider.getExecutions()) {
+        if (!ex.weekKey || !ex.day) continue;
+        if (visibleIds && ex.inboxId && !visibleIds.has(ex.inboxId)) continue;
+        const dateKey = makeDayKeyFromWeek(ex.weekKey, ex.day);
+        const val = metric === 'duration'
+            ? Math.max(0, (ex.end ?? ex.start) - ex.start)
+            : 1;
+        buckets.set(dateKey, (buckets.get(dateKey) ?? 0) + val);
+    }
+
+    const data = Array.from(buckets.entries())
+        .map(([date, value]) => ({ date, value }));
+
+    const total = data.reduce((s, d) => s + d.value, 0);
+    return {
+        stats: [{ label: '活跃总量', value: total }],
+        heatmap: { data, metricLabel: metric === 'duration' ? '时长(分钟)' : '次数' },
+    };
 }

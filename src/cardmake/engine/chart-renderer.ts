@@ -1,7 +1,7 @@
 // 图表渲染器：纯 SVG 自绘柱状图 / 折线图 / 饼图 / 环形图。
 // 不引入第三方图表库，体积小、可控、无兼容风险。
 import type { ChartType } from '../../datatypes/form';
-import type { ChartSeries } from '../../datatypes/chart';
+import type { ChartSeries, HeatmapSeries } from '../../datatypes/chart';
 
 /** 图表渲染配置 */
 export interface ChartRenderOptions {
@@ -211,4 +211,115 @@ function svgEl(tag: string, attrs: Record<string, string>): SVGElement {
 /** 截断过长文本 */
 function truncate(text: string, max: number): string {
     return text.length > max ? `${text.slice(0, max)}…` : text;
+}
+
+/**
+ * 热力活跃图（GitHub 贡献图风格）：按周排列的日历格子，颜色深浅表示活跃度。
+ * 使用 HTML 网格而非 SVG，便于响应式布局与 tooltip。
+ */
+export function renderHeatmap(container: HTMLElement, series: HeatmapSeries): void {
+    const data = series.data;
+    if (data.length === 0) {
+        container.createDiv({ cls: 'wb-chart-empty', text: '暂无数据' });
+        return;
+    }
+
+    // 建立日期键 → 活跃度 的映射
+    const valueMap = new Map<string, number>();
+    for (const d of data) valueMap.set(d.date, d.value);
+
+    // 计算最近一年（365 天）的日期范围，对齐到周一作为起始
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const start = new Date(today);
+    start.setDate(start.getDate() - 364);
+    // 对齐到周一（getDay: 0=周日 ... 6=周六）
+    const startDow = (start.getDay() + 6) % 7; // 0=周一 ... 6=周日
+    start.setDate(start.getDate() - startDow);
+
+    // 计算最大活跃度（用于分档着色）
+    const maxValue = Math.max(...data.map((d) => d.value), 1);
+
+    const grid = container.createDiv({ cls: 'wb-heatmap' });
+
+    // 列头：月份标签
+    const monthRow = grid.createDiv({ cls: 'wb-heatmap-months' });
+    // 左侧留白（星期标签列）
+    monthRow.createDiv({ cls: 'wb-heatmap-month-spacer' });
+    {
+        let cursor = new Date(start);
+        let lastMonth = -1;
+        while (cursor <= today) {
+            const m = cursor.getMonth();
+            if (m !== lastMonth) {
+                const label = monthRow.createDiv({ cls: 'wb-heatmap-month' });
+                label.textContent = `${cursor.getMonth() + 1}月`;
+                lastMonth = m;
+            } else {
+                monthRow.createDiv({ cls: 'wb-heatmap-month wb-heatmap-month-empty' });
+            }
+            cursor.setDate(cursor.getDate() + 7);
+        }
+    }
+
+    // 主体：星期行 × 周列
+    const body = grid.createDiv({ cls: 'wb-heatmap-body' });
+
+    // 星期标签列
+    const dayLabels = body.createDiv({ cls: 'wb-heatmap-days' });
+    const dayNames = ['', '一', '', '三', '', '五', ''];
+    for (const name of dayNames) {
+        dayLabels.createDiv({ cls: 'wb-heatmap-day', text: name });
+    }
+
+    // 周列
+    const weeks = body.createDiv({ cls: 'wb-heatmap-weeks' });
+    const cursor = new Date(start);
+    while (cursor <= today) {
+        const weekCol = weeks.createDiv({ cls: 'wb-heatmap-week' });
+        for (let dow = 0; dow < 7; dow++) {
+            const cellDate = new Date(cursor);
+            cellDate.setDate(cursor.getDate() + dow);
+            const key = makeDayKeyLocal(cellDate);
+            const value = valueMap.get(key) ?? 0;
+
+            const cell = weekCol.createDiv({ cls: 'wb-heatmap-cell' });
+            if (cellDate > today) {
+                cell.addClass('is-future');
+            } else if (value > 0) {
+                const level = heatLevel(value, maxValue);
+                cell.addClass(`is-level-${level}`);
+                cell.setAttribute('data-value', String(value));
+                cell.setAttribute('data-date', key);
+                cell.setAttribute('title', `${key}: ${value} 分钟`);
+            }
+        }
+        cursor.setDate(cursor.getDate() + 7);
+    }
+
+    // 图例
+    const legend = grid.createDiv({ cls: 'wb-heatmap-legend' });
+    legend.createSpan({ cls: 'wb-heatmap-legend-label', text: '少' });
+    for (let i = 1; i <= 4; i++) {
+        legend.createSpan({ cls: `wb-heatmap-cell is-level-${i}` });
+    }
+    legend.createSpan({ cls: 'wb-heatmap-legend-label', text: '多' });
+}
+
+/** 根据活跃度值分档（1-4 档） */
+function heatLevel(value: number, maxValue: number): number {
+    if (maxValue <= 0) return 1;
+    const ratio = value / maxValue;
+    if (ratio <= 0.25) return 1;
+    if (ratio <= 0.5) return 2;
+    if (ratio <= 0.75) return 3;
+    return 4;
+}
+
+/** 生成本地日期键（YYYY-MM-DD） */
+function makeDayKeyLocal(date: Date): string {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
 }

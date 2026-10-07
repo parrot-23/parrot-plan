@@ -35,7 +35,7 @@ export interface FieldSchema {
 }
 
 /** 图表类型 */
-export type ChartType = 'bar' | 'line' | 'pie' | 'donut';
+export type ChartType = 'bar' | 'line' | 'pie' | 'donut' | 'heatmap';
 
 /** stats 模式的数据来源定义 */
 export interface CardSource {

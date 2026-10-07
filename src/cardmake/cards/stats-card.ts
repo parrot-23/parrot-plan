@@ -1,7 +1,7 @@
 // stats 模式渲染器：定义数据来源，展示统计信息（数字卡 + 可选图表）。
 import type { CardRenderer, CardRenderContext } from '../../datatypes/renderer';
 import { aggregate } from '../data/aggregators';
-import { renderChart } from '../engine/chart-renderer';
+import { renderChart, renderHeatmap } from '../engine/chart-renderer';
 
 export const statsCardRenderer: CardRenderer = {
     render(container, instance, template, ctx) {
@@ -22,6 +22,13 @@ export const statsCardRenderer: CardRenderer = {
             const row = body.createDiv({ cls: 'wb-stat-row' });
             row.createDiv({ cls: 'wb-stat-label', text: item.label });
             row.createDiv({ cls: 'wb-stat-value', text: String(item.value) });
+        }
+
+        // 热力图（模板声明了 heatmap 类型且有数据时绘制）
+        if (source.chart === 'heatmap' && result.heatmap) {
+            const chartWrap = body.createDiv({ cls: 'wb-chart-wrap' });
+            renderHeatmap(chartWrap, result.heatmap);
+            return;
         }
 
         // 图表（模板声明了 chart 类型且有序列数据时绘制）

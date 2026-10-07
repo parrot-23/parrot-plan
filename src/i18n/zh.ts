@@ -96,6 +96,8 @@ export const zh = {
     'projectPicture.searchPlaceholder': '搜索项目名称',
     'projectPicture.searchEmpty': '未找到匹配的项目',
     'projectPicture.sectionPlaceholder': '板块区域',
+    'projectPicture.heatmapTitle': '热力活跃图',
+    'projectPicture.heatmapEmpty': '暂无执行记录',
     'year.unassigned': '已取消「{title}」在 {week} 的分配',
 
     // 命令与功能区

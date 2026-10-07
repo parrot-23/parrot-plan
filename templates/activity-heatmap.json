@@ -1,0 +1,13 @@
+{
+  "id": "activity-heatmap",
+  "name": "热力活跃图",
+  "mode": "stats",
+  "description": "按天统计执行时长（分钟），以热力图展示最近一年的活跃度",
+  "source": {
+    "type": "activity-heatmap",
+    "chart": "heatmap",
+    "params": {
+      "metric": "duration"
+    }
+  }
+}

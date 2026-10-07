@@ -98,6 +98,8 @@ export const en: I18nMessages = {
     'projectPicture.searchPlaceholder': 'Search project name',
     'projectPicture.searchEmpty': 'No matching project found',
     'projectPicture.sectionPlaceholder': 'Section Area',
+    'projectPicture.heatmapTitle': 'Activity Heatmap',
+    'projectPicture.heatmapEmpty': 'No execution records',
     'year.unassigned': 'Unassigned "{title}" from {week}',
 
     // Command and ribbon

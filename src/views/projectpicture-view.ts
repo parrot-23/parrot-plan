@@ -6,6 +6,9 @@ import { renderTaskPanel } from '../shared/task-panel';
 import type { ExecutionRecord } from '../datatypes/domain';
 import { parseWeekKey } from './week-view/timeblock-data';
 import { t } from '../i18n';
+import { aggregate } from '../cardmake/data/aggregators';
+import { renderHeatmap } from '../cardmake/engine/chart-renderer';
+import { createDataProvider } from '../cardmake/data/provider';
 
 /**
  * 项目全景图视图：从上到下的页面结构。
@@ -78,12 +81,9 @@ export class SwimlaneView {
         const board = boardRow.createDiv({ cls: 'swimlane-board' });
         this.renderBoard(board);
 
-        // ===== 第三行及以下：板块区域（占位，后续放置各种板块 / 卡片）=====
+        // ===== 第三行及以下：板块区域（当前项目的热力活跃图）=====
         const sectionArea = container.createDiv({ cls: 'swimlane-section-area' });
-        sectionArea.createDiv({
-            cls: 'swimlane-section-placeholder',
-            text: t('projectPicture.sectionPlaceholder'),
-        });
+        this.renderActivityHeatmap(sectionArea);
     }
 
     /** 重新渲染自身 */
@@ -345,5 +345,39 @@ export class SwimlaneView {
             swatch.setCssProps({ '--swatch-color': item.color });
             row.createSpan({ text: t(item.labelKey) });
         }
+    }
+
+    /** 板块区域：绘制当前聚焦项目的热力活跃图（最近一年执行时长） */
+    private renderActivityHeatmap(sectionArea: HTMLElement) {
+        sectionArea.empty();
+        sectionArea.addClass('swimlane-section-area');
+
+        const wrapper = sectionArea.createDiv({ cls: 'swimlane-heatmap-wrap' });
+        wrapper.createDiv({ cls: 'swimlane-heatmap-title', text: t('projectPicture.heatmapTitle') });
+
+        // 构建数据提供者（复用统计聚合逻辑）
+        const provider = createDataProvider(
+            () => [],
+            this.getExecutions,
+            () => this.inboxData.items,
+        );
+
+        // 聚焦项目 id（未聚焦时统计全部任务）
+        const projectId = this.inboxData.projectFocusId;
+
+        const result = aggregate(
+            {
+                type: 'activity-heatmap',
+                params: { metric: 'duration', projectId },
+            },
+            provider,
+        );
+
+        if (!result.heatmap || result.heatmap.data.length === 0) {
+            wrapper.createDiv({ cls: 'swimlane-heatmap-empty', text: t('projectPicture.heatmapEmpty') });
+            return;
+        }
+
+        renderHeatmap(wrapper, result.heatmap);
     }
 }
