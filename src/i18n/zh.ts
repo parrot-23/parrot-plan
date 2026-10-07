@@ -96,7 +96,7 @@ export const zh = {
     'projectPicture.searchPlaceholder': '搜索项目名称',
     'projectPicture.searchEmpty': '未找到匹配的项目',
     'projectPicture.sectionPlaceholder': '板块区域',
-    'projectPicture.heatmapTitle': '热力活跃图',
+    'projectPicture.heatmapTitle': '执行记录热力活跃图',
     'projectPicture.heatmapEmpty': '暂无执行记录',
     'projectPicture.planHeatmapTitle': '计划事件热力活跃图',
     'projectPicture.planHeatmapEmpty': '暂无计划事件',

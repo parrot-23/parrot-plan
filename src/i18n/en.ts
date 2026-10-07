@@ -98,7 +98,7 @@ export const en: I18nMessages = {
     'projectPicture.searchPlaceholder': 'Search project name',
     'projectPicture.searchEmpty': 'No matching project found',
     'projectPicture.sectionPlaceholder': 'Section Area',
-    'projectPicture.heatmapTitle': 'Activity Heatmap',
+    'projectPicture.heatmapTitle': 'Execution Record Heatmap',
     'projectPicture.heatmapEmpty': 'No execution records',
     'projectPicture.planHeatmapTitle': 'Planned Events Heatmap',
     'projectPicture.planHeatmapEmpty': 'No planned events',
