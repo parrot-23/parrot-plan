@@ -56,6 +56,8 @@ export class TodayView {
     private addUnplannedStart = 0;
     /** 新增非计划事件的时长（分钟，默认 30，可由用户填写） */
     private addUnplannedDuration = 30;
+    /** 当前正在执行的事件 id（点击「进入执行」后设置，用于顶部执行卡片） */
+    private executingEventId?: string;
 
     constructor(
         app: App,
@@ -149,6 +151,9 @@ export class TodayView {
             .setText(`${String(now.getMonth() + 1).padStart(2, '0')} / ${String(now.getDate()).padStart(2, '0')}`);
         dateSide.createDiv({ cls: 'today-date-weekday', text: getWeekDays()[(now.getDay() + 6) % 7] });
 
+        // 中间：正在执行的任务卡片（斜向条纹背景，突出进行中）
+        this.renderExecutingCard(box);
+
         // 右侧：日目标完成情况（大卡片 + 两张小卡片）
         const stats = this.computeDayStats();
         const statsSide = box.createDiv({ cls: 'today-date-stats' });
@@ -191,6 +196,39 @@ export class TodayView {
             barCls: 'is-added',
             size: 'small',
         });
+    }
+
+    /**
+     * 渲染「正在执行」卡片（位于日期信息旁边）。
+     * 有正在执行的任务时展示任务内容，背景使用斜向条纹突出进行中；无则不显示。
+     */
+    private renderExecutingCard(box: HTMLElement) {
+        const ev = this.executingEventId
+            ? this.getEvents().find(e => e.id === this.executingEventId)
+            : undefined;
+        if (!ev) return;
+
+        const card = box.createDiv({ cls: 'today-executing-card' });
+        // 条纹与底色跟随事件分类颜色（同色系，保持与黄色警示色一致的对比度）
+        const cat = ev.categoryId
+            ? this.categoryData.categories.find(c => c.id === ev.categoryId)
+            : undefined;
+        card.setCssProps({ '--exec-color': cat?.color ?? '#e0b400' });
+        card.createDiv({ cls: 'today-executing-label', text: t('today.executingLabel') });
+        card.createDiv({ cls: 'today-executing-name', text: ev.title });
+        card.createDiv({
+            cls: 'today-executing-time',
+            text: ev.allDay
+                ? t('today.allDay')
+                : `${formatMinutes(ev.start)} - ${formatMinutes(ev.end)}`,
+        });
+
+        // 点击卡片 → 选中该事件，同步更新任务层级 / 任务详情 / 操作按钮
+        card.addClass('is-clickable');
+        if (this.selectedEventId === ev.id) card.addClass('is-selected');
+        card.onclick = () => {
+            this.toggleEventSelection(ev.id);
+        };
     }
 
     /** 渲染单张统计卡片（标签 + 数值 + 进度条） */
@@ -561,6 +599,28 @@ export class TodayView {
 
         // 选中时间轴事件：仅「计划」状态显示「执行计划 / 替换计划」按钮
         if (selectedEvent) {
+            const isExecuting = this.executingEventId === selectedEvent.id;
+
+            // 正在执行：显示「完成执行 / 取消执行」
+            if (isExecuting) {
+                const finishBtn = row.createEl('button', {
+                    cls: 'today-action-btn mod-cta',
+                    text: t('today.finishExec'),
+                });
+                finishBtn.onclick = () => {
+                    void this.finishExecuting();
+                };
+
+                const cancelBtn = row.createEl('button', {
+                    cls: 'today-action-btn',
+                    text: t('today.cancelExec'),
+                });
+                cancelBtn.onclick = () => {
+                    this.cancelExecuting();
+                };
+                return;
+            }
+
             const status = getEventStatus(selectedEvent, this.getExecutions());
             if (status === 'planned') {
                 const execBtn = row.createEl('button', {
@@ -579,6 +639,15 @@ export class TodayView {
                     this.startReplace();
                 };
             }
+
+            // 进入执行：切换当前任务的「正在执行」状态
+            const enterBtn = row.createEl('button', {
+                cls: 'today-action-btn',
+                text: t('today.enterExec'),
+            });
+            enterBtn.onclick = () => {
+                this.toggleExecuting(selectedEvent.id);
+            };
             return;
         }
 
@@ -725,6 +794,45 @@ export class TodayView {
         await this.save();
         new Notice(t('today.completeDone', { title: ev.title }));
         await this.refresh();
+    }
+
+    /**
+     * 切换「正在执行」状态：点击「进入执行」时记录该事件为正在执行，
+     * 再次点击时清除。仅影响顶部执行卡片，不写入执行记录。
+     */
+    private toggleExecuting(eventId: string): void {
+        this.executingEventId = this.executingEventId === eventId ? undefined : eventId;
+        void this.refresh();
+    }
+
+    /** 完成执行：为正在执行的事件写入执行记录，并清除「正在执行」状态 */
+    private async finishExecuting(): Promise<void> {
+        const ev = this.getSelectedEvent();
+        if (!ev) return;
+
+        const now = new Date();
+        const todayDay = (now.getDay() + 6) % 7 + 1;
+        const weekKey = getCurrentWeekKey();
+
+        this.getExecutions().push({
+            id: `exec_${Date.now()}`,
+            eventId: ev.id,
+            inboxId: ev.inboxId,
+            day: todayDay,
+            start: ev.start,
+            end: ev.end,
+            weekKey,
+        });
+        this.executingEventId = undefined;
+        await this.save();
+        new Notice(t('today.completeDone', { title: ev.title }));
+        await this.refresh();
+    }
+
+    /** 取消执行：清除「正在执行」状态，不写入执行记录 */
+    private cancelExecuting(): void {
+        this.executingEventId = undefined;
+        void this.refresh();
     }
 
     /** 进入替换模式：锁定当前选中的时间轴事件，等待用户在左侧选择任务 */

@@ -1540,6 +1540,61 @@
     gap: 4px;
 }
 
+/* 中间：正在执行的任务卡片（斜向条纹背景，突出进行中） */
+.today-executing-card {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 2px;
+    padding: 8px 12px;
+    border: 1px solid color-mix(in srgb, var(--exec-color, #e0b400) 75%, #000000);
+    border-radius: 8px;
+    /* 斜向条纹：跟随事件分类颜色，同色系浅条纹，保持与黄色警示色一致的对比度 */
+    background-image: repeating-linear-gradient(
+        45deg,
+        color-mix(in srgb, var(--exec-color, #e0b400) 45%, #ffffff) 0,
+        color-mix(in srgb, var(--exec-color, #e0b400) 45%, #ffffff) 8px,
+        transparent 8px,
+        transparent 16px
+    );
+    background-color: color-mix(in srgb, var(--exec-color, #e0b400) 15%, #ffffff);
+    background-size: 100% 100%;
+}
+
+.today-executing-card.is-clickable {
+    cursor: pointer;
+}
+
+.today-executing-card.is-selected {
+    border-color: var(--interactive-accent);
+    outline: 2px solid var(--interactive-accent);
+    outline-offset: -1px;
+}
+
+.today-executing-label {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--text-muted);
+    white-space: nowrap;
+}
+
+.today-executing-name {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--text-normal);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.today-executing-time {
+    font-size: 11px;
+    color: var(--text-muted);
+    white-space: nowrap;
+}
+
 /* 右侧：日目标完成情况（大卡片 + 两张小卡片） */
 .today-date-stats {
     display: flex;
