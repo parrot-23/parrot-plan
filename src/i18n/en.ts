@@ -102,6 +102,9 @@ export const en: I18nMessages = {
     'projectPicture.heatmapEmpty': 'No execution records',
     'projectPicture.planHeatmapTitle': 'Planned Events Heatmap',
     'projectPicture.planHeatmapEmpty': 'No planned events',
+    'projectPicture.sectionsEmpty': 'No sections in the current project',
+    'projectPicture.statsTitle': 'Statistics',
+    'projectPicture.sectionsTitle': 'Sections',
     'year.unassigned': 'Unassigned "{title}" from {week}',
 
     // Command and ribbon

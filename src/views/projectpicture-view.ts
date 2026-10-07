@@ -1,7 +1,7 @@
 import type { App } from 'obsidian';
 
 import type { TimeBlockCategoryData } from './week-view/timeblock-category-manager';
-import type { InboxData, InboxItem } from '../datatypes/domain';
+import type { InboxData, InboxItem, Section, ChecklistData, StepsData, HabitData, FileData } from '../datatypes/domain';
 import { renderTaskPanel } from '../shared/task-panel';
 import type { ExecutionRecord, EventBlock } from '../datatypes/domain';
 import { parseWeekKey } from './week-view/timeblock-data';
@@ -85,9 +85,17 @@ export class SwimlaneView {
         const board = boardRow.createDiv({ cls: 'swimlane-board' });
         this.renderBoard(board);
 
-        // ===== 第三行及以下：板块区域（当前项目的热力活跃图）=====
-        const sectionArea = container.createDiv({ cls: 'swimlane-section-area' });
-        this.renderActivityHeatmap(sectionArea);
+        // ===== 第三行：统计信息（大方框，内含热力图卡片）=====
+        const statsArea = container.createDiv({ cls: 'swimlane-section-area' });
+        statsArea.createDiv({ cls: 'swimlane-section-area-title', text: t('projectPicture.statsTitle') });
+        const statsBody = statsArea.createDiv({ cls: 'swimlane-section-area-body' });
+        this.renderActivityHeatmap(statsBody);
+
+        // ===== 第四行：板块信息（大方框，内含板块卡片）=====
+        const sectionsArea = container.createDiv({ cls: 'swimlane-section-area' });
+        sectionsArea.createDiv({ cls: 'swimlane-section-area-title', text: t('projectPicture.sectionsTitle') });
+        const sectionsBody = sectionsArea.createDiv({ cls: 'swimlane-section-area-body' });
+        this.renderSectionCards(sectionsBody);
     }
 
     /** 重新渲染自身 */
@@ -358,10 +366,9 @@ export class SwimlaneView {
         }
     }
 
-    /** 板块区域：绘制当前聚焦项目的热力活跃图（执行记录 + 计划事件） */
-    private renderActivityHeatmap(sectionArea: HTMLElement) {
-        sectionArea.empty();
-        sectionArea.addClass('swimlane-section-area');
+    /** 统计信息区：绘制当前聚焦项目的热力活跃图（执行记录 + 计划事件） */
+    private renderActivityHeatmap(body: HTMLElement) {
+        body.empty();
 
         // 构建数据提供者（复用统计聚合逻辑）
         const provider = createDataProvider(
@@ -375,7 +382,7 @@ export class SwimlaneView {
 
         // 执行记录热力活跃图
         this.renderHeatmapBlock(
-            sectionArea,
+            body,
             t('projectPicture.heatmapTitle'),
             t('projectPicture.heatmapEmpty'),
             'activity-heatmap',
@@ -385,7 +392,7 @@ export class SwimlaneView {
 
         // 计划事件热力活跃图
         this.renderHeatmapBlock(
-            sectionArea,
+            body,
             t('projectPicture.planHeatmapTitle'),
             t('projectPicture.planHeatmapEmpty'),
             'plan-heatmap',
@@ -420,5 +427,85 @@ export class SwimlaneView {
         }
 
         renderHeatmap(wrapper, result.heatmap);
+    }
+
+    /** 板块信息区：当前聚焦项目的板块卡片（从左到右排列，只读展示） */
+    private renderSectionCards(row: HTMLElement) {
+        row.empty();
+
+        // 当前聚焦项目（未聚焦时不展示板块卡片）
+        const focusId = this.inboxData.projectFocusId;
+        const focusItem = focusId
+            ? this.inboxData.items.find(i => i.id === focusId && !i.removed)
+            : undefined;
+        const sections = focusItem?.sections ?? [];
+
+        if (sections.length === 0) {
+            row.createDiv({ cls: 'swimlane-sections-empty', text: t('projectPicture.sectionsEmpty') });
+            return;
+        }
+
+        for (const section of sections) {
+            this.renderSectionCard(row, section);
+        }
+    }
+
+    /** 渲染单张板块卡片：类型标签 + 板块名 + 条目列表（只读） */
+    private renderSectionCard(row: HTMLElement, section: Section) {
+        const card = row.createDiv({ cls: 'swimlane-section-card' });
+
+        // 卡片头部：类型标签 + 板块名
+        const head = card.createDiv({ cls: 'swimlane-section-card-head' });
+        head.createSpan({ cls: 'swimlane-section-card-type', text: this.sectionTypeLabel(section.type) });
+        head.createSpan({
+            cls: 'swimlane-section-card-name',
+            text: section.title || this.sectionTypeLabel(section.type),
+        });
+
+        // 条目列表（只读）
+        const itemsEl = card.createDiv({ cls: 'swimlane-section-card-items' });
+        const items = (section.data as { items?: unknown[] }).items ?? [];
+        if (items.length === 0) {
+            itemsEl.createDiv({ cls: 'swimlane-section-card-empty', text: t('section.emptyItems') });
+            return;
+        }
+
+        if (section.type === 'checklist') {
+            for (const it of (section.data as ChecklistData).items) {
+                this.renderSectionCardItem(itemsEl, it.done ? '☑' : '☐', it.text);
+            }
+        } else if (section.type === 'steps') {
+            for (const it of (section.data as StepsData).items) {
+                const mark = it.status === 'done' ? '✅' : it.status === 'doing' ? '🔄' : '⬜';
+                this.renderSectionCardItem(itemsEl, mark, it.text);
+            }
+        } else if (section.type === 'habit') {
+            for (const it of (section.data as HabitData).items) {
+                const count = it.checkedDays?.length ?? 0;
+                this.renderSectionCardItem(itemsEl, '🔁', it.text, String(count));
+            }
+        } else if (section.type === 'file') {
+            for (const it of (section.data as FileData).items) {
+                this.renderSectionCardItem(itemsEl, '📄', it.text || it.path);
+            }
+        }
+    }
+
+    /** 渲染板块卡片中的单个条目 */
+    private renderSectionCardItem(itemsEl: HTMLElement, mark: string, text: string, count?: string) {
+        const itemEl = itemsEl.createDiv({ cls: 'swimlane-section-card-item' });
+        itemEl.createSpan({ cls: 'swimlane-section-card-mark', text: mark });
+        itemEl.createSpan({ cls: 'swimlane-section-card-text', text });
+        if (count !== undefined) {
+            itemEl.createSpan({ cls: 'swimlane-section-card-count', text: count });
+        }
+    }
+
+    /** 板块类型显示名 */
+    private sectionTypeLabel(type: Section['type']): string {
+        if (type === 'checklist') return t('section.typeChecklist');
+        if (type === 'steps') return t('section.typeSteps');
+        if (type === 'habit') return t('section.typeHabit');
+        return t('section.typeFile');
     }
 }
