@@ -1,7 +1,7 @@
-import { App, Modal, Setting, Notice } from 'obsidian';
+import { App, Modal, Setting, Notice, AbstractInputSuggest, TFile } from 'obsidian';
 import type { TimeBlockCategoryData } from '../views/week-view/timeblock-category-manager';
 import { t } from '../i18n';
-import type { InboxItem, InboxData, Section, SectionType, ChecklistData, StepsData, HabitData } from '../datatypes/domain';
+import type { InboxItem, InboxData, Section, SectionType, ChecklistData, StepsData, HabitData, FileData } from '../datatypes/domain';
 import { DEFAULT_INBOX_DATA } from '../datatypes/domain';
 
 /**
@@ -47,6 +47,14 @@ function collectDescendantIds(inboxData: InboxData, id: string): string[] {
     };
     walk(id);
     return result;
+}
+
+/** 板块类型显示名（统一入口，避免各处三元判断遗漏新类型） */
+function sectionTypeLabel(type: SectionType): string {
+    if (type === 'checklist') return t('section.typeChecklist');
+    if (type === 'steps') return t('section.typeSteps');
+    if (type === 'habit') return t('section.typeHabit');
+    return t('section.typeFile');
 }
 
 // ===== 新增弹窗 =====
@@ -299,11 +307,7 @@ export function renderTaskPanel(
             const sectionsEl = itemEl.createDiv({ cls: 'inbox-item-sections' });
             for (const section of item.sections) {
                 const chip = sectionsEl.createSpan({ cls: 'inbox-section-chip' });
-                const typeLabel = section.type === 'checklist'
-                    ? t('section.typeChecklist')
-                    : section.type === 'steps'
-                        ? t('section.typeSteps')
-                        : t('section.typeHabit');
+                const typeLabel = sectionTypeLabel(section.type);
                 chip.setText(`${typeLabel}${section.title ? '·' + section.title : ''}`);
             }
         }
@@ -364,11 +368,7 @@ export function renderTaskPanel(
                 renderList();
             };
 
-            const typeLabel = section.type === 'checklist'
-                ? t('section.typeChecklist')
-                : section.type === 'steps'
-                    ? t('section.typeSteps')
-                    : t('section.typeHabit');
+            const typeLabel = sectionTypeLabel(section.type);
             titleRow.createSpan({ cls: 'inbox-section-subdir-type', text: typeLabel });
             titleRow.createSpan({ cls: 'inbox-item-title', text: section.title || typeLabel });
 
@@ -404,6 +404,10 @@ export function renderTaskPanel(
                 for (const it of (section.data as HabitData).items) {
                     const count = it.checkedDays?.length ?? 0;
                     renderSectionEntry(item, section.id, depth + 1, it.id, '🔁', it.text, String(count));
+                }
+            } else if (section.type === 'file') {
+                for (const it of (section.data as FileData).items) {
+                    renderSectionEntry(item, section.id, depth + 1, it.id, '📄', it.text || it.path);
                 }
             }
         }
@@ -676,6 +680,35 @@ class ConfirmDeleteInboxModal extends Modal {
     }
 }
 
+// ===== 文件路径自动补全（文件板块使用）=====
+/** 输入框的文件路径建议：从 vault 全部文件中模糊匹配 */
+class FilePathSuggest extends AbstractInputSuggest<TFile> {
+    constructor(
+        app: App,
+        private inputEl: HTMLInputElement,
+        private onPick: (path: string) => void,
+    ) {
+        super(app, inputEl);
+    }
+
+    protected getSuggestions(query: string): TFile[] {
+        const lower = query.toLowerCase();
+        return this.app.vault.getFiles()
+            .filter(f => f.path.toLowerCase().includes(lower))
+            .slice(0, 50);
+    }
+
+    renderSuggestion(file: TFile, el: HTMLElement): void {
+        el.setText(file.path);
+    }
+
+    selectSuggestion(file: TFile): void {
+        this.inputEl.value = file.path;
+        this.onPick(file.path);
+        this.close();
+    }
+}
+
 // ===== 任务详情弹窗（查看/编辑标题、描述、分类、板块）=====
 class InboxDetailModal extends Modal {
     private title: string;
@@ -839,6 +872,31 @@ class InboxDetailModal extends Modal {
                     this.renderSections(container);
                 };
             }
+        } else if (section.type === 'file') {
+            const data = section.data as FileData;
+            for (const item of data.items) {
+                const row = itemsEl.createDiv({ cls: 'section-item-row' });
+                // 文件路径输入框（带 vault 文件自动补全）
+                const pathInput = row.createEl('input', { type: 'text', cls: 'section-item-text section-file-path' });
+                pathInput.value = item.path;
+                pathInput.placeholder = t('section.filePlaceholder');
+                new FilePathSuggest(this.app, pathInput, (path) => {
+                    item.path = path;
+                    // 未自定义显示名时，用文件名作为显示名
+                    if (!item.text) item.text = path;
+                });
+                pathInput.onchange = () => { item.path = pathInput.value; };
+                // 显示名输入框（可选）
+                const nameInput = row.createEl('input', { type: 'text', cls: 'section-item-text section-file-name' });
+                nameInput.value = item.text;
+                nameInput.placeholder = t('section.fileNamePlaceholder');
+                nameInput.onchange = () => { item.text = nameInput.value; };
+                const del = row.createEl('button', { cls: 'section-item-del', text: '✕' });
+                del.onclick = () => {
+                    data.items = data.items.filter(i => i.id !== item.id);
+                    this.renderSections(container);
+                };
+            }
         }
 
         // 添加条目按钮
@@ -858,6 +916,8 @@ class InboxDetailModal extends Modal {
             (section.data as StepsData).items.push({ id, text: '', status: 'todo' });
         } else if (section.type === 'habit') {
             (section.data as HabitData).items.push({ id, text: '' });
+        } else if (section.type === 'file') {
+            (section.data as FileData).items.push({ id, text: '', path: '' });
         }
     }
 
@@ -877,6 +937,7 @@ class InboxDetailModal extends Modal {
                     drop.addOption('checklist', t('section.typeChecklist'));
                     drop.addOption('steps', t('section.typeSteps'));
                     drop.addOption('habit', t('section.typeHabit'));
+                    drop.addOption('file', t('section.typeFile'));
                     drop.setValue('checklist')
                         .onChange(val => type = val as SectionType);
                 });
@@ -894,9 +955,10 @@ class InboxDetailModal extends Modal {
                     .setCta()
                     .onClick(() => {
                         const id = `sec_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
-                        const data: ChecklistData | StepsData | HabitData =
+                        const data: ChecklistData | StepsData | HabitData | FileData =
                             type === 'checklist' ? { items: [] }
                             : type === 'steps' ? { items: [] }
+                            : type === 'habit' ? { items: [] }
                             : { items: [] };
                         this.sections.push({ id, type, title: name.trim() || undefined, data });
                         modal.close();
@@ -914,9 +976,7 @@ class InboxDetailModal extends Modal {
     }
 
     private sectionTypeLabel(type: SectionType): string {
-        if (type === 'checklist') return t('section.typeChecklist');
-        if (type === 'steps') return t('section.typeSteps');
-        return t('section.typeHabit');
+        return sectionTypeLabel(type);
     }
 
     private submit() {

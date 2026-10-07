@@ -3450,6 +3450,15 @@
     font-size: 12px;
 }
 
+/* 文件板块：路径输入框占主要宽度，显示名输入框较窄 */
+.section-file-path {
+    flex: 2;
+}
+
+.section-file-name {
+    flex: 1;
+}
+
 .section-add-item-btn {
     align-self: flex-start;
     margin-top: 4px;

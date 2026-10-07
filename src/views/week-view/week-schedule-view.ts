@@ -1022,7 +1022,9 @@ export class WeekScheduleView extends ItemView {
             ? t('section.typeChecklist')
             : section.type === 'steps'
                 ? t('section.typeSteps')
-                : t('section.typeHabit');
+                : section.type === 'habit'
+                    ? t('section.typeHabit')
+                    : t('section.typeFile');
         const sectionName = section.title || typeLabel;
 
         // 若选中了具体子条目，追加条目名

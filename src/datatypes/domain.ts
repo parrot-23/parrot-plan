@@ -57,8 +57,8 @@ export interface InboxItem {
     sections?: Section[];
 }
 
-/** 板块类型：清单 / 步骤 / 打卡 */
-export type SectionType = 'checklist' | 'steps' | 'habit';
+/** 板块类型：清单 / 步骤 / 打卡 / 文件 */
+export type SectionType = 'checklist' | 'steps' | 'habit' | 'file';
 
 /** 清单项（可勾选） */
 export interface ChecklistItem {
@@ -83,6 +83,15 @@ export interface HabitItem {
     checkedDays?: string[];
 }
 
+/** 文件项（关联一个 vault 文件） */
+export interface FileItem {
+    id: string;
+    /** 显示名（缺省用文件路径） */
+    text: string;
+    /** vault 内文件路径（如 'notes/foo.md'） */
+    path: string;
+}
+
 /** 清单板块数据 */
 export interface ChecklistData {
     items: ChecklistItem[];
@@ -98,12 +107,17 @@ export interface HabitData {
     items: HabitItem[];
 }
 
+/** 文件板块数据 */
+export interface FileData {
+    items: FileItem[];
+}
+
 /** 板块：任务内部的结构化内容 */
 export interface Section {
     id: string;
     type: SectionType;
     title?: string;
-    data: ChecklistData | StepsData | HabitData;
+    data: ChecklistData | StepsData | HabitData | FileData;
 }
 
 /** 收集盒数据容器 */
