@@ -14,6 +14,7 @@ import { WorkbenchView } from './views/workbench/workbench-view';
 import type { WorkbenchData } from './datatypes/card';
 import { t } from './i18n';
 import { log } from './shared/logger';
+import { HelpModal } from './helper/help-modal';
 
 export const VIEW_TYPE_MAIN = 'parrot-plan-main-view';
 
@@ -43,6 +44,8 @@ export class MainView extends ItemView {
     private workbenchView: WorkbenchView;
     private activeTab: NavTab = 'week';
     private contentRoot!: HTMLElement;
+    /** 缓存目录名称（用于帮助弹窗引用缓存图片） */
+    private cacheDirName: string;
 
     constructor(
         leaf: WorkspaceLeaf,
@@ -56,9 +59,11 @@ export class MainView extends ItemView {
         schemeData: RangeSchemeData,
         plannedWeeks: string[],
         workbenchData: WorkbenchData,
+        cacheDirName: string,
     ) {
         super(leaf);
         this.plugin = plugin;
+        this.cacheDirName = cacheDirName;
         log('MainView 构造', {
             events: events.length,
             executions: executions.length,
@@ -151,6 +156,21 @@ export class MainView extends ItemView {
                 void this.renderContent();
             };
         }
+
+        // 帮助按钮（同行最右侧）
+        const helpBtn = nav.createEl('button', {
+            text: '?',
+            cls: 'parrot-plan-nav-help-btn',
+            attr: { 'aria-label': t('help.title') },
+        });
+        helpBtn.onclick = () => {
+            const plugin = this.plugin as Plugin & {
+                saveHelpDismissed?: (dismissed: boolean) => Promise<void>;
+            };
+            new HelpModal(this.app, this.cacheDirName, (dismissed) => {
+                void plugin.saveHelpDismissed?.(dismissed);
+            }).open();
+        };
 
         // 内容区
         this.contentRoot = root.createDiv({ cls: 'parrot-plan-content' });

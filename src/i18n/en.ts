@@ -34,6 +34,11 @@ export const en: I18nMessages = {
     'nav.achievement': 'Achievements',
     'nav.placeholder': 'This is the "{name}" page',
 
+    // Help
+    'help.title': 'Help',
+    'help.todayIntro': 'The "Today Todo" page helps you turn your daily plan into real progress. The task panel on the left gathers all your tasks — select any one to see its details. The center shows the task hierarchy, task details, and this week\'s and today\'s goal progress. The timeline on the right lays out today\'s planned events by the hour, where you can click to add an unplanned event, replace an existing plan, or "enter execution" on an event and record the actual time spent. The top of the page shows live stats for today\'s total planned, completed, pending, replaced, and added items, so you can see your day at a glance. In short: pick a task on the left, view details in the center, arrange time on the right, and track progress at the top — turning "plans" into "done".',
+    'help.dontShowAgain': "Don't show again",
+
     // Today view
     'today.start': 'Start',
     'today.detailTitle': 'Task Details',
@@ -120,6 +125,11 @@ export const en: I18nMessages = {
     // Settings
     'settings.title': 'Parrot Plan Settings',
     'settings.about': 'A weekly schedule planner: time block planning, event scheduling, and execution tracking.',
+    'settings.cache': 'Cache',
+    'settings.cacheEnabled': 'Enable cache',
+    'settings.cacheEnabledDesc': 'When disabled, the cache feature will no longer be used.',
+    'settings.cacheDirName': 'Cache folder name',
+    'settings.cacheDirNameDesc': 'Name of the folder used to store plugin cache files. Defaults to parrotPlanCache.',
     'settings.data': 'Data',
     'settings.clearData': 'Clear data',
     'settings.clearDataDesc': 'Delete all tasks, events, time ranges and settings, restoring defaults. This cannot be undone.',

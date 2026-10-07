@@ -1267,6 +1267,94 @@
     border-color: var(--interactive-accent);
 }
 
+/* 帮助按钮：推到导航栏最右侧 */
+.parrot-plan-nav-help-btn {
+    margin-left: auto;
+    width: 26px;
+    height: 26px;
+    padding: 0;
+    border-radius: 50%;
+    border: 1px solid var(--background-modifier-border);
+    background: var(--interactive-normal);
+    color: var(--text-normal);
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 700;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.parrot-plan-nav-help-btn:hover {
+    background: var(--interactive-hover);
+}
+
+/* 帮助弹窗：外层容器，覆盖 Obsidian 默认宽高限制，尺寸自适应内容 */
+.parrot-help-modal-container {
+    width: auto;
+    max-width: 95vw;
+    max-height: none;
+}
+
+/* 帮助弹窗内容：尺寸与内容一致，不出现滚动条 */
+.parrot-help-modal {
+    width: fit-content;
+    max-width: 95vw;
+    max-height: none;
+    overflow: visible;
+}
+
+/* 帮助弹窗内容：左图右文 */
+.parrot-help-body {
+    display: flex;
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 20px;
+    margin-top: 12px;
+}
+
+.parrot-help-left {
+    flex-shrink: 0;
+    width: 520px;
+}
+
+.parrot-help-image {
+    width: 100%;
+    height: auto;
+    border-radius: 8px;
+    border: 1px solid var(--background-modifier-border);
+    object-fit: contain;
+}
+
+.parrot-help-right {
+    flex-shrink: 0;
+    width: 520px;
+    font-size: 14px;
+    line-height: 1.7;
+    color: var(--text-normal);
+}
+
+.parrot-help-right p {
+    margin: 0;
+}
+
+/* 帮助弹窗右下角：不再提示勾选框 */
+.parrot-help-footer {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 16px;
+}
+
+.parrot-help-dismiss {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    color: var(--text-muted);
+    cursor: pointer;
+}
+
 /* 内容区 */
 .parrot-plan-content {
     flex: 1;
@@ -2943,6 +3031,12 @@
     color: var(--text-muted);
     font-size: 13px;
     margin: 0;
+}
+
+/* ===== 设置页：禁用状态整行置灰 ===== */
+.parrot-setting-disabled .setting-item-name,
+.parrot-setting-disabled .setting-item-description {
+    color: var(--text-faint);
 }
 
 /* ===== 工作台视图 ===== */

@@ -13,12 +13,11 @@ import { VIEW_TYPE_MAIN, MainView } from './src/main-view';
 import { defaultWorkbenchData, type WorkbenchData } from './src/datatypes/card';
 import { initI18n, t, getLangDebugInfo } from './src/i18n';
 import { initLogger, log } from './src/shared/logger';
-import {
-    type AccountData,
-    createLoginToken,
-    checkLoginToken,
-} from './src/shared/account';
-import * as QRCode from 'qrcode';
+import { downloadImageToCache } from './src/helper/cache-image';
+import { HelpModal } from './src/helper/help-modal';
+
+/** 缓存目录默认名称 */
+const DEFAULT_CACHE_DIR_NAME = 'parrotPlanCache';
 
 export default class ParrotPlanPlugin extends Plugin {
     /**
@@ -40,19 +39,42 @@ export default class ParrotPlanPlugin extends Plugin {
         workbench: WorkbenchData;
     } | null = null;
 
-    /** 账号信息（随主数据一起持久化） */
-    account: AccountData = {};
+    /** 缓存目录名称（随主数据一起持久化） */
+    cacheDirName = DEFAULT_CACHE_DIR_NAME;
 
-    /**
-     * 保存账号信息：读取当前主数据 → 合并 account → 写回，
-     * 避免覆盖其他字段（主数据由 week-schedule-view.save() 整体写入）。
-     */
-    async saveAccountData(account: AccountData): Promise<void> {
-        this.account = account;
+    /** 是否启用缓存（随主数据一起持久化） */
+    cacheEnabled = true;
+
+    /** 是否已勾选「不再提示」帮助弹窗（随主数据一起持久化） */
+    helpDismissed = false;
+
+    /** 保存缓存目录名称：读取当前主数据 → 合并 → 写回，避免覆盖其他字段 */
+    async saveCacheDirName(name: string): Promise<void> {
+        this.cacheDirName = name;
         const rawData: unknown = await this.loadData();
         const savedData: Record<string, unknown> =
             rawData && typeof rawData === 'object' ? rawData as Record<string, unknown> : {};
-        savedData.account = account;
+        savedData.cacheDirName = name;
+        await this.saveData(savedData);
+    }
+
+    /** 保存是否启用缓存：读取当前主数据 → 合并 → 写回，避免覆盖其他字段 */
+    async saveCacheEnabled(enabled: boolean): Promise<void> {
+        this.cacheEnabled = enabled;
+        const rawData: unknown = await this.loadData();
+        const savedData: Record<string, unknown> =
+            rawData && typeof rawData === 'object' ? rawData as Record<string, unknown> : {};
+        savedData.cacheEnabled = enabled;
+        await this.saveData(savedData);
+    }
+
+    /** 保存「不再提示」帮助弹窗标记：读取当前主数据 → 合并 → 写回，避免覆盖其他字段 */
+    async saveHelpDismissed(dismissed: boolean): Promise<void> {
+        this.helpDismissed = dismissed;
+        const rawData: unknown = await this.loadData();
+        const savedData: Record<string, unknown> =
+            rawData && typeof rawData === 'object' ? rawData as Record<string, unknown> : {};
+        savedData.helpDismissed = dismissed;
         await this.saveData(savedData);
     }
 
@@ -72,8 +94,20 @@ export default class ParrotPlanPlugin extends Plugin {
         let savedData: Record<string, unknown> =
             rawData && typeof rawData === 'object' ? rawData as Record<string, unknown> : {};
 
-        // 读取账号信息（随主数据一起存储）
-        this.account = savedData.account ?? {};
+        // 读取缓存目录名称（随主数据一起存储，兼容旧数据：默认值）
+        this.cacheDirName = typeof savedData.cacheDirName === 'string' && savedData.cacheDirName
+            ? savedData.cacheDirName
+            : DEFAULT_CACHE_DIR_NAME;
+
+        // 读取是否启用缓存（兼容旧数据：默认启用）
+        this.cacheEnabled = typeof savedData.cacheEnabled === 'boolean'
+            ? savedData.cacheEnabled
+            : true;
+
+        // 读取「不再提示」帮助弹窗标记（兼容旧数据：默认未勾选）
+        this.helpDismissed = typeof savedData.helpDismissed === 'boolean'
+            ? savedData.helpDismissed
+            : false;
 
         const defaultCategories: TimeBlockCategoryData = {
             categories: [
@@ -140,6 +174,7 @@ export default class ParrotPlanPlugin extends Plugin {
                 });
                 return new MainView(leaf, this, d.weekRange, d.templateData, d.categoryData,
                     d.events, d.executions, d.inboxData, d.schemeData, d.plannedWeeks, d.workbench,
+                    this.cacheDirName,
                 );
             }
         );
@@ -174,6 +209,18 @@ export default class ParrotPlanPlugin extends Plugin {
 
         // 设置页
         this.addSettingTab(new ParrotPlanSettingTab(this.app, this));
+
+        // 缓存启用时，把说明图片下载到缓存目录
+        void downloadImageToCache(this.app, this.cacheDirName, this.cacheEnabled);
+
+        // 首次启动（未勾选「不再提示」）时自动打开帮助弹窗
+        if (!this.helpDismissed) {
+            this.app.workspace.onLayoutReady(() => {
+                new HelpModal(this.app, this.cacheDirName, (dismissed) => {
+                    void this.saveHelpDismissed(dismissed);
+                }).open();
+            });
+        }
     }
 
     onunload() {
@@ -224,42 +271,49 @@ class ParrotPlanSettingTab extends PluginSettingTab {
                 },
             },
             {
-                name: t('settings.account'),
+                name: t('settings.cache'),
                 searchable: false,
                 render: (setting) => {
-                    setting.setName(t('settings.account')).setHeading();
+                    setting.setName(t('settings.cache')).setHeading();
                 },
             },
             {
-                name: t('settings.wechatMiniProgram'),
-                desc: t('settings.wechatMiniProgramDesc'),
+                name: t('settings.cacheEnabled'),
+                desc: t('settings.cacheEnabledDesc'),
                 render: (setting) => {
                     setting
-                        .setName(t('settings.wechatMiniProgram'))
-                        .setDesc(t('settings.wechatMiniProgramDesc'));
-                    const thumb = setting.controlEl.createEl('img', {
-                        cls: 'parrot-wechat-qr-thumb',
-                        attr: { src: getWechatQrPath(this.app), alt: t('settings.wechatMiniProgram') },
-                    });
-                    thumb.onclick = () => new QrCodeModal(this.app).open();
-                },
-            },
-            {
-                name: t('settings.accountName'),
-                desc: this.plugin.account.userId ?? t('settings.accountNotLoggedIn'),
-                render: (setting) => {
-                    const loggedIn = !!this.plugin.account.userId;
-                    setting
-                        .setName(t('settings.accountName'))
-                        .setDesc(this.plugin.account.userId ?? t('settings.accountNotLoggedIn'))
-                        .addButton((btn) => {
-                            btn.setButtonText(loggedIn ? t('settings.loggedIn') : t('settings.login'))
-                                .setCta()
-                                .setDisabled(loggedIn)
-                                .onClick(() => {
-                                    new LoginModal(this.app, this.plugin, () => this.refresh()).open();
-                                });
+                        .setName(t('settings.cacheEnabled'))
+                        .setDesc(t('settings.cacheEnabledDesc'))
+                        .addToggle((toggle) => {
+                            toggle.setValue(this.plugin.cacheEnabled).onChange(async (value) => {
+                                await this.plugin.saveCacheEnabled(value);
+                                // 刷新设置页，更新下方缓存目录名称的禁用状态
+                                this.refresh();
+                            });
                         });
+                },
+            },
+            {
+                name: t('settings.cacheDirName'),
+                desc: t('settings.cacheDirNameDesc'),
+                render: (setting) => {
+                    setting
+                        .setName(t('settings.cacheDirName'))
+                        .setDesc(t('settings.cacheDirNameDesc'))
+                        .addText((text) => {
+                            text.setPlaceholder(DEFAULT_CACHE_DIR_NAME)
+                                .setValue(this.plugin.cacheDirName)
+                                .onChange(async (value) => {
+                                    const name = value.trim() || DEFAULT_CACHE_DIR_NAME;
+                                    await this.plugin.saveCacheDirName(name);
+                                });
+                            // 缓存关闭时禁用输入框
+                            text.setDisabled(!this.plugin.cacheEnabled);
+                        });
+                    // 缓存关闭时整行置灰
+                    if (!this.plugin.cacheEnabled) {
+                        setting.settingEl.addClass('parrot-setting-disabled');
+                    }
                 },
             },
             {
@@ -297,33 +351,6 @@ class ParrotPlanSettingTab extends PluginSettingTab {
     }
 }
 
-/** 微信小程序二维码图片相对 vault 的路径（配置目录由用户自定义，需用 configDir） */
-function getWechatQrPath(app: App): string {
-    const path = `${app.vault.configDir}/plugins/parrot-plan/src/images/qrcode.jpg`;
-    return app.vault.adapter.getResourcePath(path);
-}
-
-/** 微信小程序二维码弹窗：展示放大的二维码图片 */
-class QrCodeModal extends Modal {
-    onOpen() {
-        const { contentEl } = this;
-        contentEl.empty();
-        contentEl.createEl('h3', { text: t('settings.wechatMiniProgramTitle') });
-        const wrap = contentEl.createDiv({ cls: 'parrot-wechat-qr-modal' });
-        wrap.createEl('img', {
-            attr: { src: getWechatQrPath(this.app), alt: t('settings.wechatMiniProgram') },
-        });
-        contentEl.createEl('p', {
-            cls: 'parrot-wechat-qr-hint',
-            text: t('settings.wechatMiniProgramHint'),
-        });
-    }
-
-    onClose() {
-        this.contentEl.empty();
-    }
-}
-
 /** 通用确认弹窗 */
 class ConfirmModal extends Modal {
     private message: string;
@@ -357,115 +384,6 @@ class ConfirmModal extends Modal {
     }
 
     onClose() {
-        this.contentEl.empty();
-    }
-}
-
-/** 登录弹窗：获取登录二维码并轮询登录结果 */
-class LoginModal extends Modal {
-    private plugin: ParrotPlanPlugin;
-    private onLoggedIn: () => void;
-    /** 轮询定时器 */
-    private timer?: number;
-    /** 轮询开始时间（用于超时判断） */
-    private startedAt = 0;
-    /** 是否已结束（登录成功或超时），避免重复处理 */
-    private finished = false;
-
-    /** 轮询间隔：3 秒 */
-    private static readonly POLL_INTERVAL = 3000;
-    /** 最长轮询时长：5 分钟 */
-    private static readonly POLL_TIMEOUT = 5 * 60 * 1000;
-
-    constructor(app: App, plugin: ParrotPlanPlugin, onLoggedIn: () => void) {
-        super(app);
-        this.plugin = plugin;
-        this.onLoggedIn = onLoggedIn;
-    }
-
-    onOpen() {
-        const { contentEl } = this;
-        contentEl.empty();
-        contentEl.createEl('h3', { text: t('settings.loginTitle') });
-
-        const statusEl = contentEl.createEl('p', {
-            cls: 'parrot-login-status',
-            text: t('settings.loginLoading'),
-        });
-        const qrWrap = contentEl.createDiv({ cls: 'parrot-login-qr' });
-
-        void this.startLogin(qrWrap, statusEl);
-    }
-
-    /** 创建登录令牌 → 渲染二维码 → 开始轮询 */
-    private async startLogin(qrWrap: HTMLElement, statusEl: HTMLElement): Promise<void> {
-        let token: string;
-        try {
-            const res = await createLoginToken();
-            token = res.token;
-        } catch (err) {
-            log('创建登录令牌失败', err);
-            statusEl.setText(t('settings.loginCreateFailed'));
-            return;
-        }
-
-        // 用 token 生成二维码
-        try {
-            const dataUrl = await QRCode.toDataURL(token, { width: 220, margin: 1 });
-            qrWrap.empty();
-            qrWrap.createEl('img', { attr: { src: dataUrl, alt: 'login qr' } });
-        } catch (err) {
-            log('生成二维码失败', err);
-            statusEl.setText(t('settings.loginQrFailed'));
-            return;
-        }
-
-        statusEl.setText(t('settings.loginScanHint'));
-        this.startedAt = Date.now();
-        this.timer = window.setInterval(() => {
-            void this.poll(token, statusEl);
-        }, LoginModal.POLL_INTERVAL);
-    }
-
-    /** 轮询登录结果 */
-    private async poll(token: string, statusEl: HTMLElement): Promise<void> {
-        if (this.finished) return;
-        // 超时判断
-        if (Date.now() - this.startedAt > LoginModal.POLL_TIMEOUT) {
-            this.finish();
-            statusEl.setText(t('settings.loginTimeout'));
-            return;
-        }
-        try {
-            const res = await checkLoginToken(token);
-            if (res.loggedIn) {
-                this.finish();
-                await this.plugin.saveAccountData({
-                    token,
-                    userId: res.userId,
-                });
-                statusEl.setText(t('settings.loginSuccess'));
-                new Notice(t('settings.loginSuccess'));
-                this.onLoggedIn();
-                this.close();
-            }
-        } catch (err) {
-            // 单次轮询失败不终止，等待下次轮询
-            log('轮询登录结果失败', err);
-        }
-    }
-
-    /** 结束轮询 */
-    private finish(): void {
-        this.finished = true;
-        if (this.timer !== undefined) {
-            window.clearInterval(this.timer);
-            this.timer = undefined;
-        }
-    }
-
-    onClose() {
-        this.finish();
         this.contentEl.empty();
     }
 }

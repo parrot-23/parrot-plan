@@ -32,6 +32,11 @@ export const zh = {
     'nav.achievement': '成就榜单',
     'nav.placeholder': '当前是「{name}」页面',
 
+    // 帮助
+    'help.title': '帮助文档',
+    'help.todayIntro': '「日执行」页面帮你把一天的计划真正落地。左侧任务面板汇总了你的全部任务，选中任意任务即可查看详情；中间区域展示任务层级、任务详情，以及本周与今日的目标进度；右侧时间轴按小时铺开今天的计划事件，你可以直接点击时间轴新增非计划事件、替换原计划，或对某个事件「进入执行」并记录实际用时。页面顶部实时显示今日计划总数、已完成、待执行、替换与新增的统计，让你一眼看清今天的执行情况。简单说：左边选任务，中间看详情，右边排时间，顶部看进度——把「计划」变成「完成」。',
+    'help.dontShowAgain': '不再提示',
+
     // 当日执行视图
     'today.start': '开始执行',
     'today.detailTitle': '任务详情',
@@ -118,6 +123,11 @@ export const zh = {
     // 设置页
     'settings.title': 'Parrot Plan 设置',
     'settings.about': '一个周日程规划插件：时间区块规划、事件排布与执行追踪。',
+    'settings.cache': '缓存',
+    'settings.cacheEnabled': '启用缓存',
+    'settings.cacheEnabledDesc': '关闭后将不再使用缓存功能。',
+    'settings.cacheDirName': '缓存目录名称',
+    'settings.cacheDirNameDesc': '用于存放插件缓存文件的目录名称，默认为 parrotPlanCache。',
     'settings.data': '数据',
     'settings.clearData': '清空数据',
     'settings.clearDataDesc': '删除全部任务、事件、时间区间与配置，恢复为默认状态。此操作不可撤销。',

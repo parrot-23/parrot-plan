@@ -25,6 +25,13 @@ Link planned events to task notes for easy access to task details and execution 
 
 Provide more detailed task statistics, such as time usage and event distribution.
 
+## Network and Privacy
+
+This plugin retrieves resources from the following external address: https://636c-cloud1-d1g6azon61dd44c4e-1500284813.tcb.qcloud.la
+
+This domain is a Tencent Cloud Development (CloudBase / TCB) domain, used to download the required theme, templates, icons, and other resources. Only requests are made when the plugin is loading or retrieving resources, and the resources are cached locally in Obsidian. If you do not want the plugin to access the network, you can disable the "Data Caching" feature in the plugin settings.  
+
+
 ## License
 
 GPL 3.0+
