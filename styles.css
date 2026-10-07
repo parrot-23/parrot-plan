@@ -2180,13 +2180,13 @@
     overflow-y: auto;
 }
 
-/* 第一行：项目名称大标题 + 右侧搜索按钮 */
+/* 第一行：项目名称大标题 + 紧贴右侧的搜索按钮 */
 .swimlane-header {
     flex-shrink: 0;
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    gap: 16px;
+    justify-content: flex-start;
+    gap: 12px;
 }
 
 .swimlane-title {
@@ -2196,6 +2196,7 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+    max-width: 60%;
 }
 
 /* 搜索按钮外层容器：相对定位，用于承载下方悬浮的结果列表 */

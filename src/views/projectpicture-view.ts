@@ -253,6 +253,19 @@ export class SwimlaneView {
             const cell = execRow.createDiv({ cls: 'swimlane-cell' });
             if (execWeeks.has(w)) cell.addClass('is-exec');
         }
+
+        // 选中任务时：横向滚动到最早出现的时间点（计划 / 执行周中最小的一周）
+        if (selected) {
+            const weeks = Array.from(planWeeks).concat(Array.from(execWeeks));
+            if (weeks.length > 0) {
+                const firstWeek = Math.min.apply(null, weeks);
+                // 每格宽 60px，滚动到该周前留出一点边距
+                const targetLeft = (firstWeek - 1) * 60 - 12;
+                window.setTimeout(() => {
+                    board.scrollLeft = Math.max(0, targetLeft);
+                }, 0);
+            }
+        }
     }
 
     /** 顶部年份切换（‹ 年份 › + 今年），与年视图日历顶部一致 */
