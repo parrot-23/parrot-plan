@@ -116,16 +116,23 @@ export class SwimlaneView {
             text: t('projectPicture.search'),
         });
         searchBtn.toggleClass('is-active', this.searchOpen);
+
+        // 搜索面板容器：展开/收起只操作此容器，避免重建整个视图导致泳道图闪动
+        const panelHost = searchWrap.createDiv({ cls: 'swimlane-search-panel-host' });
+        if (this.searchOpen) {
+            this.renderSearchPanel(panelHost);
+        }
+
         searchBtn.onclick = () => {
             this.searchOpen = !this.searchOpen;
             if (!this.searchOpen) this.searchQuery = '';
-            void this.refresh();
+            searchBtn.toggleClass('is-active', this.searchOpen);
+            // 局部更新：仅重建搜索面板，不触发整个视图 refresh
+            panelHost.empty();
+            if (this.searchOpen) {
+                this.renderSearchPanel(panelHost);
+            }
         };
-
-        // 展开时：在搜索按钮下方以悬浮框展示搜索框 + 结果列表
-        if (this.searchOpen) {
-            this.renderSearchPanel(searchWrap);
-        }
     }
 
     /** 搜索面板：输入框 + 匹配到的项目结果列表，点击结果切换中心主题 */

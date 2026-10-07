@@ -2205,6 +2205,15 @@
     flex-shrink: 0;
 }
 
+/* 搜索面板宿主：不占据布局空间，仅作为悬浮面板的挂载点 */
+.swimlane-search-panel-host {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    width: 0;
+    height: 0;
+}
+
 .swimlane-search-btn {
     flex-shrink: 0;
     padding: 6px 14px;
