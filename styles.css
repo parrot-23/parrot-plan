@@ -2440,7 +2440,7 @@
 .swimlane-cell {
     flex-shrink: 0;
     width: 60px;
-    height: 60px;
+    height: 15px;
     box-sizing: border-box;
     border-right: 1px solid var(--background-modifier-border);
     border-bottom: 1px solid var(--background-modifier-border);
