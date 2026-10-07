@@ -1540,6 +1540,10 @@
     gap: 4px;
 }
 
+.today-date-side.is-clickable {
+    cursor: pointer;
+}
+
 /* 中间：正在执行的任务卡片（斜向条纹背景，突出进行中） */
 .today-executing-card {
     flex: 1;

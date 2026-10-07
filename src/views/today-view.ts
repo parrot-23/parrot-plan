@@ -144,12 +144,16 @@ export class TodayView {
         const now = new Date();
         const box = panel.createDiv({ cls: 'today-date-box' });
 
-        // 左侧：日期
+        // 左侧：日期（点击日期区域 → 取消所有选中，恢复显示周目标 / 日目标）
         const dateSide = box.createDiv({ cls: 'today-date-side' });
         dateSide.createDiv({ cls: 'today-date-year', text: `${now.getFullYear()}` });
         dateSide.createDiv({ cls: 'today-date-md' })
             .setText(`${String(now.getMonth() + 1).padStart(2, '0')} / ${String(now.getDate()).padStart(2, '0')}`);
         dateSide.createDiv({ cls: 'today-date-weekday', text: getWeekDays()[(now.getDay() + 6) % 7] });
+        dateSide.addClass('is-clickable');
+        dateSide.onclick = () => {
+            this.clearAllSelection();
+        };
 
         // 中间：正在执行的任务卡片（斜向条纹背景，突出进行中）
         this.renderExecutingCard(box);
@@ -1106,6 +1110,14 @@ export class TodayView {
     private clearInboxSelection(): void {
         this.inboxData.selectedId = undefined;
         this.lastSelectedItemId = undefined;
+    }
+
+    /** 取消所有选中状态（时间轴事件 / 新增执行记录 / 左侧任务），恢复显示周目标 / 日目标 */
+    private clearAllSelection(): void {
+        this.selectedEventId = undefined;
+        this.selectedExecId = undefined;
+        this.clearInboxSelection();
+        void this.refresh();
     }
 
     /** 在事件区块左侧渲染状态气泡（emoji + 文字，不使用颜色分类） */
