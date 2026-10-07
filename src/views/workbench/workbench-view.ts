@@ -54,7 +54,7 @@ export class WorkbenchView {
 
         // 加载模板（首次或缓存失效时）
         if (this.templates.length === 0) {
-            this.templates = await loadAllTemplates(this.app);
+            this.templates = await loadAllTemplates();
         }
 
         // 顶部工具栏：标题 + 添加卡片按钮
