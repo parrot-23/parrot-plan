@@ -147,6 +147,12 @@ export const en: I18nMessages = {
     'event.noCategory': 'No category',
     'event.titleRequired': 'Title cannot be empty',
 
+    // Event tooltip
+    'eventTooltip.time': 'Time',
+    'eventTooltip.category': 'Category',
+    'eventTooltip.status': 'Status',
+    'eventTooltip.allDay': 'All day',
+
     // Event copy / paste
     'eventCopy.copy': 'Copy Day Events',
     'eventCopy.paste': 'Paste Day Events',
@@ -252,6 +258,7 @@ export const en: I18nMessages = {
     'section.addItem': 'Add Item',
     'section.itemPlaceholder': 'Item content',
     'section.empty': 'No sections yet. Click "Add Section" to start.',
+    'section.emptyItems': 'No items',
     'section.deleteConfirm': 'Delete section "{title}"?',
     'section.stepTodo': 'To-do',
     'section.stepDoing': 'In progress',

@@ -14,7 +14,7 @@ import { renderWeekGrid } from '../../shared/week-grid';
 import { RangeSchemeModal } from './range-scheme-modal';
 import { t, getWeekDays } from '../../i18n';
 import { log } from '../../shared/logger';
-import { EVENT_STATUS_EMOJI, getEventStatus } from '../../datatypes/domain';
+import { EVENT_STATUS_EMOJI, EVENT_STATUS_LABEL_KEY, getEventStatus } from '../../datatypes/domain';
 import type { EventBlock, ExecutionRecord } from '../../datatypes/domain';
 
 export const VIEW_TYPE_WEEK = 'week-schedule-view';
@@ -161,6 +161,9 @@ export class WeekScheduleView extends ItemView {
     /** 将周计划渲染到指定容器（供主视图复用） */
     async renderInto(content: HTMLElement) {
         this.hostContainer = content;
+
+        // 清理可能残留的事件悬浮提示（重渲染时卡片被移除，mouseleave 不会触发）
+        document.querySelectorAll('.event-tooltip').forEach(el => el.remove());
 
         log('渲染周表日历', {
             weekKey: this.currentWeekKey,
@@ -366,7 +369,7 @@ export class WeekScheduleView extends ItemView {
             day,
             start: 0,
             end: 1440,
-            title: selectedInboxItem.title,
+            title: this.getSelectedEventTitle(selectedInboxItem),
             categoryId: selectedInboxItem.categoryId,
             inboxId: selectedInboxItem.id,
             allDay: true,
@@ -439,7 +442,7 @@ export class WeekScheduleView extends ItemView {
                         day: d,
                         start: startMinutes,
                         end: endMinutes,
-                        title: selectedInboxItem.title,
+                        title: this.getSelectedEventTitle(selectedInboxItem),
                         categoryId: selectedInboxItem.categoryId,
                         inboxId: selectedInboxItem.id,
                         completed: false,
@@ -543,6 +546,9 @@ export class WeekScheduleView extends ItemView {
                         }, ev
                     ).open();
                 };
+
+                // 悬浮提示：展示事件详细信息
+                this.attachEventTooltip(card, ev);
             }
         }
 
@@ -559,6 +565,89 @@ export class WeekScheduleView extends ItemView {
         });
         card.setText(title ?? ev.title);
         return card;
+    }
+
+    /** 分钟数 → HH:MM */
+    private formatMinutes(min: number): string {
+        const h = Math.floor(min / 60);
+        const m = min % 60;
+        return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+    }
+
+    /**
+     * 给事件卡片绑定悬浮提示：鼠标移入时在卡片旁显示详细信息
+     * （标题、时间、分类、执行状态），移出时移除。
+     */
+    private attachEventTooltip(card: HTMLElement, ev: EventBlock) {
+        let tip: HTMLElement | null = null;
+
+        const show = () => {
+            if (tip) return;
+            tip = document.body.createDiv({ cls: 'event-tooltip' });
+
+            // 标题
+            tip.createDiv({ cls: 'event-tooltip-title', text: ev.title });
+
+            // 时间
+            const timeText = ev.allDay
+                ? t('eventTooltip.allDay')
+                : `${this.formatMinutes(ev.start)} - ${this.formatMinutes(ev.end)}`;
+            const timeRow = tip.createDiv({ cls: 'event-tooltip-row' });
+            timeRow.createSpan({ cls: 'event-tooltip-label', text: t('eventTooltip.time') });
+            timeRow.createSpan({ cls: 'event-tooltip-value', text: timeText });
+
+            // 分类
+            const cat = ev.categoryId
+                ? this.timeBlockCategoryData.categories.find(c => c.id === ev.categoryId)
+                : undefined;
+            const catRow = tip.createDiv({ cls: 'event-tooltip-row' });
+            catRow.createSpan({ cls: 'event-tooltip-label', text: t('eventTooltip.category') });
+            const catValue = catRow.createSpan({ cls: 'event-tooltip-value' });
+            if (cat) {
+                const dot = catValue.createSpan({ cls: 'event-tooltip-dot' });
+                dot.setCssProps({ '--dot-color': cat.color });
+                catValue.createSpan({ text: cat.label });
+            } else {
+                catValue.setText(t('inbox.noCategory'));
+            }
+
+            // 执行状态（仅当前周已制定周计划时才有意义）
+            if (this.plannedWeeks.includes(this.currentWeekKey)) {
+                const status = getEventStatus(ev, this.executions);
+                const statusRow = tip.createDiv({ cls: 'event-tooltip-row' });
+                statusRow.createSpan({ cls: 'event-tooltip-label', text: t('eventTooltip.status') });
+                statusRow.createSpan({
+                    cls: 'event-tooltip-value',
+                    text: `${EVENT_STATUS_EMOJI[status]} ${t(EVENT_STATUS_LABEL_KEY[status])}`,
+                });
+            }
+
+            // 定位：优先显示在卡片右侧，空间不足则显示在左侧
+            const rect = card.getBoundingClientRect();
+            const tipRect = tip.getBoundingClientRect();
+            let left = rect.right + 8;
+            if (left + tipRect.width > window.innerWidth) {
+                left = rect.left - tipRect.width - 8;
+            }
+            let top = rect.top;
+            if (top + tipRect.height > window.innerHeight) {
+                top = window.innerHeight - tipRect.height - 8;
+            }
+            tip.setCssProps({
+                '--tip-left': `${Math.max(8, left)}px`,
+                '--tip-top': `${Math.max(8, top)}px`,
+            });
+        };
+
+        const hide = () => {
+            if (tip) {
+                tip.remove();
+                tip = null;
+            }
+        };
+
+        card.addEventListener('mouseenter', show);
+        card.addEventListener('mouseleave', hide);
     }
 
     // ===== 当前时间红线 =====
@@ -916,6 +1005,36 @@ export class WeekScheduleView extends ItemView {
         // 已移除的条目不可再排入
         if (!item || item.removed) return null;
         return item;
+    }
+
+    /**
+     * 计算排入事件时使用的标题。
+     * - 选中子条目：返回「项目名 · 板块名 · 子条目名」
+     * - 仅选中板块：返回「项目名 · 板块名」
+     * - 未选中板块：返回项目名
+     */
+    private getSelectedEventTitle(item: InboxItem): string {
+        const sectionId = this.inboxData.selectedSectionId;
+        if (!sectionId || !item.sections) return item.title;
+        const section = item.sections.find(s => s.id === sectionId);
+        if (!section) return item.title;
+        const typeLabel = section.type === 'checklist'
+            ? t('section.typeChecklist')
+            : section.type === 'steps'
+                ? t('section.typeSteps')
+                : t('section.typeHabit');
+        const sectionName = section.title || typeLabel;
+
+        // 若选中了具体子条目，追加条目名
+        const entryId = this.inboxData.selectedSectionItemId;
+        if (entryId) {
+            const entries = (section.data as { items?: { id: string; text: string }[] }).items ?? [];
+            const entry = entries.find(e => e.id === entryId);
+            if (entry && entry.text) {
+                return `${item.title} · ${sectionName} · ${entry.text}`;
+            }
+        }
+        return `${item.title} · ${sectionName}`;
     }
 
     /** 判断某任务在当前周的某天是否已排入任何事件（全天或时间点） */

@@ -311,6 +311,9 @@ export function renderTaskPanel(
         // 点击选中/取消（以 inboxData.selectedId 为准，避免宿主刷新后本地状态失效）
         itemEl.onclick = (e) => {
             e.stopPropagation();
+            // 点击任务项时清除板块选中状态
+            inboxData.selectedSectionId = undefined;
+            inboxData.selectedSectionItemId = undefined;
             if (inboxData.selectedId === item.id) {
                 inboxData.selectedId = undefined;
             } else {
@@ -331,6 +334,132 @@ export function renderTaskPanel(
         }
     }
 
+    // ===== 渲染板块为只读子目录（仅项目聚焦模式使用）=====
+    function renderSectionsAsSubdir(item: InboxItem, depth: number) {
+        if (!item.sections || item.sections.length === 0) return;
+
+        for (const section of item.sections) {
+            const el = listDiv.createDiv({ cls: 'inbox-item inbox-section-subdir' });
+            el.setCssProps({ '--inbox-depth': String(depth) });
+
+            // 选中态：选中该板块（且未选中具体条目）时高亮
+            const sectionSelected = inboxData.selectedSectionId === section.id
+                && !inboxData.selectedSectionItemId;
+            if (sectionSelected) el.addClass('selected');
+
+            const titleRow = el.createDiv({ cls: 'inbox-item-title-row' });
+
+            // 折叠/展开箭头（复用 collapsedIds，板块 id 前缀为 sec_，不与任务 id 冲突）
+            const collapsed = inboxData.collapsedIds?.includes(section.id) ?? false;
+            const toggle = titleRow.createSpan({ cls: 'inbox-item-toggle' });
+            toggle.setText(collapsed ? '▸' : '▾');
+            toggle.onclick = (e) => {
+                e.stopPropagation();
+                if (!inboxData.collapsedIds) inboxData.collapsedIds = [];
+                if (collapsed) {
+                    inboxData.collapsedIds = inboxData.collapsedIds.filter(id => id !== section.id);
+                } else {
+                    inboxData.collapsedIds.push(section.id);
+                }
+                renderList();
+            };
+
+            const typeLabel = section.type === 'checklist'
+                ? t('section.typeChecklist')
+                : section.type === 'steps'
+                    ? t('section.typeSteps')
+                    : t('section.typeHabit');
+            titleRow.createSpan({ cls: 'inbox-section-subdir-type', text: typeLabel });
+            titleRow.createSpan({ cls: 'inbox-item-title', text: section.title || typeLabel });
+
+            // 点击板块名：选中该板块，同时选中所属项目
+            el.onclick = (e) => {
+                e.stopPropagation();
+                selectSection(item, section.id);
+            };
+
+            if (collapsed) continue;
+
+            // 条目列表：像子任务一样逐条渲染（只读）
+            const items = (section.data as { items?: unknown[] }).items ?? [];
+            if (items.length === 0) {
+                const emptyEl = listDiv.createDiv({ cls: 'inbox-item inbox-section-subdir' });
+                emptyEl.setCssProps({ '--inbox-depth': String(depth + 1) });
+                const emptyRow = emptyEl.createDiv({ cls: 'inbox-item-title-row' });
+                emptyRow.createSpan({ cls: 'inbox-item-toggle inbox-item-toggle-empty' });
+                emptyRow.createSpan({ cls: 'inbox-section-subdir-empty', text: t('section.emptyItems') });
+                continue;
+            }
+
+            if (section.type === 'checklist') {
+                for (const it of (section.data as ChecklistData).items) {
+                    renderSectionEntry(item, section.id, depth + 1, it.id, it.done ? '☑' : '☐', it.text);
+                }
+            } else if (section.type === 'steps') {
+                for (const it of (section.data as StepsData).items) {
+                    const mark = it.status === 'done' ? '✅' : it.status === 'doing' ? '🔄' : '⬜';
+                    renderSectionEntry(item, section.id, depth + 1, it.id, mark, it.text);
+                }
+            } else if (section.type === 'habit') {
+                for (const it of (section.data as HabitData).items) {
+                    const count = it.checkedDays?.length ?? 0;
+                    renderSectionEntry(item, section.id, depth + 1, it.id, '🔁', it.text, String(count));
+                }
+            }
+        }
+    }
+
+    /** 选中板块：selectedId 指向所属项目，同时记录板块 */
+    function selectSection(item: InboxItem, sectionId: string) {
+        inboxData.selectedId = item.id;
+        inboxData.selectedSectionId = sectionId;
+        inboxData.selectedSectionItemId = undefined;
+        renderList();
+        updateToolbar();
+        onRefresh();
+    }
+
+    /** 选中板块条目：同时选中所属板块与项目 */
+    function selectSectionEntry(item: InboxItem, sectionId: string, entryId: string) {
+        inboxData.selectedId = item.id;
+        inboxData.selectedSectionId = sectionId;
+        inboxData.selectedSectionItemId = entryId;
+        renderList();
+        updateToolbar();
+        onRefresh();
+    }
+
+    /** 渲染板块下的单个条目（像子任务一样：inbox-item 结构 + 缩进） */
+    function renderSectionEntry(
+        item: InboxItem,
+        sectionId: string,
+        depth: number,
+        entryId: string,
+        mark: string,
+        text: string,
+        count?: string,
+    ) {
+        const el = listDiv.createDiv({ cls: 'inbox-item inbox-section-subdir' });
+        el.setCssProps({ '--inbox-depth': String(depth) });
+
+        // 选中态：选中该条目时高亮
+        if (inboxData.selectedSectionItemId === entryId) el.addClass('selected');
+
+        const titleRow = el.createDiv({ cls: 'inbox-item-title-row' });
+        titleRow.createSpan({ cls: 'inbox-item-toggle inbox-item-toggle-empty' });
+        titleRow.createSpan({ cls: 'inbox-section-subdir-mark', text: mark });
+        titleRow.createSpan({ cls: 'inbox-item-title', text });
+        if (count !== undefined) {
+            titleRow.createSpan({ cls: 'inbox-section-subdir-count', text: count });
+        }
+
+        // 点击条目：选中该条目，同时选中所属板块与项目
+        el.onclick = (e) => {
+            e.stopPropagation();
+            selectSectionEntry(item, sectionId, entryId);
+        };
+    }
+
     // ===== 渲染列表 =====
     function renderList() {
         listDiv.empty();
@@ -347,7 +476,16 @@ export function renderTaskPanel(
                 inboxData.projectFocusId = undefined;
             } else {
                 listDiv.createDiv({ cls: 'inbox-group-header', text: t('inbox.projectFocus') });
-                renderItem(focusItem, 0);
+                // 先渲染聚焦任务本身（不递归子任务），再渲染板块，最后渲染子任务，
+                // 保证板块位于子任务之上
+                renderItem(focusItem, 0, false);
+                renderSectionsAsSubdir(focusItem, 1);
+                const collapsed = inboxData.collapsedIds?.includes(focusItem.id) ?? false;
+                if (!collapsed) {
+                    for (const child of getChildren(inboxData, focusItem.id)) {
+                        renderItem(child, 1);
+                    }
+                }
                 return;
             }
         }
@@ -391,8 +529,10 @@ export function renderTaskPanel(
 
     // 点击面板空白处取消选中（任务项自身已 stopPropagation）
     container.onclick = () => {
-        if (!inboxData.selectedId) return;
+        if (!inboxData.selectedId && !inboxData.selectedSectionId) return;
         inboxData.selectedId = undefined;
+        inboxData.selectedSectionId = undefined;
+        inboxData.selectedSectionItemId = undefined;
         renderList();
         updateToolbar();
         onRefresh();

@@ -145,6 +145,12 @@ export const zh = {
     'event.noCategory': '不分类',
     'event.titleRequired': '标题不能为空',
 
+    // 事件悬浮提示
+    'eventTooltip.time': '时间',
+    'eventTooltip.category': '分类',
+    'eventTooltip.status': '状态',
+    'eventTooltip.allDay': '全天',
+
     // 事件复制 / 粘贴
     'eventCopy.copy': '复制一天事件',
     'eventCopy.paste': '粘贴一天事件',
@@ -250,6 +256,7 @@ export const zh = {
     'section.addItem': '添加条目',
     'section.itemPlaceholder': '条目内容',
     'section.empty': '暂无板块，点击「添加板块」开始',
+    'section.emptyItems': '暂无条目',
     'section.deleteConfirm': '确定删除板块「{title}」？',
     'section.stepTodo': '待办',
     'section.stepDoing': '进行中',

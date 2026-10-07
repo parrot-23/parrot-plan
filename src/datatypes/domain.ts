@@ -116,6 +116,10 @@ export interface InboxData {
     weekGoalOnly?: boolean;
     /** 项目聚焦：仅显示该任务及其所有子任务（持久化，用于「按项目排布」） */
     projectFocusId?: string;
+    /** 选中的板块 id（选中板块时，selectedId 同时指向所属项目） */
+    selectedSectionId?: string;
+    /** 选中的板块条目 id（选中条目时，同时选中其所属板块与项目） */
+    selectedSectionItemId?: string;
 }
 
 /** 默认空收集盒数据 */
@@ -141,12 +145,12 @@ export const EVENT_STATUS_EMOJI: Record<EventStatus, string> = {
 };
 
 /** 各状态对应的 i18n 文案 key */
-export const EVENT_STATUS_LABEL_KEY: Record<EventStatus, string> = {
+export const EVENT_STATUS_LABEL_KEY = {
     planned: 'today.statusPlanned',
     executed: 'today.statusExecuted',
     changed: 'today.statusChanged',
     added: 'today.statusAdded',
-};
+} as const satisfies Record<EventStatus, string>;
 
 /**
  * 计算计划事件的执行状态：替换 > 已执行 > 计划。
