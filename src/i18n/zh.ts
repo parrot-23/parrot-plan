@@ -98,6 +98,8 @@ export const zh = {
     'projectPicture.sectionPlaceholder': '板块区域',
     'projectPicture.heatmapTitle': '热力活跃图',
     'projectPicture.heatmapEmpty': '暂无执行记录',
+    'projectPicture.planHeatmapTitle': '计划事件热力活跃图',
+    'projectPicture.planHeatmapEmpty': '暂无计划事件',
     'year.unassigned': '已取消「{title}」在 {week} 的分配',
 
     // 命令与功能区

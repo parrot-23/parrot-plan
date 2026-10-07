@@ -102,6 +102,7 @@ export class MainView extends ItemView {
             this.weekView.timeBlockCategoryData,
             () => this.weekView.save(),
             () => this.weekView.executions,
+            () => this.weekView.events,
         );
         this.workbenchView = new WorkbenchView(
             this.app,

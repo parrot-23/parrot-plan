@@ -2332,8 +2332,10 @@
     flex: 1;
     min-height: 120px;
     display: flex;
-    align-items: flex-start;
+    flex-direction: column;
+    align-items: stretch;
     justify-content: flex-start;
+    gap: 16px;
     border: 1px dashed var(--background-modifier-border);
     border-radius: 8px;
     background: var(--background-secondary);

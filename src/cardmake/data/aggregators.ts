@@ -32,6 +32,8 @@ export function aggregate(source: CardSource, provider: DataProvider): Aggregati
             return aggregateCategoryDistribution(source, provider);
         case 'activity-heatmap':
             return aggregateActivityHeatmap(source, provider);
+        case 'plan-heatmap':
+            return aggregatePlanHeatmap(source, provider);
         default:
             return { stats: [] };
     }
@@ -189,6 +191,51 @@ function aggregateActivityHeatmap(source: CardSource, provider: DataProvider): A
     const total = data.reduce((s, d) => s + d.value, 0);
     return {
         stats: [{ label: '活跃总量', value: total }],
+        heatmap: { data, metricLabel: metric === 'duration' ? '时长(分钟)' : '次数' },
+    };
+}
+
+/**
+ * 计划事件热力活跃图：按天聚合计划事件时长（分钟），输出 GitHub 贡献图风格的热力图序列。
+ * 时间范围：最近一年（365 天）。
+ * 范围过滤：source.params.projectId 指定聚焦项目时，仅统计该项目及其子任务的计划事件。
+ */
+function aggregatePlanHeatmap(source: CardSource, provider: DataProvider): AggregationResult {
+    const metric = (source.params?.metric as string) ?? 'duration';
+    const projectId = source.params?.projectId as string | undefined;
+
+    // 计算聚焦项目及其所有子任务的 id 集合（未指定时统计全部）
+    let visibleIds: Set<string> | undefined;
+    if (projectId) {
+        visibleIds = new Set<string>([projectId]);
+        const walk = (parentId: string) => {
+            for (const t of provider.getTasks()) {
+                if (t.removed || t.parentId !== parentId) continue;
+                visibleIds!.add(t.id);
+                walk(t.id);
+            }
+        };
+        walk(projectId);
+    }
+
+    // 按天聚合计划事件时长（分钟）
+    const buckets = new Map<string, number>();
+    for (const ev of provider.getEvents()) {
+        if (!ev.weekKey || !ev.day) continue;
+        if (visibleIds && ev.inboxId && !visibleIds.has(ev.inboxId)) continue;
+        const dateKey = makeDayKeyFromWeek(ev.weekKey, ev.day);
+        const val = metric === 'duration'
+            ? Math.max(0, ev.end - ev.start)
+            : 1;
+        buckets.set(dateKey, (buckets.get(dateKey) ?? 0) + val);
+    }
+
+    const data = Array.from(buckets.entries())
+        .map(([date, value]) => ({ date, value }));
+
+    const total = data.reduce((s, d) => s + d.value, 0);
+    return {
+        stats: [{ label: '计划总量', value: total }],
         heatmap: { data, metricLabel: metric === 'duration' ? '时长(分钟)' : '次数' },
     };
 }

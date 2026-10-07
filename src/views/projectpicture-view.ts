@@ -3,7 +3,7 @@ import type { App } from 'obsidian';
 import type { TimeBlockCategoryData } from './week-view/timeblock-category-manager';
 import type { InboxData, InboxItem } from '../datatypes/domain';
 import { renderTaskPanel } from '../shared/task-panel';
-import type { ExecutionRecord } from '../datatypes/domain';
+import type { ExecutionRecord, EventBlock } from '../datatypes/domain';
 import { parseWeekKey } from './week-view/timeblock-data';
 import { t } from '../i18n';
 import { aggregate } from '../cardmake/data/aggregators';
@@ -24,6 +24,8 @@ export class SwimlaneView {
     private save: () => Promise<void>;
     /** 获取执行记录（用于绘制执行线） */
     private getExecutions: () => ExecutionRecord[];
+    /** 获取计划事件（用于绘制计划事件热力图） */
+    private getEvents: () => EventBlock[];
     /** 当前渲染容器（用于自刷新） */
     private container?: HTMLElement;
     /** 当前显示的年份（用于顶部年份切换） */
@@ -39,12 +41,14 @@ export class SwimlaneView {
         categoryData: TimeBlockCategoryData,
         save: () => Promise<void>,
         getExecutions: () => ExecutionRecord[],
+        getEvents: () => EventBlock[],
     ) {
         this.app = app;
         this.inboxData = inboxData;
         this.categoryData = categoryData;
         this.save = save;
         this.getExecutions = getExecutions;
+        this.getEvents = getEvents;
     }
 
     async renderInto(container: HTMLElement): Promise<void> {
@@ -347,17 +351,14 @@ export class SwimlaneView {
         }
     }
 
-    /** 板块区域：绘制当前聚焦项目的热力活跃图（最近一年执行时长） */
+    /** 板块区域：绘制当前聚焦项目的热力活跃图（执行记录 + 计划事件） */
     private renderActivityHeatmap(sectionArea: HTMLElement) {
         sectionArea.empty();
         sectionArea.addClass('swimlane-section-area');
 
-        const wrapper = sectionArea.createDiv({ cls: 'swimlane-heatmap-wrap' });
-        wrapper.createDiv({ cls: 'swimlane-heatmap-title', text: t('projectPicture.heatmapTitle') });
-
         // 构建数据提供者（复用统计聚合逻辑）
         const provider = createDataProvider(
-            () => [],
+            this.getEvents,
             this.getExecutions,
             () => this.inboxData.items,
         );
@@ -365,16 +366,49 @@ export class SwimlaneView {
         // 聚焦项目 id（未聚焦时统计全部任务）
         const projectId = this.inboxData.projectFocusId;
 
+        // 执行记录热力活跃图
+        this.renderHeatmapBlock(
+            sectionArea,
+            t('projectPicture.heatmapTitle'),
+            t('projectPicture.heatmapEmpty'),
+            'activity-heatmap',
+            provider,
+            projectId,
+        );
+
+        // 计划事件热力活跃图
+        this.renderHeatmapBlock(
+            sectionArea,
+            t('projectPicture.planHeatmapTitle'),
+            t('projectPicture.planHeatmapEmpty'),
+            'plan-heatmap',
+            provider,
+            projectId,
+        );
+    }
+
+    /** 渲染单个热力图块（标题 + 热力图或空提示） */
+    private renderHeatmapBlock(
+        sectionArea: HTMLElement,
+        title: string,
+        emptyText: string,
+        sourceType: string,
+        provider: ReturnType<typeof createDataProvider>,
+        projectId: string | undefined,
+    ) {
+        const wrapper = sectionArea.createDiv({ cls: 'swimlane-heatmap-wrap' });
+        wrapper.createDiv({ cls: 'swimlane-heatmap-title', text: title });
+
         const result = aggregate(
             {
-                type: 'activity-heatmap',
+                type: sourceType,
                 params: { metric: 'duration', projectId },
             },
             provider,
         );
 
         if (!result.heatmap || result.heatmap.data.length === 0) {
-            wrapper.createDiv({ cls: 'swimlane-heatmap-empty', text: t('projectPicture.heatmapEmpty') });
+            wrapper.createDiv({ cls: 'swimlane-heatmap-empty', text: emptyText });
             return;
         }
 
