@@ -2410,6 +2410,33 @@
     min-width: max-content;
 }
 
+/* 任务标题行：左侧固定，横向滚动时保持可见 */
+.swimlane-task-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: max-content;
+    padding: 4px 8px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-normal);
+    background: var(--background-secondary);
+    border-bottom: 1px solid var(--background-modifier-border);
+    position: sticky;
+    left: 0;
+    z-index: 2;
+}
+
+.swimlane-task-row.is-selected {
+    color: var(--interactive-accent);
+}
+
+.swimlane-task-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
 .swimlane-cell {
     flex-shrink: 0;
     width: 60px;

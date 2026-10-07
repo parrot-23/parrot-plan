@@ -1,7 +1,7 @@
 import type { App } from 'obsidian';
 
 import type { TimeBlockCategoryData } from './week-view/timeblock-category-manager';
-import type { InboxData } from '../datatypes/domain';
+import type { InboxData, InboxItem } from '../datatypes/domain';
 import { renderTaskPanel } from '../shared/task-panel';
 import type { ExecutionRecord } from '../datatypes/domain';
 import { parseWeekKey } from './week-view/timeblock-data';
@@ -76,12 +76,6 @@ export class SwimlaneView {
 
         // 右侧：泳道图
         const board = boardRow.createDiv({ cls: 'swimlane-board' });
-        // 鼠标滚轮左右滚动
-        board.addEventListener('wheel', (evt) => {
-            if (evt.deltaY === 0) return;
-            evt.preventDefault();
-            board.scrollLeft += evt.deltaY;
-        }, { passive: false });
         this.renderBoard(board);
 
         // ===== 第三行及以下：板块区域（占位，后续放置各种板块 / 卡片）=====
@@ -214,58 +208,97 @@ export class SwimlaneView {
             });
         }
 
-        // 当前选中的任务
-        const selectedId = this.inboxData.selectedId;
-        const selected = selectedId
-            ? this.inboxData.items.find(i => i.id === selectedId && !i.removed)
-            : undefined;
+        // 按任务面板的显示顺序，从上到下渲染每个任务的计划项与执行记录
+        const tasks = this.collectVisibleTasks();
+        const executions = this.getExecutions();
 
-        // 计划周集合（来自任务的 assignedWeekKeys，仅当前年份）
-        const planWeeks = new Set<number>();
-        if (selected?.assignedWeekKeys) {
-            for (const key of selected.assignedWeekKeys) {
-                const parsed = parseWeekKey(key);
-                if (parsed.year === this.currentYear) planWeeks.add(parsed.week);
+        // 记录选中任务最早出现的一周，用于渲染后滚动定位
+        let selectedFirstWeek: number | undefined;
+
+        for (const task of tasks) {
+            // 计划周集合（来自任务的 assignedWeekKeys，仅当前年份）
+            const planWeeks = new Set<number>();
+            if (task.assignedWeekKeys) {
+                for (const key of task.assignedWeekKeys) {
+                    const parsed = parseWeekKey(key);
+                    if (parsed.year === this.currentYear) planWeeks.add(parsed.week);
+                }
             }
-        }
 
-        // 执行周集合（来自执行记录，按 inboxId 匹配，仅当前年份）
-        const execWeeks = new Set<number>();
-        if (selected) {
-            for (const rec of this.getExecutions()) {
-                if (rec.inboxId === selected.id && rec.weekKey) {
+            // 执行周集合（来自执行记录，按 inboxId 匹配，仅当前年份）
+            const execWeeks = new Set<number>();
+            for (const rec of executions) {
+                if (rec.inboxId === task.id && rec.weekKey) {
                     const parsed = parseWeekKey(rec.weekKey);
                     if (parsed.year === this.currentYear) execWeeks.add(parsed.week);
                 }
             }
-        }
 
-        // 计划线
-        const planRow = board.createDiv({ cls: 'swimlane-lane-row' });
-        for (let w = 1; w <= totalWeeks; w++) {
-            const cell = planRow.createDiv({ cls: 'swimlane-cell' });
-            if (planWeeks.has(w)) cell.addClass('is-plan');
-        }
+            // 任务标题行（左侧固定，横向滚动时保持可见）
+            const titleRow = board.createDiv({ cls: 'swimlane-task-row' });
+            const cat = task.categoryId
+                ? this.categoryData.categories.find(c => c.id === task.categoryId)
+                : undefined;
+            if (cat) {
+                const dot = titleRow.createSpan({ cls: 'inbox-category-dot' });
+                dot.setCssProps({ '--dot-color': cat.color });
+            }
+            titleRow.createSpan({ cls: 'swimlane-task-name', text: task.title });
+            if (this.inboxData.selectedId === task.id) titleRow.addClass('is-selected');
 
-        // 执行线
-        const execRow = board.createDiv({ cls: 'swimlane-lane-row' });
-        for (let w = 1; w <= totalWeeks; w++) {
-            const cell = execRow.createDiv({ cls: 'swimlane-cell' });
-            if (execWeeks.has(w)) cell.addClass('is-exec');
+            // 计划线
+            const planRow = board.createDiv({ cls: 'swimlane-lane-row' });
+            for (let w = 1; w <= totalWeeks; w++) {
+                const cell = planRow.createDiv({ cls: 'swimlane-cell' });
+                if (planWeeks.has(w)) cell.addClass('is-plan');
+            }
+
+            // 执行线
+            const execRow = board.createDiv({ cls: 'swimlane-lane-row' });
+            for (let w = 1; w <= totalWeeks; w++) {
+                const cell = execRow.createDiv({ cls: 'swimlane-cell' });
+                if (execWeeks.has(w)) cell.addClass('is-exec');
+            }
+
+            // 选中任务：记录其最早出现的一周
+            if (this.inboxData.selectedId === task.id) {
+                const weeks = Array.from(planWeeks).concat(Array.from(execWeeks));
+                if (weeks.length > 0) {
+                    selectedFirstWeek = Math.min.apply(null, weeks);
+                }
+            }
         }
 
         // 选中任务时：横向滚动到最早出现的时间点（计划 / 执行周中最小的一周）
-        if (selected) {
-            const weeks = Array.from(planWeeks).concat(Array.from(execWeeks));
-            if (weeks.length > 0) {
-                const firstWeek = Math.min.apply(null, weeks);
-                // 每格宽 60px，滚动到该周前留出一点边距
-                const targetLeft = (firstWeek - 1) * 60 - 12;
-                window.setTimeout(() => {
-                    board.scrollLeft = Math.max(0, targetLeft);
-                }, 0);
-            }
+        if (selectedFirstWeek !== undefined) {
+            const firstWeek = selectedFirstWeek;
+            // 每格宽 60px，滚动到该周前留出一点边距
+            const targetLeft = (firstWeek - 1) * 60 - 12;
+            window.setTimeout(() => {
+                board.scrollLeft = Math.max(0, targetLeft);
+            }, 0);
         }
+    }
+
+    /**
+     * 按任务面板的显示顺序收集可见任务（深度优先，跳过已折叠任务的子任务）。
+     * 与 task-panel 的 renderList / renderItem 顺序保持一致。
+     */
+    private collectVisibleTasks(): InboxItem[] {
+        const result: InboxItem[] = [];
+        const collapsed = this.inboxData.collapsedIds ?? [];
+
+        const walk = (parentId: string | undefined) => {
+            const children = this.inboxData.items.filter(
+                i => !i.removed && i.parentId === parentId,
+            );
+            for (const child of children) {
+                result.push(child);
+                if (!collapsed.includes(child.id)) walk(child.id);
+            }
+        };
+        walk(undefined);
+        return result;
     }
 
     /** 顶部年份切换（‹ 年份 › + 今年），与年视图日历顶部一致 */
