@@ -92,7 +92,7 @@ export class SwimlaneView {
         for (let w = 1; w <= totalWeeks; w++) {
             headerRow.createDiv({
                 cls: 'swimlane-header-cell',
-                text: t('swimlane.weekLabel', { week: w }),
+                text: t('projectPicture.weekLabel', { week: w }),
             });
         }
 
@@ -170,9 +170,9 @@ export class SwimlaneView {
     private renderLegend(container: HTMLElement) {
         const legend = container.createDiv({ cls: 'swimlane-legend' });
 
-        const items: { labelKey: 'swimlane.legendPlan' | 'swimlane.legendExec'; color: string }[] = [
-            { labelKey: 'swimlane.legendPlan', color: 'var(--interactive-accent)' },
-            { labelKey: 'swimlane.legendExec', color: 'var(--color-green, #43b581)' },
+        const items: { labelKey: 'projectPicture.legendPlan' | 'projectPicture.legendExec'; color: string }[] = [
+            { labelKey: 'projectPicture.legendPlan', color: 'var(--interactive-accent)' },
+            { labelKey: 'projectPicture.legendExec', color: 'var(--color-green, #43b581)' },
         ];
 
         for (const item of items) {

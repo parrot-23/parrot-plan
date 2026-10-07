@@ -29,7 +29,7 @@ export const en: I18nMessages = {
     'nav.year': 'Year Plan',
     'nav.week': 'Week Plan',
     'nav.today': 'Today Todo',
-    'nav.swimlane': 'Swimlane',
+    'nav.projectPicture': 'Project Picture',
     'nav.workbench': 'Workbench',
     'nav.achievement': 'Achievements',
     'nav.placeholder': 'This is the "{name}" page',
@@ -83,10 +83,10 @@ export const en: I18nMessages = {
     'year.monthLabel': '{month}',
     'year.thisYear': 'This year',
     'year.assigned': 'Assigned "{title}" to {week}',
-    // Swimlane
-    'swimlane.weekLabel': 'W{week}',
-    'swimlane.legendPlan': 'Planned',
-    'swimlane.legendExec': 'Executed',
+    // Project Picture
+    'projectPicture.weekLabel': 'W{week}',
+    'projectPicture.legendPlan': 'Planned',
+    'projectPicture.legendExec': 'Executed',
     'year.unassigned': 'Unassigned "{title}" from {week}',
 
     // Command and ribbon

@@ -27,7 +27,7 @@ export const zh = {
     'nav.year': '年计划',
     'nav.week': '周计划',
     'nav.today': '日执行',
-    'nav.swimlane': '泳道图',
+    'nav.projectPicture': '项目全景图',
     'nav.workbench': '工作台',
     'nav.achievement': '成就榜单',
     'nav.placeholder': '当前是「{name}」页面',
@@ -81,10 +81,10 @@ export const zh = {
     'year.monthLabel': '{month}月',
     'year.thisYear': '今年',
     'year.assigned': '已将「{title}」分配到 {week}',
-    // 泳道图
-    'swimlane.weekLabel': 'W{week}',
-    'swimlane.legendPlan': '计划项',
-    'swimlane.legendExec': '执行记录',
+    // 项目全景图
+    'projectPicture.weekLabel': 'W{week}',
+    'projectPicture.legendPlan': '计划项',
+    'projectPicture.legendExec': '执行记录',
     'year.unassigned': '已取消「{title}」在 {week} 的分配',
 
     // 命令与功能区
