@@ -151,7 +151,7 @@ function dimensionKey(ex: { weekKey?: string; day?: number }, dimension: string)
 }
 
 /**
- * 热力活跃图：按天聚合执行时长（分钟），输出 GitHub 贡献图风格的热力图序列。
+ * 执行记录热力活跃图：按天聚合执行时长（分钟），输出 GitHub 贡献图风格的热力图序列。
  * 时间范围：最近一年（365 天）。
  * 范围过滤：source.params.projectId 指定聚焦项目时，仅统计该项目及其子任务的执行记录。
  */
