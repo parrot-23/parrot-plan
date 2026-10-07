@@ -94,7 +94,7 @@ export const en: I18nMessages = {
     'projectPicture.legendPlan': 'Planned',
     'projectPicture.legendExec': 'Executed',
     'projectPicture.defaultTitle': 'Project Picture',
-    'projectPicture.search': 'Search',
+    'projectPicture.search': 'Project Search',
     'projectPicture.searchPlaceholder': 'Search project name',
     'projectPicture.searchEmpty': 'No matching project found',
     'projectPicture.sectionPlaceholder': 'Section Area',

@@ -92,7 +92,7 @@ export const zh = {
     'projectPicture.legendPlan': '计划项',
     'projectPicture.legendExec': '执行记录',
     'projectPicture.defaultTitle': '项目全景图',
-    'projectPicture.search': '搜索',
+    'projectPicture.search': '项目搜索',
     'projectPicture.searchPlaceholder': '搜索项目名称',
     'projectPicture.searchEmpty': '未找到匹配的项目',
     'projectPicture.sectionPlaceholder': '板块区域',
