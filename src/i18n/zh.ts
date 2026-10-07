@@ -91,6 +91,11 @@ export const zh = {
     'projectPicture.weekLabel': 'W{week}',
     'projectPicture.legendPlan': '计划项',
     'projectPicture.legendExec': '执行记录',
+    'projectPicture.defaultTitle': '项目全景图',
+    'projectPicture.search': '搜索',
+    'projectPicture.searchPlaceholder': '搜索项目名称',
+    'projectPicture.searchEmpty': '未找到匹配的项目',
+    'projectPicture.sectionPlaceholder': '板块区域',
     'year.unassigned': '已取消「{title}」在 {week} 的分配',
 
     // 命令与功能区

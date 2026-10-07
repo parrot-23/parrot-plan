@@ -8,8 +8,10 @@ import { parseWeekKey } from './week-view/timeblock-data';
 import { t } from '../i18n';
 
 /**
- * 泳道图视图：左侧任务面板 + 右侧泳道图（W1–W52 从左到右排列）。
- * 选中任务后，在泳道图上显示该任务的「计划线」与「执行线」。
+ * 项目全景图视图：从上到下的页面结构。
+ * 第一行：项目名称大标题 + 右侧搜索按钮（可切换中心主题）；
+ * 第二行：左侧任务面板 + 右侧泳道图（W1–W52 从左到右排列，高度为原来的一半）；
+ * 第三行及以下：板块区域（占位，后续放置各种板块 / 卡片）。
  * 通过 renderInto 渲染到指定容器（与 WeekScheduleView / YearView 一致）。
  */
 export class SwimlaneView {
@@ -23,6 +25,10 @@ export class SwimlaneView {
     private container?: HTMLElement;
     /** 当前显示的年份（用于顶部年份切换） */
     private currentYear: number = new Date().getFullYear();
+    /** 是否展开搜索框 */
+    private searchOpen = false;
+    /** 搜索关键词 */
+    private searchQuery = '';
 
     constructor(
         app: App,
@@ -43,8 +49,14 @@ export class SwimlaneView {
         container.empty();
         container.addClass('swimlane-view');
 
-        // ===== 左侧：任务面板 =====
-        const taskPanel = container.createDiv({ cls: 'swimlane-task-panel' });
+        // ===== 第一行：项目名称大标题 + 右侧搜索按钮 =====
+        this.renderHeader(container);
+
+        // ===== 第二行：左侧任务面板 + 右侧泳道图（高度为原来的一半）=====
+        const boardRow = container.createDiv({ cls: 'swimlane-board-row' });
+
+        // 左侧：任务面板
+        const taskPanel = boardRow.createDiv({ cls: 'swimlane-task-panel' });
         renderTaskPanel(
             this.app,
             taskPanel,
@@ -62,8 +74,8 @@ export class SwimlaneView {
             },
         );
 
-        // ===== 右侧：泳道图 =====
-        const board = container.createDiv({ cls: 'swimlane-board' });
+        // 右侧：泳道图
+        const board = boardRow.createDiv({ cls: 'swimlane-board' });
         // 鼠标滚轮左右滚动
         board.addEventListener('wheel', (evt) => {
             if (evt.deltaY === 0) return;
@@ -71,11 +83,117 @@ export class SwimlaneView {
             board.scrollLeft += evt.deltaY;
         }, { passive: false });
         this.renderBoard(board);
+
+        // ===== 第三行及以下：板块区域（占位，后续放置各种板块 / 卡片）=====
+        const sectionArea = container.createDiv({ cls: 'swimlane-section-area' });
+        sectionArea.createDiv({
+            cls: 'swimlane-section-placeholder',
+            text: t('projectPicture.sectionPlaceholder'),
+        });
     }
 
     /** 重新渲染自身 */
     private async refresh(): Promise<void> {
         if (this.container) await this.renderInto(this.container);
+    }
+
+    /** 第一行：项目名称大标题 + 右侧搜索按钮（点击展开搜索框与结果列表） */
+    private renderHeader(container: HTMLElement) {
+        const header = container.createDiv({ cls: 'swimlane-header' });
+
+        // 标题：优先显示当前聚焦的项目名称，否则显示默认标题
+        const focusId = this.inboxData.projectFocusId;
+        const focusItem = focusId
+            ? this.inboxData.items.find(i => i.id === focusId && !i.removed)
+            : undefined;
+        header.createDiv({
+            cls: 'swimlane-title',
+            text: focusItem?.title ?? t('projectPicture.defaultTitle'),
+        });
+
+        // 右侧：搜索按钮（外层容器相对定位，用于承载下方悬浮的结果列表）
+        const searchWrap = header.createDiv({ cls: 'swimlane-search-wrap' });
+        const searchBtn = searchWrap.createEl('button', {
+            cls: 'swimlane-search-btn',
+            text: t('projectPicture.search'),
+        });
+        searchBtn.toggleClass('is-active', this.searchOpen);
+        searchBtn.onclick = () => {
+            this.searchOpen = !this.searchOpen;
+            if (!this.searchOpen) this.searchQuery = '';
+            void this.refresh();
+        };
+
+        // 展开时：在搜索按钮下方以悬浮框展示搜索框 + 结果列表
+        if (this.searchOpen) {
+            this.renderSearchPanel(searchWrap);
+        }
+    }
+
+    /** 搜索面板：输入框 + 匹配到的项目结果列表，点击结果切换中心主题 */
+    private renderSearchPanel(searchWrap: HTMLElement) {
+        const panel = searchWrap.createDiv({ cls: 'swimlane-search-panel' });
+
+        const input = panel.createEl('input', {
+            cls: 'swimlane-search-input',
+            type: 'text',
+            placeholder: t('projectPicture.searchPlaceholder'),
+        });
+        input.value = this.searchQuery;
+        input.oninput = () => {
+            this.searchQuery = input.value;
+            this.renderSearchResults(resultsEl);
+        };
+        // 阻止冒泡，避免触发外层点击
+        input.onclick = (e) => e.stopPropagation();
+
+        const resultsEl = panel.createDiv({ cls: 'swimlane-search-results' });
+        this.renderSearchResults(resultsEl);
+
+        // 自动聚焦输入框
+        window.setTimeout(() => input.focus(), 0);
+    }
+
+    /** 渲染搜索结果列表（按关键词过滤未移除的任务） */
+    private renderSearchResults(resultsEl: HTMLElement) {
+        resultsEl.empty();
+        const query = this.searchQuery.trim().toLowerCase();
+        const matches = this.inboxData.items.filter(i =>
+            !i.removed && (query === '' || i.title.toLowerCase().includes(query)),
+        );
+
+        if (matches.length === 0) {
+            resultsEl.createDiv({
+                cls: 'swimlane-search-empty',
+                text: t('projectPicture.searchEmpty'),
+            });
+            return;
+        }
+
+        for (const item of matches) {
+            const row = resultsEl.createDiv({ cls: 'swimlane-search-item' });
+            if (item.id === this.inboxData.projectFocusId) row.addClass('is-active');
+
+            const cat = item.categoryId
+                ? this.categoryData.categories.find(c => c.id === item.categoryId)
+                : undefined;
+            if (cat) {
+                const dot = row.createSpan({ cls: 'inbox-category-dot' });
+                dot.setCssProps({ '--dot-color': cat.color });
+            }
+            row.createSpan({ cls: 'swimlane-search-item-name', text: item.title });
+
+            row.onclick = () => {
+                // 切换项目全景图的中心主题：聚焦到该任务
+                this.inboxData.projectFocusId = item.id;
+                this.searchOpen = false;
+                this.searchQuery = '';
+                void (async () => {
+                    await this.save();
+                    await this.refresh();
+                })();
+            };
+        }
     }
 
     /** 渲染泳道图网格（W1–W52 从左到右） */

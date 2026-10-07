@@ -9,7 +9,7 @@ import { WeekScheduleView } from './views/week-view/week-schedule-view';
 import type { EventBlock, ExecutionRecord } from './datatypes/domain';
 import { YearView } from './views/year-view';
 import { TodayView } from './views/today-view';
-import { SwimlaneView } from './views/swimlane-view';
+import { SwimlaneView } from './views/projectpicture-view';
 import { WorkbenchView } from './views/workbench/workbench-view';
 import type { WorkbenchData } from './datatypes/card';
 import { t } from './i18n';

@@ -93,6 +93,11 @@ export const en: I18nMessages = {
     'projectPicture.weekLabel': 'W{week}',
     'projectPicture.legendPlan': 'Planned',
     'projectPicture.legendExec': 'Executed',
+    'projectPicture.defaultTitle': 'Project Picture',
+    'projectPicture.search': 'Search',
+    'projectPicture.searchPlaceholder': 'Search project name',
+    'projectPicture.searchEmpty': 'No matching project found',
+    'projectPicture.sectionPlaceholder': 'Section Area',
     'year.unassigned': 'Unassigned "{title}" from {week}',
 
     // Command and ribbon
