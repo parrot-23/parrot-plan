@@ -3,7 +3,7 @@ import { requestUrl, type App } from 'obsidian';
 import { log } from '../shared/logger';
 
 /** 说明图片的下载地址 */
-const IMAGE_URL = 'https://636c-cloud1-d1g6azon61dd44c4e-1500284813.tcb.qcloud.la/%E8%AF%B4%E6%98%8E.png?sign=5ea1f6ac304892939349f2c510a82d70&t=1791373651';
+const IMAGE_URL = 'https://636c-cloud1-d1g6azon61dd44c4e-1500284813.tcb.qcloud.la/%E8%AF%B4%E6%98%8E.png?sign=99a6d42d1f1e162aa9c8d49137459055&t=1791376719';
 
 /** 缓存目录中保存的文件名 */
 const IMAGE_FILE_NAME = '说明.png';
