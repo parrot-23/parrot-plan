@@ -172,6 +172,10 @@ export const zh = {
     'event.category': '分类',
     'event.noCategory': '不分类',
     'event.titleRequired': '标题不能为空',
+    'event.titleFromTask': '名称来源于任务，不可修改',
+    'event.note': '备注',
+    'event.notePlaceholder': '补充备注（可选）',
+    'event.needSelectTask': '请先在左侧选择任务',
 
     // 事件悬浮提示
     'eventTooltip.time': '时间',

@@ -174,6 +174,10 @@ export const en: I18nMessages = {
     'event.category': 'Category',
     'event.noCategory': 'No category',
     'event.titleRequired': 'Title cannot be empty',
+    'event.titleFromTask': 'Name comes from the task and cannot be changed',
+    'event.note': 'Note',
+    'event.notePlaceholder': 'Additional note (optional)',
+    'event.needSelectTask': 'Please select a task on the left first',
 
     // Event tooltip
     'eventTooltip.time': 'Time',

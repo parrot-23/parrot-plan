@@ -449,33 +449,8 @@ export class WeekScheduleView extends ItemView {
                     return;
                 }
 
-                // ===== 原有逻辑：弹窗新建 =====
-                new EventEditModal(this.app, startMinutes, endMinutes, this.timeBlockCategoryData,
-                    (title, start, end, categoryId) => {
-                        this.events.push({
-                            id: `ev_${Date.now()}`,
-                            day: d,
-                            start,
-                            end,
-                            title,
-                            categoryId,
-                            completed: false,
-                            weekKey: this.currentWeekKey,
-                        });
-                        log('分配计划事件（弹窗新建）', {
-                            weekKey: this.currentWeekKey,
-                            day: d,
-                            start,
-                            end,
-                            title,
-                            categoryId,
-                        });
-                        void (async () => {
-                            await this.save();
-                            await this.onOpen();
-                        })();
-                    }
-                ).open();
+                // ===== 未选中任务：事件名称来源于任务，必须先选择任务 =====
+                new Notice(t('event.needSelectTask'));
             };
 
             // 渲染已有事件（排除全天事件，仅当前周）
@@ -519,8 +494,9 @@ export class WeekScheduleView extends ItemView {
                 card.onclick = (e) => {
                     e.stopPropagation();
                     new EventEditModal(this.app, ev.start, ev.end, this.timeBlockCategoryData,
-                        (title, start, end, categoryId) => {
-                            ev.title = title;
+                        (note, start, end, categoryId) => {
+                            // 名称来源于任务，不可修改；仅更新备注、时间、分类
+                            ev.note = note || undefined;
                             ev.start = start;
                             ev.end = end;
                             ev.categoryId = categoryId;
@@ -1396,6 +1372,7 @@ export class RangeEditModal extends Modal {
 
 class EventEditModal extends Modal {
     private title: string = '';
+    private note: string = '';
     private start: number;
     private end: number;
     private categoryId: string;
@@ -1405,7 +1382,7 @@ class EventEditModal extends Modal {
         defaultStart: number,
         defaultEnd: number,
         private categoryData: TimeBlockCategoryData,
-        private onSubmit: (title: string, start: number, end: number, categoryId?: string) => void,
+        private onSubmit: (note: string, start: number, end: number, categoryId?: string) => void,
         private defaultEvent?: EventBlock,
     ) {
         super(app);
@@ -1414,6 +1391,7 @@ class EventEditModal extends Modal {
         this.categoryId = categoryData.categories[0]?.id ?? '';
         if (defaultEvent) {
             this.title = defaultEvent.title;
+            this.note = defaultEvent.note ?? '';
             this.start = defaultEvent.start;
             this.end = defaultEvent.end;
             this.categoryId = defaultEvent.categoryId ?? this.categoryId;
@@ -1423,12 +1401,15 @@ class EventEditModal extends Modal {
     onOpen() {
         const { contentEl } = this;
         contentEl.empty();
-        contentEl.createEl('h3', { text: this.defaultEvent ? t('event.edit') : t('event.create') });
+        contentEl.createEl('h3', { text: t('event.edit') });
 
-        new Setting(contentEl).setName(t('event.title')).addText(text => {
-            text.setPlaceholder(t('event.titlePlaceholder')).setValue(this.title)
-                .onChange(val => this.title = val);
-        });
+        // 事件名称来源于任务，只读展示，不可编辑
+        new Setting(contentEl)
+            .setName(t('event.title'))
+            .setDesc(t('event.titleFromTask'))
+            .addText(text => {
+                text.setValue(this.title).setDisabled(true);
+            });
 
         new Setting(contentEl).setName(t('event.startTime')).addDropdown(dd => {
             for (let h = 0; h < 24; h++) {
@@ -1459,10 +1440,16 @@ class EventEditModal extends Modal {
             dd.setValue(this.categoryId).onChange(val => this.categoryId = val);
         });
 
+        // 额外备注（可编辑）
+        new Setting(contentEl).setName(t('event.note')).addTextArea(text => {
+            text.setPlaceholder(t('event.notePlaceholder')).setValue(this.note)
+                .onChange(val => this.note = val);
+            text.inputEl.rows = 3;
+        });
+
         new Setting(contentEl)
             .addButton(btn => btn.setButtonText(t('common.save')).setCta().onClick(() => {
-                if (!this.title.trim()) { new Notice(t('event.titleRequired')); return; }
-                this.onSubmit(this.title.trim(), this.start, this.end, this.categoryId || undefined);
+                this.onSubmit(this.note.trim(), this.start, this.end, this.categoryId || undefined);
                 this.close();
             }))
             .addButton(btn => btn.setButtonText(t('common.cancel')).onClick(() => this.close()));

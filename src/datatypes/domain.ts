@@ -20,6 +20,8 @@ export interface EventBlock {
     allDay?: boolean;
     completed?: boolean;
     notePath?: string;
+    /** 额外备注（纯文本，名称来源于任务不可改，仅可补充备注） */
+    note?: string;
     /** 所属周键（如 2026-W40） */
     weekKey?: WeekKey;
 }
