@@ -77,7 +77,7 @@ export const zh = {
     'today.statAddedLabel': '新增',
     'today.weekGoalTitle': '周目标',
     'today.weekGoalEmpty': '本周暂无计划事件',
-    'today.weekGoalDuration': '共计时长 / 已执行时长',
+    'today.weekGoalDuration': '已执行时长 / 共计时长',
     'today.weekGoalCount': 'x {count}',
     'today.weekGoalDoneCount': '{done}/{count}',
     'today.dayGoalTitle': '日目标',
@@ -88,6 +88,9 @@ export const zh = {
     'today.addUnplannedMinutes': '分钟',
     'today.addUnplannedConfirm': '确认新增',
     'today.addUnplannedCancel': '取消',
+    'today.supplementYesterday': '补充昨日执行信息',
+    'today.backToToday': '回到今天',
+    'today.yesterdayBadge': '昨天',
 
     // 年视图
     'year.weekLabel': '第{week}周',

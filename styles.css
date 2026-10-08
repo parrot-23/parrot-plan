@@ -1824,6 +1824,18 @@
     cursor: pointer;
 }
 
+/* 日期状态标识（如「昨天」） */
+.today-date-badge {
+    margin-top: 2px;
+    padding: 1px 8px;
+    border-radius: 10px;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-on-accent);
+    background: var(--interactive-accent);
+    white-space: nowrap;
+}
+
 /* 中间：正在执行 / 当前时段任务卡片容器（两者并排，当前时段任务在开头） */
 .today-date-mid {
     flex: 1;

@@ -79,7 +79,7 @@ export const en: I18nMessages = {
     'today.statAddedLabel': 'Added',
     'today.weekGoalTitle': 'Week Goals',
     'today.weekGoalEmpty': 'No planned events this week',
-    'today.weekGoalDuration': 'Total / Executed duration',
+    'today.weekGoalDuration': 'Executed / Total duration',
     'today.weekGoalCount': 'x {count}',
     'today.weekGoalDoneCount': '{done}/{count}',
     'today.dayGoalTitle': 'Day Goals',
@@ -90,6 +90,9 @@ export const en: I18nMessages = {
     'today.addUnplannedMinutes': 'min',
     'today.addUnplannedConfirm': 'Confirm',
     'today.addUnplannedCancel': 'Cancel',
+    'today.supplementYesterday': 'Fill in yesterday',
+    'today.backToToday': 'Back to today',
+    'today.yesterdayBadge': 'Yesterday',
 
     // Year view
     'year.weekLabel': 'Week {week}',

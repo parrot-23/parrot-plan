@@ -4,7 +4,7 @@ import { Notice } from 'obsidian';
 import type { TimeBlockCategoryData } from './week-view/timeblock-category-manager';
 import type { InboxData, InboxItem } from '../datatypes/domain';
 import { renderTaskPanel } from '../shared/task-panel';
-import { getCurrentDayKey, getCurrentWeekKey, makeDayKeyFromWeek } from './week-view/timeblock-data';
+import { getCurrentDayKey, getISOWeek, makeDayKey, makeDayKeyFromWeek, makeWeekKey } from './week-view/timeblock-data';
 import type { EventBlock, ExecutionRecord } from '../datatypes/domain';
 import { getWeekDays, t } from '../i18n';
 import { EVENT_STATUS_EMOJI, EVENT_STATUS_LABEL_KEY, getEventStatus, type EventStatus } from '../datatypes/domain';
@@ -60,6 +60,8 @@ export class TodayView {
     private executingEventId?: string;
     /** 写回「正在执行」事件 id 的回调（用于持久化，随插件数据一起保存） */
     private setExecutingEventId?: (id: string | undefined) => void;
+    /** 当前查看的日期（默认今天；可切换到昨天以补充昨日执行信息） */
+    private viewDate: Date = new Date();
 
     constructor(
         app: App,
@@ -145,9 +147,9 @@ export class TodayView {
         if (this.container) await this.renderInto(this.container);
     }
 
-    /** 渲染今天的年月日方框 + 右侧日目标完成情况 */
+    /** 渲染当前查看日期的年月日方框 + 右侧日目标完成情况 */
     private renderDateBox(panel: HTMLElement) {
-        const now = new Date();
+        const now = this.viewDate;
         const box = panel.createDiv({ cls: 'today-date-box' });
 
         // 左侧：日期（点击日期区域 → 取消所有选中，恢复显示周目标 / 日目标）
@@ -156,6 +158,10 @@ export class TodayView {
         dateSide.createDiv({ cls: 'today-date-md' })
             .setText(`${String(now.getMonth() + 1).padStart(2, '0')} / ${String(now.getDate()).padStart(2, '0')}`);
         dateSide.createDiv({ cls: 'today-date-weekday', text: getWeekDays()[(now.getDay() + 6) % 7] });
+        // 非今天时，在日期右侧显示状态标识（如「昨天」）
+        if (!this.isViewingToday()) {
+            dateSide.createDiv({ cls: 'today-date-badge', text: t('today.yesterdayBadge') });
+        }
         dateSide.addClass('is-clickable');
         dateSide.onclick = () => {
             this.clearAllSelection();
@@ -277,18 +283,35 @@ export class TodayView {
     }
 
     /**
+     * 当前查看日期对应的信息：星期几（1=周一 ... 7=周日）、周键、日期键。
+     * 所有「今天」相关的计算都应基于此，以支持切换到昨天查看。
+     */
+    private getViewDayInfo(): { day: number; weekKey: string; dayKey: string } {
+        const d = this.viewDate;
+        const day = (d.getDay() + 6) % 7 + 1;
+        const weekKey = makeWeekKey(d.getFullYear(), getISOWeek(d));
+        return { day, weekKey, dayKey: makeDayKey(d) };
+    }
+
+    /** 当前查看的是否为今天 */
+    private isViewingToday(): boolean {
+        return makeDayKey(this.viewDate) === getCurrentDayKey();
+    }
+
+    /**
      * 获取当前时间段应进行的计划事件：今天时间轴上覆盖当前时刻的事件。
      * 若同一时刻有多个事件，取开始时间最晚的一个（最贴近当前时段）。
      */
     private getCurrentSlotEvent(): EventBlock | undefined {
+        // 仅在查看今天时展示「当前时段任务」
+        if (!this.isViewingToday()) return undefined;
         const now = new Date();
-        const todayDay = (now.getDay() + 6) % 7 + 1;
-        const weekKey = getCurrentWeekKey();
+        const { day, weekKey } = this.getViewDayInfo();
         const nowMinutes = now.getHours() * 60 + now.getMinutes();
 
         const candidates = this.getEvents().filter(ev =>
             ev.weekKey === weekKey
-            && ev.day === todayDay
+            && ev.day === day
             && !ev.allDay
             && ev.start <= nowMinutes
             && nowMinutes < ev.end,
@@ -324,7 +347,7 @@ export class TodayView {
         fill.setCssProps({ '--stat-fill': `${pct}%` });
     }
 
-    /** 统计今天的日目标完成情况（含全天事件） */
+    /** 统计当前查看日期的日目标完成情况（含全天事件） */
     private computeDayStats(): {
         total: number;
         planned: number;
@@ -332,14 +355,12 @@ export class TodayView {
         changed: number;
         added: number;
     } {
-        const now = new Date();
-        const todayDay = (now.getDay() + 6) % 7 + 1;
-        const weekKey = getCurrentWeekKey();
+        const { day, weekKey } = this.getViewDayInfo();
         const executions = this.getExecutions();
 
-        // 今天的计划事件（含全天）
+        // 当前查看日期的计划事件（含全天）
         const events = this.getEvents().filter(ev =>
-            ev.day === todayDay && ev.weekKey === weekKey,
+            ev.day === day && ev.weekKey === weekKey,
         );
 
         let planned = 0;
@@ -355,7 +376,7 @@ export class TodayView {
         // 非计划执行记录（新增）
         const plannedEventIds = new Set(events.map(ev => ev.id));
         const added = executions.filter(ex =>
-            ex.day === todayDay
+            ex.day === day
             && ex.weekKey === weekKey
             && !(ex.eventId && plannedEventIds.has(ex.eventId)),
         ).length;
@@ -526,21 +547,19 @@ export class TodayView {
         // 左侧：周目标
         const weekCol = body.createDiv({ cls: 'today-weekgoal-col' });
         weekCol.createDiv({ cls: 'today-weekgoal-col-title', text: t('today.weekGoalTitle') });
+        const { day, weekKey } = this.getViewDayInfo();
         this.renderGoalList(
             weekCol,
-            this.getEvents().filter(ev => ev.weekKey === getCurrentWeekKey()),
+            this.getEvents().filter(ev => ev.weekKey === weekKey),
             t('today.weekGoalEmpty'),
         );
 
-        // 右侧：日目标（今天）
-        const now = new Date();
-        const todayDay = (now.getDay() + 6) % 7 + 1;
-        const weekKey = getCurrentWeekKey();
+        // 右侧：日目标（当前查看日期）
         const dayCol = body.createDiv({ cls: 'today-weekgoal-col' });
         dayCol.createDiv({ cls: 'today-weekgoal-col-title', text: t('today.dayGoalTitle') });
         this.renderGoalList(
             dayCol,
-            this.getEvents().filter(ev => ev.weekKey === weekKey && ev.day === todayDay),
+            this.getEvents().filter(ev => ev.weekKey === weekKey && ev.day === day),
             t('today.dayGoalEmpty'),
         );
     }
@@ -730,15 +749,41 @@ export class TodayView {
             return;
         }
 
+        // 未选中任何任务/事件（显示周目标 / 日目标）：底部按钮用于切换查看昨天 / 回到今天
+        if (!selectedItem) {
+            const isToday = this.isViewingToday();
+            const switchBtn = row.createEl('button', {
+                cls: 'today-action-btn',
+                text: isToday ? t('today.supplementYesterday') : t('today.backToToday'),
+            });
+            switchBtn.onclick = () => {
+                this.switchViewDate(isToday);
+            };
+            return;
+        }
+
         // 选中左侧任务：执行非计划任务
         const unplannedBtn = row.createEl('button', {
             cls: 'today-action-btn',
             text: t('today.execUnplanned'),
         });
-        unplannedBtn.disabled = !selectedItem;
         unplannedBtn.onclick = () => {
             void this.executeUnplannedTask();
         };
+    }
+
+    /**
+     * 切换查看日期：isToday 为 true 时切到昨天，否则回到今天。
+     * 切换后清除所有选中状态，避免详情方框残留旧数据。
+     */
+    private switchViewDate(toYesterday: boolean): void {
+        const d = new Date();
+        if (toYesterday) d.setDate(d.getDate() - 1);
+        this.viewDate = d;
+        this.selectedEventId = undefined;
+        this.selectedExecId = undefined;
+        this.clearInboxSelection();
+        void this.refresh();
     }
 
     /** 渲染「替换任务详情方框」：左侧原计划事件，中间转换符号，右侧替换成的任务 */
@@ -793,14 +838,13 @@ export class TodayView {
         if (!item) return;
 
         const now = new Date();
-        const todayDay = (now.getDay() + 6) % 7 + 1;
-        const weekKey = getCurrentWeekKey();
+        const { day, weekKey } = this.getViewDayInfo();
         const totalMinutes = now.getHours() * 60 + now.getMinutes();
 
         this.getExecutions().push({
             id: `exec_${Date.now()}`,
             inboxId: item.id,
-            day: todayDay,
+            day,
             start: totalMinutes,
             end: totalMinutes,
             weekKey,
@@ -832,16 +876,14 @@ export class TodayView {
         const item = this.getSelectedItem();
         if (!item) return;
 
-        const now = new Date();
-        const todayDay = (now.getDay() + 6) % 7 + 1;
-        const weekKey = getCurrentWeekKey();
+        const { day, weekKey } = this.getViewDayInfo();
         const start = this.addUnplannedStart;
         const end = Math.min(24 * 60, start + this.addUnplannedDuration);
 
         this.getExecutions().push({
             id: `exec_${Date.now()}`,
             inboxId: item.id,
-            day: todayDay,
+            day,
             start,
             end,
             weekKey,
@@ -857,15 +899,13 @@ export class TodayView {
         const ev = this.getSelectedEvent();
         if (!ev) return;
 
-        const now = new Date();
-        const todayDay = (now.getDay() + 6) % 7 + 1;
-        const weekKey = getCurrentWeekKey();
+        const { day, weekKey } = this.getViewDayInfo();
 
         this.getExecutions().push({
             id: `exec_${Date.now()}`,
             eventId: ev.id,
             inboxId: ev.inboxId,
-            day: todayDay,
+            day,
             start: ev.start,
             end: ev.end,
             weekKey,
@@ -891,15 +931,13 @@ export class TodayView {
         const ev = this.getSelectedEvent();
         if (!ev) return;
 
-        const now = new Date();
-        const todayDay = (now.getDay() + 6) % 7 + 1;
-        const weekKey = getCurrentWeekKey();
+        const { day, weekKey } = this.getViewDayInfo();
 
         this.getExecutions().push({
             id: `exec_${Date.now()}`,
             eventId: ev.id,
             inboxId: ev.inboxId,
-            day: todayDay,
+            day,
             start: ev.start,
             end: ev.end,
             weekKey,
@@ -1087,18 +1125,14 @@ export class TodayView {
         this.timer = window.setInterval(updateLine, 60 * 1000);
     }
 
-    /** 在当天列上渲染今天的计划事件（与周计划视图的定位比例一致：80px / 2 小时） */
+    /** 在当天列上渲染当前查看日期的计划事件（与周计划视图的定位比例一致：80px / 2 小时） */
     private renderTodayEvents(col: HTMLElement) {
-        const now = new Date();
-        // 今天对应的星期几（1 = 周一 ... 7 = 周日）
-        const todayDay = (now.getDay() + 6) % 7 + 1;
-        const weekKey = getCurrentWeekKey();
-        // 校验：当前周键 + 今天星期几 计算出的日期键应与今天一致
-        const todayKey = getCurrentDayKey();
-        if (makeDayKeyFromWeek(weekKey, todayDay) !== todayKey) return;
+        const { day, weekKey, dayKey } = this.getViewDayInfo();
+        // 校验：周键 + 星期几 计算出的日期键应与查看日期一致
+        if (makeDayKeyFromWeek(weekKey, day) !== dayKey) return;
 
         const events = this.getEvents().filter(ev =>
-            ev.day === todayDay && ev.weekKey === weekKey && !ev.allDay,
+            ev.day === day && ev.weekKey === weekKey && !ev.allDay,
         );
 
         for (const ev of events) {
@@ -1132,7 +1166,7 @@ export class TodayView {
         // 非计划执行记录：作为独立区块渲染，状态为「新增执行」
         const plannedEventIds = new Set(events.map(ev => ev.id));
         const unplannedExecs = this.getExecutions().filter(ex =>
-            ex.day === todayDay
+            ex.day === day
             && ex.weekKey === weekKey
             && !(ex.eventId && plannedEventIds.has(ex.eventId)),
         );
