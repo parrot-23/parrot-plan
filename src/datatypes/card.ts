@@ -28,6 +28,10 @@ export interface CardInstance {
     locked?: boolean;
     /** 卡片标题（用户可自定义，缺省用模板名） */
     title?: string;
+    /** 卡片自定义宽度（像素，编辑布局时拖拽调整；缺省由网格自适应） */
+    width?: number;
+    /** 卡片自定义高度（像素，编辑布局时拖拽调整；缺省由内容决定） */
+    height?: number;
 }
 
 /** 工作台布局：一组卡片实例的命名快照 */

@@ -3482,6 +3482,33 @@
     box-sizing: border-box;
 }
 
+/* 自定义尺寸的卡片：脱离网格自适应，使用固定宽高 */
+.wb-card.has-custom-size {
+    justify-self: start;
+    width: var(--wb-card-width, auto);
+    height: var(--wb-card-height, auto);
+    overflow: auto;
+}
+
+/* 右下角三角拖拽手柄（仅编辑布局时显示） */
+.wb-card-resize {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    width: 28px;
+    height: 28px;
+    cursor: nwse-resize;
+    /* 正方形沿左下→右上对角线切开，取右下那一块三角形 */
+    background: var(--text-muted);
+    clip-path: polygon(100% 0, 100% 100%, 0 100%);
+    opacity: 0.6;
+}
+
+.wb-card-resize:hover {
+    opacity: 1;
+    background: var(--interactive-accent);
+}
+
 .wb-card-header {
     position: absolute;
     top: 8px;

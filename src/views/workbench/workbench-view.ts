@@ -141,6 +141,11 @@ export class WorkbenchView {
             if (!template) continue;
 
             const card = grid.createDiv({ cls: 'wb-card' });
+            // 应用自定义尺寸（编辑布局时拖拽调整过）
+            if (instance.width) card.setCssProps({ '--wb-card-width': `${instance.width}px` });
+            if (instance.height) card.setCssProps({ '--wb-card-height': `${instance.height}px` });
+            if (instance.width || instance.height) card.addClass('has-custom-size');
+
             // 卡片头部操作（删除）：仅编辑布局时显示删除按钮
             if (this.editingLayout) {
                 const header = card.createDiv({ cls: 'wb-card-header' });
@@ -149,6 +154,9 @@ export class WorkbenchView {
                     text: '×',
                 });
                 delBtn.onclick = () => this.removeCard(instance);
+
+                // 右下角三角拖拽手柄：按住拖动调整卡片尺寸
+                this.renderResizeHandle(card, instance);
             }
 
             const body = card.createDiv({ cls: 'wb-card-content' });
@@ -209,5 +217,48 @@ export class WorkbenchView {
         void this.save().then(() => {
             if (this.container) void this.renderInto(this.container);
         });
+    }
+
+    /**
+     * 渲染卡片右下角的三角拖拽手柄（仅编辑布局时）。
+     * 按住拖动实时调整卡片宽高，松开后持久化到卡片实例。
+     */
+    private renderResizeHandle(card: HTMLElement, instance: CardInstance) {
+        const handle = card.createDiv({ cls: 'wb-card-resize' });
+        handle.onmousedown = (e: MouseEvent) => {
+            e.preventDefault();
+            e.stopPropagation();
+
+            const startX = e.clientX;
+            const startY = e.clientY;
+            // 以卡片当前实际尺寸为起点（未设置过自定义尺寸时取渲染尺寸）
+            const startW = card.offsetWidth;
+            const startH = card.offsetHeight;
+            const minW = 200;
+            const minH = 120;
+
+            const onMove = (ev: MouseEvent) => {
+                const w = Math.max(minW, startW + (ev.clientX - startX));
+                const h = Math.max(minH, startH + (ev.clientY - startY));
+                card.setCssProps({
+                    '--wb-card-width': `${w}px`,
+                    '--wb-card-height': `${h}px`,
+                });
+                card.addClass('has-custom-size');
+            };
+
+            const onUp = (ev: MouseEvent) => {
+                document.removeEventListener('mousemove', onMove);
+                document.removeEventListener('mouseup', onUp);
+                const w = Math.max(minW, startW + (ev.clientX - startX));
+                const h = Math.max(minH, startH + (ev.clientY - startY));
+                instance.width = Math.round(w);
+                instance.height = Math.round(h);
+                void this.save();
+            };
+
+            document.addEventListener('mousemove', onMove);
+            document.addEventListener('mouseup', onUp);
+        };
     }
 }
