@@ -1824,10 +1824,21 @@
     cursor: pointer;
 }
 
-/* 中间：正在执行的任务卡片（斜向条纹背景，突出进行中） */
-.today-executing-card {
+/* 中间：正在执行 / 当前时段任务卡片容器（两者并排，当前时段任务在开头） */
+.today-date-mid {
     flex: 1;
     min-width: 0;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
+}
+
+/* 中间：正在执行的任务卡片（斜向条纹背景，突出进行中） */
+.today-executing-card {
+    /* 宽度为当前时段任务卡片的两倍 */
+    flex-shrink: 0;
+    width: 260px;
     display: flex;
     flex-direction: column;
     justify-content: center;
@@ -1874,6 +1885,54 @@
 }
 
 .today-executing-time {
+    font-size: 11px;
+    color: var(--text-muted);
+    white-space: nowrap;
+}
+
+/* 中间：当前时段任务卡片（按当前时间匹配，点击查看详情） */
+.today-currentslot-card {
+    /* 宽度与右侧「计划总数 / 已完成」大卡片保持一致；正在执行卡片为其两倍 */
+    flex-shrink: 0;
+    width: 130px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 2px;
+    padding: 8px 12px;
+    border: 1px solid color-mix(in srgb, var(--slot-color, #4c8dff) 60%, var(--background-modifier-border));
+    border-left: 3px solid var(--slot-color, #4c8dff);
+    border-radius: 8px;
+    background-color: color-mix(in srgb, var(--slot-color, #4c8dff) 10%, var(--background-secondary));
+}
+
+.today-currentslot-card.is-clickable {
+    cursor: pointer;
+}
+
+.today-currentslot-card.is-selected {
+    border-color: var(--interactive-accent);
+    outline: 2px solid var(--interactive-accent);
+    outline-offset: -1px;
+}
+
+.today-currentslot-label {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--text-muted);
+    white-space: nowrap;
+}
+
+.today-currentslot-name {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--text-normal);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.today-currentslot-time {
     font-size: 11px;
     color: var(--text-muted);
     white-space: nowrap;
@@ -2201,6 +2260,23 @@
 }
 
 .today-weekgoal-duration {
+    flex-shrink: 0;
+    font-size: 12px;
+    color: var(--text-muted);
+    font-variant-numeric: tabular-nums;
+}
+
+/* 已完成次数（如 2/3） */
+.today-weekgoal-done-count {
+    flex-shrink: 0;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-muted);
+    font-variant-numeric: tabular-nums;
+}
+
+/* 已完成时长 */
+.today-weekgoal-done-duration {
     flex-shrink: 0;
     font-size: 12px;
     color: var(--text-muted);

@@ -195,14 +195,7 @@ export default class ParrotPlanPlugin extends Plugin {
 
         // Ribbon 图标
         this.addRibbonIcon('calendar-clock', t('ribbon.open'), async () => {
-            const { workspace } = this.app;
-            let leaf = workspace.getLeavesOfType(VIEW_TYPE_MAIN)[0];
-            if (!leaf) {
-                // 在主编辑区新建标签页打开（而非当前活动 leaf，避免落到右侧边栏）
-                leaf = workspace.getLeaf('tab');
-                await leaf.setViewState({ type: VIEW_TYPE_MAIN });
-            }
-            await workspace.revealLeaf(leaf);
+            await this.openMainView();
         });
 
         // 命令面板
@@ -210,14 +203,7 @@ export default class ParrotPlanPlugin extends Plugin {
             id: 'open-week-schedule',
             name: t('command.open'),
             callback: async () => {
-                const { workspace } = this.app;
-                let leaf = workspace.getLeavesOfType(VIEW_TYPE_MAIN)[0];
-                if (!leaf) {
-                    // 在主编辑区新建标签页打开（而非右侧边栏）
-                    leaf = workspace.getLeaf('tab');
-                    await leaf.setViewState({ type: VIEW_TYPE_MAIN });
-                }
-                await workspace.revealLeaf(leaf);
+                await this.openMainView();
             }
         });
 
@@ -226,14 +212,27 @@ export default class ParrotPlanPlugin extends Plugin {
 
         // 缓存启用时，把说明图片下载到缓存目录
         void downloadImageToCache(this.app, this.cacheDirName, this.cacheEnabled);
+    }
 
-        // 首次启动（未勾选「不再提示」）时自动打开帮助弹窗
+    /**
+     * 打开主视图（Ribbon 图标 / 命令面板共用入口）。
+     * 帮助弹窗在此处触发：仅在用户主动打开插件时弹出，而非 Obsidian 启动时。
+     */
+    private async openMainView(): Promise<void> {
+        const { workspace } = this.app;
+        let leaf = workspace.getLeavesOfType(VIEW_TYPE_MAIN)[0];
+        if (!leaf) {
+            // 在主编辑区新建标签页打开（而非当前活动 leaf，避免落到右侧边栏）
+            leaf = workspace.getLeaf('tab');
+            await leaf.setViewState({ type: VIEW_TYPE_MAIN });
+        }
+        await workspace.revealLeaf(leaf);
+
+        // 未勾选「不再提示」时，打开插件后弹出帮助弹窗
         if (!this.helpDismissed) {
-            this.app.workspace.onLayoutReady(() => {
-                new HelpModal(this.app, this.cacheDirName, (dismissed) => {
-                    void this.saveHelpDismissed(dismissed);
-                }).open();
-            });
+            new HelpModal(this.app, this.cacheDirName, (dismissed) => {
+                void this.saveHelpDismissed(dismissed);
+            }).open();
         }
     }
 

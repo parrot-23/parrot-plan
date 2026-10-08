@@ -155,8 +155,10 @@ export class TodayView {
             this.clearAllSelection();
         };
 
-        // 中间：正在执行的任务卡片（斜向条纹背景，突出进行中）
-        this.renderExecutingCard(box);
+        // 中间：当前时段任务卡片 + 正在执行的任务卡片（并排，当前时段任务在开头）
+        const midSide = box.createDiv({ cls: 'today-date-mid' });
+        this.renderCurrentSlotCard(midSide);
+        this.renderExecutingCard(midSide);
 
         // 右侧：日目标完成情况（大卡片 + 两张小卡片）
         const stats = this.computeDayStats();
@@ -233,6 +235,61 @@ export class TodayView {
         card.onclick = () => {
             this.toggleEventSelection(ev.id);
         };
+    }
+
+    /**
+     * 渲染「当前时间段任务」卡片（位于日期信息旁边）。
+     * 根据当前时刻匹配今天时间轴上覆盖此刻的计划事件，展示其内容；
+     * 点击卡片 → 选中该事件，在下方任务详情方框中显示详情。无匹配事件时不显示。
+     */
+    private renderCurrentSlotCard(box: HTMLElement) {
+        const ev = this.getCurrentSlotEvent();
+        if (!ev) return;
+        // 已进入执行（正在执行卡片已展示）或已执行完成时，不再重复显示当前时段卡片
+        if (this.executingEventId === ev.id) return;
+        if (getEventStatus(ev, this.getExecutions()) === 'executed') return;
+
+        const card = box.createDiv({ cls: 'today-currentslot-card' });
+        // 底色跟随事件分类颜色
+        const cat = ev.categoryId
+            ? this.categoryData.categories.find(c => c.id === ev.categoryId)
+            : undefined;
+        card.setCssProps({ '--slot-color': cat?.color ?? '#4c8dff' });
+        card.createDiv({ cls: 'today-currentslot-label', text: t('today.currentSlotLabel') });
+        card.createDiv({ cls: 'today-currentslot-name', text: ev.title });
+        card.createDiv({
+            cls: 'today-currentslot-time',
+            text: `${formatMinutes(ev.start)} - ${formatMinutes(ev.end)}`,
+        });
+
+        // 点击卡片 → 选中该事件，在下方任务详情方框中显示
+        card.addClass('is-clickable');
+        if (this.selectedEventId === ev.id) card.addClass('is-selected');
+        card.onclick = () => {
+            this.toggleEventSelection(ev.id);
+        };
+    }
+
+    /**
+     * 获取当前时间段应进行的计划事件：今天时间轴上覆盖当前时刻的事件。
+     * 若同一时刻有多个事件，取开始时间最晚的一个（最贴近当前时段）。
+     */
+    private getCurrentSlotEvent(): EventBlock | undefined {
+        const now = new Date();
+        const todayDay = (now.getDay() + 6) % 7 + 1;
+        const weekKey = getCurrentWeekKey();
+        const nowMinutes = now.getHours() * 60 + now.getMinutes();
+
+        const candidates = this.getEvents().filter(ev =>
+            ev.weekKey === weekKey
+            && ev.day === todayDay
+            && !ev.allDay
+            && ev.start <= nowMinutes
+            && nowMinutes < ev.end,
+        );
+        if (candidates.length === 0) return undefined;
+        // 取开始时间最晚的一个
+        return candidates.reduce((a, b) => (b.start > a.start ? b : a));
     }
 
     /** 渲染单张统计卡片（标签 + 数值 + 进度条） */
@@ -495,7 +552,7 @@ export class TodayView {
         const executions = this.getExecutions();
 
         // 按标题聚合：相同事件累计次数，并分别累计总时长与已执行时长
-        const groups = new Map<string, { title: string; count: number; total: number; executed: number }>();
+        const groups = new Map<string, { title: string; count: number; total: number; executedCount: number; executed: number }>();
         let totalMinutes = 0;
         let executedMinutes = 0;
         for (const ev of events) {
@@ -505,14 +562,17 @@ export class TodayView {
             if (isExecuted) executedMinutes += duration;
 
             const key = ev.title;
-            const group = groups.get(key) ?? { title: ev.title, count: 0, total: 0, executed: 0 };
+            const group = groups.get(key) ?? { title: ev.title, count: 0, total: 0, executedCount: 0, executed: 0 };
             group.count += 1;
             group.total += duration;
-            if (isExecuted) group.executed += duration;
+            if (isExecuted) {
+                group.executedCount += 1;
+                group.executed += duration;
+            }
             groups.set(key, group);
         }
 
-        // 事件清单
+        // 事件清单：从左到右依次为 事件名称、事件次数、总时长、已完成次数、已完成时长、进度条
         const list = container.createDiv({ cls: 'today-weekgoal-list' });
         for (const group of Array.from(groups.values())) {
             const row = list.createDiv({ cls: 'today-weekgoal-item' });
@@ -523,9 +583,18 @@ export class TodayView {
                     text: t('today.weekGoalCount', { count: group.count }),
                 });
             }
-            // 弹性占位：把时长与进度条推到行末尾
-            row.createDiv({ cls: 'today-weekgoal-spacer' });
             row.createSpan({ cls: 'today-weekgoal-duration', text: formatHours(group.total) });
+
+            // 弹性占位：把已完成信息与进度条推到行末尾
+            row.createDiv({ cls: 'today-weekgoal-spacer' });
+
+            // 已完成次数（如 2/3）
+            row.createSpan({
+                cls: 'today-weekgoal-done-count',
+                text: t('today.weekGoalDoneCount', { done: group.executedCount, count: group.count }),
+            });
+            // 已完成时长
+            row.createSpan({ cls: 'today-weekgoal-done-duration', text: formatHours(group.executed) });
 
             // 行末尾的小进度条：可视化该事件已执行时长 / 总时长
             const bar = row.createDiv({ cls: 'today-stat-bar today-weekgoal-bar' });
