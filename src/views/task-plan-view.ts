@@ -1,9 +1,11 @@
 import type { App } from 'obsidian';
+import { Notice } from 'obsidian';
 
 import type { TimeBlockCategoryData } from './week-view/timeblock-category-manager';
 import type { InboxData, InboxItem } from '../datatypes/domain';
 import { renderTaskPanel } from '../shared/task-panel';
 import { renderSwimlane } from '../shared/swimlane';
+import { makeWeekKey } from './week-view/timeblock-data';
 import { t } from '../i18n';
 
 /**
@@ -75,7 +77,34 @@ export class TaskPlanView {
             },
             showExec: false,
             getDepth: (task) => depthMap.get(task.id) ?? 0,
+            onWeekClick: (week) => {
+                void this.toggleWeekAssignment(week);
+            },
         });
+    }
+
+    /**
+     * 点击泳道图某周格子：将当前选中任务分配到该周（再次点击同一周则取消）。
+     */
+    private async toggleWeekAssignment(week: number): Promise<void> {
+        const selectedId = this.inboxData.selectedId;
+        const item = selectedId
+            ? this.inboxData.items.find(i => i.id === selectedId && !i.removed)
+            : undefined;
+        if (!item) return;
+
+        const weekKey = makeWeekKey(this.currentYear, week);
+        const keys = item.assignedWeekKeys ?? [];
+        if (keys.includes(weekKey)) {
+            item.assignedWeekKeys = keys.filter(k => k !== weekKey);
+            await this.save();
+            new Notice(t('year.unassigned', { title: item.title, week: weekKey }));
+        } else {
+            item.assignedWeekKeys = [...keys, weekKey];
+            await this.save();
+            new Notice(t('year.assigned', { title: item.title, week: weekKey }));
+        }
+        await this.refresh();
     }
 
     /**

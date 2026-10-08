@@ -1,6 +1,6 @@
 import type { InboxItem, ExecutionRecord } from '../datatypes/domain';
 import type { TimeBlockCategoryData } from '../views/week-view/timeblock-category-manager';
-import { parseWeekKey } from '../views/week-view/timeblock-data';
+import { parseWeekKey, makeWeekKey, makeDayKeyFromWeek, getISOWeek } from '../views/week-view/timeblock-data';
 import { t } from '../i18n';
 
 /** 泳道图渲染选项 */
@@ -21,6 +21,8 @@ export interface SwimlaneOptions {
     getExecutions?: () => ExecutionRecord[];
     /** 获取任务层级深度（用于标题行缩进，缺省为 0） */
     getDepth?: (task: InboxItem) => number;
+    /** 点击计划线某周格子时触发（week 为 1–52） */
+    onWeekClick?: (week: number) => void;
 }
 
 /** 每周格子宽度（像素），与 styles.css 中 .swimlane-cell 保持一致 */
@@ -39,12 +41,24 @@ export function renderSwimlane(board: HTMLElement, options: SwimlaneOptions): vo
     renderYearNav(topBar, currentYear, onYearChange);
     renderLegend(topBar, showExec);
 
-    // 表头行：周号
+    // 当前周号（仅当显示年份为今年时高亮该列）
+    const now = new Date();
+    const currentWeek = currentYear === now.getFullYear() ? getISOWeek(now) : undefined;
+
+    // 表头行：周号 + 该周周一日期
     const headerRow = board.createDiv({ cls: 'swimlane-header-row' });
     for (let w = 1; w <= totalWeeks; w++) {
-        headerRow.createDiv({
-            cls: 'swimlane-header-cell',
+        const cell = headerRow.createDiv({ cls: 'swimlane-header-cell' });
+        if (w === currentWeek) cell.addClass('is-current-week');
+        cell.createDiv({
+            cls: 'swimlane-header-week',
             text: t('projectPicture.weekLabel', { week: w }),
+        });
+        // 该周周一日期（YYYY-MM-DD → MM-DD）
+        const mondayKey = makeDayKeyFromWeek(makeWeekKey(currentYear, w), 1);
+        cell.createDiv({
+            cls: 'swimlane-header-date',
+            text: mondayKey.slice(5),
         });
     }
 
@@ -96,7 +110,12 @@ export function renderSwimlane(board: HTMLElement, options: SwimlaneOptions): vo
         const planRow = board.createDiv({ cls: 'swimlane-lane-row' });
         for (let w = 1; w <= totalWeeks; w++) {
             const cell = planRow.createDiv({ cls: 'swimlane-cell' });
+            if (w === currentWeek) cell.addClass('is-current-week');
             if (planWeeks.has(w)) cell.addClass('is-plan');
+            if (options.onWeekClick) {
+                cell.addClass('is-clickable');
+                cell.onclick = () => options.onWeekClick?.(w);
+            }
         }
 
         // 执行线（可选）
@@ -104,6 +123,7 @@ export function renderSwimlane(board: HTMLElement, options: SwimlaneOptions): vo
             const execRow = board.createDiv({ cls: 'swimlane-lane-row' });
             for (let w = 1; w <= totalWeeks; w++) {
                 const cell = execRow.createDiv({ cls: 'swimlane-cell' });
+                if (w === currentWeek) cell.addClass('is-current-week');
                 if (execWeeks.has(w)) cell.addClass('is-exec');
             }
         }

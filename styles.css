@@ -3011,6 +3011,29 @@
     border-bottom: 1px solid var(--background-modifier-border);
 }
 
+/* 表头：周号 */
+.swimlane-header-week {
+    line-height: 1.3;
+}
+
+/* 表头：该周周一日期 */
+.swimlane-header-date {
+    font-size: 10px;
+    font-weight: 400;
+    color: var(--text-faint);
+    line-height: 1.3;
+}
+
+/* 当前周列高亮（表头） */
+.swimlane-header-cell.is-current-week {
+    color: var(--interactive-accent);
+    background: var(--background-modifier-hover);
+}
+
+.swimlane-header-cell.is-current-week .swimlane-header-date {
+    color: var(--interactive-accent);
+}
+
 /* 泳道行 */
 .swimlane-lane-row {
     display: flex;
@@ -3066,6 +3089,20 @@
     box-sizing: border-box;
     border-right: 1px solid var(--background-modifier-border);
     border-bottom: 1px solid var(--background-modifier-border);
+}
+
+/* 可点击的计划线格子（任务计划视图） */
+.swimlane-cell.is-clickable {
+    cursor: pointer;
+}
+
+.swimlane-cell.is-clickable:hover {
+    background: var(--background-modifier-hover);
+}
+
+/* 当前周列高亮（泳道格子）：用内描边避免覆盖计划/执行背景色 */
+.swimlane-cell.is-current-week {
+    box-shadow: inset 0 0 0 1px var(--interactive-accent);
 }
 
 /* 计划线：命中的周格子 */
