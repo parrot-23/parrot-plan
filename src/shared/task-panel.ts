@@ -1,7 +1,7 @@
 import { App, Modal, Setting, Notice, AbstractInputSuggest, TFile, setIcon } from 'obsidian';
 import type { TimeBlockCategoryData } from '../views/week-view/timeblock-category-manager';
 import { t } from '../i18n';
-import type { InboxItem, InboxData, Section, SectionType, ChecklistData, StepsData, HabitData, FileData } from '../datatypes/domain';
+import type { InboxItem, InboxData, Section, SectionType, ChecklistData, StepsData, HabitData, FileData, EventBlock } from '../datatypes/domain';
 import { DEFAULT_INBOX_DATA, SECTION_TYPE_META } from '../datatypes/domain';
 
 /**
@@ -55,6 +55,14 @@ function sectionTypeLabel(type: SectionType): string {
     if (type === 'steps') return t('section.typeSteps');
     if (type === 'habit') return t('section.typeHabit');
     return t('section.typeFile');
+}
+
+/** 分钟数 → 时长文本（如 90 → "1.5h"，60 → "1h"，30 → "30m"） */
+function formatDuration(minutes: number): string {
+    if (minutes <= 0) return '0m';
+    if (minutes < 60) return `${minutes}m`;
+    const hours = minutes / 60;
+    return Number.isInteger(hours) ? `${hours}h` : `${hours.toFixed(1)}h`;
 }
 
 // ===== 新增浮动面板（紧贴任务面板右侧，非模态，可同时操作其他笔记）=====
@@ -205,6 +213,8 @@ export interface TaskPanelOptions {
     currentWeekKey?: string;
     /** 是否启用「按项目排布」按钮（仅年视图使用） */
     enableProjectFocus?: boolean;
+    /** 当前周的计划事件（用于周目标卡片统计已分配时长/次数） */
+    events?: EventBlock[];
 }
 
 export function renderTaskPanel(
@@ -218,7 +228,7 @@ export function renderTaskPanel(
     onUpdate?: (item?: InboxItem) => void | Promise<void>,
     options: TaskPanelOptions = {},
 ) {
-    const { currentWeekKey, enableProjectFocus } = options;
+    const { currentWeekKey, enableProjectFocus, events } = options;
     container.empty();
     container.addClass('inbox-panel');
 
@@ -424,6 +434,11 @@ export function renderTaskPanel(
     function renderWeekGoalCard(cardList: HTMLElement, item: InboxItem) {
         const card = cardList.createDiv({ cls: 'week-goal-card' });
 
+        // 选中态高亮（与任务项一致，供点击日历分配计划事件使用）
+        if (inboxData.selectedId === item.id) {
+            card.addClass('selected');
+        }
+
         // 分类色点（有分类时显示）
         if (item.categoryId) {
             const cat = categoryData.categories.find(c => c.id === item.categoryId);
@@ -436,10 +451,53 @@ export function renderTaskPanel(
         // 任务名称
         card.createDiv({ cls: 'week-goal-card-title', text: item.title });
 
-        // 时长 / 次数（暂留空占位，后续接入统计）
+        // 右上角：拥有的板块类型图标（与任务面板条目中的板块图标样式一致）
+        if (item.sections && item.sections.length > 0) {
+            const iconsEl = card.createDiv({ cls: 'week-goal-card-section-icons' });
+            for (const section of item.sections) {
+                const chip = iconsEl.createSpan({ cls: 'inbox-section-chip' });
+                setIcon(chip, SECTION_TYPE_META[section.type].icon);
+            }
+        }
+
+        // 统计本周已分配的计划事件：时长（分钟累加）与次数
+        let totalMinutes = 0;
+        let count = 0;
+        if (events && currentWeekKey) {
+            for (const ev of events) {
+                if (ev.inboxId === item.id && ev.weekKey === currentWeekKey) {
+                    totalMinutes += Math.max(0, ev.end - ev.start);
+                    count += 1;
+                }
+            }
+        }
+
+        // 最后一行：已分配：时长 3h 次数 x3（数值高亮）
         const meta = card.createDiv({ cls: 'week-goal-card-meta' });
-        meta.createSpan({ cls: 'week-goal-card-duration', text: t('inbox.weekGoalDurationPlaceholder') });
-        meta.createSpan({ cls: 'week-goal-card-count', text: t('inbox.weekGoalCountPlaceholder') });
+        meta.createSpan({ cls: 'week-goal-card-assigned-label', text: t('inbox.weekGoalAssigned') });
+
+        const durationEl = meta.createSpan({ cls: 'week-goal-card-duration' });
+        durationEl.createSpan({ text: t('inbox.weekGoalDurationLabel') });
+        durationEl.createSpan({ cls: 'week-goal-card-value', text: formatDuration(totalMinutes) });
+
+        const countEl = meta.createSpan({ cls: 'week-goal-card-count' });
+        countEl.createSpan({ text: t('inbox.weekGoalCountLabel') });
+        countEl.createSpan({ cls: 'week-goal-card-value', text: `x${count}` });
+
+        // 点击选中/取消（与任务项一致：设置 selectedId，供点击日历分配计划事件）
+        card.onclick = (e) => {
+            e.stopPropagation();
+            inboxData.selectedSectionId = undefined;
+            inboxData.selectedSectionItemId = undefined;
+            if (inboxData.selectedId === item.id) {
+                inboxData.selectedId = undefined;
+            } else {
+                inboxData.selectedId = item.id;
+            }
+            renderList();
+            updateToolbar();
+            onRefresh();
+        };
     }
 
     // ===== 渲染板块为只读子目录（仅项目聚焦模式使用）=====

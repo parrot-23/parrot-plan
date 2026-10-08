@@ -954,6 +954,26 @@
     border-radius: 8px;
     background: var(--background-primary);
     box-sizing: border-box;
+    cursor: pointer;
+    position: relative;
+}
+
+/* 右上角：板块类型图标（复用 .inbox-section-chip 样式） */
+.week-goal-card-section-icons {
+    position: absolute;
+    top: 6px;
+    right: 8px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+/* 选中态：与任务项选中样式一致 */
+.week-goal-card.selected {
+    border-color: var(--interactive-accent);
+    border-width: 2px;
+    /* 边框加粗后补偿内边距，避免内容位移 */
+    padding: 9px;
 }
 
 .week-goal-card-title {
@@ -963,6 +983,8 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+    /* 为右上角板块图标预留空间，避免长标题被遮挡 */
+    padding-right: 44px;
 }
 
 .week-goal-card-meta {
@@ -971,6 +993,19 @@
     gap: 12px;
     font-size: 12px;
     color: var(--text-muted);
+}
+
+/* 时长/次数：标签与数值同组，数值高亮 */
+.week-goal-card-duration,
+.week-goal-card-count {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+}
+
+.week-goal-card-value {
+    color: var(--interactive-accent);
+    font-weight: 600;
 }
 
 /* ===== 收集盒选中状态 ===== */
