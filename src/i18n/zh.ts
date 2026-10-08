@@ -299,7 +299,11 @@ export const zh = {
     'workbench.addCard': '添加卡片',
     'workbench.empty': '暂无卡片，点击「添加卡片」开始',
     'workbench.cardAdded': '已添加卡片「{name}」',
-    'workbench.layoutScheme': '布局方案',
+    'workbench.layoutScheme': '布局管理',
+    'workbench.editLayout': '编辑布局',
+    'workbench.editLayoutActive': '编辑中',
+    'workbench.saveLayout': '保存',
+    'workbench.cancelLayout': '取消',
 
     // 布局方案弹窗
     'layout.title': '布局方案',
@@ -307,6 +311,9 @@ export const zh = {
     'layout.custom': '自定义布局',
     'layout.generalDesc': '通用布局：使用预设的卡片排列方式，快速套用常见的看板结构。',
     'layout.customDesc': '自定义布局：自由调整卡片的位置、大小与排列，打造属于你的专属工作台。',
+    'layout.defaultName': '默认布局',
+    'layout.active': '使用中',
+    'layout.empty': '暂无自定义布局',
 };
 
 export type I18nMessages = typeof zh;

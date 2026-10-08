@@ -30,14 +30,48 @@ export interface CardInstance {
     title?: string;
 }
 
+/** 工作台布局：一组卡片实例的命名快照 */
+export interface WorkbenchLayout {
+    /** 布局 id（默认布局固定为 DEFAULT_LAYOUT_ID） */
+    id: string;
+    /** 布局名称 */
+    name: string;
+    /** 该布局包含的卡片实例 */
+    instances: CardInstance[];
+}
+
+/** 默认布局固定 id，不可删除 */
+export const DEFAULT_LAYOUT_ID = 'default';
+
 /** 工作台数据顶层容器（随 plugin.data 持久化） */
 export interface WorkbenchData {
+    /** 当前工作台正在展示的卡片实例 */
     instances: CardInstance[];
+    /** 用户创建的全部布局（含默认布局） */
+    layouts?: WorkbenchLayout[];
+    /** 当前激活的布局 id */
+    activeLayoutId?: string;
 }
 
 /** 默认空工作台数据 */
 export function defaultWorkbenchData(): WorkbenchData {
     return { instances: [] };
+}
+
+/**
+ * 确保工作台数据中存在默认布局，且默认布局始终对应当前工作台展示的内容。
+ * - 首次初始化：用当前 instances 快照生成默认布局，并激活它。
+ * - 已存在：默认布局的 instances 同步为当前 instances（保持「默认布局 = 当前展示」）。
+ */
+export function ensureDefaultLayout(data: WorkbenchData, name: string): void {
+    if (!data.layouts) data.layouts = [];
+    const existing = data.layouts.find(l => l.id === DEFAULT_LAYOUT_ID);
+    if (existing) {
+        existing.instances = data.instances;
+    } else {
+        data.layouts.unshift({ id: DEFAULT_LAYOUT_ID, name, instances: data.instances });
+    }
+    if (!data.activeLayoutId) data.activeLayoutId = DEFAULT_LAYOUT_ID;
 }
 
 /** 生成周期键 */

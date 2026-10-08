@@ -301,7 +301,11 @@ export const en: I18nMessages = {
     'workbench.addCard': 'Add Card',
     'workbench.empty': 'No cards yet. Click "Add Card" to start.',
     'workbench.cardAdded': 'Card "{name}" added',
-    'workbench.layoutScheme': 'Layout Scheme',
+    'workbench.layoutScheme': 'Layout Management',
+    'workbench.editLayout': 'Edit Layout',
+    'workbench.editLayoutActive': 'Editing',
+    'workbench.saveLayout': 'Save',
+    'workbench.cancelLayout': 'Cancel',
 
     // Layout scheme modal
     'layout.title': 'Layout Scheme',
@@ -309,4 +313,7 @@ export const en: I18nMessages = {
     'layout.custom': 'Custom Layout',
     'layout.generalDesc': 'General Layout: apply preset card arrangements to quickly set up a common board structure.',
     'layout.customDesc': 'Custom Layout: freely adjust the position, size, and arrangement of cards to build your own workbench.',
+    'layout.defaultName': 'Default Layout',
+    'layout.active': 'In use',
+    'layout.empty': 'No custom layouts yet',
 };

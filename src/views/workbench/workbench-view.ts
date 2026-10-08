@@ -4,6 +4,7 @@ import { Notice } from 'obsidian';
 
 import type { CardTemplate } from '../../datatypes/form';
 import type { CardInstance, WorkbenchData } from '../../datatypes/card';
+import { ensureDefaultLayout } from '../../datatypes/card';
 import { loadAllTemplates } from '../../cardmake/data/template-loader';
 import { getCardRenderer } from '../../cardmake/cards/card-registry';
 import type { CardRenderContext } from '../../datatypes/renderer';
@@ -31,6 +32,10 @@ export class WorkbenchView {
     private container?: HTMLElement;
     /** 已加载的模板列表 */
     private templates: CardTemplate[] = [];
+    /** 是否处于「编辑布局」状态（控制添加卡片按钮显隐） */
+    private editingLayout = false;
+    /** 进入编辑布局时的卡片快照（用于取消时还原） */
+    private editSnapshot: CardInstance[] | null = null;
 
     constructor(
         app: App,
@@ -53,25 +58,75 @@ export class WorkbenchView {
         container.empty();
         container.addClass('workbench-view');
 
+        // 确保默认布局存在，且始终对应当前工作台展示的内容
+        ensureDefaultLayout(this.workbenchData, t('layout.defaultName'));
+
         // 加载模板（首次或缓存失效时）
         if (this.templates.length === 0) {
             this.templates = await loadAllTemplates();
         }
 
-        // 顶部工具栏：标题 + 添加卡片按钮 + 布局方案按钮
+        // 顶部工具栏：标题 + 编辑布局按钮 + 添加卡片按钮（仅编辑态显示）+ 布局方案按钮
         const toolbar = container.createDiv({ cls: 'wb-toolbar' });
         toolbar.createDiv({ cls: 'wb-toolbar-title', text: t('workbench.title') });
         const actions = toolbar.createDiv({ cls: 'wb-toolbar-actions' });
-        const addBtn = actions.createEl('button', {
-            cls: 'wb-add-btn',
-            text: t('workbench.addCard'),
+
+        // 添加卡片按钮：仅编辑态显示
+        if (this.editingLayout) {
+            const addBtn = actions.createEl('button', {
+                cls: 'wb-add-btn',
+                text: t('workbench.addCard'),
+            });
+            addBtn.onclick = () => this.showAddCardMenu(addBtn);
+
+            // 保存按钮：退出编辑态并持久化
+            const saveBtn = actions.createEl('button', {
+                cls: 'wb-save-btn',
+                text: t('workbench.saveLayout'),
+            });
+            saveBtn.onclick = () => {
+                this.editingLayout = false;
+                this.editSnapshot = null;
+                void this.save().then(() => {
+                    if (this.container) void this.renderInto(this.container);
+                });
+            };
+
+            // 取消按钮：还原到进入编辑态前的快照
+            const cancelBtn = actions.createEl('button', {
+                cls: 'wb-cancel-btn',
+                text: t('workbench.cancelLayout'),
+            });
+            cancelBtn.onclick = () => {
+                if (this.editSnapshot) {
+                    this.workbenchData.instances = this.editSnapshot.map((i) => ({ ...i }));
+                }
+                this.editingLayout = false;
+                this.editSnapshot = null;
+                void this.renderInto(container);
+            };
+        }
+
+        // 编辑布局按钮：切换编辑态（编辑态下显示为「编辑中」，位于添加/保存/取消之后）
+        const editBtn = actions.createEl('button', {
+            cls: 'wb-edit-layout-btn',
+            text: this.editingLayout ? t('workbench.editLayoutActive') : t('workbench.editLayout'),
         });
-        addBtn.onclick = () => this.showAddCardMenu(addBtn);
+        editBtn.toggleClass('is-active', this.editingLayout);
+        editBtn.onclick = () => {
+            this.editingLayout = !this.editingLayout;
+            // 进入编辑态时记录快照，退出时清空
+            this.editSnapshot = this.editingLayout
+                ? this.workbenchData.instances.map((i) => ({ ...i }))
+                : null;
+            void this.renderInto(container);
+        };
+
         const layoutBtn = actions.createEl('button', {
             cls: 'wb-layout-btn',
             text: t('workbench.layoutScheme'),
         });
-        layoutBtn.onclick = () => new LayoutModal(this.app).open();
+        layoutBtn.onclick = () => new LayoutModal(this.app, this.workbenchData).open();
 
         // 卡片网格
         const grid = container.createDiv({ cls: 'wb-grid' });
