@@ -288,6 +288,8 @@ export const zh = {
     'inbox.title': '📥 任务面板',
     'inbox.weekGoal': '周目标',
     'inbox.emptyWeekGoal': '本周暂无目标，去「年」视图分配任务',
+    'inbox.weekGoalDurationPlaceholder': '时长 —',
+    'inbox.weekGoalCountPlaceholder': '次数 —',
     'inbox.maxDepth': '子任务最多嵌套 {max} 层',
     'inbox.projectFocusBtn': '按项目排布',
     'inbox.projectFocus': '项目排布',

@@ -380,6 +380,28 @@ export function renderTaskPanel(
         }
     }
 
+    // ===== 渲染周目标卡片（周目标模式下替代任务层级列表）=====
+    function renderWeekGoalCard(cardList: HTMLElement, item: InboxItem) {
+        const card = cardList.createDiv({ cls: 'week-goal-card' });
+
+        // 分类色点（有分类时显示）
+        if (item.categoryId) {
+            const cat = categoryData.categories.find(c => c.id === item.categoryId);
+            if (cat) {
+                const dot = card.createSpan({ cls: 'inbox-category-dot' });
+                dot.setCssProps({ '--dot-color': cat.color });
+            }
+        }
+
+        // 任务名称
+        card.createDiv({ cls: 'week-goal-card-title', text: item.title });
+
+        // 时长 / 次数（暂留空占位，后续接入统计）
+        const meta = card.createDiv({ cls: 'week-goal-card-meta' });
+        meta.createSpan({ cls: 'week-goal-card-duration', text: t('inbox.weekGoalDurationPlaceholder') });
+        meta.createSpan({ cls: 'week-goal-card-count', text: t('inbox.weekGoalCountPlaceholder') });
+    }
+
     // ===== 渲染板块为只读子目录（仅项目聚焦模式使用）=====
     function renderSectionsAsSubdir(item: InboxItem, depth: number) {
         if (!item.sections || item.sections.length === 0) return;
@@ -513,6 +535,27 @@ export function renderTaskPanel(
         // 只显示未移除的顶层条目
         let topItems = getChildren(inboxData, undefined);
 
+        // 周目标模式（优先级最高）：隐藏原有任务层级，改为渲染「周目标卡片列表」
+        // （卡片代表分配到当前周的任务，内容为任务名称 + 时长 / 次数占位）
+        if (weekGoalOnly && currentWeekKey) {
+            const weekKey = currentWeekKey;
+            const assignedItems = getVisibleItems(inboxData).filter(i =>
+                i.assignedWeekKeys?.includes(weekKey) ?? false,
+            );
+
+            if (assignedItems.length === 0) {
+                listDiv.createDiv({ cls: 'inbox-empty' }).setText(t('inbox.emptyWeekGoal'));
+                return;
+            }
+
+            listDiv.createDiv({ cls: 'inbox-group-header', text: t('inbox.weekGoal') });
+            const cardList = listDiv.createDiv({ cls: 'week-goal-card-list' });
+            for (const item of assignedItems) {
+                renderWeekGoalCard(cardList, item);
+            }
+            return;
+        }
+
         // 项目聚焦模式：仅显示聚焦任务及其所有子任务（以聚焦任务为根递归展示）
         const focusId = inboxData.projectFocusId;
         if (focusId) {
@@ -534,27 +577,6 @@ export function renderTaskPanel(
                 }
                 return;
             }
-        }
-
-        // 周目标模式：仅显示「自身」分配到当前周的任务（任意层级，平铺显示），统一归入「周目标」分组
-        if (weekGoalOnly && currentWeekKey) {
-            const weekKey = currentWeekKey;
-            const assignedItems = getVisibleItems(inboxData).filter(i =>
-                i.assignedWeekKeys?.includes(weekKey) ?? false,
-            );
-
-            if (assignedItems.length === 0) {
-                listDiv.createDiv({ cls: 'inbox-empty' }).setText(t('inbox.emptyWeekGoal'));
-                return;
-            }
-
-            // 单一分组：列出本周所有目标，不再按星期几分组
-            listDiv.createDiv({ cls: 'inbox-group-header', text: t('inbox.weekGoal') });
-            for (const item of assignedItems) {
-                // 平铺渲染：每个任务自身独立成项，不再递归子任务
-                renderItem(item, 0, false);
-            }
-            return;
         }
 
         if (topItems.length === 0) {

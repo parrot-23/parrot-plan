@@ -290,6 +290,8 @@ export const en: I18nMessages = {
     'inbox.title': '📥 Task Panel',
     'inbox.weekGoal': 'Week Goals',
     'inbox.emptyWeekGoal': 'No goals this week. Assign tasks in the Year view.',
+    'inbox.weekGoalDurationPlaceholder': 'Duration —',
+    'inbox.weekGoalCountPlaceholder': 'Count —',
     'inbox.maxDepth': 'Subtasks can nest at most {max} levels',
     'inbox.projectFocusBtn': 'By Project',
     'inbox.projectFocus': 'Project Layout',

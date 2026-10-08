@@ -913,6 +913,42 @@
     border-bottom: 1px solid var(--background-modifier-border);
 }
 
+/* ===== 周目标卡片列表（周目标模式下替代任务层级列表）===== */
+.week-goal-card-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 8px 0;
+}
+
+.week-goal-card {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 10px;
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 8px;
+    background: var(--background-primary);
+    box-sizing: border-box;
+}
+
+.week-goal-card-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-normal);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.week-goal-card-meta {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 12px;
+    color: var(--text-muted);
+}
+
 /* ===== 收集盒选中状态 ===== */
 .inbox-item {
     cursor: pointer;
