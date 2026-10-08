@@ -48,34 +48,48 @@ export default class ParrotPlanPlugin extends Plugin {
     /** 是否已勾选「不再提示」帮助弹窗（随主数据一起持久化） */
     helpDismissed = false;
 
-    /** 保存缓存目录名称：读取当前主数据 → 合并 → 写回，避免覆盖其他字段 */
+    /**
+     * 唯一的数据保存出口：把插件持有的全部数据一次性写回。
+     * 所有视图与设置项都通过此方法保存，避免「全量覆盖」与「合并写回」两套逻辑并存
+     * 导致字段互相覆盖（例如周计划视图保存时抹掉 cacheDirName 等设置字段）。
+     */
+    async saveAll(): Promise<void> {
+        const d = this.data;
+        if (!d) return;
+        await this.saveData({
+            version: 1,
+            days: d.weekRange.days,
+            weeks: d.weekRange.weeks,
+            dayTemplateData: d.templateData,
+            timeBlockCategoryData: d.categoryData,
+            schemeData: d.schemeData,
+            events: d.events,
+            executions: d.executions,
+            inboxData: d.inboxData,
+            plannedWeeks: d.plannedWeeks,
+            workbench: d.workbench,
+            cacheDirName: this.cacheDirName,
+            cacheEnabled: this.cacheEnabled,
+            helpDismissed: this.helpDismissed,
+        });
+    }
+
+    /** 保存缓存目录名称 */
     async saveCacheDirName(name: string): Promise<void> {
         this.cacheDirName = name;
-        const rawData: unknown = await this.loadData();
-        const savedData: Record<string, unknown> =
-            rawData && typeof rawData === 'object' ? rawData as Record<string, unknown> : {};
-        savedData.cacheDirName = name;
-        await this.saveData(savedData);
+        await this.saveAll();
     }
 
-    /** 保存是否启用缓存：读取当前主数据 → 合并 → 写回，避免覆盖其他字段 */
+    /** 保存是否启用缓存 */
     async saveCacheEnabled(enabled: boolean): Promise<void> {
         this.cacheEnabled = enabled;
-        const rawData: unknown = await this.loadData();
-        const savedData: Record<string, unknown> =
-            rawData && typeof rawData === 'object' ? rawData as Record<string, unknown> : {};
-        savedData.cacheEnabled = enabled;
-        await this.saveData(savedData);
+        await this.saveAll();
     }
 
-    /** 保存「不再提示」帮助弹窗标记：读取当前主数据 → 合并 → 写回，避免覆盖其他字段 */
+    /** 保存「不再提示」帮助弹窗标记 */
     async saveHelpDismissed(dismissed: boolean): Promise<void> {
         this.helpDismissed = dismissed;
-        const rawData: unknown = await this.loadData();
-        const savedData: Record<string, unknown> =
-            rawData && typeof rawData === 'object' ? rawData as Record<string, unknown> : {};
-        savedData.helpDismissed = dismissed;
-        await this.saveData(savedData);
+        await this.saveAll();
     }
 
     async onload() {
