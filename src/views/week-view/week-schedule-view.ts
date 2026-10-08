@@ -15,7 +15,7 @@ import { RangeSchemeModal } from './range-scheme-modal';
 import { t, getWeekDays } from '../../i18n';
 import { log } from '../../shared/logger';
 import { EVENT_STATUS_EMOJI, EVENT_STATUS_LABEL_KEY, getEventStatus } from '../../datatypes/domain';
-import type { EventBlock, ExecutionRecord } from '../../datatypes/domain';
+import type { EventBlock, ExecutionRecord, EventStatus } from '../../datatypes/domain';
 
 export const VIEW_TYPE_WEEK = 'week-schedule-view';
 
@@ -533,7 +533,15 @@ export class WeekScheduleView extends ItemView {
                 };
 
                 // 悬浮提示：展示事件详细信息
-                this.attachEventTooltip(card, ev);
+                // 已制定周计划时，改为按背景网格 2 小时区间悬浮（见下方），卡片本身不再显示提示
+                if (!this.plannedWeeks.includes(this.currentWeekKey)) {
+                    this.attachEventTooltip(card, ev);
+                }
+            }
+
+            // 已制定周计划：按背景网格 2 小时区间悬浮，显示该区间内所有计划/执行信息
+            if (this.plannedWeeks.includes(this.currentWeekKey)) {
+                this.attachRangeHover(col, d);
             }
         }
 
@@ -633,6 +641,221 @@ export class WeekScheduleView extends ItemView {
 
         card.addEventListener('mouseenter', show);
         card.addEventListener('mouseleave', hide);
+    }
+
+    /**
+     * 已制定周计划时：按背景网格的 2 小时区间悬浮。
+     * 鼠标在某天列的某个 2 小时区间内移动时，显示该区间内的所有事件：
+     * - 第 1 列：原计划信息（区间内所有计划事件，每个一张详细卡片，从上到下）
+     * - 第 2 列：执行信息（区间内所有执行记录）；若某执行记录关联的计划事件被替换过，
+     *   则该执行卡片与第 1 列对应的原计划卡片行对齐。
+     */
+    private attachRangeHover(col: HTMLElement, day: number) {
+        let tip: HTMLElement | null = null;
+        let currentRangeStart = -1;
+
+        const hide = () => {
+            if (tip) {
+                tip.remove();
+                tip = null;
+            }
+            currentRangeStart = -1;
+        };
+
+        const show = (rangeStart: number, clientX: number, clientY: number) => {
+            if (tip) tip.remove();
+            tip = document.body.createDiv({ cls: 'event-tooltip range-hover-tooltip' });
+
+            const rangeEnd = rangeStart + 120;
+
+            // 区间内所有计划事件（按开始时间排序）
+            const plannedEvents = this.events
+                .filter(ev => ev.day === day && !ev.allDay && ev.weekKey === this.currentWeekKey
+                    && ev.start < rangeEnd && ev.end > rangeStart)
+                .sort((a, b) => a.start - b.start);
+
+            // 区间内所有执行记录（按开始时间排序）
+            const execs = this.executions
+                .filter(ex => ex.day === day && ex.weekKey === this.currentWeekKey
+                    && ex.start < rangeEnd && ex.end > rangeStart)
+                .sort((a, b) => a.start - b.start);
+
+            // 两列容器
+            const cols = tip.createDiv({ cls: 'range-hover-cols' });
+
+            // ===== 第 1 列：原计划 =====
+            const plannedCol = cols.createDiv({ cls: 'range-hover-col' });
+            plannedCol.createDiv({ cls: 'range-hover-col-title', text: t('eventTooltip.plannedCol') });
+            // 记录每个计划事件在第 1 列中的行号（用于第 2 列对齐）
+            const plannedRowIndex = new Map<string, number>();
+            if (plannedEvents.length === 0) {
+                plannedCol.createDiv({ cls: 'range-hover-empty', text: t('eventTooltip.none') });
+            } else {
+                plannedEvents.forEach((ev, idx) => {
+                    plannedRowIndex.set(ev.id, idx);
+                    this.renderRangeHoverCard(plannedCol, ev);
+                });
+            }
+
+            // ===== 第 2 列：执行 =====
+            const execCol = cols.createDiv({ cls: 'range-hover-col' });
+            execCol.createDiv({ cls: 'range-hover-col-title', text: t('eventTooltip.execCol') });
+            if (execs.length === 0) {
+                execCol.createDiv({ cls: 'range-hover-empty', text: t('eventTooltip.none') });
+            } else {
+                // 先按「是否替换了某原计划」分组：替换的按原计划行号对齐，其余顺序排列
+                const aligned = new Map<number, ExecutionRecord>();
+                const unaligned: ExecutionRecord[] = [];
+                for (const ex of execs) {
+                    const planned = ex.eventId
+                        ? this.events.find(e => e.id === ex.eventId)
+                        : undefined;
+                    // 该执行关联的计划事件被替换过 → 与第 1 列对应原计划卡片对齐
+                    if (planned && planned.replacedFromInboxId && plannedRowIndex.has(planned.id)) {
+                        aligned.set(plannedRowIndex.get(planned.id)!, ex);
+                    } else {
+                        unaligned.push(ex);
+                    }
+                }
+
+                // 按第 1 列行数逐行渲染：对齐的执行卡片放在对应行，其余依次填充空行
+                const totalRows = Math.max(plannedEvents.length, aligned.size + unaligned.length);
+                let unalignedIdx = 0;
+                for (let row = 0; row < totalRows; row++) {
+                    const ex = aligned.get(row) ?? unaligned[unalignedIdx++];
+                    if (ex) {
+                        this.renderRangeHoverExecCard(execCol, ex);
+                    } else {
+                        // 占位，保持与第 1 列行对齐
+                        execCol.createDiv({ cls: 'range-hover-placeholder' });
+                    }
+                }
+            }
+
+            // 定位：优先显示在鼠标右侧，空间不足则显示在左侧
+            const tipRect = tip.getBoundingClientRect();
+            let left = clientX + 12;
+            if (left + tipRect.width > window.innerWidth) {
+                left = clientX - tipRect.width - 12;
+            }
+            let top = clientY + 12;
+            if (top + tipRect.height > window.innerHeight) {
+                top = window.innerHeight - tipRect.height - 8;
+            }
+            tip.setCssProps({
+                '--tip-left': `${Math.max(8, left)}px`,
+                '--tip-top': `${Math.max(8, top)}px`,
+            });
+        };
+
+        col.addEventListener('mousemove', (e) => {
+            const rect = col.getBoundingClientRect();
+            const y = e.clientY - rect.top;
+            // 固定 2 小时网格：每 120 分钟一段（与背景网格一致，80px = 2 小时）
+            const rangeStart = Math.floor((y / 80) * 120 / 120) * 120;
+            if (rangeStart === currentRangeStart && tip) {
+                // 同一区间内移动：仅更新位置，避免重复重建
+                const tipRect = tip.getBoundingClientRect();
+                let left = e.clientX + 12;
+                if (left + tipRect.width > window.innerWidth) {
+                    left = e.clientX - tipRect.width - 12;
+                }
+                let top = e.clientY + 12;
+                if (top + tipRect.height > window.innerHeight) {
+                    top = window.innerHeight - tipRect.height - 8;
+                }
+                tip.setCssProps({
+                    '--tip-left': `${Math.max(8, left)}px`,
+                    '--tip-top': `${Math.max(8, top)}px`,
+                });
+                return;
+            }
+            currentRangeStart = rangeStart;
+            show(rangeStart, e.clientX, e.clientY);
+        });
+
+        col.addEventListener('mouseleave', hide);
+    }
+
+    /** 渲染区间悬浮中的「计划事件」详细卡片（与现有悬浮提示字段一致） */
+    private renderRangeHoverCard(parent: HTMLElement, ev: EventBlock) {
+        const card = parent.createDiv({ cls: 'range-hover-card' });
+        card.createDiv({ cls: 'event-tooltip-title', text: ev.title });
+
+        const timeRow = card.createDiv({ cls: 'event-tooltip-row' });
+        timeRow.createSpan({ cls: 'event-tooltip-label', text: t('eventTooltip.time') });
+        timeRow.createSpan({
+            cls: 'event-tooltip-value',
+            text: `${this.formatMinutes(ev.start)} - ${this.formatMinutes(ev.end)}`,
+        });
+
+        const cat = ev.categoryId
+            ? this.timeBlockCategoryData.categories.find(c => c.id === ev.categoryId)
+            : undefined;
+        const catRow = card.createDiv({ cls: 'event-tooltip-row' });
+        catRow.createSpan({ cls: 'event-tooltip-label', text: t('eventTooltip.category') });
+        const catValue = catRow.createSpan({ cls: 'event-tooltip-value' });
+        if (cat) {
+            const dot = catValue.createSpan({ cls: 'event-tooltip-dot' });
+            dot.setCssProps({ '--dot-color': cat.color });
+            catValue.createSpan({ text: cat.label });
+        } else {
+            catValue.setText(t('inbox.noCategory'));
+        }
+
+        const status = getEventStatus(ev, this.executions);
+        const statusRow = card.createDiv({ cls: 'event-tooltip-row' });
+        statusRow.createSpan({ cls: 'event-tooltip-label', text: t('eventTooltip.status') });
+        statusRow.createSpan({
+            cls: 'event-tooltip-value',
+            text: `${EVENT_STATUS_EMOJI[status]} ${t(EVENT_STATUS_LABEL_KEY[status])}`,
+        });
+    }
+
+    /** 渲染区间悬浮中的「执行记录」详细卡片 */
+    private renderRangeHoverExecCard(parent: HTMLElement, ex: ExecutionRecord) {
+        const card = parent.createDiv({ cls: 'range-hover-card' });
+
+        // 状态：关联计划事件 → 已执行；无关联 → 新增
+        const status: EventStatus = ex.eventId ? 'executed' : 'added';
+
+        // 标题：优先取来源任务标题，否则用关联计划事件标题；名称前加对应类型图标
+        const item = ex.inboxId
+            ? this.inboxData.items.find(i => i.id === ex.inboxId && !i.removed)
+            : undefined;
+        const planned = ex.eventId ? this.events.find(e => e.id === ex.eventId) : undefined;
+        const title = item?.title ?? planned?.title ?? t('eventTooltip.execTitle');
+        const titleEl = card.createDiv({ cls: 'event-tooltip-title' });
+        titleEl.createSpan({ cls: 'range-hover-exec-icon', text: EVENT_STATUS_EMOJI[status] });
+        titleEl.createSpan({ text: title });
+
+        const timeRow = card.createDiv({ cls: 'event-tooltip-row' });
+        timeRow.createSpan({ cls: 'event-tooltip-label', text: t('eventTooltip.time') });
+        timeRow.createSpan({
+            cls: 'event-tooltip-value',
+            text: `${this.formatMinutes(ex.start)} - ${this.formatMinutes(ex.end)}`,
+        });
+
+        const cat = item?.categoryId
+            ? this.timeBlockCategoryData.categories.find(c => c.id === item.categoryId)
+            : undefined;
+        const catRow = card.createDiv({ cls: 'event-tooltip-row' });
+        catRow.createSpan({ cls: 'event-tooltip-label', text: t('eventTooltip.category') });
+        const catValue = catRow.createSpan({ cls: 'event-tooltip-value' });
+        if (cat) {
+            const dot = catValue.createSpan({ cls: 'event-tooltip-dot' });
+            dot.setCssProps({ '--dot-color': cat.color });
+            catValue.createSpan({ text: cat.label });
+        } else {
+            catValue.setText(t('inbox.noCategory'));
+        }
+
+        const statusRow = card.createDiv({ cls: 'event-tooltip-row' });
+        statusRow.createSpan({ cls: 'event-tooltip-label', text: t('eventTooltip.status') });
+        statusRow.createSpan({
+            cls: 'event-tooltip-value',
+            text: `${EVENT_STATUS_EMOJI[status]} ${t(EVENT_STATUS_LABEL_KEY[status])}`,
+        });
     }
 
     // ===== 当前时间红线 =====

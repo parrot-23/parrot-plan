@@ -1158,6 +1158,57 @@
     background: var(--dot-color, #888888);
 }
 
+/* 区间悬浮提示：两列（原计划 / 执行） */
+.range-hover-tooltip {
+    min-width: 320px;
+    max-width: 560px;
+}
+
+.range-hover-cols {
+    display: flex;
+    flex-direction: row;
+    gap: 10px;
+}
+
+.range-hover-col {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.range-hover-col-title {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-muted);
+    padding-bottom: 2px;
+    border-bottom: 1px solid var(--background-modifier-border);
+}
+
+/* 单张详细卡片 */
+.range-hover-card {
+    padding: 6px 8px;
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 4px;
+    background: var(--background-secondary);
+}
+
+/* 执行卡片标题前的类型图标 */
+.range-hover-exec-icon {
+    margin-right: 4px;
+}
+
+/* 占位：保持第 2 列与第 1 列行对齐 */
+.range-hover-placeholder {
+    min-height: 1px;
+}
+
+.range-hover-empty {
+    font-size: 12px;
+    color: var(--text-faint);
+}
+
 /* 工具栏：已制定周计划按钮 */
 .week-planned-toggle-btn {
     padding: 6px 10px;
@@ -1552,6 +1603,58 @@
 
 .year-week-row {
     display: flex;
+    position: relative;
+}
+
+/* 行级事件层：叠加在整行之上，色条可跨格子连续显示 */
+.year-week-row-tasks {
+    position: absolute;
+    top: 24px;
+    left: 0;
+    right: 0;
+    bottom: 4px;
+    pointer-events: none;
+    overflow: hidden;
+}
+
+/* 单条事件色条：按连续区间定位（--seg-start 起始列，--seg-span 跨越列数） */
+.year-week-row-task {
+    position: absolute;
+    /* 每列宽度 = 100% / 13，右侧留 2px 间隙避免拥挤 */
+    left: calc(var(--seg-start) * 100% / 13);
+    width: calc(var(--seg-span) * 100% / 13 - 2px);
+    /* 固定行高 16px，行间距 2px，按行号定位 */
+    top: calc(var(--row-index) * 18px);
+    height: 16px;
+    box-sizing: border-box;
+    padding: 0 4px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 10px;
+    line-height: 1.3;
+    border-radius: 3px;
+    /* 浅色同色背景（分类颜色降低透明度） */
+    background: var(--task-bg, var(--background-primary));
+    color: var(--text-normal);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* 分类颜色小圆点 */
+.year-week-row-task::before {
+    content: '';
+    flex-shrink: 0;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--task-color, #888888);
+}
+
+.year-week-row-task-label {
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .year-week-cell {
@@ -1625,45 +1728,6 @@
     font-size: 20px;
     line-height: 1;
     pointer-events: none;
-}
-
-/* 格子内已分配的任务列表 */
-.year-week-cell-tasks {
-    position: absolute;
-    top: 24px;
-    left: 4px;
-    right: 4px;
-    bottom: 4px;
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-    overflow: hidden;
-}
-
-.year-week-cell-task {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    font-size: 10px;
-    line-height: 1.3;
-    padding: 1px 4px;
-    border-radius: 3px;
-    /* 浅色同色背景（分类颜色降低透明度） */
-    background: var(--task-bg, var(--background-primary));
-    color: var(--text-normal);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-/* 分类颜色小圆点 */
-.year-week-cell-task::before {
-    content: '';
-    flex-shrink: 0;
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background: var(--task-color, #888888);
 }
 
 /* ===== 当日执行视图 ===== */

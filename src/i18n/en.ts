@@ -180,6 +180,10 @@ export const en: I18nMessages = {
     'eventTooltip.category': 'Category',
     'eventTooltip.status': 'Status',
     'eventTooltip.allDay': 'All day',
+    'eventTooltip.plannedCol': 'Planned',
+    'eventTooltip.execCol': 'Executed',
+    'eventTooltip.none': 'None',
+    'eventTooltip.execTitle': 'Execution',
 
     // Event copy / paste
     'eventCopy.copy': 'Copy Day Events',

@@ -178,6 +178,10 @@ export const zh = {
     'eventTooltip.category': '分类',
     'eventTooltip.status': '状态',
     'eventTooltip.allDay': '全天',
+    'eventTooltip.plannedCol': '原计划',
+    'eventTooltip.execCol': '执行',
+    'eventTooltip.none': '无',
+    'eventTooltip.execTitle': '执行记录',
 
     // 事件复制 / 粘贴
     'eventCopy.copy': '复制一天事件',

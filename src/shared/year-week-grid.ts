@@ -16,7 +16,7 @@ export interface YearWeekGridOptions {
     /** 高亮的周（可选） */
     activeWeek?: number;
     /** 各周已分配的任务（周键 → 任务列表），用于在格子内展示 */
-    assignedTasks?: Record<string, { title: string; color?: string }[]>;
+    assignedTasks?: Record<string, { id: string; title: string; color?: string }[]>;
     /** 已制定周计划的周键列表，用于在格子左上角显示图标 */
     plannedWeeks?: string[];
 }
@@ -118,9 +118,32 @@ export function renderYearWeekGrid(
         for (let row = 0; row < rowCount; row++) {
             const rowEl = grid.createDiv({ cls: 'year-week-row' });
 
+            // 该行内每个格子对应的周号（含占位 null）
+            const rowWeeks: (number | null)[] = [];
             for (let i = 0; i < weeksPerRow; i++) {
                 const week = row * weeksPerRow + i + 1;
-                if (week > totalWeeks) {
+                rowWeeks.push(week > totalWeeks ? null : week);
+            }
+
+            // 该行内出现过的所有任务（按首次出现顺序），用于分配全局行号
+            const rowTaskOrder: { id: string; title: string; color?: string }[] = [];
+            const rowTaskSeen = new Set<string>();
+            for (const week of rowWeeks) {
+                if (week === null) continue;
+                const tasks = options.assignedTasks?.[makeWeekKey(year, week)] ?? [];
+                for (const task of tasks) {
+                    if (rowTaskSeen.has(task.id)) continue;
+                    rowTaskSeen.add(task.id);
+                    rowTaskOrder.push(task);
+                }
+            }
+            const rowIndexOf = new Map<string, number>();
+            rowTaskOrder.forEach((task, idx) => rowIndexOf.set(task.id, idx));
+
+            // 先渲染格子（背景、月份、周数、计划图标）
+            for (let i = 0; i < weeksPerRow; i++) {
+                const week = rowWeeks[i];
+                if (week === null) {
                     // 补齐占位，保持列对齐
                     rowEl.createDiv({ cls: 'year-week-cell is-empty' });
                     continue;
@@ -152,23 +175,42 @@ export function renderYearWeekGrid(
                     });
                 }
 
-                // 已分配到该周的任务
-                const tasks = options.assignedTasks?.[weekKey] ?? [];
-                if (tasks.length > 0) {
-                    const taskList = cell.createDiv({ cls: 'year-week-cell-tasks' });
-                    for (const task of tasks) {
-                        const taskEl = taskList.createDiv({ cls: 'year-week-cell-task', text: task.title });
-                        if (task.color) {
-                            taskEl.setCssProps({
-                                '--task-color': task.color,
-                                // 浅色同色背景：分类颜色降低透明度
-                                '--task-bg': hexToTransparent(task.color, 0.18),
+                cell.onclick = () => options.onWeekClick?.(week, year);
+            }
+
+            // 再渲染事件层：同一行内同一任务高度一致，连续出现的格子合并为一条色条
+            if (rowTaskOrder.length > 0) {
+                const layer = rowEl.createDiv({ cls: 'year-week-row-tasks' });
+
+                // 逐任务计算「连续区间」并渲染色条
+                for (const task of rowTaskOrder) {
+                    const rowIndex = rowIndexOf.get(task.id) ?? 0;
+                    let segStart = -1;
+                    for (let i = 0; i <= weeksPerRow; i++) {
+                        const week = i < weeksPerRow ? rowWeeks[i] : null;
+                        const has = week !== null
+                            && (options.assignedTasks?.[makeWeekKey(year, week)] ?? []).some(x => x.id === task.id);
+                        if (has && segStart === -1) {
+                            segStart = i;
+                        } else if (!has && segStart !== -1) {
+                            // 渲染 [segStart, i-1] 区间
+                            const bar = layer.createDiv({ cls: 'year-week-row-task' });
+                            bar.setCssProps({
+                                '--seg-start': String(segStart),
+                                '--seg-span': String(i - segStart),
+                                '--row-index': String(rowIndex),
                             });
+                            if (task.color) {
+                                bar.setCssProps({
+                                    '--task-color': task.color,
+                                    '--task-bg': hexToTransparent(task.color, 0.18),
+                                });
+                            }
+                            bar.createSpan({ cls: 'year-week-row-task-label', text: task.title });
+                            segStart = -1;
                         }
                     }
                 }
-
-                cell.onclick = () => options.onWeekClick?.(week, year);
             }
         }
     }

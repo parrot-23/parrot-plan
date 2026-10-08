@@ -81,9 +81,9 @@ export class YearView {
         if (this.container) await this.renderInto(this.container);
     }
 
-    /** 汇总各周已分配的任务（周键 → 任务列表，含分类颜色） */
-    private buildAssignedTasks(): Record<string, { title: string; color?: string }[]> {
-        const map: Record<string, { title: string; color?: string }[]> = {};
+    /** 汇总各周已分配的任务（周键 → 任务列表，含任务 id 与分类颜色） */
+    private buildAssignedTasks(): Record<string, { id: string; title: string; color?: string }[]> {
+        const map: Record<string, { id: string; title: string; color?: string }[]> = {};
 
         // 项目聚焦：仅显示聚焦任务及其所有子任务，隐藏其余任务
         const focusId = this.inboxData.projectFocusId;
@@ -110,7 +110,7 @@ export class YearView {
                 ? this.categoryData.categories.find(c => c.id === item.categoryId)?.color
                 : undefined;
             for (const weekKey of item.assignedWeekKeys) {
-                (map[weekKey] ??= []).push({ title: item.title, color });
+                (map[weekKey] ??= []).push({ id: item.id, title: item.title, color });
             }
         }
         return map;
