@@ -1355,6 +1355,68 @@
     cursor: pointer;
 }
 
+/* 布局方案弹窗：外层容器 */
+.parrot-layout-modal-container {
+    width: auto;
+    max-width: 90vw;
+    max-height: none;
+}
+
+/* 布局方案弹窗内容 */
+.parrot-layout-modal {
+    width: 720px;
+    max-width: 90vw;
+}
+
+/* 布局方案弹窗：左菜单右内容 */
+.parrot-layout-body {
+    display: flex;
+    flex-direction: row;
+    align-items: stretch;
+    gap: 16px;
+    margin-top: 12px;
+    min-height: 320px;
+}
+
+.parrot-layout-menu {
+    flex-shrink: 0;
+    width: 160px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    border-right: 1px solid var(--background-modifier-border);
+    padding-right: 12px;
+}
+
+.parrot-layout-menu-item {
+    padding: 8px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    color: var(--text-normal);
+}
+
+.parrot-layout-menu-item:hover {
+    background: var(--interactive-hover);
+}
+
+.parrot-layout-menu-item.is-active {
+    background: var(--interactive-accent);
+    color: var(--text-on-accent);
+}
+
+.parrot-layout-content {
+    flex: 1;
+    min-width: 0;
+    font-size: 14px;
+    line-height: 1.7;
+    color: var(--text-normal);
+}
+
+.parrot-layout-content p {
+    margin: 0;
+}
+
 /* 内容区 */
 .parrot-plan-content {
     flex: 1;
@@ -3063,6 +3125,13 @@
     color: var(--text-normal);
 }
 
+.wb-toolbar-actions {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
+}
+
 .wb-add-btn {
     position: relative;
     padding: 6px 12px;
@@ -3076,6 +3145,20 @@
 
 .wb-add-btn:hover {
     filter: brightness(1.05);
+}
+
+.wb-layout-btn {
+    padding: 6px 12px;
+    border-radius: 4px;
+    border: 1px solid var(--background-modifier-border);
+    background: var(--background-secondary);
+    color: var(--text-normal);
+    cursor: pointer;
+    font-size: 13px;
+}
+
+.wb-layout-btn:hover {
+    background: var(--interactive-hover);
 }
 
 .wb-add-menu {

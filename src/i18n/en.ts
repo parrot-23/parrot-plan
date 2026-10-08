@@ -36,7 +36,7 @@ export const en: I18nMessages = {
 
     // Help
     'help.title': 'Help',
-    'help.todayIntro': 'The "Today Todo" page helps you turn your daily plan into real progress. The task panel on the left gathers all your tasks — select any one to see its details. The center shows the task hierarchy, task details, and this week\'s and today\'s goal progress. The timeline on the right lays out today\'s planned events by the hour, where you can click to add an unplanned event, replace an existing plan, or "enter execution" on an event and record the actual time spent. The top of the page shows live stats for today\'s total planned, completed, pending, replaced, and added items, so you can see your day at a glance. In short: pick a task on the left, view details in the center, arrange time on the right, and track progress at the top — turning "plans" into "done".',
+    'help.todayIntro': 'This plugin is about data sovereignty. Your daily plan is not stored on any cloud platform, but on your own device. The plugin uses its own storage format, but the data is complete, readable, and recoverable. If the plugin stops being maintained, the file will belong to you. More importantly, it supports one-click export to Excel/CSV formats, so you can take your daily plan with you and analyze it, migrate it, or back it up.',
     'help.dontShowAgain': "Don't show again",
 
     // Today view
@@ -301,4 +301,12 @@ export const en: I18nMessages = {
     'workbench.addCard': 'Add Card',
     'workbench.empty': 'No cards yet. Click "Add Card" to start.',
     'workbench.cardAdded': 'Card "{name}" added',
+    'workbench.layoutScheme': 'Layout Scheme',
+
+    // Layout scheme modal
+    'layout.title': 'Layout Scheme',
+    'layout.general': 'General Layout',
+    'layout.custom': 'Custom Layout',
+    'layout.generalDesc': 'General Layout: apply preset card arrangements to quickly set up a common board structure.',
+    'layout.customDesc': 'Custom Layout: freely adjust the position, size, and arrangement of cards to build your own workbench.',
 };

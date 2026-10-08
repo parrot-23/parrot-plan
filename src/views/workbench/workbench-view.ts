@@ -11,6 +11,7 @@ import { createDataProvider } from '../../cardmake/data/provider';
 import type { EventBlock, ExecutionRecord } from '../../datatypes/domain';
 import type { InboxItem } from '../../datatypes/domain';
 import { t } from '../../i18n';
+import { LayoutModal } from './layout-modal';
 
 /**
  * 工作台视图：与 YearView / TodayView 一致，通过 renderInto 渲染到指定容器。
@@ -57,14 +58,20 @@ export class WorkbenchView {
             this.templates = await loadAllTemplates();
         }
 
-        // 顶部工具栏：标题 + 添加卡片按钮
+        // 顶部工具栏：标题 + 添加卡片按钮 + 布局方案按钮
         const toolbar = container.createDiv({ cls: 'wb-toolbar' });
         toolbar.createDiv({ cls: 'wb-toolbar-title', text: t('workbench.title') });
-        const addBtn = toolbar.createEl('button', {
+        const actions = toolbar.createDiv({ cls: 'wb-toolbar-actions' });
+        const addBtn = actions.createEl('button', {
             cls: 'wb-add-btn',
             text: t('workbench.addCard'),
         });
         addBtn.onclick = () => this.showAddCardMenu(addBtn);
+        const layoutBtn = actions.createEl('button', {
+            cls: 'wb-layout-btn',
+            text: t('workbench.layoutScheme'),
+        });
+        layoutBtn.onclick = () => new LayoutModal(this.app).open();
 
         // 卡片网格
         const grid = container.createDiv({ cls: 'wb-grid' });
