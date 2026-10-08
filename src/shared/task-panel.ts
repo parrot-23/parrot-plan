@@ -354,9 +354,50 @@ export function renderTaskPanel(
             }
         }
 
+        // 长按进入拖动模式：按住约 300ms 未移动则开始拖动
+        let longPressTimer: number | undefined;
+        let longPressStart: { x: number; y: number } | undefined;
+        let suppressClick = false;
+
+        const cancelLongPress = () => {
+            if (longPressTimer !== undefined) {
+                window.clearTimeout(longPressTimer);
+                longPressTimer = undefined;
+            }
+            longPressStart = undefined;
+        };
+
+        itemEl.onmousedown = (e) => {
+            // 仅左键；忽略折叠箭头等交互元素
+            if (e.button !== 0) return;
+            if ((e.target as HTMLElement).closest('.inbox-item-toggle')) return;
+            longPressStart = { x: e.clientX, y: e.clientY };
+            longPressTimer = window.setTimeout(() => {
+                longPressTimer = undefined;
+                suppressClick = true;
+                startDrag(item, itemEl, () => { suppressClick = false; });
+            }, 300);
+        };
+
+        itemEl.onmousemove = (e) => {
+            // 长按期间移动超过阈值则取消长按（视为普通点击/选择）
+            if (!longPressStart) return;
+            if (Math.abs(e.clientX - longPressStart.x) > 5 || Math.abs(e.clientY - longPressStart.y) > 5) {
+                cancelLongPress();
+            }
+        };
+
+        itemEl.onmouseup = () => cancelLongPress();
+        itemEl.onmouseleave = () => cancelLongPress();
+
         // 点击选中/取消（以 inboxData.selectedId 为准，避免宿主刷新后本地状态失效）
         itemEl.onclick = (e) => {
             e.stopPropagation();
+            // 长按拖动结束后抑制本次点击，避免误选中
+            if (suppressClick) {
+                suppressClick = false;
+                return;
+            }
             // 点击任务项时清除板块选中状态
             inboxData.selectedSectionId = undefined;
             inboxData.selectedSectionItemId = undefined;
@@ -592,6 +633,159 @@ export function renderTaskPanel(
         }
     }
 
+    // ===== 拖动排序 / 调整层级 =====
+    /** 每层缩进像素（与 CSS 中 --inbox-depth 的 16px 保持一致） */
+    const DEPTH_INDENT = 16;
+
+    /**
+     * 开始拖动某任务：长按任务项后，跟随鼠标显示插入指示线，
+     * 松手时根据落点重排 inboxData.items 并更新 parentId。
+     * onEnd 在拖动结束时回调（用于重置长按抑制标记）。
+     */
+    function startDrag(item: InboxItem, itemEl: HTMLElement, onEnd?: () => void) {
+        // 被拖动任务及其所有后代（拖动时整体移动，且不能拖入自身后代）
+        const movingIds = new Set<string>([item.id, ...collectDescendantIds(inboxData, item.id)]);
+
+        // 当前可见的任务项（按 DOM 顺序），排除被拖动项及其后代
+        const targets = Array.from(listDiv.querySelectorAll<HTMLElement>('.inbox-item'))
+            .filter(el => {
+                const id = el.getAttribute('data-id');
+                return id && !movingIds.has(id);
+            });
+
+        itemEl.addClass('is-dragging');
+
+        // 插入指示线
+        const indicator = listDiv.createDiv({ cls: 'inbox-drag-indicator' });
+
+        // 计算落点：返回 { beforeId, parentId, depth }
+        const computeDrop = (clientX: number, clientY: number) => {
+            if (targets.length === 0) {
+                return { beforeId: undefined as string | undefined, parentId: undefined as string | undefined, depth: 0 };
+            }
+            // 找到鼠标 Y 最接近的目标项
+            let refEl: HTMLElement | undefined;
+            let placeAfter = false;
+            for (const el of targets) {
+                const rect = el.getBoundingClientRect();
+                if (clientY < rect.top) {
+                    refEl = el;
+                    placeAfter = false;
+                    break;
+                }
+                if (clientY <= rect.bottom) {
+                    refEl = el;
+                    placeAfter = clientY > rect.top + rect.height / 2;
+                    break;
+                }
+            }
+            if (!refEl) {
+                refEl = targets[targets.length - 1];
+                placeAfter = true;
+            }
+
+            const refId = refEl.getAttribute('data-id')!;
+
+            // 层级：根据鼠标 X 相对目标项左边缘的偏移（每 16px 一层）
+            const refRect = refEl.getBoundingClientRect();
+            const offset = clientX - refRect.left;
+            let depth = Math.round(offset / DEPTH_INDENT);
+            depth = Math.max(0, Math.min(depth, MAX_INBOX_DEPTH - 1));
+
+            // 落点父级：目标项深度为 depth 时，父级是深度 depth-1 的最近前驱
+            let parentId: string | undefined;
+            if (depth > 0) {
+                // 在目标项之前找深度为 depth-1 的项作为父级
+                const refIndex = targets.indexOf(refEl);
+                for (let i = refIndex; i >= 0; i--) {
+                    const candId = targets[i].getAttribute('data-id')!;
+                    const candItem = inboxData.items.find(x => x.id === candId)!;
+                    const candDepth = getItemDepth(inboxData, candItem) - 1;
+                    if (candDepth === depth - 1) {
+                        parentId = candId;
+                        break;
+                    }
+                }
+                // 找不到合适父级则退回顶层
+                if (!parentId) depth = 0;
+            }
+
+            return { beforeId: refId, placeAfter, parentId, depth };
+        };
+
+        // 指示线定位
+        const updateIndicator = (clientX: number, clientY: number) => {
+            const drop = computeDrop(clientX, clientY);
+            const refEl = targets.find(el => el.getAttribute('data-id') === drop.beforeId);
+            if (!refEl) {
+                indicator.removeClass('is-visible');
+                return;
+            }
+            const rect = refEl.getBoundingClientRect();
+            const listRect = listDiv.getBoundingClientRect();
+            const top = (drop.placeAfter ? rect.bottom : rect.top) - listRect.top + listDiv.scrollTop;
+            indicator.addClass('is-visible');
+            indicator.setCssProps({
+                '--indicator-top': `${top}px`,
+                '--indicator-left': `${drop.depth * DEPTH_INDENT}px`,
+            });
+        };
+
+        const onMove = (ev: MouseEvent) => {
+            updateIndicator(ev.clientX, ev.clientY);
+        };
+
+        const onUp = (ev: MouseEvent) => {
+            document.removeEventListener('mousemove', onMove);
+            document.removeEventListener('mouseup', onUp);
+            indicator.remove();
+            itemEl.removeClass('is-dragging');
+
+            const drop = computeDrop(ev.clientX, ev.clientY);
+            applyDrop(item, drop);
+            onEnd?.();
+        };
+
+        document.addEventListener('mousemove', onMove);
+        document.addEventListener('mouseup', onUp);
+    }
+
+    /** 应用落点：更新 parentId 并重排 items 数组，然后保存刷新 */
+    function applyDrop(
+        item: InboxItem,
+        drop: { beforeId?: string; placeAfter?: boolean; parentId?: string; depth: number },
+    ) {
+        // 更新层级
+        item.parentId = drop.parentId;
+
+        // 重排数组：把 item 及其后代整体移动到目标位置
+        const movingIds = new Set<string>([item.id, ...collectDescendantIds(inboxData, item.id)]);
+        const moving = inboxData.items.filter(i => movingIds.has(i.id));
+        const rest = inboxData.items.filter(i => !movingIds.has(i.id));
+
+        if (!drop.beforeId) {
+            // 放到末尾
+            inboxData.items = [...rest, ...moving];
+        } else {
+            const refIndex = rest.findIndex(i => i.id === drop.beforeId);
+            const insertAt = refIndex < 0
+                ? rest.length
+                : (drop.placeAfter ? refIndex + 1 : refIndex);
+            inboxData.items = [
+                ...rest.slice(0, insertAt),
+                ...moving,
+                ...rest.slice(insertAt),
+            ];
+        }
+
+        renderList();
+        updateToolbar();
+        void (async () => {
+            if (onUpdate) await onUpdate(item);
+            onRefresh();
+        })();
+    }
+
     renderList();
     updateToolbar();
 
@@ -746,7 +940,7 @@ class ConfirmDeleteInboxModal extends Modal {
 
 // ===== 文件路径自动补全（文件板块使用）=====
 /** 输入框的文件路径建议：从 vault 全部文件中模糊匹配 */
-class FilePathSuggest extends AbstractInputSuggest<TFile> {
+export class FilePathSuggest extends AbstractInputSuggest<TFile> {
     constructor(
         app: App,
         private inputEl: HTMLInputElement,

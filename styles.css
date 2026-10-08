@@ -841,6 +841,30 @@
 .inbox-list {
     overflow-y: auto;
     flex: 1;
+    position: relative;
+}
+
+/* 拖动中的任务项 */
+.inbox-item.is-dragging {
+    opacity: 0.5;
+}
+
+/* 拖动插入指示线 */
+.inbox-drag-indicator {
+    display: none;
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: var(--interactive-accent);
+    pointer-events: none;
+    z-index: 5;
+}
+
+.inbox-drag-indicator.is-visible {
+    display: block;
+    top: var(--indicator-top, 0);
+    margin-left: var(--indicator-left, 0);
 }
 
 .inbox-item {

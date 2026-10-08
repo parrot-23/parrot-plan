@@ -3,7 +3,7 @@ import { Modal, Notice, Setting, setIcon } from 'obsidian';
 
 import type { TimeBlockCategoryData } from './week-view/timeblock-category-manager';
 import type { InboxData, InboxItem, Section, ChecklistData, StepsData, HabitData, FileData } from '../datatypes/domain';
-import { renderTaskPanel } from '../shared/task-panel';
+import { renderTaskPanel, FilePathSuggest } from '../shared/task-panel';
 import { renderSwimlane } from '../shared/swimlane';
 import { makeWeekKey, parseWeekKey } from './week-view/timeblock-data';
 import { t } from '../i18n';
@@ -375,6 +375,12 @@ export class TaskPlanView {
                 pathInput.value = it.path;
                 pathInput.placeholder = t('section.filePlaceholder');
                 pathInput.onchange = () => { it.path = pathInput.value; };
+                // 点击/输入时弹出 vault 文件下拉列表，按输入内容筛选
+                new FilePathSuggest(this.app, pathInput, (path) => {
+                    it.path = path;
+                    // 未自定义显示名时，用文件路径作为显示名
+                    if (!it.text) it.text = path;
+                });
                 const nameInput = line.createEl('input', { type: 'text', cls: 'swimlane-section-card-edit-text' });
                 nameInput.value = it.text;
                 nameInput.placeholder = t('section.fileNamePlaceholder');
