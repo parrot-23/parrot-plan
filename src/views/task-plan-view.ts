@@ -3,6 +3,7 @@ import { Modal, Notice, Setting, setIcon } from 'obsidian';
 
 import type { TimeBlockCategoryData } from './week-view/timeblock-category-manager';
 import type { InboxData, InboxItem, Section, ChecklistData, StepsData, HabitData, FileData } from '../datatypes/domain';
+import { SECTION_TYPE_META } from '../datatypes/domain';
 import { renderTaskPanel, FilePathSuggest } from '../shared/task-panel';
 import { renderSwimlane } from '../shared/swimlane';
 import { makeWeekKey, parseWeekKey } from './week-view/timeblock-data';
@@ -249,7 +250,9 @@ export class TaskPlanView {
 
         // 卡片头部：类型标签 + 板块名 + 编辑按钮
         const head = card.createDiv({ cls: 'swimlane-section-card-head' });
-        head.createSpan({ cls: 'swimlane-section-card-type', text: this.sectionTypeLabel(section.type) });
+        const typeEl = head.createSpan({ cls: 'swimlane-section-card-type' });
+        setIcon(typeEl.createSpan({ cls: 'swimlane-section-card-type-icon' }), this.sectionTypeIcon(section.type));
+        typeEl.createSpan({ text: this.sectionTypeLabel(section.type) });
         head.createSpan({
             cls: 'swimlane-section-card-name',
             text: section.title || this.sectionTypeLabel(section.type),
@@ -286,7 +289,15 @@ export class TaskPlanView {
             }
         } else if (section.type === 'file') {
             for (const it of (section.data as FileData).items) {
-                this.renderSectionCardItem(itemsEl, '📄', it.text || it.path);
+                const itemEl = this.renderSectionCardItem(itemsEl, '📄', it.text || it.path);
+                // 点击文件条目：在新标签页打开对应 vault 文件
+                if (it.path) {
+                    itemEl.addClass('is-clickable');
+                    itemEl.onclick = (e) => {
+                        e.stopPropagation();
+                        void this.app.workspace.openLinkText(it.path, '', 'tab');
+                    };
+                }
             }
         }
     }
@@ -297,7 +308,9 @@ export class TaskPlanView {
 
         // 卡片头部：类型标签 + 板块名 + 删除卡片 / 退出按钮
         const head = card.createDiv({ cls: 'swimlane-section-card-head' });
-        head.createSpan({ cls: 'swimlane-section-card-type', text: this.sectionTypeLabel(section.type) });
+        const typeEl = head.createSpan({ cls: 'swimlane-section-card-type' });
+        setIcon(typeEl.createSpan({ cls: 'swimlane-section-card-type-icon' }), this.sectionTypeIcon(section.type));
+        typeEl.createSpan({ text: this.sectionTypeLabel(section.type) });
         head.createSpan({
             cls: 'swimlane-section-card-name',
             text: section.title || this.sectionTypeLabel(section.type),
@@ -437,22 +450,25 @@ export class TaskPlanView {
         this.renderSectionCards(row);
     }
 
-    /** 渲染板块卡片中的单个条目 */
-    private renderSectionCardItem(itemsEl: HTMLElement, mark: string, text: string, count?: string): void {
+    /** 渲染板块卡片中的单个条目，返回条目元素 */
+    private renderSectionCardItem(itemsEl: HTMLElement, mark: string, text: string, count?: string): HTMLElement {
         const itemEl = itemsEl.createDiv({ cls: 'swimlane-section-card-item' });
         itemEl.createSpan({ cls: 'swimlane-section-card-mark', text: mark });
         itemEl.createSpan({ cls: 'swimlane-section-card-text', text });
         if (count !== undefined) {
             itemEl.createSpan({ cls: 'swimlane-section-card-count', text: count });
         }
+        return itemEl;
     }
 
     /** 板块类型显示名 */
     private sectionTypeLabel(type: Section['type']): string {
-        if (type === 'checklist') return t('section.typeChecklist');
-        if (type === 'steps') return t('section.typeSteps');
-        if (type === 'habit') return t('section.typeHabit');
-        return t('section.typeFile');
+        return t(SECTION_TYPE_META[type].labelKey as Parameters<typeof t>[0]);
+    }
+
+    /** 板块类型对应的 Obsidian 原生图标名 */
+    private sectionTypeIcon(type: Section['type']): string {
+        return SECTION_TYPE_META[type].icon;
     }
 
     /**

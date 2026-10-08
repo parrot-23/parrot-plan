@@ -62,6 +62,17 @@ export interface InboxItem {
 /** 板块类型：清单 / 步骤 / 打卡 / 文件 */
 export type SectionType = 'checklist' | 'steps' | 'habit' | 'file';
 
+/**
+ * 板块类型原型数据：统一维护各类型的 Obsidian 图标名与名称 i18n key。
+ * 各视图（任务面板、任务计划视图等）统一从此处读取，避免各处重复判断。
+ */
+export const SECTION_TYPE_META: Record<SectionType, { icon: string; labelKey: string }> = {
+    checklist: { icon: 'check-square', labelKey: 'section.typeChecklist' },
+    steps: { icon: 'list-ordered', labelKey: 'section.typeSteps' },
+    habit: { icon: 'repeat', labelKey: 'section.typeHabit' },
+    file: { icon: 'file-text', labelKey: 'section.typeFile' },
+};
+
 /** 清单项（可勾选） */
 export interface ChecklistItem {
     id: string;

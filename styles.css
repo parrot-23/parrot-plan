@@ -2992,11 +2992,25 @@
 
 .swimlane-section-card-type {
     flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
     padding: 1px 6px;
     border-radius: 3px;
     background: var(--interactive-accent);
     color: var(--text-on-accent);
     font-size: 10px;
+}
+
+/* 类型标签内的图标 */
+.swimlane-section-card-type-icon {
+    display: inline-flex;
+    align-items: center;
+}
+
+.swimlane-section-card-type-icon svg {
+    width: 11px;
+    height: 11px;
 }
 
 .swimlane-section-card-name {
@@ -3023,6 +3037,21 @@
     gap: 6px;
     font-size: 12px;
     color: var(--text-normal);
+}
+
+/* 可点击的文件条目：手型光标 + 悬浮反馈 */
+.swimlane-section-card-item.is-clickable {
+    cursor: pointer;
+    border-radius: 3px;
+}
+
+.swimlane-section-card-item.is-clickable:hover {
+    background: var(--background-modifier-hover);
+}
+
+.swimlane-section-card-item.is-clickable:hover .swimlane-section-card-text {
+    color: var(--text-accent);
+    text-decoration: underline;
 }
 
 .swimlane-section-card-mark {
@@ -4271,6 +4300,12 @@
     color: var(--text-muted);
     font-size: 10px;
     line-height: 1.4;
+}
+
+/* 板块摘要图标（仅图标，无文字） */
+.inbox-section-chip svg {
+    width: 12px;
+    height: 12px;
 }
 
 /* 详情弹窗中的板块编辑区 */

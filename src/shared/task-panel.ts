@@ -1,8 +1,8 @@
-import { App, Modal, Setting, Notice, AbstractInputSuggest, TFile } from 'obsidian';
+import { App, Modal, Setting, Notice, AbstractInputSuggest, TFile, setIcon } from 'obsidian';
 import type { TimeBlockCategoryData } from '../views/week-view/timeblock-category-manager';
 import { t } from '../i18n';
 import type { InboxItem, InboxData, Section, SectionType, ChecklistData, StepsData, HabitData, FileData } from '../datatypes/domain';
-import { DEFAULT_INBOX_DATA } from '../datatypes/domain';
+import { DEFAULT_INBOX_DATA, SECTION_TYPE_META } from '../datatypes/domain';
 
 /**
  * 任务面板：公共组件。
@@ -344,13 +344,12 @@ export function renderTaskPanel(
                 .setText(item.description);
         }
 
-        // 展示板块摘要（只读，编辑在详情弹窗中）
+        // 展示板块摘要（只读，编辑在详情弹窗中）：仅显示类型图标，不显示名称
         if (item.sections && item.sections.length > 0) {
             const sectionsEl = itemEl.createDiv({ cls: 'inbox-item-sections' });
             for (const section of item.sections) {
                 const chip = sectionsEl.createSpan({ cls: 'inbox-section-chip' });
-                const typeLabel = sectionTypeLabel(section.type);
-                chip.setText(`${typeLabel}${section.title ? '·' + section.title : ''}`);
+                setIcon(chip, SECTION_TYPE_META[section.type].icon);
             }
         }
 
