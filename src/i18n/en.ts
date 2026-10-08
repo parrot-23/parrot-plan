@@ -27,12 +27,20 @@ export const en: I18nMessages = {
 
     // Main navigation (tab button group)
     'nav.year': 'Year Plan',
+    'nav.taskPlan': 'Task Plan',
     'nav.week': 'Week Plan',
     'nav.today': 'Today Todo',
     'nav.projectPicture': 'Project Picture',
     'nav.workbench': 'Workbench',
     'nav.achievement': 'Achievements',
     'nav.placeholder': 'This is the "{name}" page',
+
+    // Task Plan view
+    'taskPlan.noSelection': 'Select a task on the left',
+    'taskPlan.description': 'Description',
+    'taskPlan.category': 'Category',
+    'taskPlan.plannedWeeks': 'Planned weeks',
+    'taskPlan.emptyValue': '—',
 
     // Help
     'help.title': 'Help',

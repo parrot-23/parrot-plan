@@ -8,6 +8,7 @@ import type { InboxData } from './datatypes/domain';
 import { WeekScheduleView } from './views/week-view/week-schedule-view';
 import type { EventBlock, ExecutionRecord } from './datatypes/domain';
 import { YearView } from './views/year-view';
+import { TaskPlanView } from './views/task-plan-view';
 import { TodayView } from './views/today-view';
 import { SwimlaneView } from './views/projectpicture-view';
 import { WorkbenchView } from './views/workbench/workbench-view';
@@ -19,11 +20,12 @@ import { HelpModal } from './helper/help-modal';
 export const VIEW_TYPE_MAIN = 'parrot-plan-main-view';
 
 /** 主导航 tab 标识 */
-type NavTab = 'year' | 'week' | 'today' | 'swimlane' | 'workbench' | 'achievement';
+type NavTab = 'year' | 'taskPlan' | 'week' | 'today' | 'swimlane' | 'workbench' | 'achievement';
 
 /** 主导航按钮定义（label 存 i18n key，渲染时再求值，避免模块加载时语言未初始化） */
-const NAV_TABS: { id: NavTab; labelKey: 'nav.year' | 'nav.week' | 'nav.today' | 'nav.projectPicture' | 'nav.workbench' | 'nav.achievement' }[] = [
+const NAV_TABS: { id: NavTab; labelKey: 'nav.year' | 'nav.taskPlan' | 'nav.week' | 'nav.today' | 'nav.projectPicture' | 'nav.workbench' | 'nav.achievement' }[] = [
     { id: 'year', labelKey: 'nav.year' },
+    { id: 'taskPlan', labelKey: 'nav.taskPlan' },
     { id: 'week', labelKey: 'nav.week' },
     { id: 'today', labelKey: 'nav.today' },
     { id: 'swimlane', labelKey: 'nav.projectPicture' },
@@ -39,6 +41,7 @@ export class MainView extends ItemView {
     plugin: Plugin;
     private weekView: WeekScheduleView;
     private yearView: YearView;
+    private taskPlanView: TaskPlanView;
     private todayView: TodayView;
     private swimlaneView: SwimlaneView;
     private workbenchView: WorkbenchView;
@@ -93,6 +96,12 @@ export class MainView extends ItemView {
                 void this.renderContent();
             },
             () => this.weekView.plannedWeeks,
+        );
+        this.taskPlanView = new TaskPlanView(
+            this.app,
+            this.weekView.inboxData,
+            this.weekView.timeBlockCategoryData,
+            () => this.weekView.save(),
         );
         this.todayView = new TodayView(
             this.app,
@@ -199,7 +208,7 @@ export class MainView extends ItemView {
 
         this.contentRoot.empty();
         // 清除上一次视图残留在共享容器上的视图类，避免多个视图样式叠加导致布局错乱
-        this.contentRoot.removeClass('today-view', 'year-view', 'swimlane-view', 'workbench-view');
+        this.contentRoot.removeClass('today-view', 'year-view', 'task-plan-view', 'swimlane-view', 'workbench-view');
 
         if (this.activeTab === 'week') {
             await this.weekView.renderInto(this.contentRoot);
@@ -208,6 +217,11 @@ export class MainView extends ItemView {
 
         if (this.activeTab === 'year') {
             await this.yearView.renderInto(this.contentRoot);
+            return;
+        }
+
+        if (this.activeTab === 'taskPlan') {
+            await this.taskPlanView.renderInto(this.contentRoot);
             return;
         }
 

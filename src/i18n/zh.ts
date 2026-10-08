@@ -25,12 +25,20 @@ export const zh = {
 
     // 主导航（tab 按钮组）
     'nav.year': '年计划',
+    'nav.taskPlan': '任务计划',
     'nav.week': '周计划',
     'nav.today': '日执行',
     'nav.projectPicture': '项目全景图',
     'nav.workbench': '工作台',
     'nav.achievement': '成就榜单',
     'nav.placeholder': '当前是「{name}」页面',
+
+    // 任务计划视图
+    'taskPlan.noSelection': '请在左侧选择一个任务',
+    'taskPlan.description': '项目描述',
+    'taskPlan.category': '分类',
+    'taskPlan.plannedWeeks': '已计划周数',
+    'taskPlan.emptyValue': '—',
 
     // 帮助
     'help.title': '帮助文档',
