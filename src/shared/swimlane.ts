@@ -21,6 +21,8 @@ export interface SwimlaneOptions {
     getExecutions?: () => ExecutionRecord[];
     /** 获取任务层级深度（用于标题行缩进，缺省为 0） */
     getDepth?: (task: InboxItem) => number;
+    /** 获取该任务所有子孙节点的计划周号（1–52，仅当前年份；用于渲染条纹格子） */
+    getDescendantWeeks?: (task: InboxItem) => number[];
     /** 点击计划线某周格子时触发（task 为该行任务，week 为 1–52） */
     onWeekClick?: (task: InboxItem, week: number) => void;
 }
@@ -108,9 +110,15 @@ export function renderSwimlane(board: HTMLElement, options: SwimlaneOptions): vo
 
         // 计划线
         const planRow = board.createDiv({ cls: 'swimlane-lane-row' });
+        // 子孙节点的计划周（父级行也渲染，但用条纹样式区分）
+        const descendantWeeks = new Set(options.getDescendantWeeks?.(task) ?? []);
         for (let w = 1; w <= totalWeeks; w++) {
             const cell = planRow.createDiv({ cls: 'swimlane-cell' });
-            if (planWeeks.has(w)) cell.addClass('is-plan');
+            if (planWeeks.has(w)) {
+                cell.addClass('is-plan');
+            } else if (descendantWeeks.has(w)) {
+                cell.addClass('is-plan-inherited');
+            }
             if (options.onWeekClick) {
                 cell.addClass('is-clickable');
                 cell.onclick = () => options.onWeekClick?.(task, w);

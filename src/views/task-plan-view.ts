@@ -5,7 +5,7 @@ import type { TimeBlockCategoryData } from './week-view/timeblock-category-manag
 import type { InboxData, InboxItem } from '../datatypes/domain';
 import { renderTaskPanel } from '../shared/task-panel';
 import { renderSwimlane } from '../shared/swimlane';
-import { makeWeekKey } from './week-view/timeblock-data';
+import { makeWeekKey, parseWeekKey } from './week-view/timeblock-data';
 import { t } from '../i18n';
 
 /**
@@ -65,7 +65,7 @@ export class TaskPlanView {
 
         // 泳道图（仅显示计划，不显示执行；只显示当前选中任务及其子任务）
         const board = contentPanel.createDiv({ cls: 'task-plan-board' });
-        const { tasks, depthMap } = this.collectSelectedSubtree();
+        const { tasks, depthMap, inheritedMap } = this.collectSelectedSubtree();
         renderSwimlane(board, {
             tasks,
             categoryData: this.categoryData,
@@ -77,6 +77,7 @@ export class TaskPlanView {
             },
             showExec: false,
             getDepth: (task) => depthMap.get(task.id) ?? 0,
+            getDescendantWeeks: (task) => inheritedMap.get(task.id) ?? [],
             onWeekClick: (task, week) => {
                 void this.toggleWeekAssignment(task, week);
             },
@@ -106,30 +107,57 @@ export class TaskPlanView {
 
     /**
      * 收集当前选中任务及其所有子任务（深度优先，跳过已折叠任务的子任务）。
-     * 返回任务列表与每个任务的层级深度（选中任务为 0，子任务依次递增）。
+     * 返回任务列表、每个任务的层级深度（选中任务为 0），
+     * 以及每个任务的所有子孙节点的计划周号（当前年份，用于渲染条纹格子）。
      * 未选中任务时返回空列表。
      */
-    private collectSelectedSubtree(): { tasks: InboxItem[]; depthMap: Map<string, number> } {
+    private collectSelectedSubtree(): {
+        tasks: InboxItem[];
+        depthMap: Map<string, number>;
+        inheritedMap: Map<string, number[]>;
+    } {
         const tasks: InboxItem[] = [];
         const depthMap = new Map<string, number>();
+        const inheritedMap = new Map<string, number[]>();
         const selectedId = this.inboxData.selectedId;
-        if (!selectedId) return { tasks, depthMap };
+        if (!selectedId) return { tasks, depthMap, inheritedMap };
         const root = this.inboxData.items.find(i => i.id === selectedId && !i.removed);
-        if (!root) return { tasks, depthMap };
+        if (!root) return { tasks, depthMap, inheritedMap };
 
         const collapsed = this.inboxData.collapsedIds ?? [];
 
-        const walk = (item: InboxItem, depth: number) => {
+        // 提取任务在当前年份的计划周号
+        const weeksOf = (item: InboxItem): number[] => {
+            const result: number[] = [];
+            for (const key of item.assignedWeekKeys ?? []) {
+                const parsed = parseWeekKey(key);
+                if (parsed.year === this.currentYear) result.push(parsed.week);
+            }
+            return result;
+        };
+
+        // 递归收集：返回该节点及其所有子孙的计划周号集合
+        const walk = (item: InboxItem, depth: number): Set<number> => {
             tasks.push(item);
             depthMap.set(item.id, depth);
-            if (collapsed.includes(item.id)) return;
-            const children = this.inboxData.items.filter(
-                i => !i.removed && i.parentId === item.id,
-            );
-            for (const child of children) walk(child, depth + 1);
+
+            const descendantWeeks = new Set<number>();
+            if (!collapsed.includes(item.id)) {
+                const children = this.inboxData.items.filter(
+                    i => !i.removed && i.parentId === item.id,
+                );
+                for (const child of children) {
+                    // 子节点自身计划周 + 其子孙的计划周
+                    for (const w of weeksOf(child)) descendantWeeks.add(w);
+                    for (const w of Array.from(walk(child, depth + 1))) descendantWeeks.add(w);
+                }
+            }
+            // 该行条纹格子 = 所有子孙的计划周（不含自身）
+            inheritedMap.set(item.id, Array.from(descendantWeeks));
+            return descendantWeeks;
         };
         walk(root, 0);
-        return { tasks, depthMap };
+        return { tasks, depthMap, inheritedMap };
     }
 
     /** 渲染右侧信息表单：项目描述、分类、已计划周数 */

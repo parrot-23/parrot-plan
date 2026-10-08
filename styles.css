@@ -3106,6 +3106,18 @@
     opacity: 0.85;
 }
 
+/* 计划线：从父级继承的周格子（斜条纹，颜色与自身计划一致） */
+.swimlane-cell.is-plan-inherited {
+    background: repeating-linear-gradient(
+        45deg,
+        var(--interactive-accent) 0,
+        var(--interactive-accent) 3px,
+        transparent 3px,
+        transparent 6px
+    );
+    opacity: 0.85;
+}
+
 /* 执行线：命中的周格子 */
 .swimlane-cell.is-exec {
     background: var(--color-green, #43b581);
