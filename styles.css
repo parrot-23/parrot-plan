@@ -1001,6 +1001,29 @@
     justify-content: flex-end;
 }
 
+/* 新增任务浮动面板：紧贴任务面板右侧，绝对定位，可覆盖日历 */
+.inbox-add-panel {
+    position: fixed;
+    left: var(--panel-left, 0);
+    top: var(--panel-top, 0);
+    z-index: 1000;
+    width: 320px;
+    max-height: 80vh;
+    overflow-y: auto;
+    padding: 12px 14px;
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 8px;
+    background: var(--background-primary);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.22);
+}
+
+.inbox-add-panel-title {
+    margin: 0 0 10px;
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text-normal);
+}
+
 .inbox-cat-chip {
     display: inline-flex;
     align-items: center;

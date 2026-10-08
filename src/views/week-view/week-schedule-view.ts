@@ -508,6 +508,11 @@ export class WeekScheduleView extends ItemView {
                     ).open();
                 };
 
+                // 左侧任务面板选中该任务时，高亮对应事件卡片
+                if (this.inboxData.selectedId && ev.inboxId === this.inboxData.selectedId) {
+                    card.addClass('is-task-selected');
+                }
+
                 // 悬浮提示：展示事件详细信息
                 // 已制定周计划时，改为按背景网格 2 小时区间悬浮（见下方），卡片本身不再显示提示
                 if (!this.plannedWeeks.includes(this.currentWeekKey)) {

@@ -57,29 +57,70 @@ function sectionTypeLabel(type: SectionType): string {
     return t('section.typeFile');
 }
 
-// ===== 新增弹窗 =====
-class InboxAddModal extends Modal {
+// ===== 新增浮动面板（紧贴任务面板右侧，非模态，可同时操作其他笔记）=====
+class InboxAddPanel {
     private title: string = '';
     private description: string = '';
     private categoryId: string = '';
+    private panelEl: HTMLElement;
+    private closeHandler?: (e: MouseEvent) => void;
 
     constructor(
-        app: App,
+        private app: App,
+        /** 挂载父容器（任务面板根节点），面板作为其子节点，随视图一起销毁 */
+        private mountParent: HTMLElement,
+        /** 锚点元素（「+」按钮），面板紧贴其所在任务面板右侧 */
+        private anchor: HTMLElement,
         private onSubmit: (item: InboxItem) => void,
         /** 分类数据（用于新建时直接选择分类） */
         private categoryData: TimeBlockCategoryData,
         /** 父任务标题（添加子任务时显示） */
         private parentTitle?: string,
     ) {
-        super(app);
         // 默认选中第一个分类（未分类）
         this.categoryId = categoryData.categories[0]?.id ?? '';
+        // 挂到任务面板容器内（而非 body），关闭视图时随容器一起销毁
+        this.panelEl = mountParent.createDiv({ cls: 'inbox-add-panel' });
     }
 
-    onOpen() {
-        const { contentEl } = this;
+    open() {
+        this.render();
+        this.position();
+        // 点击面板外部关闭（延迟绑定，避免本次点击立即触发关闭）
+        this.closeHandler = (e: MouseEvent) => {
+            if (!this.panelEl.contains(e.target as Node)) {
+                this.close();
+            }
+        };
+        window.setTimeout(() => {
+            if (this.closeHandler) document.addEventListener('click', this.closeHandler);
+        }, 0);
+    }
+
+    /** 定位：紧贴任务面板右边缘，垂直对齐锚点按钮 */
+    private position() {
+        const anchorRect = this.anchor.getBoundingClientRect();
+        const panelRect = this.panelEl.getBoundingClientRect();
+        // 优先放在任务面板右侧
+        let left = anchorRect.right + 8;
+        if (left + panelRect.width > window.innerWidth) {
+            left = Math.max(8, window.innerWidth - panelRect.width - 8);
+        }
+        let top = anchorRect.top;
+        if (top + panelRect.height > window.innerHeight) {
+            top = Math.max(8, window.innerHeight - panelRect.height - 8);
+        }
+        this.panelEl.setCssProps({
+            '--panel-left': `${left}px`,
+            '--panel-top': `${top}px`,
+        });
+    }
+
+    private render() {
+        const contentEl = this.panelEl;
         contentEl.empty();
         contentEl.createEl('h3', {
+            cls: 'inbox-add-panel-title',
             text: this.parentTitle
                 ? t('inbox.addSubTitle', { title: this.parentTitle })
                 : t('inbox.addTitle'),
@@ -152,8 +193,12 @@ class InboxAddModal extends Modal {
         this.close();
     }
 
-    onClose() {
-        this.contentEl.empty();
+    close() {
+        if (this.closeHandler) {
+            document.removeEventListener('click', this.closeHandler);
+            this.closeHandler = undefined;
+        }
+        this.panelEl.remove();
     }
 }
 
@@ -616,7 +661,7 @@ export function renderTaskPanel(
             return;
         }
 
-        new InboxAddModal(app, (item) => {
+        new InboxAddPanel(app, container, addBtn, (item) => {
             if (parent) {
                 item.parentId = parent.id;
                 // 确保父任务展开，便于看到新子任务
