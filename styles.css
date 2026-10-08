@@ -13,7 +13,8 @@
     width: 250px;
     height: 100%;
     box-sizing: border-box;
-    overflow: hidden;
+    /* 允许新增任务浮动面板溢出到右侧日历上 */
+    overflow: visible;
     padding: 10px;
     border-right: 1px solid var(--background-modifier-border);
     background: var(--background-secondary);
@@ -766,6 +767,7 @@
 /* 仅负责内部布局；外框（padding / border / background）由各视图的 *-task-panel 统一提供，
    避免同一元素上两个类互相覆盖导致不同视图对齐不一致 */
 .inbox-panel {
+    position: relative;
     height: 100%;
     display: flex;
     flex-direction: column;
@@ -1001,10 +1003,10 @@
     justify-content: flex-end;
 }
 
-/* 新增任务浮动面板：紧贴任务面板右侧，绝对定位，可覆盖日历 */
+/* 新增任务浮动面板：相对任务面板容器绝对定位，紧贴其右侧，可覆盖日历 */
 .inbox-add-panel {
-    position: fixed;
-    left: var(--panel-left, 0);
+    position: absolute;
+    left: var(--panel-left, 100%);
     top: var(--panel-top, 0);
     z-index: 1000;
     width: 320px;
@@ -1556,7 +1558,8 @@
     width: 250px;
     height: 100%;
     box-sizing: border-box;
-    overflow: hidden;
+    /* 允许新增任务浮动面板溢出到右侧日历上 */
+    overflow: visible;
     padding: 10px;
     border-right: 1px solid var(--background-modifier-border);
     background: var(--background-secondary);
@@ -1775,7 +1778,8 @@
     width: 250px;
     height: 100%;
     box-sizing: border-box;
-    overflow: hidden;
+    /* 允许新增任务浮动面板溢出到右侧日历上 */
+    overflow: visible;
     padding: 10px;
     border-right: 1px solid var(--background-modifier-border);
     background: var(--background-secondary);

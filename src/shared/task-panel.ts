@@ -79,37 +79,34 @@ class InboxAddPanel {
     ) {
         // 默认选中第一个分类（未分类）
         this.categoryId = categoryData.categories[0]?.id ?? '';
-        // 挂到任务面板容器内（而非 body），关闭视图时随容器一起销毁
+        // 挂到任务面板容器内（而非 body），随视图一起销毁；用绝对定位紧贴其右侧
         this.panelEl = mountParent.createDiv({ cls: 'inbox-add-panel' });
     }
 
     open() {
         this.render();
+        // 等布局完成后再定位，确保尺寸真实
         this.position();
+        window.requestAnimationFrame(() => this.position());
         // 点击面板外部关闭（延迟绑定，避免本次点击立即触发关闭）
+        // 用 mousedown 判断，且检查事件目标是否在面板内，避免点击面板内部时误关闭
         this.closeHandler = (e: MouseEvent) => {
-            if (!this.panelEl.contains(e.target as Node)) {
-                this.close();
-            }
+            const target = e.target as Node | null;
+            if (target && this.panelEl.contains(target)) return;
+            this.close();
         };
         window.setTimeout(() => {
-            if (this.closeHandler) document.addEventListener('click', this.closeHandler);
+            if (this.closeHandler) document.addEventListener('mousedown', this.closeHandler);
         }, 0);
     }
 
-    /** 定位：紧贴任务面板右边缘，垂直对齐锚点按钮 */
+    /** 定位：相对任务面板容器绝对定位，紧贴其右边缘，垂直对齐「+」按钮 */
     private position() {
+        const parentRect = this.mountParent.getBoundingClientRect();
         const anchorRect = this.anchor.getBoundingClientRect();
-        const panelRect = this.panelEl.getBoundingClientRect();
-        // 优先放在任务面板右侧
-        let left = anchorRect.right + 8;
-        if (left + panelRect.width > window.innerWidth) {
-            left = Math.max(8, window.innerWidth - panelRect.width - 8);
-        }
-        let top = anchorRect.top;
-        if (top + panelRect.height > window.innerHeight) {
-            top = Math.max(8, window.innerHeight - panelRect.height - 8);
-        }
+        // 相对父容器：left = 父容器宽度（紧贴右边缘），top = 按钮相对父容器顶部的偏移
+        const left = this.mountParent.clientWidth;
+        const top = anchorRect.top - parentRect.top;
         this.panelEl.setCssProps({
             '--panel-left': `${left}px`,
             '--panel-top': `${top}px`,
@@ -195,7 +192,7 @@ class InboxAddPanel {
 
     close() {
         if (this.closeHandler) {
-            document.removeEventListener('click', this.closeHandler);
+            document.removeEventListener('mousedown', this.closeHandler);
             this.closeHandler = undefined;
         }
         this.panelEl.remove();
