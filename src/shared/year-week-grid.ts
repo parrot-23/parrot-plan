@@ -19,6 +19,8 @@ export interface YearWeekGridOptions {
     assignedTasks?: Record<string, { id: string; title: string; color?: string }[]>;
     /** 已制定周计划的周键列表，用于在格子左上角显示图标 */
     plannedWeeks?: string[];
+    /** 左侧任务面板当前选中的任务 id，用于高亮对应事件色条 */
+    selectedTaskId?: string;
 }
 
 /** 12 个月的固定配色（同一月份始终同色） */
@@ -195,6 +197,10 @@ export function renderYearWeekGrid(
                         } else if (!has && segStart !== -1) {
                             // 渲染 [segStart, i-1] 区间
                             const bar = layer.createDiv({ cls: 'year-week-row-task' });
+                            // 左侧任务面板选中该任务时，高亮对应色条
+                            if (options.selectedTaskId && task.id === options.selectedTaskId) {
+                                bar.addClass('is-selected');
+                            }
                             bar.setCssProps({
                                 '--seg-start': String(segStart),
                                 '--seg-span': String(i - segStart),

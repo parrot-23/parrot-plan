@@ -70,6 +70,7 @@ export class YearView {
         renderYearWeekGrid(calendarPanel, {
             assignedTasks: this.buildAssignedTasks(),
             plannedWeeks: this.getPlannedWeeks?.() ?? [],
+            selectedTaskId: this.inboxData.selectedId,
             onWeekClick: (week, year) => {
                 void this.onWeekClick(week, year);
             },

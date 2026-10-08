@@ -1043,6 +1043,10 @@ export class TodayView {
 
             // 点击事件卡片 → 在中心方框展示详情（再次点击取消选中）
             if (this.selectedEventId === ev.id) card.addClass('is-selected');
+            // 左侧任务面板选中该任务时，高亮对应事件卡片
+            if (this.inboxData.selectedId && ev.inboxId === this.inboxData.selectedId) {
+                card.addClass('is-task-selected');
+            }
             card.onclick = (e) => {
                 e.stopPropagation();
                 this.toggleEventSelection(ev.id);
@@ -1081,6 +1085,10 @@ export class TodayView {
 
             // 点击「新增」卡片 → 在中心方框展示详情（再次点击取消选中）
             if (this.selectedExecId === ex.id) card.addClass('is-selected');
+            // 左侧任务面板选中该任务时，高亮对应执行卡片
+            if (this.inboxData.selectedId && ex.inboxId === this.inboxData.selectedId) {
+                card.addClass('is-task-selected');
+            }
             card.onclick = (e) => {
                 e.stopPropagation();
                 this.toggleExecSelection(ex.id);

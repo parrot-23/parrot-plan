@@ -1642,6 +1642,13 @@
     text-overflow: ellipsis;
 }
 
+/* 左侧任务面板选中对应任务时，高亮事件色条（边框） */
+.year-week-row-task.is-selected {
+    outline: 2px solid var(--text-accent);
+    outline-offset: -1px;
+    z-index: 1;
+}
+
 /* 分类颜色小圆点 */
 .year-week-row-task::before {
     content: '';
@@ -2336,6 +2343,13 @@
 .event-card.is-selected .event-status-bubble {
     outline: 2px solid var(--interactive-accent);
     outline-offset: -1px;
+}
+
+/* 左侧任务面板选中对应任务时，高亮事件卡片（边框） */
+.event-card.is-task-selected {
+    outline: 2px solid var(--text-accent);
+    outline-offset: -1px;
+    z-index: 5;
 }
 
 /* 右侧当天时间轴 */
