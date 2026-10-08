@@ -37,6 +37,8 @@ export default class ParrotPlanPlugin extends Plugin {
         plannedWeeks: string[];
         /** 工作台卡片数据 */
         workbench: WorkbenchData;
+        /** 当前正在执行的事件 id（日执行视图顶部执行卡片，随主数据一起持久化） */
+        executingEventId?: string;
     } | null = null;
 
     /** 缓存目录名称（随主数据一起持久化） */
@@ -68,6 +70,7 @@ export default class ParrotPlanPlugin extends Plugin {
             inboxData: d.inboxData,
             plannedWeeks: d.plannedWeeks,
             workbench: d.workbench,
+            executingEventId: d.executingEventId,
             cacheDirName: this.cacheDirName,
             cacheEnabled: this.cacheEnabled,
             helpDismissed: this.helpDismissed,
@@ -162,6 +165,10 @@ export default class ParrotPlanPlugin extends Plugin {
         const initialWorkbench = (savedData.workbench && typeof savedData.workbench === 'object')
             ? savedData.workbench as WorkbenchData
             : defaultWorkbenchData();
+        // 当前正在执行的事件 id（兼容旧数据：默认无）
+        const initialExecutingEventId = typeof savedData.executingEventId === 'string'
+            ? savedData.executingEventId
+            : undefined;
 
         // 存入插件实例，作为唯一数据源（视图重建时从这里读取最新数据）
         this.data = {
@@ -174,6 +181,7 @@ export default class ParrotPlanPlugin extends Plugin {
             schemeData: initialSchemeData,
             plannedWeeks: initialPlannedWeeks,
             workbench: initialWorkbench,
+            executingEventId: initialExecutingEventId,
         };
 
         // 注册视图
@@ -188,7 +196,7 @@ export default class ParrotPlanPlugin extends Plugin {
                 });
                 return new MainView(leaf, this, d.weekRange, d.templateData, d.categoryData,
                     d.events, d.executions, d.inboxData, d.schemeData, d.plannedWeeks, d.workbench,
-                    this.cacheDirName,
+                    this.cacheDirName, d.executingEventId,
                 );
             }
         );

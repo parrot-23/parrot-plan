@@ -60,6 +60,7 @@ export class MainView extends ItemView {
         plannedWeeks: string[],
         workbenchData: WorkbenchData,
         cacheDirName: string,
+        executingEventId?: string,
     ) {
         super(leaf);
         this.plugin = plugin;
@@ -100,6 +101,12 @@ export class MainView extends ItemView {
             () => this.weekView.save(),
             () => this.weekView.events,
             () => this.weekView.executions,
+            executingEventId,
+            (id) => {
+                // 写回插件数据源，随 saveAll 一起持久化
+                const p = this.plugin as Plugin & { data?: { executingEventId?: string } };
+                if (p.data) p.data.executingEventId = id;
+            },
         );
         this.swimlaneView = new SwimlaneView(
             this.app,

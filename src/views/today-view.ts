@@ -58,6 +58,8 @@ export class TodayView {
     private addUnplannedDuration = 30;
     /** 当前正在执行的事件 id（点击「进入执行」后设置，用于顶部执行卡片） */
     private executingEventId?: string;
+    /** 写回「正在执行」事件 id 的回调（用于持久化，随插件数据一起保存） */
+    private setExecutingEventId?: (id: string | undefined) => void;
 
     constructor(
         app: App,
@@ -66,6 +68,8 @@ export class TodayView {
         save: () => Promise<void>,
         getEvents: () => EventBlock[],
         getExecutions: () => ExecutionRecord[],
+        initialExecutingEventId?: string,
+        setExecutingEventId?: (id: string | undefined) => void,
     ) {
         this.app = app;
         this.inboxData = inboxData;
@@ -73,6 +77,8 @@ export class TodayView {
         this.save = save;
         this.getEvents = getEvents;
         this.getExecutions = getExecutions;
+        this.executingEventId = initialExecutingEventId;
+        this.setExecutingEventId = setExecutingEventId;
     }
 
     async renderInto(container: HTMLElement): Promise<void> {
@@ -875,6 +881,8 @@ export class TodayView {
      */
     private toggleExecuting(eventId: string): void {
         this.executingEventId = this.executingEventId === eventId ? undefined : eventId;
+        this.setExecutingEventId?.(this.executingEventId);
+        void this.save();
         void this.refresh();
     }
 
@@ -897,6 +905,7 @@ export class TodayView {
             weekKey,
         });
         this.executingEventId = undefined;
+        this.setExecutingEventId?.(undefined);
         await this.save();
         new Notice(t('today.completeDone', { title: ev.title }));
         await this.refresh();
@@ -905,6 +914,8 @@ export class TodayView {
     /** 取消执行：清除「正在执行」状态，不写入执行记录 */
     private cancelExecuting(): void {
         this.executingEventId = undefined;
+        this.setExecutingEventId?.(undefined);
+        void this.save();
         void this.refresh();
     }
 
