@@ -1669,6 +1669,11 @@
     box-sizing: border-box;
 }
 
+/* 任务计划视图内的板块信息方框（位于泳道图下方） */
+.task-plan-content-panel .swimlane-section-area {
+    margin-top: 16px;
+}
+
 /* 周历网格 */
 .year-week-grid {
     width: 100%;
@@ -3098,6 +3103,25 @@
 
 .swimlane-cell.is-clickable:hover {
     background: var(--background-modifier-hover);
+}
+
+/* 已计划/已执行的格子：悬停时保持原色，不被灰色悬停背景遮挡 */
+.swimlane-cell.is-clickable.is-plan:hover {
+    background: var(--interactive-accent);
+}
+
+.swimlane-cell.is-clickable.is-plan-inherited:hover {
+    background: repeating-linear-gradient(
+        45deg,
+        var(--interactive-accent) 0,
+        var(--interactive-accent) 3px,
+        transparent 3px,
+        transparent 6px
+    );
+}
+
+.swimlane-cell.is-clickable.is-exec:hover {
+    background: var(--color-green, #43b581);
 }
 
 /* 计划线：命中的周格子 */

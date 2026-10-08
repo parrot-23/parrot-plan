@@ -2,7 +2,7 @@ import type { App } from 'obsidian';
 import { Notice } from 'obsidian';
 
 import type { TimeBlockCategoryData } from './week-view/timeblock-category-manager';
-import type { InboxData, InboxItem } from '../datatypes/domain';
+import type { InboxData, InboxItem, Section, ChecklistData, StepsData, HabitData, FileData } from '../datatypes/domain';
 import { renderTaskPanel } from '../shared/task-panel';
 import { renderSwimlane } from '../shared/swimlane';
 import { makeWeekKey, parseWeekKey } from './week-view/timeblock-data';
@@ -21,6 +21,8 @@ export class TaskPlanView {
     private container?: HTMLElement;
     /** 泳道图当前显示的年份 */
     private currentYear: number = new Date().getFullYear();
+    /** 刷新前泳道图的横向滚动位置（渲染后恢复，避免位置跳动） */
+    private savedScrollLeft: number | null = null;
 
     constructor(
         app: App,
@@ -36,6 +38,11 @@ export class TaskPlanView {
 
     async renderInto(container: HTMLElement): Promise<void> {
         this.container = container;
+        // 刷新前记录泳道图的横向滚动位置，渲染后恢复，避免位置跳动
+        const prevBoard = container.querySelector('.task-plan-board');
+        if (prevBoard) {
+            this.savedScrollLeft = prevBoard.scrollLeft;
+        }
         container.empty();
         container.addClass('task-plan-view');
 
@@ -82,6 +89,100 @@ export class TaskPlanView {
                 void this.toggleWeekAssignment(task, week);
             },
         });
+
+        // 恢复刷新前的横向滚动位置，实现无感刷新
+        if (this.savedScrollLeft !== null) {
+            const left = this.savedScrollLeft;
+            this.savedScrollLeft = null;
+            window.setTimeout(() => {
+                board.scrollLeft = left;
+            }, 0);
+        }
+
+        // 泳道图下方：板块信息方框（当前选中项目的板块卡片）
+        const sectionsArea = contentPanel.createDiv({ cls: 'swimlane-section-area' });
+        sectionsArea.createDiv({ cls: 'swimlane-section-area-title', text: t('projectPicture.sectionsTitle') });
+        const sectionsBody = sectionsArea.createDiv({ cls: 'swimlane-section-area-body' });
+        this.renderSectionCards(sectionsBody);
+    }
+
+    /** 板块信息区：当前选中项目的板块卡片（从左到右排列，只读展示） */
+    private renderSectionCards(row: HTMLElement): void {
+        row.empty();
+
+        const selectedId = this.inboxData.selectedId;
+        const item = selectedId
+            ? this.inboxData.items.find(i => i.id === selectedId && !i.removed)
+            : undefined;
+        const sections = item?.sections ?? [];
+
+        if (sections.length === 0) {
+            row.createDiv({ cls: 'swimlane-sections-empty', text: t('projectPicture.sectionsEmpty') });
+            return;
+        }
+
+        for (const section of sections) {
+            this.renderSectionCard(row, section);
+        }
+    }
+
+    /** 渲染单张板块卡片：类型标签 + 板块名 + 条目列表（只读） */
+    private renderSectionCard(row: HTMLElement, section: Section): void {
+        const card = row.createDiv({ cls: 'swimlane-section-card' });
+
+        // 卡片头部：类型标签 + 板块名
+        const head = card.createDiv({ cls: 'swimlane-section-card-head' });
+        head.createSpan({ cls: 'swimlane-section-card-type', text: this.sectionTypeLabel(section.type) });
+        head.createSpan({
+            cls: 'swimlane-section-card-name',
+            text: section.title || this.sectionTypeLabel(section.type),
+        });
+
+        // 条目列表（只读）
+        const itemsEl = card.createDiv({ cls: 'swimlane-section-card-items' });
+        const items = (section.data as { items?: unknown[] }).items ?? [];
+        if (items.length === 0) {
+            itemsEl.createDiv({ cls: 'swimlane-section-card-empty', text: t('section.emptyItems') });
+            return;
+        }
+
+        if (section.type === 'checklist') {
+            for (const it of (section.data as ChecklistData).items) {
+                this.renderSectionCardItem(itemsEl, it.done ? '☑' : '☐', it.text);
+            }
+        } else if (section.type === 'steps') {
+            for (const it of (section.data as StepsData).items) {
+                const mark = it.status === 'done' ? '✅' : it.status === 'doing' ? '🔄' : '⬜';
+                this.renderSectionCardItem(itemsEl, mark, it.text);
+            }
+        } else if (section.type === 'habit') {
+            for (const it of (section.data as HabitData).items) {
+                const count = it.checkedDays?.length ?? 0;
+                this.renderSectionCardItem(itemsEl, '🔁', it.text, String(count));
+            }
+        } else if (section.type === 'file') {
+            for (const it of (section.data as FileData).items) {
+                this.renderSectionCardItem(itemsEl, '📄', it.text || it.path);
+            }
+        }
+    }
+
+    /** 渲染板块卡片中的单个条目 */
+    private renderSectionCardItem(itemsEl: HTMLElement, mark: string, text: string, count?: string): void {
+        const itemEl = itemsEl.createDiv({ cls: 'swimlane-section-card-item' });
+        itemEl.createSpan({ cls: 'swimlane-section-card-mark', text: mark });
+        itemEl.createSpan({ cls: 'swimlane-section-card-text', text });
+        if (count !== undefined) {
+            itemEl.createSpan({ cls: 'swimlane-section-card-count', text: count });
+        }
+    }
+
+    /** 板块类型显示名 */
+    private sectionTypeLabel(type: Section['type']): string {
+        if (type === 'checklist') return t('section.typeChecklist');
+        if (type === 'steps') return t('section.typeSteps');
+        if (type === 'habit') return t('section.typeHabit');
+        return t('section.typeFile');
     }
 
     /**

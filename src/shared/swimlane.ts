@@ -9,7 +9,7 @@ export interface SwimlaneOptions {
     tasks: InboxItem[];
     /** 分类数据（用于任务标题前的分类色点） */
     categoryData: TimeBlockCategoryData;
-    /** 当前选中任务 id（用于高亮与滚动定位） */
+    /** 当前选中任务 id（用于高亮） */
     selectedId?: string;
     /** 当前显示年份 */
     currentYear: number;
@@ -26,9 +26,6 @@ export interface SwimlaneOptions {
     /** 点击计划线某周格子时触发（task 为该行任务，week 为 1–52） */
     onWeekClick?: (task: InboxItem, week: number) => void;
 }
-
-/** 每周格子宽度（像素），与 styles.css 中 .swimlane-cell 保持一致 */
-const CELL_WIDTH = 60;
 
 /**
  * 渲染泳道图网格（W1–W52 从左到右）。
@@ -65,9 +62,6 @@ export function renderSwimlane(board: HTMLElement, options: SwimlaneOptions): vo
     }
 
     const executions = showExec ? (options.getExecutions?.() ?? []) : [];
-
-    // 记录选中任务最早出现的一周，用于渲染后滚动定位
-    let selectedFirstWeek: number | undefined;
 
     for (const task of tasks) {
         // 计划周集合（来自任务的 assignedWeekKeys，仅当前年份）
@@ -133,23 +127,6 @@ export function renderSwimlane(board: HTMLElement, options: SwimlaneOptions): vo
                 if (execWeeks.has(w)) cell.addClass('is-exec');
             }
         }
-
-        // 选中任务：记录其最早出现的一周
-        if (selectedId === task.id) {
-            const weeks = Array.from(planWeeks).concat(Array.from(execWeeks));
-            if (weeks.length > 0) {
-                selectedFirstWeek = Math.min.apply(null, weeks);
-            }
-        }
-    }
-
-    // 选中任务时：横向滚动到最早出现的时间点（计划 / 执行周中最小的一周）
-    if (selectedFirstWeek !== undefined) {
-        const firstWeek = selectedFirstWeek;
-        const targetLeft = (firstWeek - 1) * CELL_WIDTH - 12;
-        window.setTimeout(() => {
-            board.scrollLeft = Math.max(0, targetLeft);
-        }, 0);
     }
 }
 
