@@ -49,7 +49,7 @@ export const zh = {
     'today.complete': '完成执行计划任务',
     'today.replace': '替换执行其他任务',
     'today.execUnplanned': '执行非计划任务',
-    'today.execPlanned': '执行计划',
+    'today.execPlanned': '已执行计划',
     'today.replacePlanned': '替换计划',
     'today.enterExec': '进入执行',
     'today.exitExec': '结束执行',

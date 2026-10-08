@@ -141,13 +141,15 @@ export class WorkbenchView {
             if (!template) continue;
 
             const card = grid.createDiv({ cls: 'wb-card' });
-            // 卡片头部操作（删除）
-            const header = card.createDiv({ cls: 'wb-card-header' });
-            const delBtn = header.createEl('button', {
-                cls: 'wb-card-delete',
-                text: '×',
-            });
-            delBtn.onclick = () => this.removeCard(instance);
+            // 卡片头部操作（删除）：仅编辑布局时显示删除按钮
+            if (this.editingLayout) {
+                const header = card.createDiv({ cls: 'wb-card-header' });
+                const delBtn = header.createEl('button', {
+                    cls: 'wb-card-delete',
+                    text: '×',
+                });
+                delBtn.onclick = () => this.removeCard(instance);
+            }
 
             const body = card.createDiv({ cls: 'wb-card-content' });
             const renderer = getCardRenderer(instance.mode);

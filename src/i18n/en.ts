@@ -51,7 +51,7 @@ export const en: I18nMessages = {
     'today.complete': 'Complete Planned Task',
     'today.replace': 'Replace with Another Task',
     'today.execUnplanned': 'Execute Unplanned Task',
-    'today.execPlanned': 'Execute Planned',
+    'today.execPlanned': 'Executed Planned',
     'today.replacePlanned': 'Replace Planned',
     'today.enterExec': 'Enter Execution',
     'today.exitExec': 'Exit Execution',
