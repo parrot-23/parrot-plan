@@ -77,20 +77,17 @@ export class TaskPlanView {
             },
             showExec: false,
             getDepth: (task) => depthMap.get(task.id) ?? 0,
-            onWeekClick: (week) => {
-                void this.toggleWeekAssignment(week);
+            onWeekClick: (task, week) => {
+                void this.toggleWeekAssignment(task, week);
             },
         });
     }
 
     /**
-     * 点击泳道图某周格子：将当前选中任务分配到该周（再次点击同一周则取消）。
+     * 点击泳道图某周格子：将该行任务分配到该周（再次点击同一周则取消）。
      */
-    private async toggleWeekAssignment(week: number): Promise<void> {
-        const selectedId = this.inboxData.selectedId;
-        const item = selectedId
-            ? this.inboxData.items.find(i => i.id === selectedId && !i.removed)
-            : undefined;
+    private async toggleWeekAssignment(task: InboxItem, week: number): Promise<void> {
+        const item = this.inboxData.items.find(i => i.id === task.id && !i.removed);
         if (!item) return;
 
         const weekKey = makeWeekKey(this.currentYear, week);

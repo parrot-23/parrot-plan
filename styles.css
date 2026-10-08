@@ -3100,11 +3100,6 @@
     background: var(--background-modifier-hover);
 }
 
-/* 当前周列高亮（泳道格子）：用内描边避免覆盖计划/执行背景色 */
-.swimlane-cell.is-current-week {
-    box-shadow: inset 0 0 0 1px var(--interactive-accent);
-}
-
 /* 计划线：命中的周格子 */
 .swimlane-cell.is-plan {
     background: var(--interactive-accent);
