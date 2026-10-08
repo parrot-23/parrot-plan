@@ -2870,6 +2870,61 @@
     color: var(--text-normal);
 }
 
+/* 方框标题栏：标题 + 右侧操作按钮 */
+.swimlane-section-area-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+/* 板块方框右上角「+」按钮及其下拉面板 */
+.swimlane-section-add-wrap {
+    position: relative;
+    flex-shrink: 0;
+}
+
+.swimlane-section-add-btn {
+    width: 24px;
+    height: 24px;
+    padding: 0;
+    line-height: 1;
+    font-size: 16px;
+    cursor: pointer;
+}
+
+.swimlane-section-add-panel {
+    display: none;
+    position: absolute;
+    top: 100%;
+    right: 0;
+    z-index: 10;
+    margin-top: 4px;
+    min-width: 100px;
+    padding: 4px;
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 6px;
+    background: var(--background-primary);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.swimlane-section-add-panel.is-open {
+    display: block;
+}
+
+.swimlane-section-add-option {
+    padding: 6px 10px;
+    border-radius: 4px;
+    font-size: 13px;
+    color: var(--text-normal);
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.swimlane-section-add-option:hover {
+    background: var(--background-modifier-hover);
+}
+
 /* 方框内容区：卡片横向排列 */
 .swimlane-section-area-body {
     display: flex;
@@ -2968,6 +3023,87 @@
     font-size: 12px;
     color: var(--text-faint);
     font-style: italic;
+}
+
+/* 卡片右上角编辑按钮（只读态） */
+.swimlane-section-card-edit {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 4px;
+    line-height: 1;
+    cursor: pointer;
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+}
+
+.swimlane-section-card-edit svg {
+    width: 14px;
+    height: 14px;
+}
+
+/* 编辑态卡片：右上角删除 / 退出按钮 */
+.swimlane-section-card-del,
+.swimlane-section-card-exit {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 4px;
+    line-height: 1;
+    font-size: 12px;
+    cursor: pointer;
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+}
+
+.swimlane-section-card-del svg,
+.swimlane-section-card-exit svg {
+    width: 14px;
+    height: 14px;
+}
+
+/* 编辑态条目行：控件 + 行尾删除按钮 */
+.swimlane-section-card-edit-row {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.swimlane-section-card-edit-text {
+    flex: 1;
+    min-width: 0;
+    font-size: 12px;
+}
+
+.swimlane-section-card-edit-status {
+    flex-shrink: 0;
+    font-size: 12px;
+}
+
+.swimlane-section-card-edit-del {
+    flex-shrink: 0;
+    padding: 0 4px;
+    line-height: 1;
+    font-size: 12px;
+    cursor: pointer;
+    background: transparent;
+    border: none;
+    box-shadow: none;
+}
+
+/* 编辑态底部「+」：占满一行 */
+.swimlane-section-card-add-row {
+    width: 100%;
+    margin-top: 4px;
+    padding: 4px 0;
+    font-size: 14px;
+    line-height: 1;
+    cursor: pointer;
+    text-align: center;
 }
 
 /* 热力活跃图卡片（白色背景） */
