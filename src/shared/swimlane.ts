@@ -19,6 +19,8 @@ export interface SwimlaneOptions {
     showExec: boolean;
     /** 获取执行记录（showExec 为 true 时使用） */
     getExecutions?: () => ExecutionRecord[];
+    /** 获取任务层级深度（用于标题行缩进，缺省为 0） */
+    getDepth?: (task: InboxItem) => number;
 }
 
 /** 每周格子宽度（像素），与 styles.css 中 .swimlane-cell 保持一致 */
@@ -74,6 +76,12 @@ export function renderSwimlane(board: HTMLElement, options: SwimlaneOptions): vo
 
         // 任务标题行（左侧固定，横向滚动时保持可见）
         const titleRow = board.createDiv({ cls: 'swimlane-task-row' });
+        // 层级缩进：通过 CSS 变量控制，体现任务在树中的深度
+        const depth = options.getDepth?.(task) ?? 0;
+        if (depth > 0) {
+            titleRow.setCssProps({ '--swimlane-depth': String(depth) });
+            titleRow.addClass('has-depth');
+        }
         const cat = task.categoryId
             ? categoryData.categories.find(c => c.id === task.categoryId)
             : undefined;

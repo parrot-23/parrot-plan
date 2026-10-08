@@ -24,13 +24,13 @@ type NavTab = 'year' | 'taskPlan' | 'week' | 'today' | 'swimlane' | 'workbench' 
 
 /** 主导航按钮定义（label 存 i18n key，渲染时再求值，避免模块加载时语言未初始化） */
 const NAV_TABS: { id: NavTab; labelKey: 'nav.year' | 'nav.taskPlan' | 'nav.week' | 'nav.today' | 'nav.projectPicture' | 'nav.workbench' | 'nav.achievement' }[] = [
-    { id: 'year', labelKey: 'nav.year' },
     { id: 'taskPlan', labelKey: 'nav.taskPlan' },
     { id: 'week', labelKey: 'nav.week' },
     { id: 'today', labelKey: 'nav.today' },
     { id: 'swimlane', labelKey: 'nav.projectPicture' },
     { id: 'workbench', labelKey: 'nav.workbench' },
     { id: 'achievement', labelKey: 'nav.achievement' },
+    { id: 'year', labelKey: 'nav.year' },
 ];
 
 /**

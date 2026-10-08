@@ -61,10 +61,11 @@ export class TaskPlanView {
         const contentPanel = container.createDiv({ cls: 'task-plan-content-panel' });
         this.renderInfoForm(contentPanel);
 
-        // 泳道图（仅显示计划，不显示执行）
+        // 泳道图（仅显示计划，不显示执行；只显示当前选中任务及其子任务）
         const board = contentPanel.createDiv({ cls: 'task-plan-board' });
+        const { tasks, depthMap } = this.collectSelectedSubtree();
         renderSwimlane(board, {
-            tasks: this.collectVisibleTasks(),
+            tasks,
             categoryData: this.categoryData,
             selectedId: this.inboxData.selectedId,
             currentYear: this.currentYear,
@@ -73,28 +74,36 @@ export class TaskPlanView {
                 void this.refresh();
             },
             showExec: false,
+            getDepth: (task) => depthMap.get(task.id) ?? 0,
         });
     }
 
     /**
-     * 按任务面板的显示顺序收集可见任务（深度优先，跳过已折叠任务的子任务）。
-     * 与 task-panel 的 renderList / renderItem 顺序保持一致。
+     * 收集当前选中任务及其所有子任务（深度优先，跳过已折叠任务的子任务）。
+     * 返回任务列表与每个任务的层级深度（选中任务为 0，子任务依次递增）。
+     * 未选中任务时返回空列表。
      */
-    private collectVisibleTasks(): InboxItem[] {
-        const result: InboxItem[] = [];
+    private collectSelectedSubtree(): { tasks: InboxItem[]; depthMap: Map<string, number> } {
+        const tasks: InboxItem[] = [];
+        const depthMap = new Map<string, number>();
+        const selectedId = this.inboxData.selectedId;
+        if (!selectedId) return { tasks, depthMap };
+        const root = this.inboxData.items.find(i => i.id === selectedId && !i.removed);
+        if (!root) return { tasks, depthMap };
+
         const collapsed = this.inboxData.collapsedIds ?? [];
 
-        const walk = (parentId: string | undefined) => {
+        const walk = (item: InboxItem, depth: number) => {
+            tasks.push(item);
+            depthMap.set(item.id, depth);
+            if (collapsed.includes(item.id)) return;
             const children = this.inboxData.items.filter(
-                i => !i.removed && i.parentId === parentId,
+                i => !i.removed && i.parentId === item.id,
             );
-            for (const child of children) {
-                result.push(child);
-                if (!collapsed.includes(child.id)) walk(child.id);
-            }
+            for (const child of children) walk(child, depth + 1);
         };
-        walk(undefined);
-        return result;
+        walk(root, 0);
+        return { tasks, depthMap };
     }
 
     /** 渲染右侧信息表单：项目描述、分类、已计划周数 */
