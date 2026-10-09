@@ -372,13 +372,18 @@ export class TodayView {
         let executed = 0;
         let changed = 0;
         for (const ev of events) {
+            // 被替换的计划事件：存在 replaced=true 的执行记录关联它
+            const isReplaced = executions.some(ex => ex.eventId === ev.id && ex.replaced);
+            if (isReplaced) {
+                changed++;
+                continue;
+            }
             const status = getEventStatus(ev, executions);
-            if (status === 'changed') changed++;
-            else if (status === 'executed') executed++;
+            if (status === 'executed') executed++;
             else planned++;
         }
 
-        // 非计划执行记录（新增）
+        // 非计划执行记录（新增）：排除关联计划事件的记录（含替换记录）
         const plannedEventIds = new Set(events.map(ev => ev.id));
         const added = executions.filter(ex =>
             ex.day === day
@@ -1025,7 +1030,7 @@ export class TodayView {
         void this.refresh();
     }
 
-    /** 确认替换：用左侧选中的任务替换锁定的目标事件 */
+    /** 确认替换：原计划事件保持不变，新增一条执行记录关联该计划事件（实际执行的是左侧选中的任务） */
     private async confirmReplace(): Promise<void> {
         const item = this.getSelectedItem();
         if (!item) return;
@@ -1038,13 +1043,19 @@ export class TodayView {
             return;
         }
 
-        // 记录被替换前的原任务，用于标记「变更计划」状态
-        if (ev.inboxId && ev.inboxId !== item.id) {
-            ev.replacedFromInboxId = ev.inboxId;
-        }
-        ev.title = item.title;
-        ev.categoryId = item.categoryId;
-        ev.inboxId = item.id;
+        const { day, weekKey } = this.getViewDayInfo();
+
+        // 原计划事件不做任何修改；新增替换执行记录：eventId 关联原计划事件，inboxId 为实际执行的任务
+        this.getExecutions().push({
+            id: `exec_${Date.now()}`,
+            eventId: ev.id,
+            inboxId: item.id,
+            day,
+            start: ev.start,
+            end: ev.end,
+            weekKey,
+            replaced: true,
+        });
 
         this.replaceMode = false;
         this.replaceTargetEventId = undefined;
@@ -1290,12 +1301,13 @@ export class TodayView {
             });
         }
 
-        // 非计划执行记录：作为独立区块渲染，状态为「新增执行」
+        // 非计划执行记录：作为独立区块渲染。
+        // 替换执行记录（replaced=true）虽关联计划事件，但实际执行的是另一任务，需单独显示。
         const plannedEventIds = new Set(events.map(ev => ev.id));
         const unplannedExecs = this.getExecutions().filter(ex =>
             ex.day === day
             && ex.weekKey === weekKey
-            && !(ex.eventId && plannedEventIds.has(ex.eventId)),
+            && (ex.replaced || !(ex.eventId && plannedEventIds.has(ex.eventId))),
         );
         for (const ex of unplannedExecs) {
             const card = col.createDiv({ cls: 'event-card event-card-exec today-event-card' });
@@ -1327,7 +1339,8 @@ export class TodayView {
             bubbleItems.push({
                 card,
                 top,
-                status: 'added',
+                // 替换执行记录关联了计划事件 → 状态为「已执行」；否则为「新增」
+                status: ex.eventId ? 'executed' : 'added',
                 onSelect: () => this.toggleExecSelection(ex.id),
             });
         }

@@ -14,8 +14,6 @@ export interface EventBlock {
     categoryId?: string;
     /** 来源收集盒任务 id（手动新建的事件无此字段） */
     inboxId?: string;
-    /** 被「替换计划」修改前的原任务 id（用于标记「变更计划」状态） */
-    replacedFromInboxId?: string;
     /** 全天事件（start=0, end=1440） */
     allDay?: boolean;
     completed?: boolean;
@@ -38,6 +36,11 @@ export interface ExecutionRecord {
     note?: string;
     /** 所属周键（如 2026-W40） */
     weekKey?: WeekKey;
+    /**
+     * 是否为「替换」执行：原计划未按原样执行，实际执行了另一任务。
+     * 此类记录关联原计划事件（eventId），但不改变原计划事件本身，也不使其状态变为「已执行」。
+     */
+    replaced?: boolean;
 }
 
 /** 收集盒任务（可无限层级子任务） */
@@ -180,11 +183,11 @@ export const EVENT_STATUS_LABEL_KEY = {
 } as const satisfies Record<EventStatus, string>;
 
 /**
- * 计算计划事件的执行状态：替换 > 已执行 > 计划。
+ * 计算计划事件的执行状态：已执行 > 计划。
  * 注意：仅适用于计划事件（EventBlock），「新增」状态由非计划执行记录单独判定。
+ * 替换执行记录（replaced=true）不计入，故被替换的原计划状态仍为「计划」。
  */
 export function getEventStatus(ev: EventBlock, executions: ExecutionRecord[]): EventStatus {
-    if (ev.replacedFromInboxId) return 'changed';
-    const executed = executions.some(ex => ex.eventId === ev.id);
+    const executed = executions.some(ex => ex.eventId === ev.id && !ex.replaced);
     return executed ? 'executed' : 'planned';
 }

@@ -691,8 +691,8 @@ export class WeekScheduleView extends ItemView {
                     const planned = ex.eventId
                         ? this.events.find(e => e.id === ex.eventId)
                         : undefined;
-                    // 该执行关联的计划事件被替换过 → 与第 1 列对应原计划卡片对齐
-                    if (planned && planned.replacedFromInboxId && plannedRowIndex.has(planned.id)) {
+                    // 替换执行记录 → 与第 1 列对应原计划卡片对齐
+                    if (ex.replaced && planned && plannedRowIndex.has(planned.id)) {
                         aligned.set(plannedRowIndex.get(planned.id)!, ex);
                     } else {
                         unaligned.push(ex);
