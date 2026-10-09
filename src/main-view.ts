@@ -116,6 +116,15 @@ export class MainView extends ItemView {
                 const p = this.plugin as Plugin & { data?: { executingEventId?: string } };
                 if (p.data) p.data.executingEventId = id;
             },
+            (projectId) => {
+                // 跳转到项目全景图并选中该项目
+                this.weekView.inboxData.projectFocusId = projectId;
+                this.activeTab = 'swimlane';
+                void (async () => {
+                    await this.weekView.save();
+                    await this.renderContent();
+                })();
+            },
         );
         this.swimlaneView = new SwimlaneView(
             this.app,

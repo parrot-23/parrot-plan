@@ -48,6 +48,7 @@ export const zh = {
     // 当日执行视图
     'today.start': '开始执行',
     'today.detailTitle': '任务详情',
+    'today.enterProjectPicture': '进入项目全景图',
     'today.hierarchyTitle': '任务层级',
     'today.noSelection': '选中左侧任务或时间轴上的事件以查看详情',
     'today.noDescription': '暂无描述',

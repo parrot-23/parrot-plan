@@ -2348,12 +2348,27 @@
     overflow: hidden;
 }
 
-.today-detail-title {
+.today-detail-title-row {
     flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
     padding: 10px 14px;
+    border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.today-detail-title {
     font-size: 14px;
     font-weight: 600;
-    border-bottom: 1px solid var(--background-modifier-border);
+}
+
+/* 右上角「进入项目全景图」按钮 */
+.today-detail-nav-btn {
+    flex-shrink: 0;
+    font-size: 12px;
+    padding: 2px 8px;
+    cursor: pointer;
 }
 
 .today-detail-body {
@@ -2378,6 +2393,14 @@
     color: var(--text-muted);
     white-space: pre-wrap;
     word-break: break-word;
+}
+
+/* 任务详情方框中的板块卡片区（复用 .swimlane-section-card 样式） */
+.today-detail-sections {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 8px;
 }
 
 .today-detail-row {

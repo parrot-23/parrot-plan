@@ -50,6 +50,7 @@ export const en: I18nMessages = {
     // Today view
     'today.start': 'Start',
     'today.detailTitle': 'Task Details',
+    'today.enterProjectPicture': 'Open Project Picture',
     'today.hierarchyTitle': 'Task Hierarchy',
     'today.noSelection': 'Select a task on the left or an event on the timeline to view details',
     'today.noDescription': 'No description',

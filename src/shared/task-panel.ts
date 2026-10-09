@@ -89,6 +89,8 @@ class InboxAddPanel {
         this.categoryId = categoryData.categories[0]?.id ?? '';
         // 挂到任务面板容器内（而非 body），随视图一起销毁；用绝对定位紧贴其右侧
         this.panelEl = mountParent.createDiv({ cls: 'inbox-add-panel' });
+        // 阻止点击面板内部时冒泡到任务面板容器，避免触发「点击空白处取消选中」导致面板被重渲染移除
+        this.panelEl.onclick = (e) => e.stopPropagation();
     }
 
     open() {

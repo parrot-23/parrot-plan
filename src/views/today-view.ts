@@ -1,8 +1,9 @@
 import type { App } from 'obsidian';
-import { Notice } from 'obsidian';
+import { Notice, setIcon } from 'obsidian';
 
 import type { TimeBlockCategoryData } from './week-view/timeblock-category-manager';
-import type { InboxData, InboxItem } from '../datatypes/domain';
+import type { InboxData, InboxItem, Section, ChecklistData, StepsData, HabitData, FileData } from '../datatypes/domain';
+import { SECTION_TYPE_META } from '../datatypes/domain';
 import { renderTaskPanel } from '../shared/task-panel';
 import { getCurrentDayKey, getISOWeek, makeDayKey, makeDayKeyFromWeek, makeWeekKey } from './week-view/timeblock-data';
 import type { EventBlock, ExecutionRecord } from '../datatypes/domain';
@@ -60,6 +61,8 @@ export class TodayView {
     private executingEventId?: string;
     /** 写回「正在执行」事件 id 的回调（用于持久化，随插件数据一起保存） */
     private setExecutingEventId?: (id: string | undefined) => void;
+    /** 跳转到项目全景图的回调（由 MainView 注入，负责切换 tab 并选中当前项目） */
+    private onNavigateToProjectPicture?: (projectId: string) => void;
     /** 当前查看的日期（默认今天；可切换到昨天以补充昨日执行信息） */
     private viewDate: Date = new Date();
 
@@ -72,6 +75,7 @@ export class TodayView {
         getExecutions: () => ExecutionRecord[],
         initialExecutingEventId?: string,
         setExecutingEventId?: (id: string | undefined) => void,
+        onNavigateToProjectPicture?: (projectId: string) => void,
     ) {
         this.app = app;
         this.inboxData = inboxData;
@@ -81,6 +85,7 @@ export class TodayView {
         this.getExecutions = getExecutions;
         this.executingEventId = initialExecutingEventId;
         this.setExecutingEventId = setExecutingEventId;
+        this.onNavigateToProjectPicture = onNavigateToProjectPicture;
     }
 
     async renderInto(container: HTMLElement): Promise<void> {
@@ -448,9 +453,6 @@ export class TodayView {
     /** 渲染任务详情方框（展示左侧选中任务或时间轴选中事件的详情） */
     private renderDetailBox(panel: HTMLElement) {
         const box = panel.createDiv({ cls: 'today-detail-box' });
-        box.createDiv({ cls: 'today-detail-title', text: t('today.detailTitle') });
-
-        const body = box.createDiv({ cls: 'today-detail-body' });
 
         // 优先展示时间轴上选中的事件；否则展示任务面板选中的任务
         const selectedEvent = this.selectedEventId
@@ -462,6 +464,31 @@ export class TodayView {
         const selectedItem = this.inboxData.selectedId
             ? this.inboxData.items.find(i => i.id === this.inboxData.selectedId && !i.removed)
             : undefined;
+
+        // 当前项目：优先选中任务，其次事件/执行记录来源任务
+        const currentProjectId = selectedItem?.id
+            ?? (selectedEvent?.inboxId
+                ? this.inboxData.items.find(i => i.id === selectedEvent.inboxId && !i.removed)?.id
+                : undefined)
+            ?? (selectedExec?.inboxId
+                ? this.inboxData.items.find(i => i.id === selectedExec.inboxId && !i.removed)?.id
+                : undefined);
+
+        // 标题栏：左侧标题 + 右上角「进入项目全景图」按钮
+        const titleRow = box.createDiv({ cls: 'today-detail-title-row' });
+        titleRow.createDiv({ cls: 'today-detail-title', text: t('today.detailTitle') });
+        if (currentProjectId && this.onNavigateToProjectPicture) {
+            const navBtn = titleRow.createEl('button', {
+                cls: 'today-detail-nav-btn',
+                text: t('today.enterProjectPicture'),
+            });
+            navBtn.onclick = (e) => {
+                e.stopPropagation();
+                this.onNavigateToProjectPicture?.(currentProjectId);
+            };
+        }
+
+        const body = box.createDiv({ cls: 'today-detail-body' });
 
         if (selectedEvent) {
             this.renderEventDetail(body, selectedEvent);
@@ -485,7 +512,8 @@ export class TodayView {
      */
     private renderAddUnplannedBox(panel: HTMLElement) {
         const box = panel.createDiv({ cls: 'today-detail-box today-addunplanned-box' });
-        box.createDiv({ cls: 'today-detail-title', text: t('today.addUnplannedTitle') });
+        const titleRow = box.createDiv({ cls: 'today-detail-title-row' });
+        titleRow.createDiv({ cls: 'today-detail-title', text: t('today.addUnplannedTitle') });
 
         const body = box.createDiv({ cls: 'today-detail-body' });
 
@@ -1020,6 +1048,9 @@ export class TodayView {
             dot.setCssProps({ '--dot-color': cat.color });
             row.createSpan({ text: cat.label });
         }
+
+        // 当前任务拥有的板块卡片
+        this.renderDetailSections(body, item.sections);
     }
 
     /** 展示时间轴事件详情 */
@@ -1052,6 +1083,8 @@ export class TodayView {
         if (sourceItem) {
             body.createDiv({ cls: 'today-detail-desc' })
                 .setText(sourceItem.description || t('today.noDescription'));
+            // 来源任务拥有的板块卡片
+            this.renderDetailSections(body, sourceItem.sections);
         }
     }
 
@@ -1080,7 +1113,74 @@ export class TodayView {
         if (item) {
             body.createDiv({ cls: 'today-detail-desc' })
                 .setText(item.description || t('today.noDescription'));
+            // 来源任务拥有的板块卡片
+            this.renderDetailSections(body, item.sections);
         }
+    }
+
+    /** 在任务详情方框中渲染板块卡片（只读，复用任务计划视图的卡片样式） */
+    private renderDetailSections(body: HTMLElement, sections?: Section[]): void {
+        if (!sections || sections.length === 0) return;
+
+        const wrap = body.createDiv({ cls: 'today-detail-sections' });
+        for (const section of sections) {
+            const card = wrap.createDiv({ cls: 'swimlane-section-card' });
+
+            // 卡片头部：类型图标 + 类型名 + 板块名
+            const head = card.createDiv({ cls: 'swimlane-section-card-head' });
+            const typeEl = head.createSpan({ cls: 'swimlane-section-card-type' });
+            setIcon(typeEl.createSpan({ cls: 'swimlane-section-card-type-icon' }), SECTION_TYPE_META[section.type].icon);
+            const typeLabel = t(SECTION_TYPE_META[section.type].labelKey as Parameters<typeof t>[0]);
+            typeEl.createSpan({ text: typeLabel });
+            head.createSpan({ cls: 'swimlane-section-card-name', text: section.title || typeLabel });
+
+            // 条目列表（只读）
+            const itemsEl = card.createDiv({ cls: 'swimlane-section-card-items' });
+            const items = (section.data as { items?: unknown[] }).items ?? [];
+            if (items.length === 0) {
+                itemsEl.createDiv({ cls: 'swimlane-section-card-empty', text: t('section.emptyItems') });
+                continue;
+            }
+
+            if (section.type === 'checklist') {
+                for (const it of (section.data as ChecklistData).items) {
+                    this.renderDetailSectionItem(itemsEl, it.done ? '☑' : '☐', it.text);
+                }
+            } else if (section.type === 'steps') {
+                for (const it of (section.data as StepsData).items) {
+                    const mark = it.status === 'done' ? '✅' : it.status === 'doing' ? '🔄' : '⬜';
+                    this.renderDetailSectionItem(itemsEl, mark, it.text);
+                }
+            } else if (section.type === 'habit') {
+                for (const it of (section.data as HabitData).items) {
+                    const count = it.checkedDays?.length ?? 0;
+                    this.renderDetailSectionItem(itemsEl, '🔁', it.text, String(count));
+                }
+            } else if (section.type === 'file') {
+                for (const it of (section.data as FileData).items) {
+                    const itemEl = this.renderDetailSectionItem(itemsEl, '📄', it.text || it.path);
+                    // 点击文件条目：在新标签页打开对应 vault 文件
+                    if (it.path) {
+                        itemEl.addClass('is-clickable');
+                        itemEl.onclick = (e) => {
+                            e.stopPropagation();
+                            void this.app.workspace.openLinkText(it.path, '', 'tab');
+                        };
+                    }
+                }
+            }
+        }
+    }
+
+    /** 渲染板块卡片中的单条条目 */
+    private renderDetailSectionItem(itemsEl: HTMLElement, mark: string, text: string, count?: string): HTMLElement {
+        const itemEl = itemsEl.createDiv({ cls: 'swimlane-section-card-item' });
+        itemEl.createSpan({ cls: 'swimlane-section-card-mark', text: mark });
+        itemEl.createSpan({ cls: 'swimlane-section-card-text', text });
+        if (count !== undefined) {
+            itemEl.createSpan({ cls: 'swimlane-section-card-count', text: count });
+        }
+        return itemEl;
     }
 
     /** 渲染当天时间轴（时间刻度 + 今天的计划事件 + 当前时刻红线） */
