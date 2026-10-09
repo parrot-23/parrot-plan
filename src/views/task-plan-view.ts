@@ -109,7 +109,10 @@ export class TaskPlanView {
             }, 0);
         }
 
-        // 泳道图下方：已计划周数（每个周数为一张小卡片）
+        // 泳道图与下方区域之间的分隔线
+        contentPanel.createDiv({ cls: 'task-plan-divider' });
+
+        // 泳道图下方：已计划周数（每个周数为一张小卡片，随任务面板选中任务切换）
         this.renderPlannedWeeks(contentPanel);
 
         // 泳道图下方：板块信息方框（当前选中项目的板块卡片）
@@ -499,10 +502,18 @@ export class TaskPlanView {
     }
 
     /**
-     * 收集当前选中任务及其所有子任务（深度优先，跳过已折叠任务的子任务）。
-     * 返回任务列表、每个任务的层级深度（选中任务为 0），
+     * 泳道图（及其上方项目信息）的根任务 id：
+     * 「按项目排布」激活时锁定在顶层任务（projectFocusId），否则跟随当前选中任务。
+     */
+    private getSwimlaneRootId(): string | undefined {
+        return this.inboxData.projectFocusId ?? this.inboxData.selectedId;
+    }
+
+    /**
+     * 收集泳道图根任务及其所有子任务（深度优先，跳过已折叠任务的子任务）。
+     * 返回任务列表、每个任务的层级深度（根任务为 0），
      * 以及每个任务的所有子孙节点的计划周号（当前年份，用于渲染条纹格子）。
-     * 未选中任务时返回空列表。
+     * 无根任务时返回空列表。
      */
     private collectSelectedSubtree(): {
         tasks: InboxItem[];
@@ -512,7 +523,7 @@ export class TaskPlanView {
         const tasks: InboxItem[] = [];
         const depthMap = new Map<string, number>();
         const inheritedMap = new Map<string, number[]>();
-        const selectedId = this.inboxData.selectedId;
+        const selectedId = this.getSwimlaneRootId();
         if (!selectedId) return { tasks, depthMap, inheritedMap };
         const root = this.inboxData.items.find(i => i.id === selectedId && !i.removed);
         if (!root) return { tasks, depthMap, inheritedMap };
@@ -558,11 +569,11 @@ export class TaskPlanView {
         return { tasks, depthMap, inheritedMap };
     }
 
-    /** 渲染右侧信息表单：项目描述、分类、已计划周数 */
+    /** 渲染右侧信息表单：项目描述、分类（跟随泳道图根任务） */
     private renderInfoForm(container: HTMLElement): void {
-        const selectedId = this.inboxData.selectedId;
-        const item = selectedId
-            ? this.inboxData.items.find(i => i.id === selectedId && !i.removed)
+        const rootId = this.getSwimlaneRootId();
+        const item = rootId
+            ? this.inboxData.items.find(i => i.id === rootId && !i.removed)
             : undefined;
 
         if (!item) {

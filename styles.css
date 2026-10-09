@@ -1796,9 +1796,16 @@
     flex-shrink: 0;
 }
 
+/* 泳道图与下方区域之间的分隔线 */
+.task-plan-divider {
+    height: 1px;
+    margin: 16px 0;
+    background: var(--background-modifier-border);
+}
+
 /* 已计划周数区域（位于泳道图下方） */
 .task-plan-weeks-area {
-    margin-top: 16px;
+    margin-top: 0;
 }
 
 .task-plan-weeks-title {
@@ -3565,6 +3572,9 @@
 
 .swimlane-task-row.is-selected {
     color: var(--interactive-accent);
+    /* 选中任务行：加边框高亮 */
+    box-shadow: inset 0 0 0 2px var(--interactive-accent);
+    border-radius: 4px;
 }
 
 /* 层级缩进：体现任务在树中的深度（--swimlane-depth 由渲染时设置） */
