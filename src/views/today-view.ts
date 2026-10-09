@@ -587,7 +587,7 @@ export class TodayView {
             t('today.weekGoalEmpty'),
         );
 
-        // 右侧：日目标（当前查看日期）
+        // 右侧：日目标（当前查看日期）+ 下方新增事项列表
         const dayCol = body.createDiv({ cls: 'today-weekgoal-col' });
         dayCol.createDiv({ cls: 'today-weekgoal-col-title', text: t('today.dayGoalTitle') });
         this.renderGoalList(
@@ -595,6 +595,75 @@ export class TodayView {
             this.getEvents().filter(ev => ev.weekKey === weekKey && ev.day === day),
             t('today.dayGoalEmpty'),
         );
+
+        // 日目标面板下半部分：新增事项列表（格式与日目标一致）
+        dayCol.createDiv({ cls: 'today-weekgoal-col-title', text: t('today.addedListTitle') });
+        this.renderAddedList(dayCol, day, weekKey);
+    }
+
+    /**
+     * 渲染「新增事项」清单：当前查看日期内、无关联计划事件的执行记录（即新增执行）。
+     * 复用日目标的清单样式，按来源任务标题聚合，展示次数、总时长与进度条。
+     */
+    private renderAddedList(container: HTMLElement, day: number, weekKey: string) {
+        const added = this.getExecutions().filter(
+            ex => ex.day === day && ex.weekKey === weekKey && !ex.eventId,
+        );
+        if (added.length === 0) {
+            container.createDiv({ cls: 'today-detail-empty', text: t('today.addedListEmpty') });
+            return;
+        }
+
+        // 按来源任务标题聚合：相同任务累计次数与总时长
+        const groups = new Map<string, { title: string; count: number; total: number }>();
+        let totalMinutes = 0;
+        for (const ex of added) {
+            const duration = Math.max(0, ex.end - ex.start);
+            totalMinutes += duration;
+
+            const item = ex.inboxId
+                ? this.inboxData.items.find(i => i.id === ex.inboxId && !i.removed)
+                : undefined;
+            const title = item?.title ?? t('today.statusAdded');
+            const group = groups.get(title) ?? { title, count: 0, total: 0 };
+            group.count += 1;
+            group.total += duration;
+            groups.set(title, group);
+        }
+
+        // 事项清单：从左到右依次为 名称、次数、总时长、进度条
+        const list = container.createDiv({ cls: 'today-weekgoal-list' });
+        for (const group of Array.from(groups.values())) {
+            const row = list.createDiv({ cls: 'today-weekgoal-item' });
+            row.createSpan({ cls: 'today-weekgoal-name', text: group.title });
+            if (group.count > 1) {
+                row.createSpan({
+                    cls: 'today-weekgoal-count',
+                    text: t('today.weekGoalCount', { count: group.count }),
+                });
+            }
+            row.createSpan({ cls: 'today-weekgoal-duration', text: formatHours(group.total) });
+
+            // 弹性占位：把进度条推到行末尾
+            row.createDiv({ cls: 'today-weekgoal-spacer' });
+
+            // 行末尾的小进度条：新增事项视为已执行，进度条填满
+            const bar = row.createDiv({ cls: 'today-stat-bar today-weekgoal-bar' });
+            const fill = bar.createDiv({ cls: 'today-stat-bar-fill is-executed' });
+            fill.setCssProps({ '--stat-fill': '100%' });
+        }
+
+        // 共计时长进度条（新增事项全部为已执行，故填满）
+        const stats = container.createDiv({ cls: 'today-weekgoal-stats' });
+        const labelRow = stats.createDiv({ cls: 'today-weekgoal-stats-label' });
+        labelRow.createSpan({ text: t('today.weekGoalDuration') });
+        labelRow.createSpan({
+            cls: 'today-weekgoal-stats-value',
+            text: `${formatHours(totalMinutes)} / ${formatHours(totalMinutes)}`,
+        });
+        const bar = stats.createDiv({ cls: 'today-stat-bar' });
+        const fill = bar.createDiv({ cls: 'today-stat-bar-fill is-executed' });
+        fill.setCssProps({ '--stat-fill': '100%' });
     }
 
     /**

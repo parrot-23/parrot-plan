@@ -2452,6 +2452,18 @@
     color: var(--text-normal);
 }
 
+/* 日目标栏内「新增事项」标题：与上方日目标清单之间加分隔线 */
+.today-weekgoal-col-title + .today-weekgoal-list,
+.today-weekgoal-col-title + .today-detail-empty {
+    margin-top: 0;
+}
+
+.today-weekgoal-col-title:not(:first-child) {
+    margin-top: 6px;
+    padding-top: 12px;
+    border-top: 1px solid var(--background-modifier-border);
+}
+
 .today-weekgoal-list {
     display: flex;
     flex-direction: column;
