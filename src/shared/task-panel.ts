@@ -633,65 +633,72 @@ export function renderTaskPanel(
 
     // ===== 渲染列表 =====
     function renderList() {
+        // 记录当前滚动位置，重渲染后恢复，避免选中任务时滚动条跳回顶部
+        const prevScrollTop = listDiv.scrollTop;
         listDiv.empty();
 
-        // 只显示未移除的顶层条目
-        let topItems = getChildren(inboxData, undefined);
+        try {
+            // 只显示未移除的顶层条目
+            let topItems = getChildren(inboxData, undefined);
 
-        // 周目标模式（优先级最高）：隐藏原有任务层级，改为渲染「周目标卡片列表」
-        // （卡片代表分配到当前周的任务，内容为任务名称 + 时长 / 次数占位）
-        if (weekGoalOnly && currentWeekKey) {
-            const weekKey = currentWeekKey;
-            const assignedItems = getVisibleItems(inboxData).filter(i =>
-                i.assignedWeekKeys?.includes(weekKey) ?? false,
-            );
+            // 周目标模式（优先级最高）：隐藏原有任务层级，改为渲染「周目标卡片列表」
+            // （卡片代表分配到当前周的任务，内容为任务名称 + 时长 / 次数占位）
+            if (weekGoalOnly && currentWeekKey) {
+                const weekKey = currentWeekKey;
+                const assignedItems = getVisibleItems(inboxData).filter(i =>
+                    i.assignedWeekKeys?.includes(weekKey) ?? false,
+                );
 
-            if (assignedItems.length === 0) {
-                listDiv.createDiv({ cls: 'inbox-empty' }).setText(t('inbox.emptyWeekGoal'));
-                return;
-            }
+                if (assignedItems.length === 0) {
+                    listDiv.createDiv({ cls: 'inbox-empty' }).setText(t('inbox.emptyWeekGoal'));
+                    return;
+                }
 
-            listDiv.createDiv({ cls: 'inbox-group-header', text: t('inbox.weekGoal') });
-            const cardList = listDiv.createDiv({ cls: 'week-goal-card-list' });
-            for (const item of assignedItems) {
-                renderWeekGoalCard(cardList, item);
-            }
-            return;
-        }
-
-        // 项目聚焦模式：仅显示聚焦任务及其所有子任务（以聚焦任务为根递归展示）
-        const focusId = inboxData.projectFocusId;
-        if (focusId) {
-            const focusItem = inboxData.items.find(i => i.id === focusId && !i.removed);
-            if (!focusItem) {
-                // 聚焦任务已不存在（被删除等），自动退出聚焦
-                inboxData.projectFocusId = undefined;
-            } else {
-                listDiv.createDiv({ cls: 'inbox-group-header', text: t('inbox.projectFocus') });
-                // 先渲染聚焦任务本身（不递归子任务），再渲染板块，最后渲染子任务，
-                // 保证板块位于子任务之上
-                renderItem(focusItem, 0, false);
-                renderSectionsAsSubdir(focusItem, 1);
-                const collapsed = inboxData.collapsedIds?.includes(focusItem.id) ?? false;
-                if (!collapsed) {
-                    for (const child of getChildren(inboxData, focusItem.id)) {
-                        renderItem(child, 1);
-                    }
+                listDiv.createDiv({ cls: 'inbox-group-header', text: t('inbox.weekGoal') });
+                const cardList = listDiv.createDiv({ cls: 'week-goal-card-list' });
+                for (const item of assignedItems) {
+                    renderWeekGoalCard(cardList, item);
                 }
                 return;
             }
-        }
 
-        if (topItems.length === 0) {
-            const emptyKey = weekGoalOnly
-                ? 'inbox.emptyWeekGoal'
-                : 'inbox.empty';
-            listDiv.createDiv({ cls: 'inbox-empty' }).setText(t(emptyKey));
-            return;
-        }
+            // 项目聚焦模式：仅显示聚焦任务及其所有子任务（以聚焦任务为根递归展示）
+            const focusId = inboxData.projectFocusId;
+            if (focusId) {
+                const focusItem = inboxData.items.find(i => i.id === focusId && !i.removed);
+                if (!focusItem) {
+                    // 聚焦任务已不存在（被删除等），自动退出聚焦
+                    inboxData.projectFocusId = undefined;
+                } else {
+                    listDiv.createDiv({ cls: 'inbox-group-header', text: t('inbox.projectFocus') });
+                    // 先渲染聚焦任务本身（不递归子任务），再渲染板块，最后渲染子任务，
+                    // 保证板块位于子任务之上
+                    renderItem(focusItem, 0, false);
+                    renderSectionsAsSubdir(focusItem, 1);
+                    const collapsed = inboxData.collapsedIds?.includes(focusItem.id) ?? false;
+                    if (!collapsed) {
+                        for (const child of getChildren(inboxData, focusItem.id)) {
+                            renderItem(child, 1);
+                        }
+                    }
+                    return;
+                }
+            }
 
-        for (const item of topItems) {
-            renderItem(item, 0);
+            if (topItems.length === 0) {
+                const emptyKey = weekGoalOnly
+                    ? 'inbox.emptyWeekGoal'
+                    : 'inbox.empty';
+                listDiv.createDiv({ cls: 'inbox-empty' }).setText(t(emptyKey));
+                return;
+            }
+
+            for (const item of topItems) {
+                renderItem(item, 0);
+            }
+        } finally {
+            // 恢复滚动位置（内容变短时浏览器会自动收敛到有效范围）
+            listDiv.scrollTop = prevScrollTop;
         }
     }
 

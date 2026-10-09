@@ -1820,6 +1820,11 @@
     font-size: 12px;
 }
 
+/* 「本周」按钮（跳转到本周位置） */
+.year-week-nav-this-week {
+    font-size: 12px;
+}
+
 /* 「今年」按钮激活态（当前显示的就是今年） */
 .year-week-nav-today.is-active {
     background: var(--interactive-accent);
@@ -3487,14 +3492,20 @@
 
 /* 已计划/已执行的格子：悬停时保持原色，不被灰色悬停背景遮挡 */
 .swimlane-cell.is-clickable.is-plan:hover {
-    background: var(--interactive-accent);
+    background: repeating-linear-gradient(
+        45deg,
+        var(--plan-color, var(--interactive-accent)) 0,
+        var(--plan-color, var(--interactive-accent)) 3px,
+        transparent 3px,
+        transparent 6px
+    );
 }
 
 .swimlane-cell.is-clickable.is-plan-inherited:hover {
     background: repeating-linear-gradient(
         45deg,
-        var(--interactive-accent) 0,
-        var(--interactive-accent) 3px,
+        #c8c8c8 0,
+        #c8c8c8 3px,
         transparent 3px,
         transparent 6px
     );
@@ -3504,18 +3515,24 @@
     background: var(--color-green, #43b581);
 }
 
-/* 计划线：命中的周格子 */
+/* 计划线：命中的周格子（任务本身，条纹颜色为当前任务分类颜色） */
 .swimlane-cell.is-plan {
-    background: var(--interactive-accent);
+    background: repeating-linear-gradient(
+        45deg,
+        var(--plan-color, var(--interactive-accent)) 0,
+        var(--plan-color, var(--interactive-accent)) 3px,
+        transparent 3px,
+        transparent 6px
+    );
     opacity: 0.85;
 }
 
-/* 计划线：从父级继承的周格子（斜条纹，颜色与自身计划一致） */
+/* 计划线：从父级继承的周格子（父级汇总子任务，浅灰色条纹） */
 .swimlane-cell.is-plan-inherited {
     background: repeating-linear-gradient(
         45deg,
-        var(--interactive-accent) 0,
-        var(--interactive-accent) 3px,
+        #c8c8c8 0,
+        #c8c8c8 3px,
         transparent 3px,
         transparent 6px
     );

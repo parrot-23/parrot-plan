@@ -37,7 +37,7 @@ export function renderSwimlane(board: HTMLElement, options: SwimlaneOptions): vo
 
     // ===== 顶部：年份切换 + 图例 =====
     const topBar = board.createDiv({ cls: 'swimlane-top-bar' });
-    renderYearNav(topBar, currentYear, onYearChange);
+    renderYearNav(topBar, board, currentYear, onYearChange);
     renderLegend(topBar, showExec);
 
     // 当前周号（仅当显示年份为今年时高亮该列）
@@ -139,6 +139,8 @@ export function renderSwimlane(board: HTMLElement, options: SwimlaneOptions): vo
             const cell = planRow.createDiv({ cls: 'swimlane-cell' });
             if (planWeeks.has(w)) {
                 cell.addClass('is-plan');
+                // 任务本身的计划：条纹颜色使用当前任务分类的颜色
+                if (cat) cell.setCssProps({ '--plan-color': cat.color });
             } else if (descendantWeeks.has(w)) {
                 cell.addClass('is-plan-inherited');
             }
@@ -171,9 +173,10 @@ function scrollToWeek(board: HTMLElement, week: number): void {
     board.scrollTo({ left: target, behavior: 'smooth' });
 }
 
-/** 顶部年份切换（‹ 年份 › + 今年） */
+/** 顶部年份切换（‹ 年份 › + 今年 + 本周） */
 function renderYearNav(
     board: HTMLElement,
+    scrollBoard: HTMLElement,
     currentYear: number,
     onYearChange: (year: number) => void,
 ): void {
@@ -193,6 +196,22 @@ function renderYearNav(
     });
     todayBtn.toggleClass('is-active', currentYear === new Date().getFullYear());
     todayBtn.onclick = () => onYearChange(new Date().getFullYear());
+
+    // 本周：跳转到本周位置（若当前不是今年，先切换到今年再滚动）
+    const thisWeekBtn = nav.createEl('button', {
+        text: t('weekNav.thisWeek'),
+        cls: 'year-week-nav-btn year-week-nav-this-week',
+    });
+    thisWeekBtn.onclick = () => {
+        const now = new Date();
+        const week = getISOWeek(now);
+        if (currentYear !== now.getFullYear()) {
+            // 切换年份会触发重渲染，滚动交由重渲染后的恢复逻辑处理
+            onYearChange(now.getFullYear());
+            return;
+        }
+        scrollToWeek(scrollBoard, week);
+    };
 }
 
 /** 图例：说明计划项 / 执行记录的固定颜色（showExec 为 false 时仅显示计划项） */
