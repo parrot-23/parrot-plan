@@ -45,7 +45,7 @@ export class MainView extends ItemView {
     private todayView: TodayView;
     private swimlaneView: SwimlaneView;
     private workbenchView: WorkbenchView;
-    private activeTab: NavTab = 'week';
+    private activeTab: NavTab = 'today';
     private contentRoot!: HTMLElement;
     /** 缓存目录名称（用于帮助弹窗引用缓存图片） */
     private cacheDirName: string;
