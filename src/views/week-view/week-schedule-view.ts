@@ -784,7 +784,8 @@ export class WeekScheduleView extends ItemView {
             catValue.setText(t('inbox.noCategory'));
         }
 
-        const status = getEventStatus(ev, this.executions);
+        // 第 1 列仅展示计划情况：状态固定为「计划」，不反映执行信息（执行情况在第 2 列展示）
+        const status: EventStatus = 'planned';
         const statusRow = card.createDiv({ cls: 'event-tooltip-row' });
         statusRow.createSpan({ cls: 'event-tooltip-label', text: t('eventTooltip.status') });
         statusRow.createSpan({

@@ -1256,10 +1256,14 @@ export class TodayView {
             ev.day === day && ev.weekKey === weekKey && !ev.allDay,
         );
 
+        // 收集所有卡片项（计划事件 + 新增执行记录），用于后续气泡聚类
+        const bubbleItems: { card: HTMLElement; top: number; status: EventStatus; onSelect: () => void }[] = [];
+
         for (const ev of events) {
             const card = col.createDiv({ cls: 'event-card event-card-clickable today-event-card' });
+            const top = (ev.start / 120) * 80;
             card.setCssProps({
-                '--card-top': `${(ev.start / 120) * 80}px`,
+                '--card-top': `${top}px`,
                 '--card-height': `${((ev.end - ev.start) / 120) * 80}px`,
             });
             const cat = ev.categoryId
@@ -1271,17 +1275,19 @@ export class TodayView {
             });
             card.setText(ev.title);
 
-            // 左侧状态气泡（点击气泡等同于点击卡片）
-            this.renderStatusBubble(card, getEventStatus(ev, this.getExecutions()), () => {
-                this.toggleEventSelection(ev.id);
-            });
-
             // 点击事件卡片 → 在中心方框展示详情（再次点击取消选中）
             if (this.selectedEventId === ev.id) card.addClass('is-selected');
             card.onclick = (e) => {
                 e.stopPropagation();
                 this.toggleEventSelection(ev.id);
             };
+
+            bubbleItems.push({
+                card,
+                top,
+                status: getEventStatus(ev, this.getExecutions()),
+                onSelect: () => this.toggleEventSelection(ev.id),
+            });
         }
 
         // 非计划执行记录：作为独立区块渲染，状态为「新增执行」
@@ -1293,8 +1299,9 @@ export class TodayView {
         );
         for (const ex of unplannedExecs) {
             const card = col.createDiv({ cls: 'event-card event-card-exec today-event-card' });
+            const top = (ex.start / 120) * 80;
             card.setCssProps({
-                '--card-top': `${(ex.start / 120) * 80}px`,
+                '--card-top': `${top}px`,
                 // 新增执行卡片固定高度 40px
                 '--card-height': '40px',
             });
@@ -1310,16 +1317,69 @@ export class TodayView {
             });
             card.setText(item?.title ?? t('today.statusAdded'));
 
-            this.renderStatusBubble(card, 'added', () => {
-                this.toggleExecSelection(ex.id);
-            });
-
             // 点击「新增」卡片 → 在中心方框展示详情（再次点击取消选中）
             if (this.selectedExecId === ex.id) card.addClass('is-selected');
             card.onclick = (e) => {
                 e.stopPropagation();
                 this.toggleExecSelection(ex.id);
             };
+
+            bubbleItems.push({
+                card,
+                top,
+                status: 'added',
+                onSelect: () => this.toggleExecSelection(ex.id),
+            });
+        }
+
+        // 渲染状态气泡：时间接近的卡片合并气泡并排显示（隐藏文字）
+        this.renderStatusBubbles(col, bubbleItems);
+    }
+
+    /**
+     * 渲染状态气泡。时间点接近（top 差值小于阈值）的卡片归为一组：
+     * - 组内仅 1 个：渲染常规气泡（图标 + 文字）
+     * - 组内多个：渲染合并气泡条（多个图标并排，隐藏文字），点击单个图标选中对应卡片
+     */
+    private renderStatusBubbles(
+        col: HTMLElement,
+        items: { card: HTMLElement; top: number; status: EventStatus; onSelect: () => void }[],
+    ) {
+        if (items.length === 0) return;
+
+        // 按 top 升序排序后聚类（阈值 24px，约等于 36 分钟）
+        const CLUSTER_THRESHOLD = 24;
+        const sorted = [...items].sort((a, b) => a.top - b.top);
+        const groups: typeof items[] = [];
+        for (const it of sorted) {
+            const last = groups[groups.length - 1];
+            if (last && it.top - last[last.length - 1].top < CLUSTER_THRESHOLD) {
+                last.push(it);
+            } else {
+                groups.push([it]);
+            }
+        }
+
+        for (const group of groups) {
+            if (group.length === 1) {
+                // 单个：常规气泡（图标 + 文字）
+                const it = group[0];
+                this.renderStatusBubble(it.card, it.status, it.onSelect);
+                continue;
+            }
+
+            // 多个：合并气泡条，挂在列上，垂直位置取组内平均 top
+            const avgTop = group.reduce((s, it) => s + it.top, 0) / group.length;
+            const bar = col.createDiv({ cls: 'event-status-bubble-group' });
+            bar.setCssProps({ '--bubble-top': `${avgTop}px` });
+            for (const it of group) {
+                const icon = bar.createDiv({ cls: `event-status-icon-btn is-${it.status}` });
+                icon.setText(EVENT_STATUS_EMOJI[it.status]);
+                icon.onclick = (e) => {
+                    e.stopPropagation();
+                    it.onSelect();
+                };
+            }
         }
     }
 
