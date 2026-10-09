@@ -3416,6 +3416,34 @@
     white-space: nowrap;
 }
 
+/* 任务标题后的时间区间（如 W1 - W5），周号可点击跳转 */
+.swimlane-task-range {
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--text-muted);
+}
+
+.swimlane-task-range-week {
+    cursor: pointer;
+    padding: 0 3px;
+    border-radius: 3px;
+    color: var(--interactive-accent);
+    font-variant-numeric: tabular-nums;
+}
+
+.swimlane-task-range-week:hover {
+    background: var(--background-modifier-hover);
+    text-decoration: underline;
+}
+
+.swimlane-task-range-sep {
+    color: var(--text-faint);
+}
+
 .swimlane-cell {
     flex-shrink: 0;
     width: 60px;

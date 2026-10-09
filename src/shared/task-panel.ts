@@ -335,6 +335,8 @@ export function renderTaskPanel(
                     inboxData.collapsedIds.push(item.id);
                 }
                 renderList();
+                // 通知宿主视图刷新（如泳道图需根据展开/折叠后的子任务重绘）
+                onRefresh();
             };
         } else {
             titleRow.createSpan({ cls: 'inbox-item-toggle inbox-item-toggle-empty' });

@@ -84,6 +84,9 @@ export function renderSwimlane(board: HTMLElement, options: SwimlaneOptions): vo
             }
         }
 
+        // 子孙节点的计划周（父级行也渲染，但用条纹样式区分）
+        const descendantWeeks = new Set(options.getDescendantWeeks?.(task) ?? []);
+
         // 任务标题行（左侧固定，横向滚动时保持可见）
         const titleRow = board.createDiv({ cls: 'swimlane-task-row' });
         // 层级缩进：通过 CSS 变量控制，体现任务在树中的深度
@@ -100,12 +103,38 @@ export function renderSwimlane(board: HTMLElement, options: SwimlaneOptions): vo
             dot.setCssProps({ '--dot-color': cat.color });
         }
         titleRow.createSpan({ cls: 'swimlane-task-name', text: task.title });
+
+        // 时间区间（如 W1 - W5）：取该行计划周（含子孙条纹周）的最小/最大周号
+        const rangeWeeks: number[] = [];
+        planWeeks.forEach(w => rangeWeeks.push(w));
+        descendantWeeks.forEach(w => rangeWeeks.push(w));
+        if (rangeWeeks.length > 0) {
+            const minWeek = Math.min(...rangeWeeks);
+            const maxWeek = Math.max(...rangeWeeks);
+            const rangeEl = titleRow.createSpan({ cls: 'swimlane-task-range' });
+            const startEl = rangeEl.createSpan({
+                cls: 'swimlane-task-range-week',
+                text: t('projectPicture.weekLabel', { week: minWeek }),
+            });
+            startEl.onclick = (e) => {
+                e.stopPropagation();
+                scrollToWeek(board, minWeek);
+            };
+            rangeEl.createSpan({ cls: 'swimlane-task-range-sep', text: '-' });
+            const endEl = rangeEl.createSpan({
+                cls: 'swimlane-task-range-week',
+                text: t('projectPicture.weekLabel', { week: maxWeek }),
+            });
+            endEl.onclick = (e) => {
+                e.stopPropagation();
+                scrollToWeek(board, maxWeek);
+            };
+        }
+
         if (selectedId === task.id) titleRow.addClass('is-selected');
 
         // 计划线
         const planRow = board.createDiv({ cls: 'swimlane-lane-row' });
-        // 子孙节点的计划周（父级行也渲染，但用条纹样式区分）
-        const descendantWeeks = new Set(options.getDescendantWeeks?.(task) ?? []);
         for (let w = 1; w <= totalWeeks; w++) {
             const cell = planRow.createDiv({ cls: 'swimlane-cell' });
             if (planWeeks.has(w)) {
@@ -128,6 +157,18 @@ export function renderSwimlane(board: HTMLElement, options: SwimlaneOptions): vo
             }
         }
     }
+}
+
+/** 每格周列的宽度（px），与 .swimlane-cell / .swimlane-header-cell 保持一致 */
+const WEEK_CELL_WIDTH = 60;
+
+/**
+ * 横向滚动泳道图，使指定周号（1–52）的列尽量靠左显示。
+ * 用于点击任务标题行的时间区间（w1 / w5）快速跳转。
+ */
+function scrollToWeek(board: HTMLElement, week: number): void {
+    const target = (week - 1) * WEEK_CELL_WIDTH;
+    board.scrollTo({ left: target, behavior: 'smooth' });
 }
 
 /** 顶部年份切换（‹ 年份 › + 今年） */
