@@ -83,6 +83,7 @@ export const en: I18nMessages = {
     'today.statusExecuted': 'Executed',
     'today.statusChanged': 'Replaced',
     'today.statusAdded': 'Added',
+    'today.deleteExec': 'Delete',
     'today.statTotalDoneLabel': 'Total / Done',
     'today.statBreakdownLabel': 'Pending / Executed / Replaced',
     'today.statAddedLabel': 'Added',

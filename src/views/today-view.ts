@@ -676,8 +676,17 @@ export class TodayView {
         const selectedItem = this.getSelectedItem();
         const row = panel.createDiv({ cls: 'today-action-row' });
 
-        // 选中「新增」执行记录：不显示任何操作按钮
-        if (this.selectedExecId) return;
+        // 选中「新增」执行记录：显示删除按钮
+        if (this.selectedExecId) {
+            const delBtn = row.createEl('button', {
+                cls: 'today-action-btn mod-warning',
+                text: t('today.deleteExec'),
+            });
+            delBtn.onclick = () => {
+                void this.deleteSelectedExec();
+            };
+            return;
+        }
 
         // 新增非计划事件模式：确认新增 / 取消
         if (this.addUnplannedMode) {
@@ -983,6 +992,18 @@ export class TodayView {
         this.setExecutingEventId?.(undefined);
         void this.save();
         void this.refresh();
+    }
+
+    /** 删除当前选中的执行记录 */
+    private async deleteSelectedExec(): Promise<void> {
+        if (!this.selectedExecId) return;
+        const executions = this.getExecutions();
+        const idx = executions.findIndex(ex => ex.id === this.selectedExecId);
+        if (idx < 0) return;
+        executions.splice(idx, 1);
+        this.selectedExecId = undefined;
+        await this.save();
+        await this.refresh();
     }
 
     /** 进入替换模式：锁定当前选中的时间轴事件，等待用户在左侧选择任务 */
