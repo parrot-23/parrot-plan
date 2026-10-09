@@ -109,6 +109,9 @@ export class TaskPlanView {
             }, 0);
         }
 
+        // 泳道图下方：已计划周数（每个周数为一张小卡片）
+        this.renderPlannedWeeks(contentPanel);
+
         // 泳道图下方：板块信息方框（当前选中项目的板块卡片）
         const sectionsArea = contentPanel.createDiv({ cls: 'swimlane-section-area' });
         const sectionsHeader = sectionsArea.createDiv({ cls: 'swimlane-section-area-header' });
@@ -527,26 +530,31 @@ export class TaskPlanView {
         };
 
         // 递归收集：返回该节点及其所有子孙的计划周号集合
-        const walk = (item: InboxItem, depth: number): Set<number> => {
-            tasks.push(item);
-            depthMap.set(item.id, depth);
+        // visible 表示该节点是否作为泳道行显示（折叠的子孙不显示，但仍需汇总其计划周）
+        const walk = (item: InboxItem, depth: number, visible: boolean): Set<number> => {
+            if (visible) {
+                tasks.push(item);
+                depthMap.set(item.id, depth);
+            }
 
             const descendantWeeks = new Set<number>();
-            if (!collapsed.includes(item.id)) {
-                const children = this.inboxData.items.filter(
-                    i => !i.removed && i.parentId === item.id,
-                );
-                for (const child of children) {
-                    // 子节点自身计划周 + 其子孙的计划周
-                    for (const w of weeksOf(child)) descendantWeeks.add(w);
-                    for (const w of Array.from(walk(child, depth + 1))) descendantWeeks.add(w);
+            const children = this.inboxData.items.filter(
+                i => !i.removed && i.parentId === item.id,
+            );
+            // 折叠时子孙不显示为泳道行，但仍要汇总其计划周（父级条纹格子）
+            const childrenVisible = visible && !collapsed.includes(item.id);
+            for (const child of children) {
+                // 子节点自身计划周 + 其子孙的计划周
+                for (const w of weeksOf(child)) descendantWeeks.add(w);
+                for (const w of Array.from(walk(child, depth + 1, childrenVisible))) {
+                    descendantWeeks.add(w);
                 }
             }
             // 该行条纹格子 = 所有子孙的计划周（不含自身）
             inheritedMap.set(item.id, Array.from(descendantWeeks));
             return descendantWeeks;
         };
-        walk(root, 0);
+        walk(root, 0, true);
         return { tasks, depthMap, inheritedMap };
     }
 
@@ -572,11 +580,36 @@ export class TaskPlanView {
 
         // 项目描述
         const descRow = form.createDiv({ cls: 'task-plan-field' });
-        descRow.createDiv({ cls: 'task-plan-field-label', text: t('taskPlan.description') });
-        descRow.createDiv({
+        const descLabelRow = descRow.createDiv({ cls: 'task-plan-field-label-row' });
+        descLabelRow.createDiv({ cls: 'task-plan-field-label', text: t('taskPlan.description') });
+        // 铅笔图标：点击后在页面内直接显示输入框编辑描述
+        const editDescBtn = descLabelRow.createEl('button', {
+            cls: 'task-plan-edit-desc-btn',
+            attr: { 'aria-label': t('taskPlan.editDescription') },
+        });
+        setIcon(editDescBtn, 'pencil');
+        const descValue = descRow.createDiv({
             cls: 'task-plan-field-value',
             text: item.description || t('taskPlan.emptyValue'),
         });
+        editDescBtn.onclick = () => {
+            // 已在编辑态则忽略
+            if (descRow.querySelector('.task-plan-desc-edit-input')) return;
+            const textarea = descRow.createEl('textarea', {
+                cls: 'task-plan-desc-edit-input',
+            });
+            textarea.value = item.description ?? '';
+            descValue.hide();
+            textarea.focus();
+            // 失焦后自动保存并恢复展示
+            textarea.onblur = () => {
+                void (async () => {
+                    item.description = textarea.value;
+                    await this.save();
+                    await this.refresh();
+                })();
+            };
+        };
 
         // 分类
         const category = item.categoryId
@@ -592,18 +625,30 @@ export class TaskPlanView {
         } else {
             catValue.setText(t('taskPlan.emptyValue'));
         }
+    }
 
-        // 已计划周数：列出所有已分配到的周键
+    /** 渲染「已计划周数」区域（位于泳道图下方，每个周数为一张小卡片） */
+    private renderPlannedWeeks(container: HTMLElement): void {
+        const selectedId = this.inboxData.selectedId;
+        const item = selectedId
+            ? this.inboxData.items.find(i => i.id === selectedId && !i.removed)
+            : undefined;
+        if (!item) return;
+
+        const area = container.createDiv({ cls: 'task-plan-weeks-area' });
+        area.createDiv({ cls: 'task-plan-weeks-title', text: t('taskPlan.plannedWeeks') });
+
         const weekKeys = item.assignedWeekKeys ?? [];
-        const weekRow = form.createDiv({ cls: 'task-plan-field' });
-        weekRow.createDiv({ cls: 'task-plan-field-label', text: t('taskPlan.plannedWeeks') });
-        const weekValue = weekRow.createDiv({ cls: 'task-plan-field-value' });
+        const list = area.createDiv({ cls: 'task-plan-weeks-list' });
         if (weekKeys.length === 0) {
-            weekValue.setText(t('taskPlan.emptyValue'));
-        } else {
-            for (const key of weekKeys) {
-                weekValue.createSpan({ cls: 'task-plan-week-tag', text: key });
-            }
+            list.createDiv({ cls: 'task-plan-weeks-empty', text: t('taskPlan.emptyValue') });
+            return;
+        }
+        for (const key of weekKeys) {
+            const card = list.createDiv({ cls: 'task-plan-week-card' });
+            card.createDiv({ cls: 'task-plan-week-card-title', text: key });
+            // 白底黑边的框（内容占位）
+            card.createDiv({ cls: 'task-plan-week-card-box' });
         }
     }
 

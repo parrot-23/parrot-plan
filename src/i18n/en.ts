@@ -38,6 +38,7 @@ export const en: I18nMessages = {
     // Task Plan view
     'taskPlan.noSelection': 'Select a task on the left',
     'taskPlan.description': 'Description',
+    'taskPlan.editDescription': 'Edit description',
     'taskPlan.category': 'Category',
     'taskPlan.plannedWeeks': 'Planned weeks',
     'taskPlan.emptyValue': '—',

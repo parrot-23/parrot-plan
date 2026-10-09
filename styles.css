@@ -1737,6 +1737,46 @@
     color: var(--text-muted);
 }
 
+/* 标签行：标签 + 铅笔编辑按钮 */
+.task-plan-field-label-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+/* 描述编辑铅笔按钮 */
+.task-plan-edit-desc-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2px;
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    border-radius: 4px;
+}
+
+.task-plan-edit-desc-btn:hover {
+    color: var(--text-normal);
+    background: var(--background-modifier-hover);
+}
+
+.task-plan-edit-desc-btn .svg-icon {
+    width: 14px;
+    height: 14px;
+}
+
+/* 描述内联编辑输入框 */
+.task-plan-desc-edit-input {
+    width: 100%;
+    min-height: 80px;
+    resize: vertical;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
 .task-plan-field-value {
     display: flex;
     flex-wrap: wrap;
@@ -1756,14 +1796,48 @@
     flex-shrink: 0;
 }
 
-/* 已计划周标签 */
-.task-plan-week-tag {
-    display: inline-block;
-    padding: 2px 8px;
-    border-radius: 4px;
-    background: var(--background-modifier-hover);
-    color: var(--text-normal);
+/* 已计划周数区域（位于泳道图下方） */
+.task-plan-weeks-area {
+    margin-top: 16px;
+}
+
+.task-plan-weeks-title {
     font-size: 12px;
+    color: var(--text-muted);
+    margin-bottom: 8px;
+}
+
+.task-plan-weeks-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.task-plan-weeks-empty {
+    font-size: 14px;
+    color: var(--text-normal);
+}
+
+/* 单个周数小卡片：标题为周数，下方为白底黑边的框 */
+.task-plan-week-card {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 72px;
+}
+
+.task-plan-week-card-title {
+    font-size: 12px;
+    color: var(--text-normal);
+    text-align: center;
+}
+
+.task-plan-week-card-box {
+    height: 40px;
+    background: #ffffff;
+    border: 1px solid #000000;
+    border-radius: 4px;
+    box-sizing: border-box;
 }
 
 /* 任务计划视图内的泳道图 */
