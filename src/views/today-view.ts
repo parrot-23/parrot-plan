@@ -1339,8 +1339,8 @@ export class TodayView {
             bubbleItems.push({
                 card,
                 top,
-                // 替换执行记录关联了计划事件 → 状态为「已执行」；否则为「新增」
-                status: ex.eventId ? 'executed' : 'added',
+                // 替换执行记录 → 「替换」图标；关联计划事件的普通执行 → 「已执行」；否则 → 「新增」
+                status: ex.replaced ? 'changed' : (ex.eventId ? 'executed' : 'added'),
                 onSelect: () => this.toggleExecSelection(ex.id),
             });
         }

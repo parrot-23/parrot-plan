@@ -798,8 +798,8 @@ export class WeekScheduleView extends ItemView {
     private renderRangeHoverExecCard(parent: HTMLElement, ex: ExecutionRecord) {
         const card = parent.createDiv({ cls: 'range-hover-card' });
 
-        // 状态：关联计划事件 → 已执行；无关联 → 新增
-        const status: EventStatus = ex.eventId ? 'executed' : 'added';
+        // 状态：替换执行 → 替换；关联计划事件 → 已执行；无关联 → 新增
+        const status: EventStatus = ex.replaced ? 'changed' : (ex.eventId ? 'executed' : 'added');
 
         // 标题：优先取来源任务标题，否则用关联计划事件标题；名称前加对应类型图标
         const item = ex.inboxId
