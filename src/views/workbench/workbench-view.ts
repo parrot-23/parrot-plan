@@ -14,11 +14,26 @@ import type { InboxItem } from '../../datatypes/domain';
 import { t } from '../../i18n';
 import { LayoutModal } from './layout-modal';
 
-/** 网格列数（卡片按列/行坐标定位） */
-const GRID_COLS = 4;
-/** 卡片最小宽高（像素） */
-const MIN_CARD_W = 200;
-const MIN_CARD_H = 120;
+/** 网格单位（像素）：卡片位置与尺寸均吸附到该值的整数倍 */
+const GRID = 30;
+/** 卡片默认宽高（像素，均为 GRID 的整数倍） */
+const DEFAULT_W = 300;
+const DEFAULT_H = 240;
+/** 卡片最小宽高（像素，均为 GRID 的整数倍） */
+const MIN_W = 180;
+const MIN_H = 120;
+/** 自动排布时每行放置的卡片数 */
+const CARDS_PER_ROW = 3;
+
+/** 吸附到网格：四舍五入到 GRID 的整数倍 */
+function snap(v: number): number {
+    return Math.round(v / GRID) * GRID;
+}
+
+/** 向上取整到 GRID 的整数倍（用于调整尺寸结束时的最终尺寸） */
+function snapUp(v: number): number {
+    return Math.ceil(v / GRID) * GRID;
+}
 
 /**
  * 工作台视图：与 YearView / TodayView 一致，通过 renderInto 渲染到指定容器。
@@ -134,33 +149,40 @@ export class WorkbenchView {
         });
         layoutBtn.onclick = () => new LayoutModal(this.app, this.workbenchData).open();
 
-        // 卡片网格
+        // 卡片画布（绝对定位 + 30px 网格）
         const grid = container.createDiv({ cls: 'wb-grid' });
-        grid.setCssProps({ '--wb-grid-cols': String(GRID_COLS) });
 
         if (this.workbenchData.instances.length === 0) {
             grid.createDiv({ cls: 'wb-empty', text: t('workbench.empty') });
             return;
         }
 
-        // 计算每张卡片的网格坐标（未定位的按顺序自动排布）
+        // 计算每张卡片的网格坐标（未定位的按顺序自动排布），并写回实例，保证坐标持久一致
         const positions = this.computePositions();
+        for (const instance of this.workbenchData.instances) {
+            const pos = positions.get(instance.id);
+            if (pos) {
+                instance.col = pos.col;
+                instance.row = pos.row;
+            }
+        }
 
         for (const instance of this.workbenchData.instances) {
             const template = this.templates.find((t) => t.id === instance.templateId);
             if (!template) continue;
 
             const card = grid.createDiv({ cls: 'wb-card' });
-            // 网格坐标定位
+            // 网格坐标定位（单位 30px）
             const pos = positions.get(instance.id);
             if (pos) {
-                card.style.setProperty('grid-column', `${pos.col + 1}`);
-                card.style.setProperty('grid-row', `${pos.row + 1}`);
+                card.style.setProperty('left', `${pos.col * GRID}px`);
+                card.style.setProperty('top', `${pos.row * GRID}px`);
             }
-            // 应用自定义尺寸（编辑布局时拖拽调整过）
-            if (instance.width) card.setCssProps({ '--wb-card-width': `${instance.width}px` });
-            if (instance.height) card.setCssProps({ '--wb-card-height': `${instance.height}px` });
-            if (instance.width || instance.height) card.addClass('has-custom-size');
+            // 应用尺寸（吸附到 30px 网格）
+            const w = snap(instance.width ?? DEFAULT_W);
+            const h = snap(instance.height ?? DEFAULT_H);
+            card.style.setProperty('width', `${w}px`);
+            card.style.setProperty('height', `${h}px`);
 
             // 卡片头部操作（删除）：仅编辑布局时显示删除按钮
             if (this.editingLayout) {
@@ -191,15 +213,32 @@ export class WorkbenchView {
                 const titleEl = card.querySelector<HTMLElement>('.wb-card-title');
                 if (titleEl) {
                     titleEl.addClass('is-draggable');
-                    this.attachCardDrag(titleEl, card, instance, grid);
+                    this.attachCardDrag(titleEl, card, instance);
                 }
             }
         }
+
+        // 根据卡片最大底部/右侧位置设置画布尺寸，避免绝对定位卡片溢出被裁剪
+        let maxBottom = 0;
+        let maxRight = 0;
+        for (const instance of this.workbenchData.instances) {
+            const pos = positions.get(instance.id);
+            if (!pos) continue;
+            const w = snap(instance.width ?? DEFAULT_W);
+            const h = snap(instance.height ?? DEFAULT_H);
+            const bottom = pos.row * GRID + h;
+            const right = pos.col * GRID + w;
+            if (bottom > maxBottom) maxBottom = bottom;
+            if (right > maxRight) maxRight = right;
+        }
+        grid.style.setProperty('min-height', `${Math.max(300, maxBottom + GRID)}px`);
+        grid.style.setProperty('min-width', `${maxRight + GRID}px`);
     }
 
     /**
-     * 计算每张卡片的网格坐标。
-     * 已设置 col/row 的卡片使用其坐标；未设置的按 instances 顺序自动排布到第一个空位。
+     * 计算每张卡片的网格坐标（单位 30px）。
+     * 已设置 col/row 的卡片使用其坐标；未设置的按 instances 顺序自动排布：
+     * 从左到右、从上到下，每行放 CARDS_PER_ROW 张，卡片占默认尺寸（10×8 格）。
      * 返回 instance.id → { col, row } 映射。
      */
     private computePositions(): Map<string, { col: number; row: number }> {
@@ -207,25 +246,47 @@ export class WorkbenchView {
         const occupied = new Set<string>();
         const key = (c: number, r: number) => `${c},${r}`;
 
-        // 先登记已显式定位的卡片
+        // 卡片占用的网格格数（默认尺寸）
+        const cardCols = DEFAULT_W / GRID;
+        const cardRows = DEFAULT_H / GRID;
+
+        // 先登记已显式定位的卡片（占用其覆盖的所有网格格）
         for (const inst of this.workbenchData.instances) {
             if (inst.col !== undefined && inst.row !== undefined) {
                 result.set(inst.id, { col: inst.col, row: inst.row });
-                occupied.add(key(inst.col, inst.row));
+                for (let r = 0; r < cardRows; r++) {
+                    for (let c = 0; c < cardCols; c++) {
+                        occupied.add(key(inst.col + c, inst.row + r));
+                    }
+                }
             }
         }
 
-        // 未定位的卡片：按顺序找第一个空位
+        // 未定位的卡片：按顺序找第一个空位（行优先，每行 CARDS_PER_ROW 张）
         let cursor = 0;
         for (const inst of this.workbenchData.instances) {
             if (result.has(inst.id)) continue;
-            while (occupied.has(key(cursor % GRID_COLS, Math.floor(cursor / GRID_COLS)))) {
+            while (true) {
+                const col = (cursor % CARDS_PER_ROW) * cardCols;
+                const row = Math.floor(cursor / CARDS_PER_ROW) * cardRows;
+                // 检查该槽位是否被占用
+                let free = true;
+                for (let r = 0; r < cardRows && free; r++) {
+                    for (let c = 0; c < cardCols && free; c++) {
+                        if (occupied.has(key(col + c, row + r))) free = false;
+                    }
+                }
+                if (free) break;
                 cursor++;
             }
-            const col = cursor % GRID_COLS;
-            const row = Math.floor(cursor / GRID_COLS);
+            const col = (cursor % CARDS_PER_ROW) * cardCols;
+            const row = Math.floor(cursor / CARDS_PER_ROW) * cardRows;
             result.set(inst.id, { col, row });
-            occupied.add(key(col, row));
+            for (let r = 0; r < cardRows; r++) {
+                for (let c = 0; c < cardCols; c++) {
+                    occupied.add(key(col + c, row + r));
+                }
+            }
             cursor++;
         }
         return result;
@@ -299,7 +360,7 @@ export class WorkbenchView {
     }
 
     /**
-     * 绑定尺寸调整：按住手柄/边框拖动，按方向调整卡片宽高。
+     * 绑定尺寸调整：按住手柄/边框拖动，按方向调整卡片宽高（吸附 30px 网格）。
      * dir 为八方向之一（n/s/w/e/nw/ne/sw/se）。
      */
     private attachResize(
@@ -322,15 +383,13 @@ export class WorkbenchView {
                 const dy = ev.clientY - startY;
                 let w = startW;
                 let h = startH;
-                if (dir.includes('e')) w = Math.max(MIN_CARD_W, startW + dx);
-                if (dir.includes('w')) w = Math.max(MIN_CARD_W, startW - dx);
-                if (dir.includes('s')) h = Math.max(MIN_CARD_H, startH + dy);
-                if (dir.includes('n')) h = Math.max(MIN_CARD_H, startH - dy);
-                card.setCssProps({
-                    '--wb-card-width': `${w}px`,
-                    '--wb-card-height': `${h}px`,
-                });
-                card.addClass('has-custom-size');
+                if (dir.includes('e')) w = Math.max(MIN_W, startW + dx);
+                if (dir.includes('w')) w = Math.max(MIN_W, startW - dx);
+                if (dir.includes('s')) h = Math.max(MIN_H, startH + dy);
+                if (dir.includes('n')) h = Math.max(MIN_H, startH - dy);
+                // 拖动过程中连续变化，不吸附网格
+                card.style.setProperty('width', `${w}px`);
+                card.style.setProperty('height', `${h}px`);
             };
 
             const onUp = (ev: MouseEvent) => {
@@ -340,56 +399,15 @@ export class WorkbenchView {
                 const dy = ev.clientY - startY;
                 let w = startW;
                 let h = startH;
-                if (dir.includes('e')) w = Math.max(MIN_CARD_W, startW + dx);
-                if (dir.includes('w')) w = Math.max(MIN_CARD_W, startW - dx);
-                if (dir.includes('s')) h = Math.max(MIN_CARD_H, startH + dy);
-                if (dir.includes('n')) h = Math.max(MIN_CARD_H, startH - dy);
-                instance.width = Math.round(w);
-                instance.height = Math.round(h);
-                void this.save();
-            };
-
-            document.addEventListener('mousemove', onMove);
-            document.addEventListener('mouseup', onUp);
-        };
-    }
-
-    /**
-     * 绑定卡片位置拖动：按住标题拖动整张卡片，落点按网格坐标计算并插入式重排。
-     */
-    private attachCardDrag(
-        titleEl: HTMLElement,
-        card: HTMLElement,
-        instance: CardInstance,
-        grid: HTMLElement,
-    ) {
-        titleEl.onmousedown = (e: MouseEvent) => {
-            e.preventDefault();
-            e.stopPropagation();
-
-            card.addClass('is-dragging');
-            const startX = e.clientX;
-            const startY = e.clientY;
-
-            const onMove = (ev: MouseEvent) => {
-                // 跟随鼠标位移，给出拖动反馈
-                card.style.setProperty(
-                    'transform',
-                    `translate(${ev.clientX - startX}px, ${ev.clientY - startY}px)`,
-                );
-            };
-
-            const onUp = (ev: MouseEvent) => {
-                document.removeEventListener('mousemove', onMove);
-                document.removeEventListener('mouseup', onUp);
-                card.removeClass('is-dragging');
-                card.style.removeProperty('transform');
-
-                // 计算落点所在的网格坐标
-                const target = this.resolveDropCell(grid, card, ev.clientX, ev.clientY);
-                if (target) {
-                    this.moveCardTo(instance, target.col, target.row);
-                }
+                if (dir.includes('e')) w = Math.max(MIN_W, startW + dx);
+                if (dir.includes('w')) w = Math.max(MIN_W, startW - dx);
+                if (dir.includes('s')) h = Math.max(MIN_H, startH + dy);
+                if (dir.includes('n')) h = Math.max(MIN_H, startH - dy);
+                // 松开时向上取整到 30 的倍数
+                instance.width = snapUp(w);
+                instance.height = snapUp(h);
+                // 调整尺寸后做碰撞避让
+                this.resolveCollisions();
                 void this.save().then(() => {
                     if (this.container) void this.renderInto(this.container);
                 });
@@ -400,49 +418,110 @@ export class WorkbenchView {
         };
     }
 
-    /** 根据鼠标位置计算落点网格坐标（相对网格容器） */
-    private resolveDropCell(
-        grid: HTMLElement,
+    /**
+     * 绑定卡片位置拖动：按住标题拖动整张卡片，落点吸附 30px 网格并做碰撞避让。
+     */
+    private attachCardDrag(
+        titleEl: HTMLElement,
         card: HTMLElement,
-        clientX: number,
-        clientY: number,
-    ): { col: number; row: number } | null {
-        const gridRect = grid.getBoundingClientRect();
-        const cardRect = card.getBoundingClientRect();
-        // 以鼠标位置作为落点参考
-        const relX = clientX - gridRect.left;
-        const relY = clientY - gridRect.top;
-        const colW = gridRect.width / GRID_COLS;
-        const rowH = cardRect.height + 12; // 卡片高度 + gap
-        const col = Math.max(0, Math.min(GRID_COLS - 1, Math.floor(relX / colW)));
-        const row = Math.max(0, Math.floor(relY / rowH));
-        return { col, row };
+        instance: CardInstance,
+    ) {
+        titleEl.onmousedown = (e: MouseEvent) => {
+            e.preventDefault();
+            e.stopPropagation();
+
+            card.addClass('is-dragging');
+            const startX = e.clientX;
+            const startY = e.clientY;
+            const startLeft = card.offsetLeft;
+            const startTop = card.offsetTop;
+            // 画布宽度（卡片父容器），用于限制左右边界
+            const gridWidth = card.parentElement?.clientWidth ?? 0;
+            const cardW = card.offsetWidth;
+
+            // 将 left 限制在 [0, gridWidth - cardW] 范围内
+            const clampLeft = (raw: number) => {
+                const maxLeft = Math.max(0, gridWidth - cardW);
+                return Math.max(0, Math.min(raw, maxLeft));
+            };
+
+            const onMove = (ev: MouseEvent) => {
+                // 跟随鼠标位移，吸附到 30px 网格；限制不超出画布顶部/左右边界
+                const left = clampLeft(snap(startLeft + (ev.clientX - startX)));
+                const top = Math.max(0, snap(startTop + (ev.clientY - startY)));
+                card.style.setProperty('left', `${left}px`);
+                card.style.setProperty('top', `${top}px`);
+            };
+
+            const onUp = (ev: MouseEvent) => {
+                document.removeEventListener('mousemove', onMove);
+                document.removeEventListener('mouseup', onUp);
+                card.removeClass('is-dragging');
+
+                // 落点吸附网格，写回实例坐标；超出左右边界时贴边
+                const left = clampLeft(snap(startLeft + (ev.clientX - startX)));
+                const top = Math.max(0, snap(startTop + (ev.clientY - startY)));
+                instance.col = Math.round(left / GRID);
+                instance.row = Math.round(top / GRID);
+                // 拖动后做碰撞避让
+                this.resolveCollisions();
+                void this.save().then(() => {
+                    if (this.container) void this.renderInto(this.container);
+                });
+            };
+
+            document.addEventListener('mousemove', onMove);
+            document.addEventListener('mouseup', onUp);
+        };
     }
 
     /**
-     * 将卡片移动到目标网格坐标，并做插入式重排：
-     * 目标位置及之后的卡片依次后移，避免重叠与空洞。
+     * 碰撞避让：检测所有卡片间的矩形重叠。
+     * 重叠时，位于下方的卡片向下移动（row 增加）直到不重叠；
+     * 其下方所有卡片连锁向下移动，直到整体无重叠。
      */
-    private moveCardTo(instance: CardInstance, col: number, row: number) {
-        const positions = this.computePositions();
-        const targetIndex = row * GRID_COLS + col;
+    private resolveCollisions() {
+        const rectOf = (inst: CardInstance) => {
+            const col = inst.col ?? 0;
+            const row = inst.row ?? 0;
+            const w = snap(inst.width ?? DEFAULT_W);
+            const h = snap(inst.height ?? DEFAULT_H);
+            return { col, row, w, h };
+        };
 
-        // 按当前排布顺序（行优先）排列卡片
-        const ordered = this.workbenchData.instances
-            .map((inst) => ({ inst, pos: positions.get(inst.id)! }))
-            .filter((x) => x.pos)
-            .sort((a, b) => (a.pos.row - b.pos.row) || (a.pos.col - b.pos.col));
+        const items = this.workbenchData.instances.map((inst) => ({
+            inst,
+            rect: rectOf(inst),
+        }));
 
-        const fromIdx = ordered.findIndex((x) => x.inst.id === instance.id);
-        if (fromIdx < 0) return;
-        const [moved] = ordered.splice(fromIdx, 1);
-        const insertIdx = Math.max(0, Math.min(ordered.length, targetIndex));
-        ordered.splice(insertIdx, 0, moved);
+        const overlaps = (a: { col: number; row: number; w: number; h: number }, b: { col: number; row: number; w: number; h: number }) =>
+            a.col * GRID < b.col * GRID + b.w &&
+            a.col * GRID + a.w > b.col * GRID &&
+            a.row * GRID < b.row * GRID + b.h &&
+            a.row * GRID + a.h > b.row * GRID;
 
-        // 重新按行优先顺序分配坐标
-        ordered.forEach((x, i) => {
-            x.inst.col = i % GRID_COLS;
-            x.inst.row = Math.floor(i / GRID_COLS);
-        });
+        // 迭代处理：反复检测所有卡片对的重叠，直到无重叠（上限防止死循环）
+        const maxIter = this.workbenchData.instances.length * 4;
+        for (let iter = 0; iter < maxIter; iter++) {
+            let changed = false;
+            // 按行坐标升序，保证「上方卡片」先处理
+            items.sort((a, b) => a.rect.row - b.rect.row);
+            for (let i = 0; i < items.length; i++) {
+                for (let j = i + 1; j < items.length; j++) {
+                    const upper = items[i];
+                    const lower = items[j];
+                    if (overlaps(upper.rect, lower.rect)) {
+                        // 下方卡片向下移动到上方卡片底部
+                        const newRow = Math.round((upper.rect.row * GRID + upper.rect.h) / GRID);
+                        if (newRow > lower.rect.row) {
+                            lower.inst.row = newRow;
+                            lower.rect.row = newRow;
+                            changed = true;
+                        }
+                    }
+                }
+            }
+            if (!changed) break;
+        }
     }
 }

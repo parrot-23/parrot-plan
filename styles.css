@@ -3892,7 +3892,7 @@
     height: 100%;
     padding: 12px;
     box-sizing: border-box;
-    overflow-y: auto;
+    overflow: auto;
 }
 
 .wb-toolbar {
@@ -4027,26 +4027,18 @@
 }
 
 .wb-grid {
-    display: grid;
-    grid-template-columns: repeat(var(--wb-grid-cols, 4), minmax(0, 1fr));
-    gap: 12px;
-    align-items: start;
+    position: relative;
+    min-height: 300px;
 }
 
 .wb-card {
-    position: relative;
+    position: absolute;
     border: 1px solid var(--background-modifier-border);
     border-radius: 8px;
     background: var(--background-secondary);
     padding: 12px;
     box-sizing: border-box;
-}
-
-/* 自定义尺寸的卡片：使用固定宽高 */
-.wb-card.has-custom-size {
-    width: var(--wb-card-width, auto);
-    height: var(--wb-card-height, auto);
-    overflow: auto;
+    overflow: hidden;
 }
 
 /* ===== 编辑布局态：卡片边框 + 四角圆点（八方向调整尺寸） ===== */
@@ -4057,7 +4049,7 @@
 }
 
 .wb-card.is-editing:hover {
-    outline: 1px solid var(--interactive-accent);
+    outline: 3px solid var(--interactive-accent);
 }
 
 /* 拖动整张卡片时的视觉反馈 */
@@ -4129,34 +4121,34 @@
 }
 
 .wb-card-edge-n {
-    top: -3px;
+    top: -6px;
     left: 8px;
     right: 8px;
-    height: 6px;
+    height: 12px;
     cursor: ns-resize;
 }
 
 .wb-card-edge-s {
-    bottom: -3px;
+    bottom: -6px;
     left: 8px;
     right: 8px;
-    height: 6px;
+    height: 12px;
     cursor: ns-resize;
 }
 
 .wb-card-edge-w {
-    left: -3px;
+    left: -6px;
     top: 8px;
     bottom: 8px;
-    width: 6px;
+    width: 12px;
     cursor: ew-resize;
 }
 
 .wb-card-edge-e {
-    right: -3px;
+    right: -6px;
     top: 8px;
     bottom: 8px;
-    width: 6px;
+    width: 12px;
     cursor: ew-resize;
 }
 
@@ -4188,7 +4180,7 @@
     font-size: 14px;
     font-weight: 600;
     color: var(--text-normal);
-    margin-bottom: 8px;
+    padding-bottom: 18px;
     padding-right: 24px;
 }
 
