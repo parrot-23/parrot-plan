@@ -463,6 +463,8 @@ export class WeekScheduleView extends ItemView {
 
                 const rawColor = cat?.color ?? '#888888';
                 card.addClass('event-card-clickable');
+                // 灰白色条纹背景（周计划视图专用）
+                card.addClass('event-card-striped');
                 card.setCssProps({
                     '--card-color': rawColor,
                     '--card-bg': '#eeeeee88',

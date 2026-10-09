@@ -283,7 +283,8 @@ export class TaskPlanView {
                 this.renderSectionCardItem(itemsEl, mark, it.text);
             }
         } else if (section.type === 'habit') {
-            for (const it of (section.data as HabitData).items) {
+            const data: HabitData = section.data;
+            for (const it of data.items) {
                 const count = it.checkedDays?.length ?? 0;
                 this.renderSectionCardItem(itemsEl, '🔁', it.text, String(count));
             }
@@ -371,13 +372,14 @@ export class TaskPlanView {
                 });
             }
         } else if (section.type === 'habit') {
-            for (const it of (section.data as HabitData).items) {
+            const data: HabitData = section.data;
+            for (const it of data.items) {
                 const line = itemsEl.createDiv({ cls: 'swimlane-section-card-edit-row' });
                 const text = line.createEl('input', { type: 'text', cls: 'swimlane-section-card-edit-text' });
                 text.value = it.text;
                 text.onchange = () => { it.text = text.value; };
                 this.renderEditRowDelete(line, () => {
-                    (section.data as HabitData).items = (section.data as HabitData).items.filter(x => x.id !== it.id);
+                    data.items = data.items.filter(x => x.id !== it.id);
                     this.renderSectionCards(row);
                 });
             }
@@ -436,7 +438,8 @@ export class TaskPlanView {
         } else if (section.type === 'steps') {
             (section.data as StepsData).items.push({ id, text: '', status: 'todo' });
         } else if (section.type === 'habit') {
-            (section.data as HabitData).items.push({ id, text: '' });
+            const data: HabitData = section.data;
+            data.items.push({ id, text: '' });
         } else if (section.type === 'file') {
             (section.data as FileData).items.push({ id, text: '', path: '' });
         }

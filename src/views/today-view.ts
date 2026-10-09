@@ -2,7 +2,7 @@ import type { App } from 'obsidian';
 import { Notice, setIcon } from 'obsidian';
 
 import type { TimeBlockCategoryData } from './week-view/timeblock-category-manager';
-import type { InboxData, InboxItem, Section, ChecklistData, StepsData, HabitData, FileData } from '../datatypes/domain';
+import type { InboxData, InboxItem, ChecklistData, StepsData, HabitData, FileData } from '../datatypes/domain';
 import { SECTION_TYPE_META } from '../datatypes/domain';
 import { renderTaskPanel } from '../shared/task-panel';
 import { getCurrentDayKey, getISOWeek, makeDayKey, makeDayKeyFromWeek, makeWeekKey } from './week-view/timeblock-data';
@@ -1151,7 +1151,7 @@ export class TodayView {
         }
 
         // 当前任务拥有的板块卡片
-        this.renderDetailSections(body, item.sections);
+        this.renderDetailSections(body, item);
     }
 
     /** 展示时间轴事件详情 */
@@ -1185,7 +1185,7 @@ export class TodayView {
             body.createDiv({ cls: 'today-detail-desc' })
                 .setText(sourceItem.description || t('today.noDescription'));
             // 来源任务拥有的板块卡片
-            this.renderDetailSections(body, sourceItem.sections);
+            this.renderDetailSections(body, sourceItem);
         }
     }
 
@@ -1215,12 +1215,13 @@ export class TodayView {
             body.createDiv({ cls: 'today-detail-desc' })
                 .setText(item.description || t('today.noDescription'));
             // 来源任务拥有的板块卡片
-            this.renderDetailSections(body, item.sections);
+            this.renderDetailSections(body, item);
         }
     }
 
-    /** 在任务详情方框中渲染板块卡片（只读，复用任务计划视图的卡片样式） */
-    private renderDetailSections(body: HTMLElement, sections?: Section[]): void {
+    /** 在任务详情方框中渲染板块卡片（清单可勾选，其余只读，复用任务计划视图的卡片样式） */
+    private renderDetailSections(body: HTMLElement, item: InboxItem): void {
+        const sections = item.sections;
         if (!sections || sections.length === 0) return;
 
         const wrap = body.createDiv({ cls: 'today-detail-sections' });
@@ -1250,7 +1251,18 @@ export class TodayView {
 
             if (section.type === 'checklist') {
                 for (const it of (section.data as ChecklistData).items) {
-                    this.renderDetailSectionItem(itemsEl, it.done ? '☑' : '☐', it.text);
+                    const itemEl = this.renderDetailSectionItem(itemsEl, it.done ? '☑' : '☐', it.text);
+                    // 点击清单条目：切换勾选状态并持久化
+                    itemEl.addClass('is-clickable');
+                    if (it.done) itemEl.addClass('is-done');
+                    itemEl.onclick = (e) => {
+                        e.stopPropagation();
+                        it.done = !it.done;
+                        void (async () => {
+                            await this.save();
+                            await this.refresh();
+                        })();
+                    };
                 }
             } else if (section.type === 'steps') {
                 for (const it of (section.data as StepsData).items) {
@@ -1258,7 +1270,8 @@ export class TodayView {
                     this.renderDetailSectionItem(itemsEl, mark, it.text);
                 }
             } else if (section.type === 'habit') {
-                for (const it of (section.data as HabitData).items) {
+                const data: HabitData = section.data;
+                for (const it of data.items) {
                     const count = it.checkedDays?.length ?? 0;
                     this.renderDetailSectionItem(itemsEl, '🔁', it.text, String(count));
                 }

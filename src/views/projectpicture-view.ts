@@ -406,7 +406,8 @@ export class SwimlaneView {
                 this.renderSectionCardItem(itemsEl, mark, it.text);
             }
         } else if (section.type === 'habit') {
-            for (const it of (section.data as HabitData).items) {
+            const data: HabitData = section.data;
+            for (const it of data.items) {
                 const count = it.checkedDays?.length ?? 0;
                 this.renderSectionCardItem(itemsEl, '🔁', it.text, String(count));
             }

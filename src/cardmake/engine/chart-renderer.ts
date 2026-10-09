@@ -52,7 +52,7 @@ function renderBarChart(container: HTMLElement, data: ChartSeries['data'], optio
     const barGap = 4;
     const barW = Math.max(2, (width - padLeft * 2 - barGap * (data.length - 1)) / data.length);
 
-    const svg = createSvg(container, width, height);
+    const svg = createChartSvg(container, width, height);
     for (let i = 0; i < data.length; i++) {
         const d = data[i];
         const h = (d.value / max) * chartH;
@@ -93,7 +93,7 @@ function renderLineChart(container: HTMLElement, data: ChartSeries['data'], opti
     const n = data.length;
     const stepX = n > 1 ? (width - padLeft * 2) / (n - 1) : 0;
 
-    const svg = createSvg(container, width, height);
+    const svg = createChartSvg(container, width, height);
     const points: string[] = [];
     for (let i = 0; i < n; i++) {
         const x = padLeft + i * stepX;
@@ -144,7 +144,7 @@ function renderPieChart(
         return;
     }
 
-    const svg = createSvg(container, size, size);
+    const svg = createChartSvg(container, size, size);
     let angle = -Math.PI / 2; // 从顶部开始
     for (let i = 0; i < data.length; i++) {
         const frac = data[i].value / total;
@@ -189,23 +189,20 @@ function pieSlice(cx: number, cy: number, outerR: number, innerR: number, start:
 }
 
 /** 创建 SVG 根节点 */
-function createSvg(container: HTMLElement, width: number, height: number): SVGSVGElement {
-    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-    svg.setAttribute('class', 'wb-chart-svg');
-    svg.setAttribute('width', String(width));
-    svg.setAttribute('height', String(height));
-    svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
-    container.appendChild(svg);
-    return svg;
+function createChartSvg(container: HTMLElement, width: number, height: number): SVGSVGElement {
+    return container.createSvg('svg', {
+        cls: 'wb-chart-svg',
+        attr: {
+            width: String(width),
+            height: String(height),
+            viewBox: `0 0 ${width} ${height}`,
+        },
+    });
 }
 
 /** 创建 SVG 元素 */
-function svgEl(tag: string, attrs: Record<string, string>): SVGElement {
-    const el = document.createElementNS('http://www.w3.org/2000/svg', tag);
-    for (const [k, v] of Object.entries(attrs)) {
-        el.setAttribute(k, v);
-    }
-    return el;
+function svgEl<K extends keyof SVGElementTagNameMap>(tag: K, attrs: Record<string, string>): SVGElementTagNameMap[K] {
+    return createSvg(tag, { attr: attrs });
 }
 
 /** 截断过长文本 */

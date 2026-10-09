@@ -32,6 +32,10 @@ export interface CardInstance {
     width?: number;
     /** 卡片自定义高度（像素，编辑布局时拖拽调整；缺省由内容决定） */
     height?: number;
+    /** 网格列坐标（0 基，编辑布局时拖动排布；缺省按顺序自动排布） */
+    col?: number;
+    /** 网格行坐标（0 基，编辑布局时拖动排布；缺省按顺序自动排布） */
+    row?: number;
 }
 
 /** 工作台布局：一组卡片实例的命名快照 */

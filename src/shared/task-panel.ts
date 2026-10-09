@@ -567,7 +567,8 @@ export function renderTaskPanel(
                     renderSectionEntry(item, section.id, depth + 1, it.id, mark, it.text);
                 }
             } else if (section.type === 'habit') {
-                for (const it of (section.data as HabitData).items) {
+                const data: HabitData = section.data;
+                for (const it of data.items) {
                     const count = it.checkedDays?.length ?? 0;
                     renderSectionEntry(item, section.id, depth + 1, it.id, '🔁', it.text, String(count));
                 }
@@ -1049,7 +1050,7 @@ class InboxDetailModal extends Modal {
         // 深拷贝板块，避免编辑时直接改动原数据（取消时不生效）
         this.sections = (item.sections ?? []).map(s => ({
             ...s,
-            data: JSON.parse(JSON.stringify(s.data)),
+            data: JSON.parse(JSON.stringify(s.data)) as Section['data'],
         }));
     }
 
@@ -1179,7 +1180,7 @@ class InboxDetailModal extends Modal {
                 };
             }
         } else if (section.type === 'habit') {
-            const data = section.data as HabitData;
+            const data: HabitData = section.data;
             for (const item of data.items) {
                 const row = itemsEl.createDiv({ cls: 'section-item-row' });
                 const text = row.createEl('input', { type: 'text', cls: 'section-item-text' });
@@ -1234,7 +1235,8 @@ class InboxDetailModal extends Modal {
         } else if (section.type === 'steps') {
             (section.data as StepsData).items.push({ id, text: '', status: 'todo' });
         } else if (section.type === 'habit') {
-            (section.data as HabitData).items.push({ id, text: '' });
+            const data: HabitData = section.data;
+            data.items.push({ id, text: '' });
         } else if (section.type === 'file') {
             (section.data as FileData).items.push({ id, text: '', path: '' });
         }
