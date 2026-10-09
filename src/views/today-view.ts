@@ -2,6 +2,7 @@ import type { App } from 'obsidian';
 import { Notice, setIcon } from 'obsidian';
 
 import type { TimeBlockCategoryData } from './week-view/timeblock-category-manager';
+import { UNCATEGORIZED_CATEGORY_ID } from './week-view/timeblock-category-manager';
 import type { InboxData, InboxItem, ChecklistData, StepsData, HabitData, FileData } from '../datatypes/domain';
 import { SECTION_TYPE_META } from '../datatypes/domain';
 import { renderTaskPanel } from '../shared/task-panel';
@@ -134,6 +135,8 @@ export class TodayView {
             // 未选中任何任务/事件时，在任务详情方框的位置展示「周目标方框」
             this.renderDetailBox(centerPanel);
         } else {
+            // 周目标 / 日目标方框上方：今日各分类已执行时长（图形化）
+            this.renderCategoryDurationBox(centerPanel);
             this.renderWeekGoalBox(centerPanel);
         }
         // 替换模式下，在任务详情下方展示「替换任务详情方框」
@@ -566,6 +569,55 @@ export class TodayView {
             }
         };
         durationRow.createSpan({ cls: 'today-detail-label', text: t('today.addUnplannedMinutes') });
+    }
+
+    /**
+     * 渲染「今日各分类已执行时长」方框（位于周目标 / 日目标方框上方）。
+     * 按分类聚合当前查看日期的执行记录时长，用横向条形图展示。
+     */
+    private renderCategoryDurationBox(panel: HTMLElement) {
+        const { day, weekKey } = this.getViewDayInfo();
+        const executions = this.getExecutions().filter(
+            ex => ex.day === day && ex.weekKey === weekKey,
+        );
+
+        // 按分类聚合执行时长（分钟）
+        const minutesByCat = new Map<string, number>();
+        for (const ex of executions) {
+            const item = ex.inboxId
+                ? this.inboxData.items.find(i => i.id === ex.inboxId && !i.removed)
+                : undefined;
+            const catId = item?.categoryId ?? UNCATEGORIZED_CATEGORY_ID;
+            const minutes = Math.max(0, ex.end - ex.start);
+            minutesByCat.set(catId, (minutesByCat.get(catId) ?? 0) + minutes);
+        }
+
+        const box = panel.createDiv({ cls: 'today-cat-duration-box' });
+        box.createDiv({ cls: 'today-cat-duration-title', text: t('today.categoryDurationTitle') });
+
+        if (minutesByCat.size === 0) {
+            box.createDiv({ cls: 'today-cat-duration-empty', text: t('today.categoryDurationEmpty') });
+            return;
+        }
+
+        // 按分类顺序排列，仅显示有时长的分类
+        const rows = this.categoryData.categories
+            .map(cat => ({ cat, minutes: minutesByCat.get(cat.id) ?? 0 }))
+            .filter(r => r.minutes > 0);
+        const maxMinutes = Math.max(...rows.map(r => r.minutes), 1);
+
+        const chart = box.createDiv({ cls: 'today-cat-duration-chart' });
+        for (const { cat, minutes } of rows) {
+            const row = chart.createDiv({ cls: 'today-cat-duration-row' });
+            row.createDiv({ cls: 'today-cat-duration-label', text: cat.label });
+            const track = row.createDiv({ cls: 'today-cat-duration-track' });
+            const bar = track.createDiv({ cls: 'today-cat-duration-bar' });
+            bar.setCssProps({
+                '--bar-color': cat.color ?? '#888888',
+                '--bar-width': `${Math.round((minutes / maxMinutes) * 100)}%`,
+            });
+            row.createDiv({ cls: 'today-cat-duration-value', text: formatHours(minutes) });
+        }
     }
 
     /**

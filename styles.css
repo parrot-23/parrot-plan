@@ -2438,6 +2438,76 @@
     overflow: hidden;
 }
 
+/* 今日各分类已执行时长方框（位于周目标 / 日目标方框上方） */
+.today-cat-duration-box {
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 10px 14px;
+    margin-bottom: 8px;
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 10px;
+    background: var(--background-secondary);
+}
+
+.today-cat-duration-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-normal);
+}
+
+.today-cat-duration-empty {
+    font-size: 12px;
+    color: var(--text-muted);
+}
+
+.today-cat-duration-chart {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.today-cat-duration-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.today-cat-duration-label {
+    flex-shrink: 0;
+    width: 72px;
+    font-size: 12px;
+    color: var(--text-muted);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.today-cat-duration-track {
+    flex: 1;
+    height: 14px;
+    border-radius: 7px;
+    background: var(--background-modifier-hover);
+    overflow: hidden;
+}
+
+.today-cat-duration-bar {
+    height: 100%;
+    width: var(--bar-width, 0%);
+    border-radius: 7px;
+    background: var(--bar-color, #888888);
+    transition: width 0.2s ease;
+}
+
+.today-cat-duration-value {
+    flex-shrink: 0;
+    width: 44px;
+    text-align: right;
+    font-size: 12px;
+    color: var(--text-normal);
+}
+
 .today-detail-title-row {
     flex-shrink: 0;
     display: flex;

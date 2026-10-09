@@ -93,6 +93,8 @@ export const zh = {
     'today.weekGoalDoneCount': '{done}/{count}',
     'today.dayGoalTitle': '日目标',
     'today.dayGoalEmpty': '今日暂无计划事件',
+    'today.categoryDurationTitle': '今日各分类已执行时长',
+    'today.categoryDurationEmpty': '今日暂无执行记录',
     'today.addedListTitle': '新增事项',
     'today.addedListEmpty': '今日暂无新增事项',
     'today.addUnplannedTitle': '执行非计划事件',

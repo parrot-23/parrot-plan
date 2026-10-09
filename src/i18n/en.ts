@@ -95,6 +95,8 @@ export const en: I18nMessages = {
     'today.weekGoalDoneCount': '{done}/{count}',
     'today.dayGoalTitle': 'Day Goals',
     'today.dayGoalEmpty': 'No planned events today',
+    'today.categoryDurationTitle': 'Executed duration by category today',
+    'today.categoryDurationEmpty': 'No executions today',
     'today.addedListTitle': 'Added Items',
     'today.addedListEmpty': 'No added items today',
     'today.addUnplannedTitle': 'Execute Unplanned Event',
