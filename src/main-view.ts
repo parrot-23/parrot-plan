@@ -46,6 +46,8 @@ export class MainView extends ItemView {
     private swimlaneView: SwimlaneView;
     private workbenchView: WorkbenchView;
     private activeTab: NavTab = 'today';
+    /** 上一次渲染的 tab（用于判断是否「进入」周计划视图） */
+    private prevTab: NavTab | undefined;
     private contentRoot!: HTMLElement;
     /** 缓存目录名称（用于帮助弹窗引用缓存图片） */
     private cacheDirName: string;
@@ -218,6 +220,12 @@ export class MainView extends ItemView {
         this.contentRoot.empty();
         // 清除上一次视图残留在共享容器上的视图类，避免多个视图样式叠加导致布局错乱
         this.contentRoot.removeClass('today-view', 'year-view', 'task-plan-view', 'swimlane-view', 'workbench-view');
+
+        // 从其他页面进入周计划视图时，若未选中任务则默认激活「周目标」
+        if (this.activeTab === 'week' && this.prevTab !== 'week' && !this.weekView.inboxData.selectedId) {
+            this.weekView.inboxData.weekGoalOnly = true;
+        }
+        this.prevTab = this.activeTab;
 
         if (this.activeTab === 'week') {
             await this.weekView.renderInto(this.contentRoot);

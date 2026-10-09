@@ -1224,8 +1224,13 @@ export class TodayView {
         if (!sections || sections.length === 0) return;
 
         const wrap = body.createDiv({ cls: 'today-detail-sections' });
+        // 清单类型单独一行，其他类型（步骤/打卡/文件）一起放在下面一行
+        const checklistRow = wrap.createDiv({ cls: 'today-detail-sections-row' });
+        const otherRow = wrap.createDiv({ cls: 'today-detail-sections-row' });
+
         for (const section of sections) {
-            const card = wrap.createDiv({ cls: 'swimlane-section-card' });
+            const row = section.type === 'checklist' ? checklistRow : otherRow;
+            const card = row.createDiv({ cls: 'swimlane-section-card' });
 
             // 卡片头部：类型图标 + 类型名 + 板块名
             const head = card.createDiv({ cls: 'swimlane-section-card-head' });
@@ -1271,6 +1276,10 @@ export class TodayView {
                 }
             }
         }
+
+        // 隐藏没有卡片的行，避免多余间距
+        if (checklistRow.childElementCount === 0) checklistRow.remove();
+        if (otherRow.childElementCount === 0) otherRow.remove();
     }
 
     /** 渲染板块卡片中的单条条目 */
