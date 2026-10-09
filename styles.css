@@ -4062,10 +4062,16 @@
 /* 标题：编辑态下可按住拖动整张卡片 */
 .wb-card-title.is-draggable {
     cursor: grab;
+    border-radius: 4px;
+}
+
+.wb-card-title.is-draggable:hover {
+    background: var(--background-modifier-hover);
 }
 
 .wb-card-title.is-draggable:active {
     cursor: grabbing;
+    background: var(--background-modifier-hover);
 }
 
 /* 四角圆点：默认隐藏，悬停卡片时显示 */
