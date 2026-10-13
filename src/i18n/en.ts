@@ -40,6 +40,13 @@ export const en: I18nMessages = {
     'nav.achievement': 'Achievements',
     'nav.story': 'Story',
     'nav.gtd': 'GTD',
+    'nav.scene': 'Scene',
+    'nav.scriptManage': 'Script Manager',
+    'nav.gtdCollect': 'Collect',
+    'nav.gtdOrganize': 'Organize',
+    'nav.gtdClarify': 'Clarify',
+    'nav.gtdReview': 'Review',
+    'nav.gtdEngage': 'Engage',
     'nav.placeholder': 'This is the "{name}" page',
 
     // Task Plan view

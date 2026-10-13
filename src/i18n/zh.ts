@@ -38,6 +38,13 @@ export const zh = {
     'nav.achievement': '成就榜单',
     'nav.story': '故事',
     'nav.gtd': 'GTD',
+    'nav.scene': '剧本场景',
+    'nav.scriptManage': '剧本管理',
+    'nav.gtdCollect': '收集',
+    'nav.gtdOrganize': '组织',
+    'nav.gtdClarify': '梳理',
+    'nav.gtdReview': '回顾',
+    'nav.gtdEngage': '执行',
     'nav.placeholder': '当前是「{name}」页面',
 
     // 任务计划视图

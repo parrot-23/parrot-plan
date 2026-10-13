@@ -27,7 +27,7 @@ export const VIEW_TYPE_MAIN = 'parrot-plan-main-view';
 type PrimaryView = 'pdca' | 'okr' | 'workbench' | 'story' | 'gtd';
 
 /** 二级视图（tab）标识 */
-type NavTab = 'year' | 'taskPlan' | 'week' | 'today' | 'check' | 'improve' | 'swimlane' | 'workbench' | 'achievement' | 'gtd' | 'okrHome' | 'okrTaskPlan';
+type NavTab = 'year' | 'taskPlan' | 'week' | 'today' | 'check' | 'improve' | 'swimlane' | 'workbench' | 'achievement' | 'gtd' | 'okrHome' | 'okrTaskPlan' | 'scene' | 'scriptManage' | 'gtdCollect' | 'gtdOrganize' | 'gtdClarify' | 'gtdReview' | 'gtdEngage';
 
 /** 一级视图定义（顶部第一行） */
 const PRIMARY_VIEWS: { id: PrimaryView; labelKey: 'nav.pdca' | 'nav.okr' | 'nav.workbench' | 'nav.story' | 'nav.gtd' }[] = [
@@ -39,7 +39,7 @@ const PRIMARY_VIEWS: { id: PrimaryView; labelKey: 'nav.pdca' | 'nav.okr' | 'nav.
 ];
 
 /** 二级视图定义（顶部第二行，按一级视图分组；label 存 i18n key，渲染时再求值） */
-const SECONDARY_TABS: Record<PrimaryView, { id: NavTab; labelKey: 'nav.year' | 'nav.taskPlan' | 'nav.week' | 'nav.today' | 'nav.check' | 'nav.improve' | 'nav.projectPicture' | 'nav.workbench' | 'nav.achievement' | 'nav.gtd' | 'nav.okr' }[]> = {
+const SECONDARY_TABS: Record<PrimaryView, { id: NavTab; labelKey: 'nav.year' | 'nav.taskPlan' | 'nav.week' | 'nav.today' | 'nav.check' | 'nav.improve' | 'nav.projectPicture' | 'nav.workbench' | 'nav.achievement' | 'nav.gtd' | 'nav.okr' | 'nav.scene' | 'nav.scriptManage' | 'nav.gtdCollect' | 'nav.gtdOrganize' | 'nav.gtdClarify' | 'nav.gtdReview' | 'nav.gtdEngage' }[]> = {
     pdca: [
         { id: 'week', labelKey: 'nav.week' },
         { id: 'today', labelKey: 'nav.today' },
@@ -54,9 +54,15 @@ const SECONDARY_TABS: Record<PrimaryView, { id: NavTab; labelKey: 'nav.year' | '
     ],
     story: [
         { id: 'achievement', labelKey: 'nav.achievement' },
+        { id: 'scene', labelKey: 'nav.scene' },
+        { id: 'scriptManage', labelKey: 'nav.scriptManage' },
     ],
     gtd: [
-        { id: 'gtd', labelKey: 'nav.gtd' },
+        { id: 'gtdCollect', labelKey: 'nav.gtdCollect' },
+        { id: 'gtdOrganize', labelKey: 'nav.gtdOrganize' },
+        { id: 'gtdClarify', labelKey: 'nav.gtdClarify' },
+        { id: 'gtdReview', labelKey: 'nav.gtdReview' },
+        { id: 'gtdEngage', labelKey: 'nav.gtdEngage' },
     ],
 };
 
@@ -66,7 +72,7 @@ const DEFAULT_TAB: Record<PrimaryView, NavTab> = {
     okr: 'okrTaskPlan',
     workbench: 'workbench',
     story: 'achievement',
-    gtd: 'gtd',
+    gtd: 'gtdCollect',
 };
 
 /**
@@ -89,6 +95,8 @@ export class MainView extends ItemView {
     private activePrimary: PrimaryView = 'pdca';
     /** 当前二级视图（tab） */
     private activeTab: NavTab = 'today';
+    /** 记录每个一级视图上次打开的二级视图（切换一级视图时恢复） */
+    private lastTabByPrimary: Partial<Record<PrimaryView, NavTab>> = {};
     /** 上一次渲染的 tab（用于判断是否「进入」周计划视图） */
     private prevTab: NavTab | undefined;
     private contentRoot!: HTMLElement;
@@ -237,9 +245,11 @@ export class MainView extends ItemView {
             if (pv.id === this.activePrimary) btn.addClass('is-active');
             btn.onclick = () => {
                 if (this.activePrimary === pv.id) return;
+                // 记录当前一级视图正在查看的二级视图
+                this.lastTabByPrimary[this.activePrimary] = this.activeTab;
                 this.activePrimary = pv.id;
-                // 切换一级视图时，激活该一级视图的默认二级视图
-                this.activeTab = DEFAULT_TAB[pv.id];
+                // 恢复该一级视图上次打开的二级视图（无记录时用默认值兜底）
+                this.activeTab = this.lastTabByPrimary[pv.id] ?? DEFAULT_TAB[pv.id];
                 // 重建二级视图 tab 行
                 this.renderSecondaryTabs();
                 void this.renderContent();
@@ -283,6 +293,8 @@ export class MainView extends ItemView {
             if (tab.id === this.activeTab) btn.addClass('is-active');
             btn.onclick = () => {
                 this.activeTab = tab.id;
+                // 记录当前一级视图正在查看的二级视图
+                this.lastTabByPrimary[this.activePrimary] = tab.id;
                 void this.renderContent();
             };
         }
