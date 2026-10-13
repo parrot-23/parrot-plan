@@ -3082,6 +3082,20 @@
     width: 50px;
     box-sizing: border-box;
     cursor: pointer;
+    position: relative;
+}
+
+/* 方案时间区间分类色条：贴在时间刻度列内部最右侧（窄色条，实心分类色） */
+.today-scheme-bar {
+    position: absolute;
+    right: 0;
+    width: 7px;
+    top: var(--bar-top, 0);
+    height: var(--bar-height, 0);
+    background-color: var(--bar-color, #888888);
+    border-radius: 2px;
+    pointer-events: none;
+    z-index: 1;
 }
 
 .today-day-column {

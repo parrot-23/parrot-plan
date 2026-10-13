@@ -5,7 +5,7 @@ import type { TimeBlockCategoryData } from '../../shared/timeblock-category-mana
 import { UNCATEGORIZED_CATEGORY_ID } from '../../shared/timeblock-category-manager';
 import type { InboxData, InboxItem, ChecklistData, StepsData, HabitData, FileData } from '../../datatypes/domain';
 import { SECTION_TYPE_META } from '../../datatypes/domain';
-import { getCurrentDayKey, getISOWeek, makeDayKey, makeDayKeyFromWeek, makeWeekKey, hexToTransparent } from '../../shared/timeblock-data';
+import { getCurrentDayKey, getISOWeek, makeDayKey, makeDayKeyFromWeek, makeWeekKey } from '../../shared/timeblock-data';
 import type { DailyRange } from '../../shared/timeblock-data';
 import type { EventBlock, ExecutionRecord } from '../../datatypes/domain';
 import { getWeekDays, t } from '../../i18n';
@@ -1422,6 +1422,9 @@ export class TodayView {
                 .setText(`${h.toString().padStart(2, '0')}:00`);
         }
 
+        // 方案时间区间分类色条：贴在时间刻度列内部最右侧（窄色条，不显示文字）
+        this.renderSchemeBars(timeCol);
+
         // 点击左侧时间刻度列 → 新增非计划事件（起始时间按点击位置换算，吸附到 5 分钟）
         timeCol.onclick = (e) => {
             const rect = timeCol.getBoundingClientRect();
@@ -1437,9 +1440,6 @@ export class TodayView {
         for (let h = 0; h < 24; h += 2) {
             col.createDiv({ cls: 'hour-cell two-hour' });
         }
-
-        // 方案时间区块背景：左侧垂直线条，按方案分类颜色（与周计划视图一致）
-        this.renderSchemeBars(col);
 
         // 今天的计划事件（按当前周键 + 今天星期几筛选）
         this.renderTodayEvents(col);
@@ -1457,25 +1457,24 @@ export class TodayView {
     }
 
     /**
-     * 渲染方案时间区块背景：左侧垂直线条，颜色取自方案分类。
-     * 与周计划视图的只读时间区块背景（.range-bg）保持一致。
+     * 渲染方案时间区间分类色条：贴在时间刻度列内部最右侧。
+     * 窄色条（约 6-8px），实心分类色，不显示文字，不拦截点击。
      */
-    private renderSchemeBars(col: HTMLElement) {
+    private renderSchemeBars(timeCol: HTMLElement) {
         const { day } = this.getViewDayInfo();
         const dayData = this.getSchemeDays().find(d => d.day === day);
         const ranges = dayData?.ranges ?? [];
         for (const range of ranges) {
-            const bgBlock = col.createDiv({ cls: 'range-block range-bg' });
+            const bar = timeCol.createDiv({ cls: 'today-scheme-bar' });
             const cat = this.categoryData.categories.find(c => c.id === range.sort);
-            const rawColor = cat?.color ?? '#888888';
-            const afColor = hexToTransparent(rawColor, 0.5);
+            const color = cat?.color ?? '#888888';
 
             const top = (range.start / 120) * 80;
             const height = ((range.end - range.start) / 120) * 80;
-            bgBlock.setCssProps({
-                '--range-color': afColor,
-                '--range-top': `${top}px`,
-                '--range-height': `${height}px`,
+            bar.setCssProps({
+                '--bar-color': color,
+                '--bar-top': `${top}px`,
+                '--bar-height': `${height}px`,
             });
         }
     }
