@@ -10,6 +10,8 @@ import type { EventBlock, ExecutionRecord } from './datatypes/domain';
 import { YearView } from './views/pdca/year-view';
 import { TaskPlanView } from './views/pdca/task-plan-view';
 import { TodayView } from './views/pdca/today-view';
+import { CheckView } from './views/pdca/check-view';
+import { ImproveView } from './views/pdca/improve-view';
 import { SwimlaneView } from './views/pdca/projectpicture-view';
 import { WorkbenchView } from './views/pdca/workbench/workbench-view';
 import { OkrView } from './views/okr/okr-view';
@@ -25,7 +27,7 @@ export const VIEW_TYPE_MAIN = 'parrot-plan-main-view';
 type PrimaryView = 'pdca' | 'okr';
 
 /** 二级视图（tab）标识 */
-type NavTab = 'year' | 'taskPlan' | 'week' | 'today' | 'swimlane' | 'workbench' | 'achievement' | 'okrHome' | 'okrTaskPlan';
+type NavTab = 'year' | 'taskPlan' | 'week' | 'today' | 'check' | 'improve' | 'swimlane' | 'workbench' | 'achievement' | 'okrHome' | 'okrTaskPlan';
 
 /** 一级视图定义（顶部第一行） */
 const PRIMARY_VIEWS: { id: PrimaryView; labelKey: 'nav.pdca' | 'nav.okr' }[] = [
@@ -34,10 +36,12 @@ const PRIMARY_VIEWS: { id: PrimaryView; labelKey: 'nav.pdca' | 'nav.okr' }[] = [
 ];
 
 /** 二级视图定义（顶部第二行，按一级视图分组；label 存 i18n key，渲染时再求值） */
-const SECONDARY_TABS: Record<PrimaryView, { id: NavTab; labelKey: 'nav.year' | 'nav.taskPlan' | 'nav.week' | 'nav.today' | 'nav.projectPicture' | 'nav.workbench' | 'nav.achievement' | 'nav.okr' }[]> = {
+const SECONDARY_TABS: Record<PrimaryView, { id: NavTab; labelKey: 'nav.year' | 'nav.taskPlan' | 'nav.week' | 'nav.today' | 'nav.check' | 'nav.improve' | 'nav.projectPicture' | 'nav.workbench' | 'nav.achievement' | 'nav.okr' }[]> = {
     pdca: [
         { id: 'week', labelKey: 'nav.week' },
         { id: 'today', labelKey: 'nav.today' },
+        { id: 'check', labelKey: 'nav.check' },
+        { id: 'improve', labelKey: 'nav.improve' },
         { id: 'swimlane', labelKey: 'nav.projectPicture' },
         { id: 'workbench', labelKey: 'nav.workbench' },
         { id: 'achievement', labelKey: 'nav.achievement' },
@@ -59,6 +63,8 @@ export class MainView extends ItemView {
     private yearView: YearView;
     private taskPlanView: TaskPlanView;
     private todayView: TodayView;
+    private checkView: CheckView;
+    private improveView: ImproveView;
     private swimlaneView: SwimlaneView;
     private workbenchView: WorkbenchView;
     private okrView: OkrView;
@@ -151,6 +157,20 @@ export class MainView extends ItemView {
                 })();
             },
             () => this.weekView.getSchemeDays(),
+        );
+        this.checkView = new CheckView(
+            this.app,
+            this.weekView.inboxData,
+            this.weekView.timeBlockCategoryData,
+            () => this.weekView.events,
+            () => this.weekView.executions,
+        );
+        this.improveView = new ImproveView(
+            this.app,
+            this.weekView.inboxData,
+            this.weekView.timeBlockCategoryData,
+            () => this.weekView.events,
+            () => this.weekView.executions,
         );
         this.swimlaneView = new SwimlaneView(
             this.app,
@@ -286,7 +306,7 @@ export class MainView extends ItemView {
 
         this.contentRoot.empty();
         // 清除上一次视图残留在共享容器上的视图类，避免多个视图样式叠加导致布局错乱
-        this.contentRoot.removeClass('today-view', 'year-view', 'task-plan-view', 'swimlane-view', 'workbench-view');
+        this.contentRoot.removeClass('today-view', 'year-view', 'task-plan-view', 'swimlane-view', 'workbench-view', 'check-view', 'improve-view');
 
         // 从其他页面进入周计划视图时，若未选中任务则默认激活「周目标」
         if (this.activeTab === 'week' && this.prevTab !== 'week' && !this.weekView.inboxData.selectedId) {
@@ -316,6 +336,16 @@ export class MainView extends ItemView {
 
         if (this.activeTab === 'today') {
             await this.todayView.renderInto(this.contentRoot);
+            return;
+        }
+
+        if (this.activeTab === 'check') {
+            await this.checkView.renderInto(this.contentRoot);
+            return;
+        }
+
+        if (this.activeTab === 'improve') {
+            await this.improveView.renderInto(this.contentRoot);
             return;
         }
 
