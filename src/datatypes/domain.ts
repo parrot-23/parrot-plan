@@ -60,7 +60,37 @@ export interface InboxItem {
     removed?: boolean;
     /** 板块：任务内部的结构化内容（可选，旧任务无此字段） */
     sections?: Section[];
+    /** OKR 信息（可选，旧任务无此字段） */
+    okr?: OkrInfo;
 }
+
+/** 任务 OKR 信息（计划值，手填） */
+export interface OkrInfo {
+    /** OKR 条件列表（每行：条件类型 + 目标值） */
+    conditions: OkrCondition[];
+}
+
+/** OKR 条件类型：时长 / 次数 / 成果 / 数量 */
+export type OkrConditionType = 'duration' | 'times' | 'outcome' | 'count';
+
+/** OKR 条件项（一行：条件类型 + 目标值） */
+export interface OkrCondition {
+    id: string;
+    type: OkrConditionType;
+    /** 目标值 */
+    target: number;
+}
+
+/**
+ * OKR 条件类型原型数据：统一维护各类型的名称 i18n key 与单位 i18n key。
+ * 各视图统一从此处读取，避免各处重复判断。
+ */
+export const OKR_CONDITION_META: Record<OkrConditionType, { labelKey: string; unitKey: string }> = {
+    duration: { labelKey: 'okr.typeDuration', unitKey: 'okr.unitMinute' },
+    times: { labelKey: 'okr.typeTimes', unitKey: 'okr.unitTimes' },
+    outcome: { labelKey: 'okr.typeOutcome', unitKey: 'okr.unitCount' },
+    count: { labelKey: 'okr.typeCount', unitKey: 'okr.unitCount' },
+};
 
 /** 板块类型：清单 / 步骤 / 打卡 / 文件 */
 export type SectionType = 'checklist' | 'steps' | 'habit' | 'file';

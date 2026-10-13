@@ -46,6 +46,19 @@ export const en: I18nMessages = {
     'taskPlan.plannedWeeks': 'Planned weeks',
     'taskPlan.emptyValue': '—',
 
+    // OKR info
+    'okr.title': 'OKR Info',
+    'okr.addCondition': 'Add condition',
+    'okr.empty': 'No OKR conditions yet',
+    'okr.targetPlaceholder': 'Target',
+    'okr.typeDuration': 'Duration',
+    'okr.typeTimes': 'Times',
+    'okr.typeOutcome': 'Outcome',
+    'okr.typeCount': 'Count',
+    'okr.unitMinute': 'min',
+    'okr.unitTimes': 'times',
+    'okr.unitCount': 'pcs',
+
     // Help
     'help.title': 'Help',
     'help.todayIntro': 'This plugin is about data sovereignty. Your daily plan is not stored on any cloud platform, but on your own device. The plugin uses its own storage format, but the data is complete, readable, and recoverable. If the plugin stops being maintained, the file will belong to you. More importantly, it supports one-click export to Excel/CSV formats, so you can take your daily plan with you and analyze it, migrate it, or back it up.',

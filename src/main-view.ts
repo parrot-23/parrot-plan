@@ -13,6 +13,7 @@ import { TodayView } from './views/pdca/today-view';
 import { SwimlaneView } from './views/pdca/projectpicture-view';
 import { WorkbenchView } from './views/pdca/workbench/workbench-view';
 import { OkrView } from './views/okr/okr-view';
+import { OkrTaskPlanView } from './views/okr/okr-task-plan-view';
 import type { WorkbenchData } from './datatypes/card';
 import { t } from './i18n';
 import { log } from './shared/logger';
@@ -24,7 +25,7 @@ export const VIEW_TYPE_MAIN = 'parrot-plan-main-view';
 type PrimaryView = 'pdca' | 'okr';
 
 /** 二级视图（tab）标识 */
-type NavTab = 'year' | 'taskPlan' | 'week' | 'today' | 'swimlane' | 'workbench' | 'achievement' | 'okrHome';
+type NavTab = 'year' | 'taskPlan' | 'week' | 'today' | 'swimlane' | 'workbench' | 'achievement' | 'okrHome' | 'okrTaskPlan';
 
 /** 一级视图定义（顶部第一行） */
 const PRIMARY_VIEWS: { id: PrimaryView; labelKey: 'nav.pdca' | 'nav.okr' }[] = [
@@ -44,6 +45,7 @@ const SECONDARY_TABS: Record<PrimaryView, { id: NavTab; labelKey: 'nav.year' | '
         { id: 'year', labelKey: 'nav.year' },
     ],
     okr: [
+        { id: 'okrTaskPlan', labelKey: 'nav.taskPlan' },
         { id: 'okrHome', labelKey: 'nav.okr' },
     ],
 };
@@ -61,6 +63,7 @@ export class MainView extends ItemView {
     private swimlaneView: SwimlaneView;
     private workbenchView: WorkbenchView;
     private okrView: OkrView;
+    private okrTaskPlanView: OkrTaskPlanView;
     /** 当前一级视图 */
     private activePrimary: PrimaryView = 'pdca';
     /** 当前二级视图（tab） */
@@ -166,6 +169,12 @@ export class MainView extends ItemView {
             () => this.weekView.inboxData.items,
         );
         this.okrView = new OkrView(this.app);
+        this.okrTaskPlanView = new OkrTaskPlanView(
+            this.app,
+            this.weekView.inboxData,
+            this.weekView.timeBlockCategoryData,
+            () => this.weekView.save(),
+        );
     }
 
     getViewType(): string {
@@ -297,6 +306,11 @@ export class MainView extends ItemView {
 
         if (this.activeTab === 'taskPlan') {
             await this.taskPlanView.renderInto(this.contentRoot);
+            return;
+        }
+
+        if (this.activeTab === 'okrTaskPlan') {
+            await this.okrTaskPlanView.renderInto(this.contentRoot);
             return;
         }
 

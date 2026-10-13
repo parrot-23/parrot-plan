@@ -3283,6 +3283,48 @@
     color: var(--text-faint);
 }
 
+/* OKR 信息方框 */
+.okr-add-btn {
+    flex-shrink: 0;
+    padding: 2px 10px;
+    font-size: 12px;
+    cursor: pointer;
+}
+
+.okr-body {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.okr-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.okr-type-select {
+    flex-shrink: 0;
+    min-width: 80px;
+}
+
+.okr-target-input {
+    width: 100px;
+    flex-shrink: 0;
+}
+
+.okr-unit {
+    font-size: 13px;
+    color: var(--text-muted);
+}
+
+.okr-del-btn {
+    flex-shrink: 0;
+    padding: 0 6px;
+    line-height: 1;
+    cursor: pointer;
+}
+
 /* 板块卡片（白色背景） */
 .swimlane-section-card {
     flex-shrink: 0;

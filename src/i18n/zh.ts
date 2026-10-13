@@ -44,6 +44,19 @@ export const zh = {
     'taskPlan.plannedWeeks': '已计划周数',
     'taskPlan.emptyValue': '—',
 
+    // OKR 信息
+    'okr.title': 'OKR 信息',
+    'okr.addCondition': '添加条件',
+    'okr.empty': '暂无 OKR 条件',
+    'okr.targetPlaceholder': '目标值',
+    'okr.typeDuration': '时长',
+    'okr.typeTimes': '次数',
+    'okr.typeOutcome': '成果',
+    'okr.typeCount': '数量',
+    'okr.unitMinute': '分钟',
+    'okr.unitTimes': '次',
+    'okr.unitCount': '个',
+
     // 帮助
     'help.title': '帮助文档',
     'help.todayIntro': '这个插件的核心理念是：**数据主权归用户**。你的日程计划不归属于任何平台的云端，而是保存在你自己的设备上；插件采用自有存储格式，但数据完整、可读、可恢复，即使插件停止维护，文件依然属于你。更关键的是，支持一键导出 Excel/CSV 等通用格式，用户随时可以把多年的日程带走分析、迁移或备份。',
