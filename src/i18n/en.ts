@@ -59,6 +59,13 @@ export const en: I18nMessages = {
     'okr.unitTimes': 'times',
     'okr.unitCount': 'pcs',
 
+    // OKR progress
+    'okr.progressTitle': 'Progress',
+    'okr.progressEmpty': 'No OKR conditions yet',
+    'okr.progressTarget': 'Target',
+    'okr.progressCurrent': 'Current',
+    'okr.progressPercent': '{percent}%',
+
     // Help
     'help.title': 'Help',
     'help.todayIntro': 'This plugin is about data sovereignty. Your daily plan is not stored on any cloud platform, but on your own device. The plugin uses its own storage format, but the data is complete, readable, and recoverable. If the plugin stops being maintained, the file will belong to you. More importantly, it supports one-click export to Excel/CSV formats, so you can take your daily plan with you and analyze it, migrate it, or back it up.',

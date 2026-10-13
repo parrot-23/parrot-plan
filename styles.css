@@ -3325,6 +3325,56 @@
     cursor: pointer;
 }
 
+/* OKR 进度方框 */
+.okr-progress-body {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.okr-progress-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.okr-progress-label {
+    flex-shrink: 0;
+    min-width: 48px;
+    font-size: 13px;
+    color: var(--text-normal);
+}
+
+.okr-progress-bar {
+    flex: 1;
+    height: 10px;
+    border-radius: 5px;
+    background: var(--background-modifier-border);
+    overflow: hidden;
+}
+
+.okr-progress-fill {
+    height: 100%;
+    border-radius: 5px;
+    background: var(--interactive-accent);
+    transition: width 0.2s ease;
+}
+
+.okr-progress-value {
+    flex-shrink: 0;
+    font-size: 13px;
+    color: var(--text-muted);
+}
+
+.okr-progress-percent {
+    flex-shrink: 0;
+    min-width: 40px;
+    text-align: right;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-normal);
+}
+
 /* 板块卡片（白色背景） */
 .swimlane-section-card {
     flex-shrink: 0;

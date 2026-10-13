@@ -73,6 +73,10 @@ export class OkrTaskPlanView {
         const okrWrap = contentPanel.createDiv({ cls: 'okr-wrap' });
         this.renderOkrBox(okrWrap);
 
+        // 进度方框（当前选中任务的 OKR 条件完成进度）
+        const progressWrap = contentPanel.createDiv({ cls: 'okr-progress-wrap' });
+        this.renderProgressBox(progressWrap);
+
         // 板块信息方框（当前选中项目的板块卡片）
         const sectionsArea = contentPanel.createDiv({ cls: 'swimlane-section-area' });
         const sectionsHeader = sectionsArea.createDiv({ cls: 'swimlane-section-area-header' });
@@ -525,6 +529,57 @@ export class OkrTaskPlanView {
         item.okr.conditions = item.okr.conditions.filter(c => c.id !== condId);
         await this.save();
         this.renderOkrBox(wrap);
+    }
+
+    /** 进度方框：当前选中任务的 OKR 条件完成进度（当前值 / 目标值） */
+    private renderProgressBox(wrap: HTMLElement): void {
+        wrap.empty();
+
+        const selectedId = this.inboxData.selectedId;
+        const item = selectedId
+            ? this.inboxData.items.find(i => i.id === selectedId && !i.removed)
+            : undefined;
+        if (!item) return;
+
+        const area = wrap.createDiv({ cls: 'swimlane-section-area okr-progress-area' });
+        const header = area.createDiv({ cls: 'swimlane-section-area-header' });
+        header.createDiv({ cls: 'swimlane-section-area-title', text: t('okr.progressTitle') });
+
+        const body = area.createDiv({ cls: 'okr-progress-body' });
+        const conditions = item.okr?.conditions ?? [];
+        if (conditions.length === 0) {
+            body.createDiv({ cls: 'swimlane-sections-empty', text: t('okr.progressEmpty') });
+            return;
+        }
+
+        for (const cond of conditions) {
+            const row = body.createDiv({ cls: 'okr-progress-row' });
+
+            // 条件类型标签
+            row.createSpan({
+                cls: 'okr-progress-label',
+                text: t(OKR_CONDITION_META[cond.type].labelKey as Parameters<typeof t>[0]),
+            });
+
+            // 进度条
+            const bar = row.createDiv({ cls: 'okr-progress-bar' });
+            const fill = bar.createDiv({ cls: 'okr-progress-fill' });
+            const percent = cond.target > 0 ? Math.min(100, Math.round((0 / cond.target) * 100)) : 0;
+            fill.style.width = `${percent}%`;
+
+            // 数值：当前 / 目标
+            const unit = t(OKR_CONDITION_META[cond.type].unitKey as Parameters<typeof t>[0]);
+            row.createSpan({
+                cls: 'okr-progress-value',
+                text: `0 / ${cond.target} ${unit}`,
+            });
+
+            // 百分比
+            row.createSpan({
+                cls: 'okr-progress-percent',
+                text: t('okr.progressPercent', { percent: String(percent) }),
+            });
+        }
     }
 
     /** 渲染右侧信息表单：项目描述、分类（跟随当前选中任务） */
