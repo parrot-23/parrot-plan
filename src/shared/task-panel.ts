@@ -1,5 +1,5 @@
 import { App, Modal, Setting, Notice, AbstractInputSuggest, TFile, setIcon } from 'obsidian';
-import type { TimeBlockCategoryData } from '../views/week-view/timeblock-category-manager';
+import type { TimeBlockCategoryData } from './timeblock-category-manager';
 import { t } from '../i18n';
 import type { InboxItem, InboxData, Section, SectionType, ChecklistData, StepsData, HabitData, FileData, EventBlock } from '../datatypes/domain';
 import { DEFAULT_INBOX_DATA, SECTION_TYPE_META } from '../datatypes/domain';

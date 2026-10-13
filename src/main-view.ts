@@ -1,17 +1,18 @@
 import { ItemView, WorkspaceLeaf } from 'obsidian';
 import type { Plugin } from 'obsidian';
 
-import type { WeekRangeData, RangeSchemeData } from './views/week-view/timeblock-data';
-import type { TimeBlockCategoryData } from './views/week-view/timeblock-category-manager';
-import type { DayTemplateData } from './views/week-view/template-manager';
+import type { WeekRangeData, RangeSchemeData } from './shared/timeblock-data';
+import type { TimeBlockCategoryData } from './shared/timeblock-category-manager';
+import type { DayTemplateData } from './shared/template-manager';
 import type { InboxData } from './datatypes/domain';
-import { WeekScheduleView } from './views/week-view/week-schedule-view';
+import { WeekScheduleView } from './views/pdca/week-view/week-schedule-view';
 import type { EventBlock, ExecutionRecord } from './datatypes/domain';
-import { YearView } from './views/year-view';
-import { TaskPlanView } from './views/task-plan-view';
-import { TodayView } from './views/today-view';
-import { SwimlaneView } from './views/projectpicture-view';
-import { WorkbenchView } from './views/workbench/workbench-view';
+import { YearView } from './views/pdca/year-view';
+import { TaskPlanView } from './views/pdca/task-plan-view';
+import { TodayView } from './views/pdca/today-view';
+import { SwimlaneView } from './views/pdca/projectpicture-view';
+import { WorkbenchView } from './views/pdca/workbench/workbench-view';
+import { OkrView } from './views/okr/okr-view';
 import type { WorkbenchData } from './datatypes/card';
 import { t } from './i18n';
 import { log } from './shared/logger';
@@ -19,19 +20,33 @@ import { HelpModal } from './helper/help-modal';
 
 export const VIEW_TYPE_MAIN = 'parrot-plan-main-view';
 
-/** 主导航 tab 标识 */
-type NavTab = 'year' | 'taskPlan' | 'week' | 'today' | 'swimlane' | 'workbench' | 'achievement';
+/** 一级视图标识 */
+type PrimaryView = 'pdca' | 'okr';
 
-/** 主导航按钮定义（label 存 i18n key，渲染时再求值，避免模块加载时语言未初始化） */
-const NAV_TABS: { id: NavTab; labelKey: 'nav.year' | 'nav.taskPlan' | 'nav.week' | 'nav.today' | 'nav.projectPicture' | 'nav.workbench' | 'nav.achievement' }[] = [
-    { id: 'taskPlan', labelKey: 'nav.taskPlan' },
-    { id: 'week', labelKey: 'nav.week' },
-    { id: 'today', labelKey: 'nav.today' },
-    { id: 'swimlane', labelKey: 'nav.projectPicture' },
-    { id: 'workbench', labelKey: 'nav.workbench' },
-    { id: 'achievement', labelKey: 'nav.achievement' },
-    { id: 'year', labelKey: 'nav.year' },
+/** 二级视图（tab）标识 */
+type NavTab = 'year' | 'taskPlan' | 'week' | 'today' | 'swimlane' | 'workbench' | 'achievement' | 'okrHome';
+
+/** 一级视图定义（顶部第一行） */
+const PRIMARY_VIEWS: { id: PrimaryView; labelKey: 'nav.pdca' | 'nav.okr' }[] = [
+    { id: 'pdca', labelKey: 'nav.pdca' },
+    { id: 'okr', labelKey: 'nav.okr' },
 ];
+
+/** 二级视图定义（顶部第二行，按一级视图分组；label 存 i18n key，渲染时再求值） */
+const SECONDARY_TABS: Record<PrimaryView, { id: NavTab; labelKey: 'nav.year' | 'nav.taskPlan' | 'nav.week' | 'nav.today' | 'nav.projectPicture' | 'nav.workbench' | 'nav.achievement' | 'nav.okr' }[]> = {
+    pdca: [
+        { id: 'taskPlan', labelKey: 'nav.taskPlan' },
+        { id: 'week', labelKey: 'nav.week' },
+        { id: 'today', labelKey: 'nav.today' },
+        { id: 'swimlane', labelKey: 'nav.projectPicture' },
+        { id: 'workbench', labelKey: 'nav.workbench' },
+        { id: 'achievement', labelKey: 'nav.achievement' },
+        { id: 'year', labelKey: 'nav.year' },
+    ],
+    okr: [
+        { id: 'okrHome', labelKey: 'nav.okr' },
+    ],
+};
 
 /**
  * 主视图：作为顶层 tab 容器，左上角按钮组切换不同页面。
@@ -45,10 +60,16 @@ export class MainView extends ItemView {
     private todayView: TodayView;
     private swimlaneView: SwimlaneView;
     private workbenchView: WorkbenchView;
+    private okrView: OkrView;
+    /** 当前一级视图 */
+    private activePrimary: PrimaryView = 'pdca';
+    /** 当前二级视图（tab） */
     private activeTab: NavTab = 'today';
     /** 上一次渲染的 tab（用于判断是否「进入」周计划视图） */
     private prevTab: NavTab | undefined;
     private contentRoot!: HTMLElement;
+    /** 二级视图 tab 行容器（切换一级视图时重建） */
+    private secondaryRow?: HTMLElement;
     /** 缓存目录名称（用于帮助弹窗引用缓存图片） */
     private cacheDirName: string;
 
@@ -144,6 +165,7 @@ export class MainView extends ItemView {
             () => this.weekView.executions,
             () => this.weekView.inboxData.items,
         );
+        this.okrView = new OkrView(this.app);
     }
 
     getViewType(): string {
@@ -170,22 +192,30 @@ export class MainView extends ItemView {
         root.empty();
         root.addClass('parrot-plan-main');
 
-        // 顶部导航栏（左上角按钮组）
+        // 顶部导航栏：第一行一级视图，第二行二级视图
         const nav = root.createDiv({ cls: 'parrot-plan-nav' });
-        for (const tab of NAV_TABS) {
-            const btn = nav.createEl('button', {
-                text: t(tab.labelKey),
-                cls: 'parrot-plan-nav-btn',
+
+        // 第一行：一级视图（PDCA / 任务OKR）
+        const primaryRow = nav.createDiv({ cls: 'parrot-plan-nav-primary-row' });
+        for (const pv of PRIMARY_VIEWS) {
+            const btn = primaryRow.createEl('button', {
+                text: t(pv.labelKey),
+                cls: 'parrot-plan-nav-primary-btn',
             });
-            if (tab.id === this.activeTab) btn.addClass('is-active');
+            if (pv.id === this.activePrimary) btn.addClass('is-active');
             btn.onclick = () => {
-                this.activeTab = tab.id;
+                if (this.activePrimary === pv.id) return;
+                this.activePrimary = pv.id;
+                // 切换一级视图时，激活该一级视图下的第一个二级视图
+                this.activeTab = SECONDARY_TABS[pv.id][0].id;
+                // 重建二级视图 tab 行
+                this.renderSecondaryTabs();
                 void this.renderContent();
             };
         }
 
-        // 帮助按钮（同行最右侧）
-        const helpBtn = nav.createEl('button', {
+        // 帮助按钮（第一行最右侧）
+        const helpBtn = primaryRow.createEl('button', {
             text: '?',
             cls: 'parrot-plan-nav-help-btn',
             attr: { 'aria-label': t('help.title') },
@@ -199,9 +229,31 @@ export class MainView extends ItemView {
             }).open();
         };
 
+        // 第二行：当前一级视图下的二级视图
+        this.secondaryRow = nav.createDiv({ cls: 'parrot-plan-nav-secondary-row' });
+        this.renderSecondaryTabs();
+
         // 内容区
         this.contentRoot = root.createDiv({ cls: 'parrot-plan-content' });
         await this.renderContent();
+    }
+
+    /** 重建二级视图 tab 行（切换一级视图时调用） */
+    private renderSecondaryTabs() {
+        if (!this.secondaryRow) return;
+        this.secondaryRow.empty();
+        for (const tab of SECONDARY_TABS[this.activePrimary]) {
+            const btn = this.secondaryRow.createEl('button', {
+                text: t(tab.labelKey),
+                cls: 'parrot-plan-nav-btn',
+                attr: { 'data-tab': tab.id },
+            });
+            if (tab.id === this.activeTab) btn.addClass('is-active');
+            btn.onclick = () => {
+                this.activeTab = tab.id;
+                void this.renderContent();
+            };
+        }
     }
 
     /** 根据当前 tab 渲染内容区 */
@@ -211,10 +263,16 @@ export class MainView extends ItemView {
             events: this.weekView.events.length,
             executions: this.weekView.executions.length,
         });
-        // 刷新导航高亮
-        const navBtns = this.containerEl.querySelectorAll('.parrot-plan-nav-btn');
-        navBtns.forEach((btn, i) => {
-            btn.toggleClass('is-active', NAV_TABS[i].id === this.activeTab);
+        // 刷新导航高亮：一级视图
+        const primaryBtns = this.containerEl.querySelectorAll('.parrot-plan-nav-primary-btn');
+        primaryBtns.forEach((btn, i) => {
+            btn.toggleClass('is-active', PRIMARY_VIEWS[i].id === this.activePrimary);
+        });
+        // 刷新导航高亮：二级视图
+        const secondaryBtns = this.containerEl.querySelectorAll('.parrot-plan-nav-btn');
+        secondaryBtns.forEach((btn) => {
+            const tabId = btn.getAttribute('data-tab');
+            btn.toggleClass('is-active', tabId === this.activeTab);
         });
 
         this.contentRoot.empty();
@@ -257,10 +315,15 @@ export class MainView extends ItemView {
             return;
         }
 
+        if (this.activeTab === 'okrHome') {
+            await this.okrView.renderInto(this.contentRoot);
+            return;
+        }
+
         // 其余页面：占位
-        const tab = NAV_TABS.find(t => t.id === this.activeTab)!;
+        const tab = SECONDARY_TABS[this.activePrimary].find(t => t.id === this.activeTab);
         const placeholder = this.contentRoot.createDiv({ cls: 'parrot-plan-placeholder' });
-        placeholder.setText(t('nav.placeholder', { name: t(tab.labelKey) }));
+        placeholder.setText(t('nav.placeholder', { name: tab ? t(tab.labelKey) : '' }));
     }
 
     async onClose() {

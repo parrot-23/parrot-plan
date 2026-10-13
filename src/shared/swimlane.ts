@@ -1,6 +1,6 @@
 import type { InboxItem, ExecutionRecord } from '../datatypes/domain';
-import type { TimeBlockCategoryData } from '../views/week-view/timeblock-category-manager';
-import { parseWeekKey, makeWeekKey, makeDayKeyFromWeek, getISOWeek } from '../views/week-view/timeblock-data';
+import type { TimeBlockCategoryData } from './timeblock-category-manager';
+import { parseWeekKey, makeWeekKey, makeDayKeyFromWeek, getISOWeek } from './timeblock-data';
 import { t } from '../i18n';
 
 /** 泳道图渲染选项 */

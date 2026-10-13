@@ -26,6 +26,9 @@ export const en: I18nMessages = {
     'view.title': 'Week Schedule',
 
     // Main navigation (tab button group)
+    'nav.pdca': 'PDCA',
+    'nav.okr': 'Task OKR',
+    'nav.okrPlaceholder': 'Task OKR is under development',
     'nav.year': 'Year Plan',
     'nav.taskPlan': 'Task Plan',
     'nav.week': 'Week Plan',

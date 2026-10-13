@@ -1,5 +1,5 @@
 import { t } from '../i18n';
-import { makeWeekKey, getISOWeek, hexToTransparent } from '../views/week-view/timeblock-data';
+import { makeWeekKey, getISOWeek, hexToTransparent } from './timeblock-data';
 import { EVENT_STATUS_EMOJI } from '../datatypes/domain';
 
 /**

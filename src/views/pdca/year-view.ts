@@ -1,12 +1,12 @@
 import type { App } from 'obsidian';
 import { Notice } from 'obsidian';
 
-import type { TimeBlockCategoryData } from './week-view/timeblock-category-manager';
-import type { InboxData } from '../datatypes/domain';
-import { renderTaskPanel } from '../shared/task-panel';
-import { renderYearWeekGrid } from '../shared/year-week-grid';
-import { makeWeekKey } from './week-view/timeblock-data';
-import { t } from '../i18n';
+import type { TimeBlockCategoryData } from '../../shared/timeblock-category-manager';
+import type { InboxData } from '../../datatypes/domain';
+import { renderTaskPanel } from '../../shared/task-panel';
+import { renderYearWeekGrid } from '../../shared/year-week-grid';
+import { makeWeekKey } from '../../shared/timeblock-data';
+import { t } from '../../i18n';
 
 /**
  * 年视图：左侧任务面板 + 右侧周历面板（1-52 周）。

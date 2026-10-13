@@ -1,13 +1,13 @@
 import type { App } from 'obsidian';
 import { Modal, Notice, Setting, setIcon } from 'obsidian';
 
-import type { TimeBlockCategoryData } from './week-view/timeblock-category-manager';
-import type { InboxData, InboxItem, Section, ChecklistData, StepsData, HabitData, FileData } from '../datatypes/domain';
-import { SECTION_TYPE_META } from '../datatypes/domain';
-import { renderTaskPanel, FilePathSuggest } from '../shared/task-panel';
-import { renderSwimlane } from '../shared/swimlane';
-import { makeWeekKey, parseWeekKey } from './week-view/timeblock-data';
-import { t } from '../i18n';
+import type { TimeBlockCategoryData } from '../../shared/timeblock-category-manager';
+import type { InboxData, InboxItem, Section, ChecklistData, StepsData, HabitData, FileData } from '../../datatypes/domain';
+import { SECTION_TYPE_META } from '../../datatypes/domain';
+import { renderTaskPanel, FilePathSuggest } from '../../shared/task-panel';
+import { renderSwimlane } from '../../shared/swimlane';
+import { makeWeekKey, parseWeekKey } from '../../shared/timeblock-data';
+import { t } from '../../i18n';
 
 /**
  * 任务计划视图：左侧任务面板 + 右侧内容区（项目信息表单 + 泳道图）。

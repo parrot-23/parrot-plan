@@ -1424,9 +1424,46 @@
 .parrot-plan-nav {
     flex-shrink: 0;
     display: flex;
+    flex-direction: column;
     gap: 6px;
     padding: 8px 12px;
     border-bottom: 1px solid var(--background-modifier-border);
+}
+
+/* 第一行：一级视图（PDCA / 任务OKR） */
+.parrot-plan-nav-primary-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+/* 第二行：二级视图 */
+.parrot-plan-nav-secondary-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+/* 一级视图按钮：比二级更醒目 */
+.parrot-plan-nav-primary-btn {
+    padding: 5px 16px;
+    border-radius: 6px;
+    border: 1px solid var(--background-modifier-border);
+    background: var(--interactive-normal);
+    color: var(--text-normal);
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.parrot-plan-nav-primary-btn:hover {
+    background: var(--interactive-hover);
+}
+
+.parrot-plan-nav-primary-btn.is-active {
+    background: var(--interactive-accent);
+    color: var(--text-on-accent);
+    border-color: var(--interactive-accent);
 }
 
 .parrot-plan-nav-btn {

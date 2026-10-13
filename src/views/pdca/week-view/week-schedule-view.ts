@@ -2,20 +2,20 @@
 
 import { ItemView, WorkspaceLeaf, Modal, Setting, Notice, App } from 'obsidian';
 import type { Plugin } from 'obsidian';
-import type { WeekRangeData, CategorizedRange, TimeBlockCategoryId, RangeSchemeData, DailyRange, WeekKey } from './timeblock-data';
-import { hexToTransparent, getCurrentWeekKey, makeWeekKey, parseWeekKey, shiftWeekKey, makeDayKeyFromWeek, makeDefaultScheme, DEFAULT_SCHEME_ID, DEFAULT_WEEK_RANGE } from './timeblock-data';
-import type { TimeBlockCategoryData } from './timeblock-category-manager';
-import type { DayTemplateData } from './template-manager';
-import { renderTimeBlockCategoryLegend } from './timeblock-category-manager';
-import { renderDayTemplateRow } from './template-manager';
-import { renderTaskPanel } from '../../shared/task-panel';
-import { DEFAULT_INBOX_DATA, type InboxData, type InboxItem } from '../../datatypes/domain';
-import { renderWeekGrid } from '../../shared/week-grid';
+import type { WeekRangeData, CategorizedRange, TimeBlockCategoryId, RangeSchemeData, DailyRange, WeekKey } from '../../../shared/timeblock-data';
+import { hexToTransparent, getCurrentWeekKey, makeWeekKey, parseWeekKey, shiftWeekKey, makeDayKeyFromWeek, makeDefaultScheme, DEFAULT_SCHEME_ID, DEFAULT_WEEK_RANGE } from '../../../shared/timeblock-data';
+import type { TimeBlockCategoryData } from '../../../shared/timeblock-category-manager';
+import type { DayTemplateData } from '../../../shared/template-manager';
+import { renderTimeBlockCategoryLegend } from '../../../shared/timeblock-category-manager';
+import { renderDayTemplateRow } from '../../../shared/template-manager';
+import { renderTaskPanel } from '../../../shared/task-panel';
+import { DEFAULT_INBOX_DATA, type InboxData, type InboxItem } from '../../../datatypes/domain';
+import { renderWeekGrid } from '../../../shared/week-grid';
 import { RangeSchemeModal } from './range-scheme-modal';
-import { t, getWeekDays } from '../../i18n';
-import { log } from '../../shared/logger';
-import { EVENT_STATUS_EMOJI, EVENT_STATUS_LABEL_KEY, getEventStatus } from '../../datatypes/domain';
-import type { EventBlock, ExecutionRecord, EventStatus } from '../../datatypes/domain';
+import { t, getWeekDays } from '../../../i18n';
+import { log } from '../../../shared/logger';
+import { EVENT_STATUS_EMOJI, EVENT_STATUS_LABEL_KEY, getEventStatus } from '../../../datatypes/domain';
+import type { EventBlock, ExecutionRecord, EventStatus } from '../../../datatypes/domain';
 
 export const VIEW_TYPE_WEEK = 'week-schedule-view';
 

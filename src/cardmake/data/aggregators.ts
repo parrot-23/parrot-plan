@@ -5,7 +5,7 @@
 import type { CardSource } from '../../datatypes/form';
 import type { DataProvider, StatItem, ChartSeries, ChartDatum, HeatmapSeries } from '../../datatypes/chart';
 import { getEventStatus } from '../../datatypes/domain';
-import { makeDayKeyFromWeek } from '../../views/week-view/timeblock-data';
+import { makeDayKeyFromWeek } from '../../shared/timeblock-data';
 
 /** 聚合结果：数字指标 + 可选图表序列 */
 export interface AggregationResult {

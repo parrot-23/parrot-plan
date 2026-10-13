@@ -1,12 +1,12 @@
 import { App, Modal, Notice, Plugin, PluginSettingTab, type SettingDefinitionItem } from 'obsidian';
 
-import type { WeekRangeData, RangeSchemeData } from './src/views/week-view/timeblock-data';
-import { getCurrentWeekKey, ensureDefaultScheme } from './src/views/week-view/timeblock-data';
-import type { TimeBlockCategoryData } from './src/views/week-view/timeblock-category-manager';
-import { ensureUncategorizedCategory } from './src/views/week-view/timeblock-category-manager';
-import type { DayTemplateData } from './src/views/week-view/template-manager';
+import type { WeekRangeData, RangeSchemeData } from './src/shared/timeblock-data';
+import { getCurrentWeekKey, ensureDefaultScheme } from './src/shared/timeblock-data';
+import type { TimeBlockCategoryData } from './src/shared/timeblock-category-manager';
+import { ensureUncategorizedCategory } from './src/shared/timeblock-category-manager';
+import type { DayTemplateData } from './src/shared/template-manager';
 
-import { DEFAULT_WEEK_RANGE } from './src/views/week-view/timeblock-data';
+import { DEFAULT_WEEK_RANGE } from './src/shared/timeblock-data';
 import type { EventBlock, ExecutionRecord } from './src/datatypes/domain';
 import { DEFAULT_INBOX_DATA, type InboxData } from './src/datatypes/domain';
 import { VIEW_TYPE_MAIN, MainView } from './src/main-view';

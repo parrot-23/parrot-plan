@@ -1,15 +1,15 @@
 import type { App } from 'obsidian';
 import { Notice, setIcon } from 'obsidian';
 
-import type { TimeBlockCategoryData } from './week-view/timeblock-category-manager';
-import { UNCATEGORIZED_CATEGORY_ID } from './week-view/timeblock-category-manager';
-import type { InboxData, InboxItem, ChecklistData, StepsData, HabitData, FileData } from '../datatypes/domain';
-import { SECTION_TYPE_META } from '../datatypes/domain';
-import { renderTaskPanel } from '../shared/task-panel';
-import { getCurrentDayKey, getISOWeek, makeDayKey, makeDayKeyFromWeek, makeWeekKey } from './week-view/timeblock-data';
-import type { EventBlock, ExecutionRecord } from '../datatypes/domain';
-import { getWeekDays, t } from '../i18n';
-import { EVENT_STATUS_EMOJI, EVENT_STATUS_LABEL_KEY, getEventStatus, type EventStatus } from '../datatypes/domain';
+import type { TimeBlockCategoryData } from '../../shared/timeblock-category-manager';
+import { UNCATEGORIZED_CATEGORY_ID } from '../../shared/timeblock-category-manager';
+import type { InboxData, InboxItem, ChecklistData, StepsData, HabitData, FileData } from '../../datatypes/domain';
+import { SECTION_TYPE_META } from '../../datatypes/domain';
+import { renderTaskPanel } from '../../shared/task-panel';
+import { getCurrentDayKey, getISOWeek, makeDayKey, makeDayKeyFromWeek, makeWeekKey } from '../../shared/timeblock-data';
+import type { EventBlock, ExecutionRecord } from '../../datatypes/domain';
+import { getWeekDays, t } from '../../i18n';
+import { EVENT_STATUS_EMOJI, EVENT_STATUS_LABEL_KEY, getEventStatus, type EventStatus } from '../../datatypes/domain';
 
 /** 把分钟数格式化为 HH:MM */
 function formatMinutes(minutes: number): string {

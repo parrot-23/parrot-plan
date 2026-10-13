@@ -1,14 +1,14 @@
 import type { App } from 'obsidian';
 
-import type { TimeBlockCategoryData } from './week-view/timeblock-category-manager';
-import type { InboxData, InboxItem, Section, ChecklistData, StepsData, HabitData, FileData } from '../datatypes/domain';
-import { renderTaskPanel } from '../shared/task-panel';
-import type { ExecutionRecord, EventBlock } from '../datatypes/domain';
-import { renderSwimlane } from '../shared/swimlane';
-import { t } from '../i18n';
-import { aggregate } from '../cardmake/data/aggregators';
-import { renderHeatmap } from '../cardmake/engine/chart-renderer';
-import { createDataProvider } from '../cardmake/data/provider';
+import type { TimeBlockCategoryData } from '../../shared/timeblock-category-manager';
+import type { InboxData, InboxItem, Section, ChecklistData, StepsData, HabitData, FileData } from '../../datatypes/domain';
+import { renderTaskPanel } from '../../shared/task-panel';
+import type { ExecutionRecord, EventBlock } from '../../datatypes/domain';
+import { renderSwimlane } from '../../shared/swimlane';
+import { t } from '../../i18n';
+import { aggregate } from '../../cardmake/data/aggregators';
+import { renderHeatmap } from '../../cardmake/engine/chart-renderer';
+import { createDataProvider } from '../../cardmake/data/provider';
 
 /**
  * 项目全景图视图：从上到下的页面结构。

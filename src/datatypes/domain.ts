@@ -2,7 +2,7 @@
 // 这些是插件最核心的数据标准，被周计划、日执行、年计划、泳道图、工作台等多个视图共用，
 // 统一在此定义，保证各视图读取的数据口径一致。
 
-import type { WeekKey } from '../views/week-view/timeblock-data';
+import type { WeekKey } from '../shared/timeblock-data';
 
 /** 计划事件（周计划视图排布的事件） */
 export interface EventBlock {
