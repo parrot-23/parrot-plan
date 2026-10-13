@@ -64,7 +64,7 @@ export const en: I18nMessages = {
     'okr.unitCount': 'pcs',
 
     // OKR progress
-    'okr.progressTitle': 'Progress',
+    'okr.progressTitle': 'OKR Progress',
     'okr.progressEmpty': 'No OKR conditions yet',
     'okr.progressTarget': 'Target',
     'okr.progressCurrent': 'Current',

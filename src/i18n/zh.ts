@@ -62,7 +62,7 @@ export const zh = {
     'okr.unitCount': '个',
 
     // OKR 进度
-    'okr.progressTitle': '进度',
+    'okr.progressTitle': 'OKR进度',
     'okr.progressEmpty': '暂无 OKR 条件',
     'okr.progressTarget': '目标',
     'okr.progressCurrent': '当前',

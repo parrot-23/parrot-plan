@@ -2991,6 +2991,39 @@
     color: var(--interactive-accent);
 }
 
+/* OKR 执行进度方框（位于任务层级方框与任务详情方框之间） */
+.today-okr-progress-box {
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 10px;
+    background: var(--background-secondary);
+    overflow: hidden;
+}
+
+.today-okr-progress-title {
+    flex-shrink: 0;
+    padding: 10px 14px;
+    font-size: 14px;
+    font-weight: 600;
+    border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.today-okr-progress-body {
+    padding: 10px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    max-height: 180px;
+    overflow-y: auto;
+}
+
+.today-okr-progress-empty {
+    font-size: 13px;
+    color: var(--text-faint);
+}
+
 /* 任务详情方框 */
 .today-detail-box {
     flex: 1;
