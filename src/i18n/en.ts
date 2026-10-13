@@ -38,6 +38,8 @@ export const en: I18nMessages = {
     'nav.projectPicture': 'Project Picture',
     'nav.workbench': 'Workbench',
     'nav.achievement': 'Achievements',
+    'nav.story': 'Story',
+    'nav.gtd': 'GTD',
     'nav.placeholder': 'This is the "{name}" page',
 
     // Task Plan view

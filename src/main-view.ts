@@ -24,33 +24,52 @@ import { HelpModal } from './helper/help-modal';
 export const VIEW_TYPE_MAIN = 'parrot-plan-main-view';
 
 /** 一级视图标识 */
-type PrimaryView = 'pdca' | 'okr';
+type PrimaryView = 'pdca' | 'okr' | 'workbench' | 'story' | 'gtd';
 
 /** 二级视图（tab）标识 */
-type NavTab = 'year' | 'taskPlan' | 'week' | 'today' | 'check' | 'improve' | 'swimlane' | 'workbench' | 'achievement' | 'okrHome' | 'okrTaskPlan';
+type NavTab = 'year' | 'taskPlan' | 'week' | 'today' | 'check' | 'improve' | 'swimlane' | 'workbench' | 'achievement' | 'gtd' | 'okrHome' | 'okrTaskPlan';
 
 /** 一级视图定义（顶部第一行） */
-const PRIMARY_VIEWS: { id: PrimaryView; labelKey: 'nav.pdca' | 'nav.okr' }[] = [
+const PRIMARY_VIEWS: { id: PrimaryView; labelKey: 'nav.pdca' | 'nav.okr' | 'nav.workbench' | 'nav.story' | 'nav.gtd' }[] = [
     { id: 'okr', labelKey: 'nav.okr' },
     { id: 'pdca', labelKey: 'nav.pdca' },
+    { id: 'workbench', labelKey: 'nav.workbench' },
+    { id: 'story', labelKey: 'nav.story' },
+    { id: 'gtd', labelKey: 'nav.gtd' },
 ];
 
 /** 二级视图定义（顶部第二行，按一级视图分组；label 存 i18n key，渲染时再求值） */
-const SECONDARY_TABS: Record<PrimaryView, { id: NavTab; labelKey: 'nav.year' | 'nav.taskPlan' | 'nav.week' | 'nav.today' | 'nav.check' | 'nav.improve' | 'nav.projectPicture' | 'nav.workbench' | 'nav.achievement' | 'nav.okr' }[]> = {
+const SECONDARY_TABS: Record<PrimaryView, { id: NavTab; labelKey: 'nav.year' | 'nav.taskPlan' | 'nav.week' | 'nav.today' | 'nav.check' | 'nav.improve' | 'nav.projectPicture' | 'nav.workbench' | 'nav.achievement' | 'nav.gtd' | 'nav.okr' }[]> = {
     pdca: [
         { id: 'week', labelKey: 'nav.week' },
         { id: 'today', labelKey: 'nav.today' },
         { id: 'check', labelKey: 'nav.check' },
         { id: 'improve', labelKey: 'nav.improve' },
-        { id: 'swimlane', labelKey: 'nav.projectPicture' },
-        { id: 'workbench', labelKey: 'nav.workbench' },
-        { id: 'achievement', labelKey: 'nav.achievement' },
-        { id: 'year', labelKey: 'nav.year' },
     ],
     okr: [
         { id: 'okrTaskPlan', labelKey: 'nav.taskPlan' },
         { id: 'okrHome', labelKey: 'nav.okr' },
+        { id: 'swimlane', labelKey: 'nav.projectPicture' },
+        { id: 'year', labelKey: 'nav.year' },
     ],
+    workbench: [
+        { id: 'workbench', labelKey: 'nav.workbench' },
+    ],
+    story: [
+        { id: 'achievement', labelKey: 'nav.achievement' },
+    ],
+    gtd: [
+        { id: 'gtd', labelKey: 'nav.gtd' },
+    ],
+};
+
+/** 各一级视图的默认二级视图（切换一级视图时激活） */
+const DEFAULT_TAB: Record<PrimaryView, NavTab> = {
+    pdca: 'today',
+    okr: 'okrTaskPlan',
+    workbench: 'workbench',
+    story: 'achievement',
+    gtd: 'gtd',
 };
 
 /**
@@ -121,9 +140,11 @@ export class MainView extends ItemView {
             this.weekView.timeBlockCategoryData,
             () => this.weekView.save(),
             (weekKey) => {
-                // 未选中任务时点击周格子 → 切到周计划并定位到该周
+                // 未选中任务时点击周格子 → 切到周计划并定位到该周（周计划归属「PDCA」一级视图）
                 this.weekView.currentWeekKey = weekKey;
+                this.activePrimary = 'pdca';
                 this.activeTab = 'week';
+                this.renderSecondaryTabs();
                 void this.renderContent();
             },
             () => this.weekView.plannedWeeks,
@@ -148,9 +169,11 @@ export class MainView extends ItemView {
                 if (p.data) p.data.executingEventId = id;
             },
             (projectId) => {
-                // 跳转到项目全景图并选中该项目
+                // 跳转到项目全景图并选中该项目（项目全景图归属「任务OKR」一级视图）
                 this.weekView.inboxData.projectFocusId = projectId;
+                this.activePrimary = 'okr';
                 this.activeTab = 'swimlane';
+                this.renderSecondaryTabs();
                 void (async () => {
                     await this.weekView.save();
                     await this.renderContent();
@@ -224,7 +247,7 @@ export class MainView extends ItemView {
         // 顶部导航栏：第一行一级视图，第二行二级视图
         const nav = root.createDiv({ cls: 'parrot-plan-nav' });
 
-        // 第一行：一级视图（PDCA / 任务OKR）
+        // 第一行：一级视图（任务OKR / PDCA / 工作台 / 故事 / GTD）
         const primaryRow = nav.createDiv({ cls: 'parrot-plan-nav-primary-row' });
         for (const pv of PRIMARY_VIEWS) {
             const btn = primaryRow.createEl('button', {
@@ -235,8 +258,8 @@ export class MainView extends ItemView {
             btn.onclick = () => {
                 if (this.activePrimary === pv.id) return;
                 this.activePrimary = pv.id;
-                // 切换一级视图时，激活该一级视图下的第一个二级视图
-                this.activeTab = SECONDARY_TABS[pv.id][0].id;
+                // 切换一级视图时，激活该一级视图的默认二级视图
+                this.activeTab = DEFAULT_TAB[pv.id];
                 // 重建二级视图 tab 行
                 this.renderSecondaryTabs();
                 void this.renderContent();

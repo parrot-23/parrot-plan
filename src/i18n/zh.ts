@@ -36,6 +36,8 @@ export const zh = {
     'nav.projectPicture': '项目全景图',
     'nav.workbench': '工作台',
     'nav.achievement': '成就榜单',
+    'nav.story': '故事',
+    'nav.gtd': 'GTD',
     'nav.placeholder': '当前是「{name}」页面',
 
     // 任务计划视图
