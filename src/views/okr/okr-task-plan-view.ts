@@ -582,7 +582,7 @@ export class OkrTaskPlanView {
         }
     }
 
-    /** 渲染右侧信息表单：项目描述、分类（跟随当前选中任务） */
+    /** 渲染右侧信息表单：项目描述、分类、截止日期（跟随当前选中任务） */
     private renderInfoForm(container: HTMLElement): void {
         const selectedId = this.inboxData.selectedId;
         const item = selectedId
@@ -597,7 +597,11 @@ export class OkrTaskPlanView {
             return;
         }
 
-        const form = container.createDiv({ cls: 'task-plan-form' });
+        // 任务详情方框（位于 OKR 信息方框上方）
+        const box = container.createDiv({ cls: 'task-plan-detail-box' });
+        box.createDiv({ cls: 'task-plan-detail-title', text: t('taskPlan.detailTitle') });
+
+        const form = box.createDiv({ cls: 'task-plan-form' });
 
         // 标题
         form.createEl('h2', { cls: 'task-plan-title', text: item.title });
@@ -649,6 +653,22 @@ export class OkrTaskPlanView {
         } else {
             catValue.setText(t('taskPlan.emptyValue'));
         }
+
+        // 截止日期（原生 date 输入框，选择后自动保存）
+        const dueRow = form.createDiv({ cls: 'task-plan-field' });
+        dueRow.createDiv({ cls: 'task-plan-field-label', text: t('taskPlan.dueDate') });
+        const dueInput = dueRow.createEl('input', {
+            cls: 'task-plan-due-input',
+            type: 'date',
+        });
+        dueInput.value = item.dueDate ?? '';
+        dueInput.onchange = () => {
+            void (async () => {
+                item.dueDate = dueInput.value || undefined;
+                await this.save();
+                await this.refresh();
+            })();
+        };
     }
 
     /** 重新渲染自身 */

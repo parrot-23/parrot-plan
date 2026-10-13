@@ -49,9 +49,11 @@ export const zh = {
 
     // 任务计划视图
     'taskPlan.noSelection': '请在左侧选择一个任务',
+    'taskPlan.detailTitle': '任务详情',
     'taskPlan.description': '项目描述',
     'taskPlan.editDescription': '编辑描述',
     'taskPlan.category': '分类',
+    'taskPlan.dueDate': '截止日期',
     'taskPlan.plannedWeeks': '已计划周数',
     'taskPlan.emptyValue': '—',
 

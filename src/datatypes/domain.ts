@@ -62,6 +62,8 @@ export interface InboxItem {
     sections?: Section[];
     /** OKR 信息（可选，旧任务无此字段） */
     okr?: OkrInfo;
+    /** 截止日期（可选，格式 YYYY-MM-DD，旧任务无此字段） */
+    dueDate?: string;
 }
 
 /** 任务 OKR 信息（计划值，手填） */

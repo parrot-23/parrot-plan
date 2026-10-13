@@ -2221,6 +2221,35 @@
     padding: 8px 0;
 }
 
+/* 任务详情方框（位于 OKR 信息方框上方） */
+.task-plan-detail-box {
+    display: flex;
+    flex-direction: column;
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 10px;
+    background: var(--background-secondary);
+    overflow: hidden;
+    margin-bottom: 12px;
+}
+
+.task-plan-detail-title {
+    flex-shrink: 0;
+    padding: 10px 14px;
+    font-size: 14px;
+    font-weight: 600;
+    border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.task-plan-detail-box .task-plan-form {
+    padding: 12px 14px;
+}
+
+/* 截止日期输入框 */
+.task-plan-due-input {
+    width: 100%;
+    max-width: 200px;
+}
+
 /* 信息表单 */
 .task-plan-form {
     display: flex;
