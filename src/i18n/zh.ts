@@ -58,6 +58,7 @@ export const zh = {
     'taskPlan.statusNotStarted': '未开始',
     'taskPlan.statusInProgress': '进行中',
     'taskPlan.statusDone': '已完成',
+    'taskPlan.habitTime': '习惯时间点',
     'taskPlan.plannedWeeks': '已计划周数',
     'taskPlan.emptyValue': '—',
 

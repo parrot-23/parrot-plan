@@ -2270,6 +2270,59 @@
     border-color: var(--interactive-accent);
 }
 
+/* 习惯时间点：小时/分钟下拉 */
+.task-plan-habit-group {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.task-plan-habit-select {
+    width: auto;
+}
+
+.task-plan-habit-sep {
+    color: var(--text-muted);
+}
+
+/* 习惯时间点启用开关 */
+.task-plan-habit-toggle {
+    position: relative;
+    flex-shrink: 0;
+    width: 32px;
+    height: 18px;
+    padding: 0;
+    border-radius: 9px;
+    background: var(--background-modifier-border);
+    cursor: pointer;
+    transition: background 0.2s ease;
+}
+
+.task-plan-habit-toggle::after {
+    content: '';
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: #fff;
+    transition: transform 0.2s ease;
+}
+
+.task-plan-habit-toggle.is-on {
+    background: var(--interactive-accent);
+}
+
+.task-plan-habit-toggle.is-on::after {
+    transform: translateX(14px);
+}
+
+/* 未启用时时间下拉置灰 */
+.task-plan-habit-group.is-disabled {
+    opacity: 0.5;
+}
+
 /* 信息表单 */
 .task-plan-form {
     display: flex;

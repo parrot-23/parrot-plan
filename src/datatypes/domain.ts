@@ -66,6 +66,10 @@ export interface InboxItem {
     dueDate?: string;
     /** 任务状态（可选：notStarted / inProgress / done，旧任务无此字段，默认未开始） */
     status?: string;
+    /** 习惯时间点（可选，起始时间，单位分钟，如 540 表示 09:00，旧任务无此字段） */
+    habitTime?: number;
+    /** 习惯时间点是否启用（可选，旧任务无此字段，默认未启用） */
+    habitTimeEnabled?: boolean;
 }
 
 /** 任务 OKR 信息（计划值，手填） */

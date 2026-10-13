@@ -60,6 +60,7 @@ export const en: I18nMessages = {
     'taskPlan.statusNotStarted': 'Not started',
     'taskPlan.statusInProgress': 'In progress',
     'taskPlan.statusDone': 'Done',
+    'taskPlan.habitTime': 'Habit time',
     'taskPlan.plannedWeeks': 'Planned weeks',
     'taskPlan.emptyValue': '—',
 

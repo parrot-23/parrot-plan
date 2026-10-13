@@ -694,6 +694,64 @@ export class OkrTaskPlanView {
                 })();
             };
         }
+
+        // 习惯时间点（起始时间：小时下拉 + 分钟下拉，选择后自动保存）
+        const habitRow = form.createDiv({ cls: 'task-plan-field' });
+        const habitLabelRow = habitRow.createDiv({ cls: 'task-plan-field-label-row' });
+
+        // 启用开关（点击切换，禁用时时间下拉置灰）
+        const habitEnabled = item.habitTimeEnabled ?? false;
+        const toggleBtn = habitLabelRow.createEl('button', {
+            cls: 'task-plan-habit-toggle',
+            attr: { 'aria-label': t('taskPlan.habitTime') },
+        });
+        toggleBtn.toggleClass('is-on', habitEnabled);
+        toggleBtn.onclick = () => {
+            void (async () => {
+                item.habitTimeEnabled = !habitEnabled;
+                await this.save();
+                await this.refresh();
+            })();
+        };
+
+        habitLabelRow.createDiv({ cls: 'task-plan-field-label', text: t('taskPlan.habitTime') });
+        const habitGroup = habitRow.createDiv({ cls: 'task-plan-habit-group' });
+
+        // 未设置时默认 09:00
+        const habitMinutes = item.habitTime ?? 9 * 60;
+        const habitHour = Math.floor(habitMinutes / 60);
+        const habitMinute = habitMinutes % 60;
+
+        const hourSelect = habitGroup.createEl('select', { cls: 'task-plan-habit-select' });
+        for (let h = 0; h < 24; h++) {
+            hourSelect.createEl('option', { text: `${String(h).padStart(2, '0')}`, value: `${h}` });
+        }
+        hourSelect.value = `${habitHour}`;
+
+        habitGroup.createSpan({ cls: 'task-plan-habit-sep', text: ':' });
+
+        const minuteSelect = habitGroup.createEl('select', { cls: 'task-plan-habit-select' });
+        for (let m = 0; m < 60; m += 5) {
+            minuteSelect.createEl('option', { text: `${String(m).padStart(2, '0')}`, value: `${m}` });
+        }
+        minuteSelect.value = `${habitMinute}`;
+
+        // 未启用时置灰不可点
+        if (!habitEnabled) {
+            hourSelect.disabled = true;
+            minuteSelect.disabled = true;
+            habitGroup.addClass('is-disabled');
+        }
+
+        const applyHabit = () => {
+            void (async () => {
+                item.habitTime = Number(hourSelect.value) * 60 + Number(minuteSelect.value);
+                await this.save();
+                await this.refresh();
+            })();
+        };
+        hourSelect.onchange = applyHabit;
+        minuteSelect.onchange = applyHabit;
     }
 
     /** 重新渲染自身 */
