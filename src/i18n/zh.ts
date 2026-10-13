@@ -54,6 +54,10 @@ export const zh = {
     'taskPlan.editDescription': '编辑描述',
     'taskPlan.category': '分类',
     'taskPlan.dueDate': '截止日期',
+    'taskPlan.status': '任务状态',
+    'taskPlan.statusNotStarted': '未开始',
+    'taskPlan.statusInProgress': '进行中',
+    'taskPlan.statusDone': '已完成',
     'taskPlan.plannedWeeks': '已计划周数',
     'taskPlan.emptyValue': '—',
 

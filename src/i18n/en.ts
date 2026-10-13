@@ -56,6 +56,10 @@ export const en: I18nMessages = {
     'taskPlan.editDescription': 'Edit description',
     'taskPlan.category': 'Category',
     'taskPlan.dueDate': 'Due date',
+    'taskPlan.status': 'Status',
+    'taskPlan.statusNotStarted': 'Not started',
+    'taskPlan.statusInProgress': 'In progress',
+    'taskPlan.statusDone': 'Done',
     'taskPlan.plannedWeeks': 'Planned weeks',
     'taskPlan.emptyValue': '—',
 

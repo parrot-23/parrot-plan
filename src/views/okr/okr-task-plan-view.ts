@@ -669,6 +669,31 @@ export class OkrTaskPlanView {
                 await this.refresh();
             })();
         };
+
+        // 任务状态（按钮组，当前状态高亮，点击后自动保存）
+        const statusRow = form.createDiv({ cls: 'task-plan-field' });
+        statusRow.createDiv({ cls: 'task-plan-field-label', text: t('taskPlan.status') });
+        const statusGroup = statusRow.createDiv({ cls: 'task-plan-status-group' });
+        const statuses: { value: string; labelKey: 'taskPlan.statusNotStarted' | 'taskPlan.statusInProgress' | 'taskPlan.statusDone' }[] = [
+            { value: 'notStarted', labelKey: 'taskPlan.statusNotStarted' },
+            { value: 'inProgress', labelKey: 'taskPlan.statusInProgress' },
+            { value: 'done', labelKey: 'taskPlan.statusDone' },
+        ];
+        const currentStatus = item.status ?? 'notStarted';
+        for (const st of statuses) {
+            const btn = statusGroup.createEl('button', {
+                cls: 'task-plan-status-btn',
+                text: t(st.labelKey),
+            });
+            if (st.value === currentStatus) btn.addClass('is-active');
+            btn.onclick = () => {
+                void (async () => {
+                    item.status = st.value;
+                    await this.save();
+                    await this.refresh();
+                })();
+            };
+        }
     }
 
     /** 重新渲染自身 */

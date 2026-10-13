@@ -2250,6 +2250,26 @@
     max-width: 200px;
 }
 
+/* 任务状态按钮组 */
+.task-plan-status-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.task-plan-status-btn {
+    padding: 3px 12px;
+    font-size: 12px;
+    border-radius: 12px;
+    cursor: pointer;
+}
+
+.task-plan-status-btn.is-active {
+    background: var(--interactive-accent);
+    color: var(--text-on-accent);
+    border-color: var(--interactive-accent);
+}
+
 /* 信息表单 */
 .task-plan-form {
     display: flex;

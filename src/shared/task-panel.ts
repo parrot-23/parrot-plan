@@ -353,11 +353,6 @@ export function renderTaskPanel(
 
         titleRow.createSpan({ cls: 'inbox-item-title', text: item.title });
 
-        if (item.description) {
-            itemEl.createDiv({ cls: 'inbox-item-desc' })
-                .setText(item.description);
-        }
-
         // 展示板块摘要（只读，编辑在详情弹窗中）：仅显示类型图标，不显示名称
         if (item.sections && item.sections.length > 0) {
             const sectionsEl = itemEl.createDiv({ cls: 'inbox-item-sections' });

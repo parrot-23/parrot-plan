@@ -64,6 +64,8 @@ export interface InboxItem {
     okr?: OkrInfo;
     /** 截止日期（可选，格式 YYYY-MM-DD，旧任务无此字段） */
     dueDate?: string;
+    /** 任务状态（可选：notStarted / inProgress / done，旧任务无此字段，默认未开始） */
+    status?: string;
 }
 
 /** 任务 OKR 信息（计划值，手填） */
