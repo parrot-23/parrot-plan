@@ -5,8 +5,8 @@ import type { TimeBlockCategoryData } from '../../shared/timeblock-category-mana
 import { UNCATEGORIZED_CATEGORY_ID } from '../../shared/timeblock-category-manager';
 import type { InboxData, InboxItem, ChecklistData, StepsData, HabitData, FileData } from '../../datatypes/domain';
 import { SECTION_TYPE_META } from '../../datatypes/domain';
-import { renderTaskPanel } from '../../shared/task-panel';
-import { getCurrentDayKey, getISOWeek, makeDayKey, makeDayKeyFromWeek, makeWeekKey } from '../../shared/timeblock-data';
+import { getCurrentDayKey, getISOWeek, makeDayKey, makeDayKeyFromWeek, makeWeekKey, hexToTransparent } from '../../shared/timeblock-data';
+import type { DailyRange } from '../../shared/timeblock-data';
 import type { EventBlock, ExecutionRecord } from '../../datatypes/domain';
 import { getWeekDays, t } from '../../i18n';
 import { EVENT_STATUS_EMOJI, EVENT_STATUS_LABEL_KEY, getEventStatus, type EventStatus } from '../../datatypes/domain';
@@ -64,6 +64,8 @@ export class TodayView {
     private setExecutingEventId?: (id: string | undefined) => void;
     /** 跳转到项目全景图的回调（由 MainView 注入，负责切换 tab 并选中当前项目） */
     private onNavigateToProjectPicture?: (projectId: string) => void;
+    /** 获取当前激活方案的单日区间配置（用于时间轴左侧分类色条） */
+    private getSchemeDays: () => DailyRange[];
     /** 当前查看的日期（默认今天；可切换到昨天以补充昨日执行信息） */
     private viewDate: Date = new Date();
 
@@ -77,6 +79,7 @@ export class TodayView {
         initialExecutingEventId?: string,
         setExecutingEventId?: (id: string | undefined) => void,
         onNavigateToProjectPicture?: (projectId: string) => void,
+        getSchemeDays?: () => DailyRange[],
     ) {
         this.app = app;
         this.inboxData = inboxData;
@@ -87,6 +90,7 @@ export class TodayView {
         this.executingEventId = initialExecutingEventId;
         this.setExecutingEventId = setExecutingEventId;
         this.onNavigateToProjectPicture = onNavigateToProjectPicture;
+        this.getSchemeDays = getSchemeDays ?? (() => []);
     }
 
     async renderInto(container: HTMLElement): Promise<void> {
@@ -105,26 +109,17 @@ export class TodayView {
             this.selectedExecId = undefined;
         }
 
-        // ===== 左侧：任务面板 =====
+        // ===== 左侧：当天任务面板（仅显示安排在当天的任务）=====
         const taskPanel = container.createDiv({ cls: 'today-task-panel' });
-        renderTaskPanel(
-            this.app,
-            taskPanel,
-            this.inboxData,
-            this.categoryData,
-            async () => {
-                await this.save();
-            },
-            () => {
-                void this.refresh();
-            },
-            undefined,
-            async () => {
-                await this.save();
-            },
-        );
+        this.renderTodayTaskPanel(taskPanel);
 
-        // ===== 中间：日期方框 + 任务层级方框 + 任务详情方框 + 操作按钮 =====
+        // ===== 中间：当天时间轴（紧贴左侧任务面板）=====
+        const timelinePanel = container.createDiv({ cls: 'today-timeline-panel' });
+        this.renderTimeline(timelinePanel);
+        // 恢复时间轴滚动位置
+        timelinePanel.scrollTop = prevScrollTop;
+
+        // ===== 右侧：日期方框 + 任务层级方框 + 任务详情方框 + 操作按钮 =====
         const centerPanel = container.createDiv({ cls: 'today-center-panel' });
         this.renderDateBox(centerPanel);
         this.renderHierarchyBox(centerPanel);
@@ -142,17 +137,75 @@ export class TodayView {
         // 替换模式下，在任务详情下方展示「替换任务详情方框」
         if (this.replaceMode) this.renderReplaceBox(centerPanel);
         this.renderActionButtons(centerPanel);
-
-        // ===== 右侧：当天时间轴 =====
-        const timelinePanel = container.createDiv({ cls: 'today-timeline-panel' });
-        this.renderTimeline(timelinePanel);
-        // 恢复时间轴滚动位置
-        timelinePanel.scrollTop = prevScrollTop;
     }
 
     /** 重新渲染自身 */
     private async refresh(): Promise<void> {
         if (this.container) await this.renderInto(this.container);
+    }
+
+    /**
+     * 左侧「当天任务面板」：仅显示安排在当天的任务（来自当天的计划事件）。
+     * 点击任务项可选中（写入 inboxData.selectedId），供右侧任务详情方框展示。
+     */
+    private renderTodayTaskPanel(panel: HTMLElement) {
+        panel.empty();
+        panel.addClass('today-task-list-panel');
+
+        // 标题
+        panel.createDiv({ cls: 'today-task-list-title', text: t('today.taskListTitle') });
+
+        const { day, weekKey } = this.getViewDayInfo();
+        // 当天计划事件（含全天），按开始时间排序
+        const dayEvents = this.getEvents()
+            .filter(ev => ev.day === day && ev.weekKey === weekKey)
+            .sort((a, b) => a.start - b.start);
+
+        const list = panel.createDiv({ cls: 'today-task-list' });
+
+        if (dayEvents.length === 0) {
+            list.createDiv({ cls: 'today-task-list-empty', text: t('today.taskListEmpty') });
+            return;
+        }
+
+        for (const ev of dayEvents) {
+            const item = ev.inboxId
+                ? this.inboxData.items.find(i => i.id === ev.inboxId && !i.removed)
+                : undefined;
+            const cat = ev.categoryId
+                ? this.categoryData.categories.find(c => c.id === ev.categoryId)
+                : undefined;
+
+            const row = list.createDiv({ cls: 'today-task-list-item' });
+            row.setCssProps({ '--chip-color': cat?.color ?? '#888888' });
+
+            // 选中态高亮（与时间轴事件选中互斥，这里以任务来源 id 判断）
+            if (item && this.inboxData.selectedId === item.id) {
+                row.addClass('is-selected');
+            }
+
+            row.createSpan({ cls: 'today-task-list-name', text: ev.title });
+
+            // 时间标签（全天事件显示「全天」）
+            const timeText = ev.allDay
+                ? t('allday.label')
+                : `${formatMinutes(ev.start)}-${formatMinutes(ev.end)}`;
+            row.createSpan({ cls: 'today-task-list-time', text: timeText });
+
+            // 点击选中该任务（再次点击取消），并清除时间轴事件选中
+            row.onclick = (e) => {
+                e.stopPropagation();
+                if (!item) return;
+                this.selectedEventId = undefined;
+                this.selectedExecId = undefined;
+                if (this.inboxData.selectedId === item.id) {
+                    this.inboxData.selectedId = undefined;
+                } else {
+                    this.inboxData.selectedId = item.id;
+                }
+                void this.refresh();
+            };
+        }
     }
 
     /** 渲染当前查看日期的年月日方框 + 右侧日目标完成情况 */
@@ -1385,6 +1438,9 @@ export class TodayView {
             col.createDiv({ cls: 'hour-cell two-hour' });
         }
 
+        // 方案时间区块背景：左侧垂直线条，按方案分类颜色（与周计划视图一致）
+        this.renderSchemeBars(col);
+
         // 今天的计划事件（按当前周键 + 今天星期几筛选）
         this.renderTodayEvents(col);
 
@@ -1398,6 +1454,30 @@ export class TodayView {
         updateLine();
         // 每分钟更新一次
         this.timer = window.setInterval(updateLine, 60 * 1000);
+    }
+
+    /**
+     * 渲染方案时间区块背景：左侧垂直线条，颜色取自方案分类。
+     * 与周计划视图的只读时间区块背景（.range-bg）保持一致。
+     */
+    private renderSchemeBars(col: HTMLElement) {
+        const { day } = this.getViewDayInfo();
+        const dayData = this.getSchemeDays().find(d => d.day === day);
+        const ranges = dayData?.ranges ?? [];
+        for (const range of ranges) {
+            const bgBlock = col.createDiv({ cls: 'range-block range-bg' });
+            const cat = this.categoryData.categories.find(c => c.id === range.sort);
+            const rawColor = cat?.color ?? '#888888';
+            const afColor = hexToTransparent(rawColor, 0.5);
+
+            const top = (range.start / 120) * 80;
+            const height = ((range.end - range.start) / 120) * 80;
+            bgBlock.setCssProps({
+                '--range-color': afColor,
+                '--range-top': `${top}px`,
+                '--range-height': `${height}px`,
+            });
+        }
     }
 
     /** 在当天列上渲染当前查看日期的计划事件（与周计划视图的定位比例一致：80px / 2 小时） */

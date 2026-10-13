@@ -10,7 +10,7 @@ import { renderTimeBlockCategoryLegend } from '../../../shared/timeblock-categor
 import { renderDayTemplateRow } from '../../../shared/template-manager';
 import { renderTaskPanel } from '../../../shared/task-panel';
 import { DEFAULT_INBOX_DATA, type InboxData, type InboxItem } from '../../../datatypes/domain';
-import { renderWeekGrid } from '../../../shared/week-grid';
+import { renderWeekPanel } from '../../../shared/week-panel';
 import { RangeSchemeModal } from './range-scheme-modal';
 import { t, getWeekDays } from '../../../i18n';
 import { log } from '../../../shared/logger';
@@ -214,37 +214,103 @@ export class WeekScheduleView extends ItemView {
         // 日历区域
         const calendar = main.createDiv({ cls: 'week-calendar' });
 
-        // ===== 周网格骨架（公共组件）=====
-        const { grid, headerRow, bodyRowInner } = renderWeekGrid(calendar, {
-            onHeaderClick: (d) => {
-                // 点击星期表头添加全天事件
-                void this.addAllDayEvent(d);
+        // ===== 周面板（公共组件）：一周七天，每天一列 =====
+        const { dayColumns } = renderWeekPanel(calendar, {
+            onColumnClick: (d) => {
+                // 点击某天列：将左侧选中的任务添加到这一天
+                void this.addTaskToDay(d);
             },
         });
 
-        // ===== 日模板行（周计划特有）=====
-        renderDayTemplateRow(
-            headerRow.parentElement!,
-            this.dayTemplateData.dayProperties,
-            this.dayTemplateData.dayTemplates,
-            (day) => {
-                // 点击模板行单元格添加全天事件
-                void this.addAllDayEvent(day);
-            }
-        );
-
-        // ===== 全天事件行（放在星期表头下方、日历主体上方）=====
-        this.renderAllDayRow(grid, bodyRowInner.parentElement!);
-
-        // ===== 事件层 =====
-        this.renderEventLayer(bodyRowInner);
+        // 渲染每天列内的任务清单
+        for (let d = 1; d <= 7; d++) {
+            this.renderDayColumn(dayColumns[d - 1], d);
+        }
     }
 
     async onClose() {
         const content = this.containerEl.children[1] as HTMLElement;
         content.empty();
     }
-   
+
+    // ===== 周面板：单日列 =====
+    /** 渲染某天列内的任务清单（当天已排入的任务） */
+    private renderDayColumn(col: HTMLElement, day: number) {
+        const dayEvents = this.events.filter(
+            ev => ev.day === day && ev.weekKey === this.currentWeekKey,
+        );
+
+        if (dayEvents.length === 0) {
+            col.createDiv({ cls: 'week-panel-empty', text: t('weekPanel.empty') });
+            return;
+        }
+
+        for (const ev of dayEvents) {
+            const chip = col.createDiv({ cls: 'week-panel-task' });
+            const cat = ev.categoryId
+                ? this.timeBlockCategoryData.categories.find(c => c.id === ev.categoryId)
+                : undefined;
+            chip.setCssProps({ '--chip-color': cat?.color ?? '#888888' });
+            chip.createSpan({ cls: 'week-panel-task-title', text: ev.title });
+
+            // 删除按钮（已制定周计划时计划固定，不允许删除）
+            if (!this.plannedWeeks.includes(this.currentWeekKey)) {
+                const delBtn = chip.createDiv({ cls: 'week-panel-task-del' });
+                delBtn.setText('×');
+                delBtn.onclick = async (e) => {
+                    e.stopPropagation();
+                    // 原地删除，保持数组引用不变（插件持有同一引用）
+                    const idx = this.events.findIndex(x => x.id === ev.id);
+                    if (idx >= 0) this.events.splice(idx, 1);
+                    await this.save();
+                    await this.onOpen();
+                };
+            }
+        }
+    }
+
+    /** 将左侧选中的任务添加到某一天（周面板点击列时调用） */
+    private async addTaskToDay(day: number) {
+        const selectedInboxItem = this.getSelectedInboxItem();
+        if (!selectedInboxItem) {
+            new Notice(t('allday.needSelect'));
+            return;
+        }
+        // 已制定周计划时计划已固定，不允许再添加
+        if (this.plannedWeeks.includes(this.currentWeekKey)) {
+            new Notice(t('event.weekPlannedLocked'));
+            return;
+        }
+        // 当天已有该任务的任何事件，则不再重复添加
+        if (this.hasAnyEventForItem(selectedInboxItem, day)) {
+            new Notice(t('event.alreadyScheduled', { title: selectedInboxItem.title }));
+            return;
+        }
+        this.events.push({
+            id: `ev_${Date.now()}`,
+            day,
+            start: 0,
+            end: 1440,
+            title: this.getSelectedEventTitle(selectedInboxItem),
+            categoryId: selectedInboxItem.categoryId,
+            inboxId: selectedInboxItem.id,
+            allDay: true,
+            completed: false,
+            weekKey: this.currentWeekKey,
+        });
+        // 加入某天时，同时成为该周的周目标
+        this.assignItemToDay(selectedInboxItem, day);
+        log('周面板添加任务', {
+            weekKey: this.currentWeekKey,
+            day,
+            title: selectedInboxItem.title,
+            inboxId: selectedInboxItem.id,
+        });
+        await this.save();
+        await this.onOpen();
+        new Notice(t('event.scheduled', { title: selectedInboxItem.title }));
+    }
+
     // ===== 全天事件行 =====
     private renderAllDayRow(grid: HTMLElement, beforeEl: HTMLElement) {
         const row = grid.createDiv({ cls: 'all-day-row' });

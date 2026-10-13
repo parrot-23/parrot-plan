@@ -150,6 +150,7 @@ export class MainView extends ItemView {
                     await this.renderContent();
                 })();
             },
+            () => this.weekView.getSchemeDays(),
         );
         this.swimlaneView = new SwimlaneView(
             this.app,

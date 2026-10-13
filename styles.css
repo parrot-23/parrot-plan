@@ -38,6 +38,102 @@
     padding: 0 10px 10px;
 }
 
+/* ======================== 周面板（一周七天，每天一列） ======================== */
+.week-panel {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+/* 表头行 */
+.week-panel-header {
+    display: flex;
+    flex-shrink: 0;
+    border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.week-panel-header-cell {
+    flex: 1;
+    text-align: center;
+    font-weight: bold;
+    padding: 6px 4px;
+    border-right: 1px solid var(--background-modifier-border);
+}
+
+.week-panel-header-cell:last-child {
+    border-right: none;
+}
+
+/* 7 列容器 */
+.week-panel-columns {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    overflow-y: auto;
+}
+
+/* 单日列 */
+.week-panel-column {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 6px 4px;
+    border-right: 1px solid var(--background-modifier-border);
+    cursor: pointer;
+}
+
+.week-panel-column:last-child {
+    border-right: none;
+}
+
+.week-panel-column:hover {
+    background: var(--background-modifier-hover);
+}
+
+/* 空列提示 */
+.week-panel-empty {
+    color: var(--text-faint);
+    font-size: 12px;
+    text-align: center;
+    padding: 4px 0;
+}
+
+/* 列内任务条目 */
+.week-panel-task {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 6px;
+    border-radius: 4px;
+    border-left: 4px solid var(--chip-color, #888888);
+    background: var(--background-secondary);
+    font-size: 12px;
+    cursor: default;
+}
+
+.week-panel-task-title {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.week-panel-task-del {
+    flex-shrink: 0;
+    cursor: pointer;
+    color: var(--text-muted);
+    padding: 0 2px;
+}
+
+.week-panel-task-del:hover {
+    color: var(--text-error);
+}
+
 /* 工具栏（右上角，横向排列） */
 .schedule-toolbar {
     flex-shrink: 0;
@@ -2103,17 +2199,73 @@
     min-height: 0;
 }
 
-/* 左侧任务面板 */
+/* 左侧：当天任务面板（仅显示安排在当天的任务） */
 .today-task-panel {
     flex-shrink: 0;
-    width: 250px;
+    width: 220px;
     height: 100%;
     box-sizing: border-box;
-    /* 允许新增任务浮动面板溢出到右侧日历上 */
-    overflow: visible;
+    overflow-y: auto;
     padding: 10px;
     border-right: 1px solid var(--background-modifier-border);
     background: var(--background-secondary);
+}
+
+/* 当天任务面板标题 */
+.today-task-list-title {
+    font-weight: bold;
+    font-size: 13px;
+    margin-bottom: 8px;
+    color: var(--text-normal);
+}
+
+/* 当天任务列表 */
+.today-task-list {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.today-task-list-empty {
+    color: var(--text-faint);
+    font-size: 12px;
+    padding: 4px 0;
+}
+
+/* 当天任务条目 */
+.today-task-list-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 6px;
+    border-radius: 4px;
+    border-left: 4px solid var(--chip-color, #888888);
+    background: var(--background-primary);
+    font-size: 12px;
+    cursor: pointer;
+}
+
+.today-task-list-item:hover {
+    background: var(--background-modifier-hover);
+}
+
+.today-task-list-item.is-selected {
+    outline: 1px solid var(--interactive-accent);
+    outline-offset: -1px;
+}
+
+.today-task-list-name {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.today-task-list-time {
+    flex-shrink: 0;
+    color: var(--text-muted);
+    font-size: 11px;
 }
 
 /* 中间：日期方框 + 任务详情方框 */
@@ -2910,14 +3062,14 @@
     z-index: 5;
 }
 
-/* 右侧当天时间轴 */
+/* 中间：当天时间轴（紧贴左侧任务面板） */
 .today-timeline-panel {
     flex-shrink: 0;
     width: 220px;
     height: 100%;
     box-sizing: border-box;
     overflow-y: auto;
-    border-left: 1px solid var(--background-modifier-border);
+    border-right: 1px solid var(--background-modifier-border);
 }
 
 .today-timeline {

@@ -131,6 +131,8 @@ export const en: I18nMessages = {
     'today.supplementYesterday': 'Fill in yesterday',
     'today.backToToday': 'Back to today',
     'today.yesterdayBadge': 'Yesterday',
+    'today.taskListTitle': "Today's tasks",
+    'today.taskListEmpty': 'No tasks scheduled for today',
 
     // Year view
     'year.weekLabel': 'Week {week}',
@@ -203,6 +205,9 @@ export const en: I18nMessages = {
     'allday.needSelect': 'Please select a task in the inbox first',
     'allday.added': 'Added all-day event "{title}"',
     'allday.empty': 'None',
+
+    // Week panel
+    'weekPanel.empty': 'No tasks',
 
     // Event layer
     'event.scheduled': 'Scheduled "{title}"',

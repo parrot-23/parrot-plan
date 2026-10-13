@@ -129,6 +129,8 @@ export const zh = {
     'today.supplementYesterday': '补充昨日执行信息',
     'today.backToToday': '回到今天',
     'today.yesterdayBadge': '昨天',
+    'today.taskListTitle': '当天任务',
+    'today.taskListEmpty': '当天暂无安排的任务',
 
     // 年视图
     'year.weekLabel': '第{week}周',
@@ -201,6 +203,9 @@ export const zh = {
     'allday.needSelect': '请先在收集盒中选中一个任务',
     'allday.added': '已添加全天事件"{title}"',
     'allday.empty': '暂无',
+
+    // 周面板
+    'weekPanel.empty': '暂无任务',
 
     // 事件层
     'event.scheduled': '已排入"{title}"',
