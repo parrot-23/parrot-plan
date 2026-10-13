@@ -48,9 +48,6 @@ const SECONDARY_TABS: Record<PrimaryView, { id: NavTab; labelKey: 'nav.year' | '
     ],
     okr: [
         { id: 'okrTaskPlan', labelKey: 'nav.taskPlan' },
-        { id: 'okrHome', labelKey: 'nav.okr' },
-        { id: 'swimlane', labelKey: 'nav.projectPicture' },
-        { id: 'year', labelKey: 'nav.year' },
     ],
     workbench: [
         { id: 'workbench', labelKey: 'nav.workbench' },
@@ -139,14 +136,7 @@ export class MainView extends ItemView {
             this.weekView.inboxData,
             this.weekView.timeBlockCategoryData,
             () => this.weekView.save(),
-            (weekKey) => {
-                // 未选中任务时点击周格子 → 切到周计划并定位到该周（周计划归属「PDCA」一级视图）
-                this.weekView.currentWeekKey = weekKey;
-                this.activePrimary = 'pdca';
-                this.activeTab = 'week';
-                this.renderSecondaryTabs();
-                void this.renderContent();
-            },
+            undefined,
             () => this.weekView.plannedWeeks,
         );
         this.taskPlanView = new TaskPlanView(
@@ -168,17 +158,7 @@ export class MainView extends ItemView {
                 const p = this.plugin as Plugin & { data?: { executingEventId?: string } };
                 if (p.data) p.data.executingEventId = id;
             },
-            (projectId) => {
-                // 跳转到项目全景图并选中该项目（项目全景图归属「任务OKR」一级视图）
-                this.weekView.inboxData.projectFocusId = projectId;
-                this.activePrimary = 'okr';
-                this.activeTab = 'swimlane';
-                this.renderSecondaryTabs();
-                void (async () => {
-                    await this.weekView.save();
-                    await this.renderContent();
-                })();
-            },
+            undefined,
             () => this.weekView.getSchemeDays(),
         );
         this.checkView = new CheckView(
