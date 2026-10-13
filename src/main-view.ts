@@ -29,14 +29,13 @@ type NavTab = 'year' | 'taskPlan' | 'week' | 'today' | 'swimlane' | 'workbench' 
 
 /** 一级视图定义（顶部第一行） */
 const PRIMARY_VIEWS: { id: PrimaryView; labelKey: 'nav.pdca' | 'nav.okr' }[] = [
-    { id: 'pdca', labelKey: 'nav.pdca' },
     { id: 'okr', labelKey: 'nav.okr' },
+    { id: 'pdca', labelKey: 'nav.pdca' },
 ];
 
 /** 二级视图定义（顶部第二行，按一级视图分组；label 存 i18n key，渲染时再求值） */
 const SECONDARY_TABS: Record<PrimaryView, { id: NavTab; labelKey: 'nav.year' | 'nav.taskPlan' | 'nav.week' | 'nav.today' | 'nav.projectPicture' | 'nav.workbench' | 'nav.achievement' | 'nav.okr' }[]> = {
     pdca: [
-        { id: 'taskPlan', labelKey: 'nav.taskPlan' },
         { id: 'week', labelKey: 'nav.week' },
         { id: 'today', labelKey: 'nav.today' },
         { id: 'swimlane', labelKey: 'nav.projectPicture' },
