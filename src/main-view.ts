@@ -39,9 +39,9 @@ type NavTab = 'year' | 'taskPlan' | 'week' | 'today' | 'check' | 'improve' | 'sw
 
 /** 一级视图定义（顶部第一行） */
 const PRIMARY_VIEWS: { id: PrimaryView; labelKey: 'nav.pdca' | 'nav.okr' | 'nav.workbench' | 'nav.story' | 'nav.gtd' }[] = [
+    { id: 'workbench', labelKey: 'nav.workbench' },
     { id: 'okr', labelKey: 'nav.okr' },
     { id: 'pdca', labelKey: 'nav.pdca' },
-    { id: 'workbench', labelKey: 'nav.workbench' },
     { id: 'story', labelKey: 'nav.story' },
     { id: 'gtd', labelKey: 'nav.gtd' },
 ];

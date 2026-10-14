@@ -128,26 +128,25 @@ export class WorkbenchView {
             };
         }
 
-        // 编辑布局按钮：切换编辑态（编辑态下显示为「编辑中」，位于添加/保存/取消之后）
-        const editBtn = actions.createEl('button', {
-            cls: 'wb-edit-layout-btn',
-            text: this.editingLayout ? t('workbench.editLayoutActive') : t('workbench.editLayout'),
-        });
-        editBtn.toggleClass('is-active', this.editingLayout);
-        editBtn.onclick = () => {
-            this.editingLayout = !this.editingLayout;
-            // 进入编辑态时记录快照，退出时清空
-            this.editSnapshot = this.editingLayout
-                ? this.workbenchData.instances.map((i) => ({ ...i }))
-                : null;
-            void this.renderInto(container);
-        };
+        // 编辑布局按钮：切换编辑态（编辑态下隐藏，避免重复触发）
+        if (!this.editingLayout) {
+            const editBtn = actions.createEl('button', {
+                cls: 'wb-edit-layout-btn',
+                text: t('workbench.editLayout'),
+            });
+            editBtn.onclick = () => {
+                this.editingLayout = true;
+                // 进入编辑态时记录快照
+                this.editSnapshot = this.workbenchData.instances.map((i) => ({ ...i }));
+                void this.renderInto(container);
+            };
 
-        const layoutBtn = actions.createEl('button', {
-            cls: 'wb-layout-btn',
-            text: t('workbench.layoutScheme'),
-        });
-        layoutBtn.onclick = () => new LayoutModal(this.app, this.workbenchData).open();
+            const layoutBtn = actions.createEl('button', {
+                cls: 'wb-layout-btn',
+                text: t('workbench.layoutScheme'),
+            });
+            layoutBtn.onclick = () => new LayoutModal(this.app, this.workbenchData).open();
+        }
 
         // 卡片画布（绝对定位 + 30px 网格）
         const grid = container.createDiv({ cls: 'wb-grid' });
