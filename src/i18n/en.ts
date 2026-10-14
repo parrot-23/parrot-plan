@@ -116,6 +116,7 @@ export const en: I18nMessages = {
     'okr.addCondition': 'Add condition',
     'okr.empty': 'No OKR conditions yet',
     'okr.targetPlaceholder': 'Target',
+    'okr.outcomePlaceholder': 'Outcome description',
     'okr.typeDuration': 'Duration',
     'okr.typeTimes': 'Times',
     'okr.typeOutcome': 'Outcome',

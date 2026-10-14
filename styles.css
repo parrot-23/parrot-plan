@@ -3983,6 +3983,13 @@
     flex-shrink: 0;
 }
 
+/* 成果文本输入框：占满剩余宽度 */
+.okr-outcome-input {
+    flex: 1;
+    width: auto;
+    min-width: 0;
+}
+
 .okr-unit {
     font-size: 13px;
     color: var(--text-muted);
@@ -4021,6 +4028,22 @@
     border-radius: 5px;
     background: var(--background-modifier-border);
     overflow: hidden;
+}
+
+/* 时长进度条：宽度为页面的一半 */
+.okr-progress-bar.is-half {
+    flex: 0 0 50%;
+    max-width: 50%;
+}
+
+/* 成果勾选框 */
+.okr-progress-checkbox {
+    flex-shrink: 0;
+}
+
+.okr-progress-outcome-text {
+    font-size: 13px;
+    color: var(--text-normal);
 }
 
 .okr-progress-fill {

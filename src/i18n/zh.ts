@@ -114,6 +114,7 @@ export const zh = {
     'okr.addCondition': '添加条件',
     'okr.empty': '暂无 OKR 条件',
     'okr.targetPlaceholder': '目标值',
+    'okr.outcomePlaceholder': '成果描述',
     'okr.typeDuration': '时长',
     'okr.typeTimes': '次数',
     'okr.typeOutcome': '成果',

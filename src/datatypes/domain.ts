@@ -78,15 +78,17 @@ export interface OkrInfo {
     conditions: OkrCondition[];
 }
 
-/** OKR 条件类型：时长 / 次数 / 成果 / 数量 */
-export type OkrConditionType = 'duration' | 'times' | 'outcome' | 'count';
+/** OKR 条件类型：时长 / 成果 */
+export type OkrConditionType = 'duration' | 'outcome';
 
-/** OKR 条件项（一行：条件类型 + 目标值） */
+/** OKR 条件项（一行：条件类型 + 目标值 / 成果文本） */
 export interface OkrCondition {
     id: string;
     type: OkrConditionType;
-    /** 目标值 */
+    /** 目标值（时长类型使用，单位分钟） */
     target: number;
+    /** 成果文本（成果类型使用，纯文字描述） */
+    text?: string;
 }
 
 /**
@@ -95,9 +97,7 @@ export interface OkrCondition {
  */
 export const OKR_CONDITION_META: Record<OkrConditionType, { labelKey: string; unitKey: string }> = {
     duration: { labelKey: 'okr.typeDuration', unitKey: 'okr.unitMinute' },
-    times: { labelKey: 'okr.typeTimes', unitKey: 'okr.unitTimes' },
     outcome: { labelKey: 'okr.typeOutcome', unitKey: 'okr.unitCount' },
-    count: { labelKey: 'okr.typeCount', unitKey: 'okr.unitCount' },
 };
 
 /** 板块类型：清单 / 步骤 / 打卡 / 文件 */

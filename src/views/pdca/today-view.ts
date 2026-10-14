@@ -542,7 +542,6 @@ export class TodayView {
         // 该任务的执行记录（按 inboxId 聚合）
         const execs = this.getExecutions().filter(ex => ex.inboxId === currentItem.id);
         const totalMinutes = execs.reduce((s, ex) => s + Math.max(0, ex.end - ex.start), 0);
-        const execCount = execs.length;
 
         for (const cond of conditions) {
             const row = body.createDiv({ cls: 'okr-progress-row' });
@@ -553,14 +552,19 @@ export class TodayView {
                 text: t(OKR_CONDITION_META[cond.type].labelKey as Parameters<typeof t>[0]),
             });
 
-            // 当前值：按条件类型从执行记录推算
-            let current = 0;
-            if (cond.type === 'duration') current = totalMinutes;
-            else if (cond.type === 'times') current = execCount;
-            else current = execCount; // count / outcome：执行记录条数
+            if (cond.type === 'outcome') {
+                // 成果：勾选框形式展示
+                const cb = row.createEl('input', { type: 'checkbox', cls: 'okr-progress-checkbox' });
+                cb.checked = false;
+                row.createSpan({ cls: 'okr-progress-outcome-text', text: cond.text ?? '' });
+                continue;
+            }
 
-            // 进度条
-            const bar = row.createDiv({ cls: 'okr-progress-bar' });
+            // 当前值：时长类型从执行记录推算（分钟）
+            const current = totalMinutes;
+
+            // 进度条（宽度为页面的一半）
+            const bar = row.createDiv({ cls: 'okr-progress-bar is-half' });
             const fill = bar.createDiv({ cls: 'okr-progress-fill' });
             const percent = cond.target > 0 ? Math.min(100, Math.round((current / cond.target) * 100)) : 0;
             fill.style.width = `${percent}%`;

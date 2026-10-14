@@ -486,26 +486,40 @@ export class OkrTaskPlanView {
                 this.renderOkrBox(wrap);
             };
 
-            // 目标值输入
-            const target = row.createEl('input', {
-                type: 'number',
-                cls: 'okr-target-input',
-                attr: { placeholder: t('okr.targetPlaceholder') },
-            });
-            target.value = String(cond.target);
-            target.onchange = () => {
-                const v = Number(target.value);
-                cond.target = Number.isFinite(v) ? v : 0;
-                void this.save();
-            };
+            if (cond.type === 'outcome') {
+                // 成果：文本输入框（非数字）
+                const textInput = row.createEl('input', {
+                    type: 'text',
+                    cls: 'okr-target-input okr-outcome-input',
+                    attr: { placeholder: t('okr.outcomePlaceholder') },
+                });
+                textInput.value = cond.text ?? '';
+                textInput.onchange = () => {
+                    cond.text = textInput.value;
+                    void this.save();
+                };
+            } else {
+                // 时长：数字目标值 + 单位
+                const target = row.createEl('input', {
+                    type: 'number',
+                    cls: 'okr-target-input',
+                    attr: { placeholder: t('okr.targetPlaceholder') },
+                });
+                target.value = String(cond.target);
+                target.onchange = () => {
+                    const v = Number(target.value);
+                    cond.target = Number.isFinite(v) ? v : 0;
+                    void this.save();
+                };
 
-            // 单位
-            row.createSpan({
-                cls: 'okr-unit',
-                text: t(OKR_CONDITION_META[cond.type].unitKey as Parameters<typeof t>[0]),
-            });
+                // 单位
+                row.createSpan({
+                    cls: 'okr-unit',
+                    text: t(OKR_CONDITION_META[cond.type].unitKey as Parameters<typeof t>[0]),
+                });
+            }
 
-            // 删除按钮
+            // 删除按钮（放在行末尾）
             const del = row.createEl('button', { cls: 'okr-del-btn', text: '✕' });
             del.onclick = (e) => {
                 e.stopPropagation();
@@ -561,8 +575,16 @@ export class OkrTaskPlanView {
                 text: t(OKR_CONDITION_META[cond.type].labelKey as Parameters<typeof t>[0]),
             });
 
-            // 进度条
-            const bar = row.createDiv({ cls: 'okr-progress-bar' });
+            if (cond.type === 'outcome') {
+                // 成果：勾选框形式展示
+                const cb = row.createEl('input', { type: 'checkbox', cls: 'okr-progress-checkbox' });
+                cb.checked = false;
+                row.createSpan({ cls: 'okr-progress-outcome-text', text: cond.text ?? '' });
+                continue;
+            }
+
+            // 时长：进度条（宽度为页面的一半）
+            const bar = row.createDiv({ cls: 'okr-progress-bar is-half' });
             const fill = bar.createDiv({ cls: 'okr-progress-fill' });
             const percent = cond.target > 0 ? Math.min(100, Math.round((0 / cond.target) * 100)) : 0;
             fill.style.width = `${percent}%`;
