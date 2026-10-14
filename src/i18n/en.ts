@@ -67,6 +67,11 @@ export const en: I18nMessages = {
     'scene.todayTasks': 'Today\'s Tasks',
     'scene.empty': 'No tasks today',
 
+    // GTD Collect view
+    'gtd.collectPlaceholder': 'Capture something…',
+    'gtd.collectEmpty': 'No unprocessed cards',
+    'gtd.statusInbox': 'Unprocessed',
+
     // Task Plan view
     'taskPlan.noSelection': 'Select a task on the left',
     'taskPlan.detailTitle': 'Task Details',

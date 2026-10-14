@@ -11,6 +11,7 @@ import type { EventBlock, ExecutionRecord } from './src/datatypes/domain';
 import { DEFAULT_INBOX_DATA, type InboxData } from './src/datatypes/domain';
 import { VIEW_TYPE_MAIN, MainView } from './src/main-view';
 import { defaultWorkbenchData, type WorkbenchData } from './src/datatypes/card';
+import { defaultGtdData, type GtdData } from './src/datatypes/gtd';
 import { initI18n, t, getLangDebugInfo } from './src/i18n';
 import { initLogger, log } from './src/shared/logger';
 import { downloadImageToCache } from './src/helper/cache-image';
@@ -37,6 +38,8 @@ export default class ParrotPlanPlugin extends Plugin {
         plannedWeeks: string[];
         /** 工作台卡片数据 */
         workbench: WorkbenchData;
+        /** GTD 数据（收集箱等） */
+        gtdData: GtdData;
         /** 当前正在执行的事件 id（日执行视图顶部执行卡片，随主数据一起持久化） */
         executingEventId?: string;
     } | null = null;
@@ -70,6 +73,7 @@ export default class ParrotPlanPlugin extends Plugin {
             inboxData: d.inboxData,
             plannedWeeks: d.plannedWeeks,
             workbench: d.workbench,
+            gtdData: d.gtdData,
             executingEventId: d.executingEventId,
             cacheDirName: this.cacheDirName,
             cacheEnabled: this.cacheEnabled,
@@ -165,6 +169,10 @@ export default class ParrotPlanPlugin extends Plugin {
         const initialWorkbench = (savedData.workbench && typeof savedData.workbench === 'object')
             ? savedData.workbench as WorkbenchData
             : defaultWorkbenchData();
+        // GTD 数据（兼容旧数据：默认空）
+        const initialGtdData = (savedData.gtdData && typeof savedData.gtdData === 'object')
+            ? savedData.gtdData as GtdData
+            : defaultGtdData();
         // 当前正在执行的事件 id（兼容旧数据：默认无）
         const initialExecutingEventId = typeof savedData.executingEventId === 'string'
             ? savedData.executingEventId
@@ -181,6 +189,7 @@ export default class ParrotPlanPlugin extends Plugin {
             schemeData: initialSchemeData,
             plannedWeeks: initialPlannedWeeks,
             workbench: initialWorkbench,
+            gtdData: initialGtdData,
             executingEventId: initialExecutingEventId,
         };
 
@@ -196,7 +205,7 @@ export default class ParrotPlanPlugin extends Plugin {
                 });
                 return new MainView(leaf, this, d.weekRange, d.templateData, d.categoryData,
                     d.events, d.executions, d.inboxData, d.schemeData, d.plannedWeeks, d.workbench,
-                    this.cacheDirName, d.executingEventId,
+                    d.gtdData, this.cacheDirName, d.executingEventId,
                 );
             }
         );

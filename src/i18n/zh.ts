@@ -65,6 +65,11 @@ export const zh = {
     'scene.todayTasks': '今天的任务清单',
     'scene.empty': '今天暂无任务',
 
+    // GTD 收集视图
+    'gtd.collectPlaceholder': '记录一条信息…',
+    'gtd.collectEmpty': '暂无未处理的卡片',
+    'gtd.statusInbox': '未处理',
+
     // 任务计划视图
     'taskPlan.noSelection': '请在左侧选择一个任务',
     'taskPlan.detailTitle': '任务详情',
