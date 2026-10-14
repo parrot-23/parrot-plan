@@ -60,6 +60,13 @@ export class TodayView {
     private addUnplannedDuration = 30;
     /** 当前正在执行的事件 id（点击「进入执行」后设置，用于顶部执行卡片） */
     private executingEventId?: string;
+    /**
+     * 当前「进行中」的任务（点击「开始任务」后设置）。
+     * 在时间轴上以透明色块呈现，点击可选中并「完成」。
+     */
+    private runningTask?: { inboxId: string; start: number; dayKey: string };
+    /** 是否选中了「进行中任务」色块（用于操作区显示「完成」按钮） */
+    private selectedRunningTask = false;
     /** 写回「正在执行」事件 id 的回调（用于持久化，随插件数据一起保存） */
     private setExecutingEventId?: (id: string | undefined) => void;
     /** 跳转到项目全景图的回调（由 MainView 注入，负责切换 tab 并选中当前项目） */
@@ -200,6 +207,7 @@ export class TodayView {
                 if (!item) return;
                 this.selectedEventId = undefined;
                 this.selectedExecId = undefined;
+                this.selectedRunningTask = false;
                 if (this.inboxData.selectedId === item.id) {
                     this.inboxData.selectedId = undefined;
                 } else {
@@ -584,10 +592,11 @@ export class TodayView {
         }
     }
 
-    /** 是否存在选中项（时间轴事件 / 新增执行记录 / 任务面板任务） */
+    /** 是否存在选中项（时间轴事件 / 新增执行记录 / 进行中任务 / 任务面板任务） */
     private hasSelection(): boolean {
         if (this.selectedEventId) return true;
         if (this.selectedExecId) return true;
+        if (this.selectedRunningTask && this.runningTask) return true;
         return !!this.getSelectedItem();
     }
 
@@ -606,8 +615,11 @@ export class TodayView {
             ? this.inboxData.items.find(i => i.id === this.inboxData.selectedId && !i.removed)
             : undefined;
 
-        // 当前项目：优先选中任务，其次事件/执行记录来源任务
+        // 当前项目：优先选中任务，其次进行中任务，再次事件/执行记录来源任务
         const currentProjectId = selectedItem?.id
+            ?? (this.selectedRunningTask && this.runningTask
+                ? this.inboxData.items.find(i => i.id === this.runningTask!.inboxId && !i.removed)?.id
+                : undefined)
             ?? (selectedEvent?.inboxId
                 ? this.inboxData.items.find(i => i.id === selectedEvent.inboxId && !i.removed)?.id
                 : undefined)
@@ -630,6 +642,17 @@ export class TodayView {
         }
 
         const body = box.createDiv({ cls: 'today-detail-body' });
+
+        // 选中「进行中任务」：展示其来源任务详情
+        if (this.selectedRunningTask && this.runningTask) {
+            const runningItem = this.inboxData.items.find(
+                i => i.id === this.runningTask!.inboxId && !i.removed,
+            );
+            if (runningItem) {
+                this.renderItemDetail(body, runningItem);
+                return;
+            }
+        }
 
         if (selectedEvent) {
             this.renderEventDetail(body, selectedEvent);
@@ -935,6 +958,18 @@ export class TodayView {
         const selectedItem = this.getSelectedItem();
         const row = panel.createDiv({ cls: 'today-action-row' });
 
+        // 选中「进行中任务」色块：显示「完成」按钮
+        if (this.selectedRunningTask && this.runningTask) {
+            const finishBtn = row.createEl('button', {
+                cls: 'today-action-btn mod-cta',
+                text: t('today.finishRunning'),
+            });
+            finishBtn.onclick = () => {
+                void this.finishRunningTask();
+            };
+            return;
+        }
+
         // 选中「新增」执行记录：显示删除按钮
         if (this.selectedExecId) {
             const delBtn = row.createEl('button', {
@@ -1058,13 +1093,13 @@ export class TodayView {
             return;
         }
 
-        // 选中左侧任务：执行非计划任务
-        const unplannedBtn = row.createEl('button', {
-            cls: 'today-action-btn',
-            text: t('today.execUnplanned'),
+        // 选中左侧任务：开始任务（在时间轴上创建进行中记录）
+        const startBtn = row.createEl('button', {
+            cls: 'today-action-btn mod-cta',
+            text: t('today.startTask'),
         });
-        unplannedBtn.onclick = () => {
-            void this.executeUnplannedTask();
+        startBtn.onclick = () => {
+            this.startRunningTask();
         };
     }
 
@@ -1128,25 +1163,61 @@ export class TodayView {
             : undefined;
     }
 
-    /** 执行非计划任务：为选中任务生成一条执行记录 */
-    private async executeUnplannedTask(): Promise<void> {
+    /**
+     * 开始任务：为左侧选中的任务创建一条「进行中」记录（从当前时刻开始）。
+     * 在时间轴上以透明色块呈现，等待用户点击「完成」写入执行记录。
+     */
+    private startRunningTask(): void {
         const item = this.getSelectedItem();
         if (!item) return;
 
         const now = new Date();
+        const { dayKey } = this.getViewDayInfo();
+        this.runningTask = {
+            inboxId: item.id,
+            start: now.getHours() * 60 + now.getMinutes(),
+            dayKey,
+        };
+        // 开始后自动选中该进行中任务，便于直接点击「完成」
+        this.selectedRunningTask = true;
+        this.selectedEventId = undefined;
+        this.selectedExecId = undefined;
+        void this.refresh();
+    }
+
+    /** 切换「进行中任务」色块的选中状态 */
+    private toggleRunningTaskSelection(): void {
+        this.selectedRunningTask = !this.selectedRunningTask;
+        if (this.selectedRunningTask) {
+            this.selectedEventId = undefined;
+            this.selectedExecId = undefined;
+            this.clearInboxSelection();
+        }
+        void this.refresh();
+    }
+
+    /** 完成进行中任务：写入执行记录（start=开始时刻，end=当前时刻），并清除进行中状态 */
+    private async finishRunningTask(): Promise<void> {
+        const running = this.runningTask;
+        if (!running) return;
+
+        const now = new Date();
+        const nowMinutes = now.getHours() * 60 + now.getMinutes();
         const { day, weekKey } = this.getViewDayInfo();
-        const totalMinutes = now.getHours() * 60 + now.getMinutes();
 
         this.getExecutions().push({
             id: `exec_${Date.now()}`,
-            inboxId: item.id,
+            inboxId: running.inboxId,
             day,
-            start: totalMinutes,
-            end: totalMinutes,
+            start: running.start,
+            end: Math.max(running.start, nowMinutes),
             weekKey,
         });
+        const item = this.inboxData.items.find(i => i.id === running.inboxId && !i.removed);
+        this.runningTask = undefined;
+        this.selectedRunningTask = false;
         await this.save();
-        new Notice(t('today.completeDone', { title: item.title }));
+        new Notice(t('today.completeDone', { title: item?.title ?? '' }));
         await this.refresh();
     }
 
@@ -1524,12 +1595,27 @@ export class TodayView {
         // 今天的计划事件（按当前周键 + 今天星期几筛选）
         this.renderTodayEvents(col);
 
+        // 已分配到当天、且设置了习惯时间点的任务：在对应时间点透明化显示
+        this.renderHabitMarkers(col);
+
+        // 进行中任务：从开始时刻到当前时刻的透明色块
+        const runningBlock = this.renderRunningTaskBlock(col);
+
         // 当前时刻红线
         const line = col.createDiv({ cls: 'current-time-line' });
         const updateLine = () => {
             const now = new Date();
             const totalMinutes = now.getHours() * 60 + now.getMinutes();
             line.setCssProps({ '--line-top': `${(totalMinutes / 120) * 80}px` });
+            // 进行中色块随时间增长
+            if (runningBlock && this.runningTask) {
+                const start = Math.min(this.runningTask.start, totalMinutes);
+                const end = Math.max(this.runningTask.start, totalMinutes);
+                runningBlock.setCssProps({
+                    '--running-top': `${(start / 120) * 80}px`,
+                    '--running-height': `${Math.max(4, ((end - start) / 120) * 80)}px`,
+                });
+            }
         };
         updateLine();
         // 每分钟更新一次
@@ -1652,6 +1738,74 @@ export class TodayView {
     }
 
     /**
+     * 渲染「习惯时间点」标记：已分配到当天、且启用了习惯时间点的任务，
+     * 在时间轴对应时间点以透明化色块显示（不拦截点击）。
+     */
+    private renderHabitMarkers(col: HTMLElement) {
+        const { dayKey } = this.getViewDayInfo();
+
+        // 已分配到当天、且启用习惯时间点的任务
+        const items = this.inboxData.items.filter(i =>
+            !i.removed
+            && i.habitTimeEnabled
+            && typeof i.habitTime === 'number'
+            && (i.assignedDayKeys ?? []).includes(dayKey),
+        );
+        if (items.length === 0) return;
+
+        for (const item of items) {
+            const minutes = item.habitTime as number;
+            const marker = col.createDiv({ cls: 'today-habit-marker' });
+            const cat = item.categoryId
+                ? this.categoryData.categories.find(c => c.id === item.categoryId)
+                : undefined;
+            marker.setCssProps({
+                '--habit-color': cat?.color ?? '#888888',
+                '--habit-top': `${(minutes / 120) * 80}px`,
+            });
+            marker.setText(item.title);
+        }
+    }
+
+    /**
+     * 渲染「进行中任务」色块：从开始时刻到当前时刻（随时间增长）。
+     * 点击色块可选中该进行中任务，供操作区显示「完成」按钮。
+     */
+    private renderRunningTaskBlock(col: HTMLElement): HTMLElement | null {
+        const running = this.runningTask;
+        if (!running) return null;
+        // 仅当进行中任务属于当前查看日期时显示
+        const { dayKey } = this.getViewDayInfo();
+        if (running.dayKey !== dayKey) return null;
+
+        const item = this.inboxData.items.find(i => i.id === running.inboxId && !i.removed);
+        if (!item) return null;
+
+        const now = new Date();
+        const nowMinutes = now.getHours() * 60 + now.getMinutes();
+        const start = Math.min(running.start, nowMinutes);
+        const end = Math.max(running.start, nowMinutes);
+
+        const block = col.createDiv({ cls: 'today-running-block' });
+        const cat = item.categoryId
+            ? this.categoryData.categories.find(c => c.id === item.categoryId)
+            : undefined;
+        block.setCssProps({
+            '--running-color': cat?.color ?? '#4c8dff',
+            '--running-top': `${(start / 120) * 80}px`,
+            '--running-height': `${Math.max(4, ((end - start) / 120) * 80)}px`,
+        });
+        block.setText(item.title);
+
+        if (this.selectedRunningTask) block.addClass('is-selected');
+        block.onclick = (e) => {
+            e.stopPropagation();
+            this.toggleRunningTaskSelection();
+        };
+        return block;
+    }
+
+    /**
      * 渲染状态气泡。时间点接近（top 差值小于阈值）的卡片归为一组：
      * - 组内仅 1 个：渲染常规气泡（图标 + 文字）
      * - 组内多个：渲染合并气泡条（多个图标并排，隐藏文字），点击单个图标选中对应卡片
@@ -1702,6 +1856,7 @@ export class TodayView {
     private toggleEventSelection(eventId: string): void {
         this.selectedEventId = this.selectedEventId === eventId ? undefined : eventId;
         this.selectedExecId = undefined;
+        this.selectedRunningTask = false;
         // 与左侧任务面板选中互斥：选中时间轴事件时取消左侧选中
         this.clearInboxSelection();
         void this.refresh();
@@ -1711,6 +1866,7 @@ export class TodayView {
     private toggleExecSelection(execId: string): void {
         this.selectedExecId = this.selectedExecId === execId ? undefined : execId;
         this.selectedEventId = undefined;
+        this.selectedRunningTask = false;
         // 与左侧任务面板选中互斥：选中时间轴事件时取消左侧选中
         this.clearInboxSelection();
         void this.refresh();
@@ -1722,10 +1878,11 @@ export class TodayView {
         this.lastSelectedItemId = undefined;
     }
 
-    /** 取消所有选中状态（时间轴事件 / 新增执行记录 / 左侧任务），恢复显示周目标 / 日目标 */
+    /** 取消所有选中状态（时间轴事件 / 新增执行记录 / 进行中任务 / 左侧任务），恢复显示周目标 / 日目标 */
     private clearAllSelection(): void {
         this.selectedEventId = undefined;
         this.selectedExecId = undefined;
+        this.selectedRunningTask = false;
         this.clearInboxSelection();
         void this.refresh();
     }

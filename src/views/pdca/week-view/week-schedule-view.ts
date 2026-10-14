@@ -248,40 +248,65 @@ export class WeekScheduleView extends ItemView {
     // ===== 周面板：单日列 =====
     /**
      * 渲染某天列顶部的分类时长统计。
-     * 依据本列计划事件的「预估执行时长」，按分类汇总已分配的时长（分钟）。
+     * 每个分类显示两行：
+     *   1) 时间区间方案中该分类的可用时长（计划时长）
+     *   2) 本列计划事件按预估时长汇总的已分配时长
      */
     private renderDayStats(cell: HTMLElement, day: number) {
+        // 方案中该天各分类的可用时长（分钟）
+        const dayData = this.getSchemeDays().find(d => d.day === day);
+        const ranges = dayData?.ranges ?? [];
+        const planned = new Map<TimeBlockCategoryId, number>();
+        for (const range of ranges) {
+            const minutes = Math.max(0, range.end - range.start);
+            if (minutes === 0) continue;
+            planned.set(range.sort, (planned.get(range.sort) ?? 0) + minutes);
+        }
+
+        // 本列计划事件按分类汇总的已分配预估时长（分钟）
         const dayEvents = this.events.filter(
             ev => ev.day === day && ev.weekKey === this.currentWeekKey,
         );
-
-        // 按分类汇总已分配的预估时长（分钟）
-        const totals = new Map<TimeBlockCategoryId, number>();
+        const allocated = new Map<TimeBlockCategoryId, number>();
         for (const ev of dayEvents) {
             const minutes = ev.estimatedMinutes ?? 0;
             if (minutes <= 0) continue;
             const key = ev.categoryId ?? '';
-            totals.set(key, (totals.get(key) ?? 0) + minutes);
+            allocated.set(key, (allocated.get(key) ?? 0) + minutes);
         }
 
-        if (totals.size === 0) {
+        // 合并出现过的分类（方案 + 已分配），按类别列表顺序稳定输出
+        const keys = new Set<TimeBlockCategoryId>();
+        planned.forEach((_v, k) => keys.add(k));
+        allocated.forEach((_v, k) => keys.add(k));
+        if (keys.size === 0) {
             cell.createDiv({ cls: 'week-panel-stats-empty', text: '—' });
             return;
         }
 
-        // 按分类在类别列表中的顺序稳定输出（未分类排在最后）
-        const ordered = this.timeBlockCategoryData.categories.filter(c => totals.has(c.id));
-        const uncategorized = totals.get('');
-        if (uncategorized !== undefined) {
+        const ordered = this.timeBlockCategoryData.categories.filter(c => keys.has(c.id));
+        if (keys.has('')) {
             ordered.push({ id: '', label: t('defaultCategory.uncategorized'), color: '#888888' });
         }
+
         for (const cat of ordered) {
-            const minutes = totals.get(cat.id) ?? 0;
             const item = cell.createDiv({ cls: 'week-panel-stats-item' });
             item.setCssProps({ '--stats-color': cat.color });
-            item.createSpan({ cls: 'week-panel-stats-dot' });
-            item.createSpan({ cls: 'week-panel-stats-label', text: cat.label });
-            item.createSpan({ cls: 'week-panel-stats-value', text: this.formatDuration(minutes) });
+
+            // 第一行：分类名 + 方案可用时长
+            const head = item.createDiv({ cls: 'week-panel-stats-head' });
+            head.createSpan({ cls: 'week-panel-stats-dot' });
+            head.createSpan({ cls: 'week-panel-stats-label', text: cat.label });
+            head.createSpan({
+                cls: 'week-panel-stats-value',
+                text: this.formatDuration(planned.get(cat.id) ?? 0),
+            });
+
+            // 第二行：已分配时长
+            const alloc = item.createDiv({ cls: 'week-panel-stats-alloc' });
+            alloc.setText(t('weekPanel.allocated', {
+                duration: this.formatDuration(allocated.get(cat.id) ?? 0),
+            }));
         }
     }
 
@@ -292,6 +317,24 @@ export class WeekScheduleView extends ItemView {
         if (h > 0 && m > 0) return `${h}h${m}m`;
         if (h > 0) return `${h}h`;
         return `${m}m`;
+    }
+
+    /** 将分钟数格式化为「HH:MM」时钟形式 */
+    private formatClock(minutes: number): string {
+        const h = Math.floor(minutes / 60);
+        const m = minutes % 60;
+        return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+    }
+
+    /**
+     * 取事件来源任务的「习惯时间点」（分钟）。
+     * 仅当来源任务存在且已启用习惯时间点时返回，否则返回 null。
+     */
+    private getEventHabitTime(ev: EventBlock): number | null {
+        if (!ev.inboxId) return null;
+        const item = this.inboxData.items.find(i => i.id === ev.inboxId && !i.removed);
+        if (!item || !item.habitTimeEnabled) return null;
+        return typeof item.habitTime === 'number' ? item.habitTime : null;
     }
 
     /** 渲染某天列内的任务清单（当天已排入的任务） */
@@ -305,7 +348,17 @@ export class WeekScheduleView extends ItemView {
             return;
         }
 
-        for (const ev of dayEvents) {
+        // 设置了习惯时间点的任务排在最前面（其余保持原有顺序）
+        const ordered = dayEvents
+            .map((ev, idx) => ({ ev, idx, habit: this.getEventHabitTime(ev) }))
+            .sort((a, b) => {
+                const ah = a.habit !== null ? 0 : 1;
+                const bh = b.habit !== null ? 0 : 1;
+                if (ah !== bh) return ah - bh;
+                return a.idx - b.idx;
+            });
+
+        for (const { ev, habit } of ordered) {
             const chip = col.createDiv({ cls: 'week-panel-task' });
             const cat = ev.categoryId
                 ? this.timeBlockCategoryData.categories.find(c => c.id === ev.categoryId)
@@ -322,6 +375,12 @@ export class WeekScheduleView extends ItemView {
             } else {
                 estLine.addClass('is-empty');
                 estLine.setText(t('weekPanel.estimatedEmpty'));
+            }
+
+            // 习惯时间点（来源任务已启用时显示）
+            if (habit !== null) {
+                const habitLine = chip.createDiv({ cls: 'week-panel-task-habit' });
+                habitLine.setText(t('weekPanel.habitTime', { time: this.formatClock(habit) }));
             }
 
             // 点击卡片：在卡片旁弹出悬浮面板，填写预估执行时长

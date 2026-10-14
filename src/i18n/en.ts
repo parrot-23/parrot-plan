@@ -150,6 +150,8 @@ export const en: I18nMessages = {
     'today.complete': 'Complete Planned Task',
     'today.replace': 'Replace with Another Task',
     'today.execUnplanned': 'Execute Unplanned Task',
+    'today.startTask': 'Start Task',
+    'today.finishRunning': 'Finish',
     'today.execPlanned': 'Executed Planned',
     'today.replacePlanned': 'Replace Planned',
     'today.enterExec': 'Enter Execution',
@@ -310,10 +312,12 @@ export const en: I18nMessages = {
     // Week panel
     'weekPanel.empty': 'No tasks',
     'weekPanel.statsTitle': 'Category durations',
+    'weekPanel.allocated': 'Allocated {duration}',
     'weekPanel.estimated': 'Est. {duration}',
     'weekPanel.estimatedEmpty': 'Click to set estimate',
     'weekPanel.estimatedLabel': 'Estimated duration (minutes)',
     'weekPanel.estimatedPlaceholder': 'e.g. 60',
+    'weekPanel.habitTime': 'Habit {time}',
 
     // Event layer
     'event.scheduled': 'Scheduled "{title}"',

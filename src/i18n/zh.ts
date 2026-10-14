@@ -148,6 +148,8 @@ export const zh = {
     'today.complete': '完成执行计划任务',
     'today.replace': '替换执行其他任务',
     'today.execUnplanned': '执行非计划任务',
+    'today.startTask': '开始任务',
+    'today.finishRunning': '完成',
     'today.execPlanned': '已执行计划',
     'today.replacePlanned': '替换计划',
     'today.enterExec': '进入执行',
@@ -308,10 +310,12 @@ export const zh = {
     // 周面板
     'weekPanel.empty': '暂无任务',
     'weekPanel.statsTitle': '分类时长',
+    'weekPanel.allocated': '已分配 {duration}',
     'weekPanel.estimated': '预估 {duration}',
     'weekPanel.estimatedEmpty': '点击设置预估时长',
     'weekPanel.estimatedLabel': '预估执行时长（分钟）',
     'weekPanel.estimatedPlaceholder': '如 60',
+    'weekPanel.habitTime': '习惯 {time}',
 
     // 事件层
     'event.scheduled': '已排入"{title}"',
