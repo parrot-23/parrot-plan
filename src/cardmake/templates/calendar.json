@@ -1,0 +1,6 @@
+{
+  "id": "calendar",
+  "name": "日历",
+  "mode": "calendar",
+  "description": "展示月历，并标记有执行记录的日期"
+}

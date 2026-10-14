@@ -5,11 +5,13 @@ import type { CardRenderer } from '../../datatypes/renderer';
 import { periodicCardRenderer } from './periodic-card';
 import { statsCardRenderer } from './stats-card';
 import { fixedCardRenderer } from './fixed-card';
+import { calendarCardRenderer } from './calendar-card';
 
 const registry: Record<CardMode, CardRenderer> = {
     periodic: periodicCardRenderer,
     stats: statsCardRenderer,
     fixed: fixedCardRenderer,
+    calendar: calendarCardRenderer,
 };
 
 /** 按模式获取渲染器 */

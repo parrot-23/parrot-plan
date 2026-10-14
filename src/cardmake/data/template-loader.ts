@@ -13,6 +13,7 @@ import yearGoal from '../templates/year-goal.json';
 import usageDays from '../templates/usage-days.json';
 import executedTaskCount from '../templates/executed-task-count.json';
 import executionTotalDuration from '../templates/execution-total-duration.json';
+import calendar from '../templates/calendar.json';
 
 /** 内置模板列表（构建时内联，随 main.js 一起分发） */
 const BUILTIN_TEMPLATES: CardTemplate[] = [
@@ -27,6 +28,7 @@ const BUILTIN_TEMPLATES: CardTemplate[] = [
     usageDays as CardTemplate,
     executedTaskCount as CardTemplate,
     executionTotalDuration as CardTemplate,
+    calendar as CardTemplate,
 ];
 
 /** 模板缓存：id → 模板 */

@@ -292,8 +292,9 @@ export class WorkbenchView {
             key: string;
             match: (tpl: CardTemplate) => boolean;
         }> = [
-            { key: 'workbench.category.icon', match: (tpl) => tpl.mode === 'stats' },
+            { key: 'workbench.category.chart', match: (tpl) => tpl.mode === 'stats' },
             { key: 'workbench.category.view', match: (tpl) => tpl.mode === 'periodic' },
+            { key: 'workbench.category.calendar', match: (tpl) => tpl.mode === 'calendar' },
             { key: 'workbench.category.other', match: (tpl) => tpl.mode === 'fixed' },
         ];
 
@@ -359,6 +360,7 @@ export class WorkbenchView {
             'year-goal': '🏆',
             'weekly-review': '🗓️',
             'daily-mood': '😊',
+            'calendar': '📆',
         };
         return byId[tpl.id] ?? '🧩';
     }
