@@ -50,6 +50,21 @@ export const zh = {
     // 成就榜单视图
     'achievement.title': '成就榜单',
 
+    // 剧本管理视图
+    'scriptManage.official': '官方剧本',
+    'scriptManage.local': '本地剧本',
+    'scriptManage.settings': '设置',
+    'scriptManage.localEmpty': '暂无本地剧本',
+    'scriptManage.settingsPlaceholder': '设置项开发中',
+
+    // 剧本场景视图
+    'scene.entryTitle': '剧本场景',
+    'scene.entryDesc': '进入剧本场景，查看今天的任务清单',
+    'scene.enter': '进入剧本场景',
+    'scene.back': '返回',
+    'scene.todayTasks': '今天的任务清单',
+    'scene.empty': '今天暂无任务',
+
     // 任务计划视图
     'taskPlan.noSelection': '请在左侧选择一个任务',
     'taskPlan.detailTitle': '任务详情',

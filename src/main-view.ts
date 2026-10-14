@@ -17,6 +17,8 @@ import { WorkbenchView } from './views/pdca/workbench/workbench-view';
 import { OkrView } from './views/okr/okr-view';
 import { OkrTaskPlanView } from './views/okr/okr-task-plan-view';
 import { AchievementView } from './views/story/achievement-view';
+import { ScriptManageView } from './views/story/script-manage-view';
+import { SceneView } from './views/story/scene-view';
 import type { WorkbenchData } from './datatypes/card';
 import { t } from './i18n';
 import { log } from './shared/logger';
@@ -93,6 +95,8 @@ export class MainView extends ItemView {
     private okrView: OkrView;
     private okrTaskPlanView: OkrTaskPlanView;
     private achievementView: AchievementView;
+    private scriptManageView: ScriptManageView;
+    private sceneView: SceneView;
     /** 当前一级视图 */
     private activePrimary: PrimaryView = 'pdca';
     /** 当前二级视图（tab） */
@@ -214,6 +218,12 @@ export class MainView extends ItemView {
             () => this.weekView.executions,
             () => this.weekView.inboxData.items,
         );
+        this.scriptManageView = new ScriptManageView(this.app);
+        this.sceneView = new SceneView(
+            this.app,
+            this.weekView.timeBlockCategoryData,
+            () => this.weekView.events,
+        );
     }
 
     getViewType(): string {
@@ -329,7 +339,7 @@ export class MainView extends ItemView {
 
         this.contentRoot.empty();
         // 清除上一次视图残留在共享容器上的视图类，避免多个视图样式叠加导致布局错乱
-        this.contentRoot.removeClass('today-view', 'year-view', 'task-plan-view', 'swimlane-view', 'workbench-view', 'check-view', 'improve-view', 'achievement-view');
+        this.contentRoot.removeClass('today-view', 'year-view', 'task-plan-view', 'swimlane-view', 'workbench-view', 'check-view', 'improve-view', 'achievement-view', 'script-manage-view', 'scene-view');
 
         // 从其他页面进入周计划视图时，若未选中任务则默认激活「周目标」
         if (this.activeTab === 'week' && this.prevTab !== 'week' && !this.weekView.inboxData.selectedId) {
@@ -389,6 +399,16 @@ export class MainView extends ItemView {
 
         if (this.activeTab === 'achievement') {
             await this.achievementView.renderInto(this.contentRoot);
+            return;
+        }
+
+        if (this.activeTab === 'scriptManage') {
+            await this.scriptManageView.renderInto(this.contentRoot);
+            return;
+        }
+
+        if (this.activeTab === 'scene') {
+            await this.sceneView.renderInto(this.contentRoot);
             return;
         }
 

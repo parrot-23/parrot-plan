@@ -5536,6 +5536,190 @@
     gap: 8px;
 }
 
+/* ===== 剧本管理视图 ===== */
+.script-manage-view {
+    height: 100%;
+    overflow: hidden;
+}
+
+.script-manage-layout {
+    display: flex;
+    flex-direction: row;
+    height: 100%;
+}
+
+.script-manage-menu {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    width: 160px;
+    flex-shrink: 0;
+    padding: 16px 8px;
+    border-right: 1px solid var(--background-modifier-border);
+}
+
+.script-manage-menu-item {
+    text-align: left;
+    padding: 8px 12px;
+    border-radius: 6px;
+    border: none;
+    background: transparent;
+    color: var(--text-normal);
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.script-manage-menu-item:hover {
+    background: var(--background-modifier-hover);
+}
+
+.script-manage-menu-item.is-active {
+    background: var(--interactive-accent);
+    color: var(--text-on-accent);
+}
+
+.script-manage-content {
+    flex: 1;
+    padding: 16px;
+    overflow-y: auto;
+}
+
+.script-manage-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text-normal);
+    margin-bottom: 12px;
+}
+
+.script-manage-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.script-manage-card {
+    padding: 12px 16px;
+    border-radius: 8px;
+    border: 1px solid var(--background-modifier-border);
+    background: var(--background-secondary);
+}
+
+.script-manage-card-name {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-normal);
+    margin-bottom: 4px;
+}
+
+.script-manage-card-desc {
+    font-size: 12px;
+    color: var(--text-muted);
+}
+
+.script-manage-empty {
+    padding: 24px;
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 13px;
+}
+
+/* ===== 剧本场景视图 ===== */
+.scene-view {
+    height: 100%;
+    padding: 16px;
+    overflow-y: auto;
+}
+
+.scene-entry {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    height: 100%;
+    text-align: center;
+}
+
+.scene-entry-title {
+    font-size: 20px;
+    font-weight: 600;
+    color: var(--text-normal);
+}
+
+.scene-entry-desc {
+    font-size: 13px;
+    color: var(--text-muted);
+}
+
+.scene-enter-btn {
+    margin-top: 8px;
+    padding: 8px 24px;
+    border-radius: 6px;
+    border: none;
+    background: var(--interactive-accent);
+    color: var(--text-on-accent);
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.scene-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.scene-back-btn {
+    padding: 4px 12px;
+    border-radius: 6px;
+    border: 1px solid var(--background-modifier-border);
+    background: var(--interactive-normal);
+    color: var(--text-normal);
+    cursor: pointer;
+    font-size: 13px;
+}
+
+.scene-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text-normal);
+}
+
+.scene-task-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.scene-task-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 12px;
+    border-radius: 6px;
+    border-left: 3px solid var(--chip-color, #888888);
+    background: var(--background-secondary);
+}
+
+.scene-task-name {
+    font-size: 14px;
+    color: var(--text-normal);
+}
+
+.scene-task-time {
+    font-size: 12px;
+    color: var(--text-muted);
+    flex-shrink: 0;
+}
+
+.scene-task-empty {
+    padding: 24px;
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 13px;
+}
+
 /* ===== 板块（任务内层结构）===== */
 /* 任务面板中的板块摘要 chip */
 .inbox-item-sections {

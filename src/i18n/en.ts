@@ -52,6 +52,21 @@ export const en: I18nMessages = {
     // Achievement view
     'achievement.title': 'Achievements',
 
+    // Script Manager view
+    'scriptManage.official': 'Official Scripts',
+    'scriptManage.local': 'Local Scripts',
+    'scriptManage.settings': 'Settings',
+    'scriptManage.localEmpty': 'No local scripts yet',
+    'scriptManage.settingsPlaceholder': 'Settings coming soon',
+
+    // Scene view
+    'scene.entryTitle': 'Scene',
+    'scene.entryDesc': 'Enter the scene to view today\'s task list',
+    'scene.enter': 'Enter Scene',
+    'scene.back': 'Back',
+    'scene.todayTasks': 'Today\'s Tasks',
+    'scene.empty': 'No tasks today',
+
     // Task Plan view
     'taskPlan.noSelection': 'Select a task on the left',
     'taskPlan.detailTitle': 'Task Details',
