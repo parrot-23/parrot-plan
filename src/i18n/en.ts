@@ -310,6 +310,10 @@ export const en: I18nMessages = {
     // Week panel
     'weekPanel.empty': 'No tasks',
     'weekPanel.statsTitle': 'Category durations',
+    'weekPanel.estimated': 'Est. {duration}',
+    'weekPanel.estimatedEmpty': 'Click to set estimate',
+    'weekPanel.estimatedLabel': 'Estimated duration (minutes)',
+    'weekPanel.estimatedPlaceholder': 'e.g. 60',
 
     // Event layer
     'event.scheduled': 'Scheduled "{title}"',

@@ -53,6 +53,10 @@ export class WeekScheduleView extends ItemView {
     private moreToolsOpen = false;
     /** 已标记为「已制定周计划」的周键列表（与年视图联动） */
     plannedWeeks: string[] = [];
+    /** 当前打开的「预估执行时长」悬浮面板 */
+    private estimatePopover: HTMLElement | null = null;
+    /** 悬浮面板的「点击外部关闭」监听器 */
+    private estimateOutsideHandler: ((e: MouseEvent) => void) | null = null;
 
     // Obsidian 旧 API：ItemView 构造函数只接受 leaf
     constructor(leaf: WorkspaceLeaf, plugin: Plugin, data: WeekRangeData, templateData: DayTemplateData, categoryData: TimeBlockCategoryData,
@@ -149,6 +153,8 @@ export class WeekScheduleView extends ItemView {
 
         // 清理可能残留的事件悬浮提示（重渲染时卡片被移除，mouseleave 不会触发）
         document.querySelectorAll('.event-tooltip').forEach(el => el.remove());
+        // 清理预估时长悬浮面板（重渲染会移除其宿主卡片）
+        this.closeEstimatePopover();
 
         log('渲染周表日历', {
             weekKey: this.currentWeekKey,
@@ -234,6 +240,7 @@ export class WeekScheduleView extends ItemView {
     }
 
     async onClose() {
+        this.closeEstimatePopover();
         const content = this.containerEl.children[1] as HTMLElement;
         content.empty();
     }
@@ -298,7 +305,24 @@ export class WeekScheduleView extends ItemView {
                 ? this.timeBlockCategoryData.categories.find(c => c.id === ev.categoryId)
                 : undefined;
             chip.setCssProps({ '--chip-color': cat?.color ?? '#888888' });
+
+            // 第一行：标题
             chip.createSpan({ cls: 'week-panel-task-title', text: ev.title });
+
+            // 第二行：预估执行时长（未填写时显示占位提示）
+            const estLine = chip.createDiv({ cls: 'week-panel-task-est' });
+            if (typeof ev.estimatedMinutes === 'number' && ev.estimatedMinutes > 0) {
+                estLine.setText(t('weekPanel.estimated', { duration: this.formatDuration(ev.estimatedMinutes) }));
+            } else {
+                estLine.addClass('is-empty');
+                estLine.setText(t('weekPanel.estimatedEmpty'));
+            }
+
+            // 点击卡片：在卡片旁弹出悬浮面板，填写预估执行时长
+            chip.onclick = (e) => {
+                e.stopPropagation();
+                this.openEstimatePopover(chip, ev);
+            };
 
             // 删除按钮（已制定周计划时计划固定，不允许删除）
             if (!this.plannedWeeks.includes(this.currentWeekKey)) {
@@ -313,6 +337,89 @@ export class WeekScheduleView extends ItemView {
                     await this.onOpen();
                 };
             }
+        }
+    }
+
+    /**
+     * 在卡片旁弹出悬浮面板，用于填写「预估执行时长」。
+     * 面板挂在卡片内部（绝对定位），点击外部或按 Esc 关闭。
+     */
+    private openEstimatePopover(anchor: HTMLElement, ev: EventBlock) {
+        // 同一时刻只保留一个面板
+        this.closeEstimatePopover();
+
+        const pop = anchor.createDiv({ cls: 'week-panel-est-popover' });
+        this.estimatePopover = pop;
+
+        pop.createDiv({ cls: 'week-panel-est-popover-title', text: t('weekPanel.estimatedLabel') });
+
+        const input = pop.createEl('input', { cls: 'week-panel-est-input' });
+        input.type = 'number';
+        input.min = '0';
+        input.step = '5';
+        input.placeholder = t('weekPanel.estimatedPlaceholder');
+        if (typeof ev.estimatedMinutes === 'number' && ev.estimatedMinutes > 0) {
+            input.value = String(ev.estimatedMinutes);
+        }
+
+        const actions = pop.createDiv({ cls: 'week-panel-est-actions' });
+        const saveBtn = actions.createEl('button', { text: t('common.save'), cls: 'mod-cta' });
+        const cancelBtn = actions.createEl('button', { text: t('common.cancel') });
+
+        const commit = async () => {
+            const raw = input.value.trim();
+            const minutes = raw === '' ? undefined : Math.max(0, Math.floor(Number(raw)));
+            if (raw !== '' && (!Number.isFinite(minutes) || (minutes as number) < 0)) {
+                new Notice(t('weekPanel.estimatedPlaceholder'));
+                return;
+            }
+            // 原地修改，保持数组引用不变（插件持有同一引用）
+            const target = this.events.find(x => x.id === ev.id);
+            if (target) {
+                if (minutes === undefined || minutes === 0) {
+                    delete target.estimatedMinutes;
+                } else {
+                    target.estimatedMinutes = minutes;
+                }
+            }
+            this.closeEstimatePopover();
+            await this.save();
+            await this.onOpen();
+        };
+
+        saveBtn.onclick = (e) => { e.stopPropagation(); void commit(); };
+        cancelBtn.onclick = (e) => { e.stopPropagation(); this.closeEstimatePopover(); };
+        // 阻止面板内点击冒泡到卡片（避免重复触发）
+        pop.onclick = (e) => e.stopPropagation();
+        input.onkeydown = (e) => {
+            if (e.key === 'Enter') { e.preventDefault(); void commit(); }
+            else if (e.key === 'Escape') { e.preventDefault(); this.closeEstimatePopover(); }
+        };
+
+        // 点击外部关闭
+        this.estimateOutsideHandler = (e: MouseEvent) => {
+            if (!pop.contains(e.target as Node)) this.closeEstimatePopover();
+        };
+        // 延迟注册，避免本次点击立即触发关闭
+        window.setTimeout(() => {
+            if (this.estimateOutsideHandler) {
+                document.addEventListener('mousedown', this.estimateOutsideHandler);
+            }
+        }, 0);
+
+        input.focus();
+        input.select();
+    }
+
+    /** 关闭预估时长悬浮面板 */
+    private closeEstimatePopover() {
+        if (this.estimateOutsideHandler) {
+            document.removeEventListener('mousedown', this.estimateOutsideHandler);
+            this.estimateOutsideHandler = null;
+        }
+        if (this.estimatePopover) {
+            this.estimatePopover.remove();
+            this.estimatePopover = null;
         }
     }
 

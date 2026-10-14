@@ -308,6 +308,10 @@ export const zh = {
     // 周面板
     'weekPanel.empty': '暂无任务',
     'weekPanel.statsTitle': '分类时长',
+    'weekPanel.estimated': '预估 {duration}',
+    'weekPanel.estimatedEmpty': '点击设置预估时长',
+    'weekPanel.estimatedLabel': '预估执行时长（分钟）',
+    'weekPanel.estimatedPlaceholder': '如 60',
 
     // 事件层
     'event.scheduled': '已排入"{title}"',
