@@ -93,6 +93,9 @@ export const en: I18nMessages = {
     'gtd.clarifyPlaceholder': 'Write content here…',
     'gtd.clarifyConfirm': 'Confirm',
 
+    // GTD Review view
+    'gtd.reviewEmpty': 'Nothing to review yet',
+
     // Task Plan view
     'taskPlan.noSelection': 'Select a task on the left',
     'taskPlan.detailTitle': 'Task Details',

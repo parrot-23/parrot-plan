@@ -6069,6 +6069,90 @@
     font-size: 13px;
 }
 
+/* ===== GTD 回顾视图 ===== */
+.gtd-review-view {
+    height: 100%;
+    overflow: hidden;
+}
+
+.gtd-review-layout {
+    display: flex;
+    flex-direction: row;
+    height: 100%;
+}
+
+.gtd-review-menu {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    width: 160px;
+    flex-shrink: 0;
+    padding: 16px 8px;
+    border-right: 1px solid var(--background-modifier-border);
+}
+
+.gtd-review-menu-item {
+    text-align: left;
+    padding: 8px 12px;
+    border-radius: 6px;
+    border: none;
+    background: transparent;
+    color: var(--text-normal);
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.gtd-review-menu-item:hover {
+    background: var(--background-modifier-hover);
+}
+
+.gtd-review-menu-item.is-active {
+    background: var(--interactive-accent);
+    color: var(--text-on-accent);
+}
+
+.gtd-review-gallery {
+    flex: 1;
+    padding: 16px;
+    overflow-y: auto;
+}
+
+.gtd-review-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 16px;
+}
+
+.gtd-review-card {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 16px;
+    border-radius: 8px;
+    border: 1px solid var(--background-modifier-border);
+    background: var(--background-secondary);
+    min-height: 100px;
+}
+
+.gtd-review-card-content {
+    flex: 1;
+    font-size: 14px;
+    color: var(--text-normal);
+    word-break: break-word;
+}
+
+.gtd-review-card-time {
+    font-size: 12px;
+    color: var(--text-muted);
+}
+
+.gtd-review-empty {
+    padding: 24px;
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 13px;
+}
+
 /* ===== 板块（任务内层结构）===== */
 /* 任务面板中的板块摘要 chip */
 .inbox-item-sections {

@@ -91,6 +91,9 @@ export const zh = {
     'gtd.clarifyPlaceholder': '在此编写内容…',
     'gtd.clarifyConfirm': '确认',
 
+    // GTD 回顾视图
+    'gtd.reviewEmpty': '暂无回顾内容',
+
     // 任务计划视图
     'taskPlan.noSelection': '请在左侧选择一个任务',
     'taskPlan.detailTitle': '任务详情',
