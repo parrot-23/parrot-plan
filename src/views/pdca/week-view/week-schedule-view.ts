@@ -407,8 +407,40 @@ export class WeekScheduleView extends ItemView {
             }
         }, 0);
 
+        // 面板已挂载后，若右侧超出日历范围则向左偏移，避免被裁切
+        this.adjustPopoverWithinCalendar(pop);
+
         input.focus();
         input.select();
+    }
+
+    /**
+     * 校正悬浮面板的水平位置：默认左对齐卡片，若右侧超出日历容器则改为
+     * 与卡片右缘对齐（面板右缘 = 卡片右缘），确保面板不会超出日历范围。
+     */
+    private adjustPopoverWithinCalendar(pop: HTMLElement) {
+        // 先复位，避免基于上一次的偏移重复计算
+        pop.style.left = '0';
+        pop.style.right = 'auto';
+
+        const boundary = pop.closest('.week-calendar') as HTMLElement | null;
+        const popRect = pop.getBoundingClientRect();
+        const boundaryRect = boundary
+            ? boundary.getBoundingClientRect()
+            : { left: 0, right: window.innerWidth } as DOMRect;
+
+        const overflowRight = popRect.right - boundaryRect.right;
+        if (overflowRight > 0) {
+            // 与卡片右缘对齐：面板右缘贴齐卡片右缘
+            const anchor = pop.parentElement as HTMLElement | null;
+            if (anchor) {
+                const anchorRect = anchor.getBoundingClientRect();
+                const shift = popRect.right - anchorRect.right;
+                pop.style.left = `calc(0px - ${shift}px)`;
+            } else {
+                pop.style.left = `calc(0px - ${overflowRight + 4}px)`;
+            }
+        }
     }
 
     /** 关闭预估时长悬浮面板 */
