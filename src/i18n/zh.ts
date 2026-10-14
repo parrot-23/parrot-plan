@@ -47,6 +47,9 @@ export const zh = {
     'nav.gtdEngage': '执行',
     'nav.placeholder': '当前是「{name}」页面',
 
+    // 成就榜单视图
+    'achievement.title': '成就榜单',
+
     // 任务计划视图
     'taskPlan.noSelection': '请在左侧选择一个任务',
     'taskPlan.detailTitle': '任务详情',

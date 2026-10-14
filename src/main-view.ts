@@ -16,6 +16,7 @@ import { SwimlaneView } from './views/pdca/projectpicture-view';
 import { WorkbenchView } from './views/pdca/workbench/workbench-view';
 import { OkrView } from './views/okr/okr-view';
 import { OkrTaskPlanView } from './views/okr/okr-task-plan-view';
+import { AchievementView } from './views/story/achievement-view';
 import type { WorkbenchData } from './datatypes/card';
 import { t } from './i18n';
 import { log } from './shared/logger';
@@ -91,6 +92,7 @@ export class MainView extends ItemView {
     private workbenchView: WorkbenchView;
     private okrView: OkrView;
     private okrTaskPlanView: OkrTaskPlanView;
+    private achievementView: AchievementView;
     /** 当前一级视图 */
     private activePrimary: PrimaryView = 'pdca';
     /** 当前二级视图（tab） */
@@ -205,6 +207,12 @@ export class MainView extends ItemView {
             this.weekView.inboxData,
             this.weekView.timeBlockCategoryData,
             () => this.weekView.save(),
+        );
+        this.achievementView = new AchievementView(
+            this.app,
+            () => this.weekView.events,
+            () => this.weekView.executions,
+            () => this.weekView.inboxData.items,
         );
     }
 
@@ -321,7 +329,7 @@ export class MainView extends ItemView {
 
         this.contentRoot.empty();
         // 清除上一次视图残留在共享容器上的视图类，避免多个视图样式叠加导致布局错乱
-        this.contentRoot.removeClass('today-view', 'year-view', 'task-plan-view', 'swimlane-view', 'workbench-view', 'check-view', 'improve-view');
+        this.contentRoot.removeClass('today-view', 'year-view', 'task-plan-view', 'swimlane-view', 'workbench-view', 'check-view', 'improve-view', 'achievement-view');
 
         // 从其他页面进入周计划视图时，若未选中任务则默认激活「周目标」
         if (this.activeTab === 'week' && this.prevTab !== 'week' && !this.weekView.inboxData.selectedId) {
@@ -376,6 +384,11 @@ export class MainView extends ItemView {
 
         if (this.activeTab === 'okrHome') {
             await this.okrView.renderInto(this.contentRoot);
+            return;
+        }
+
+        if (this.activeTab === 'achievement') {
+            await this.achievementView.renderInto(this.contentRoot);
             return;
         }
 

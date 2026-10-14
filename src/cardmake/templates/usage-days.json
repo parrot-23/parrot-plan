@@ -1,0 +1,9 @@
+{
+  "id": "usage-days",
+  "name": "累计使用天数",
+  "mode": "stats",
+  "description": "展示用户累计使用的天数",
+  "source": {
+    "type": "usage-days"
+  }
+}

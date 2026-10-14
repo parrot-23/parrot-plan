@@ -34,6 +34,12 @@ export function aggregate(source: CardSource, provider: DataProvider): Aggregati
             return aggregateActivityHeatmap(source, provider);
         case 'plan-heatmap':
             return aggregatePlanHeatmap(source, provider);
+        case 'usage-days':
+            return aggregateUsageDays(provider);
+        case 'executed-task-count':
+            return aggregateExecutedTaskCount(provider);
+        case 'execution-total-duration':
+            return aggregateExecutionTotalDuration(provider);
         default:
             return { stats: [] };
     }
@@ -238,4 +244,33 @@ function aggregatePlanHeatmap(source: CardSource, provider: DataProvider): Aggre
         stats: [{ label: '计划总量', value: total }],
         heatmap: { data, metricLabel: metric === 'duration' ? '时长(分钟)' : '次数' },
     };
+}
+
+/** 累计使用天数：有执行记录的不同日期数 */
+function aggregateUsageDays(provider: DataProvider): AggregationResult {
+    const days = new Set<string>();
+    for (const ex of provider.getExecutions()) {
+        if (ex.weekKey && ex.day) {
+            days.add(makeDayKeyFromWeek(ex.weekKey, ex.day));
+        }
+    }
+    return { stats: [{ label: '累计使用天数', value: days.size }] };
+}
+
+/** 执行的任务总数：有执行记录的不同任务数（按 inboxId 去重） */
+function aggregateExecutedTaskCount(provider: DataProvider): AggregationResult {
+    const tasks = new Set<string>();
+    for (const ex of provider.getExecutions()) {
+        if (ex.inboxId) tasks.add(ex.inboxId);
+    }
+    return { stats: [{ label: '执行任务总数', value: tasks.size }] };
+}
+
+/** 执行总时长：全部执行记录的时长之和（分钟） */
+function aggregateExecutionTotalDuration(provider: DataProvider): AggregationResult {
+    let total = 0;
+    for (const ex of provider.getExecutions()) {
+        total += Math.max(0, (ex.end ?? ex.start) - ex.start);
+    }
+    return { stats: [{ label: '执行总时长', value: total }] };
 }

@@ -49,6 +49,9 @@ export const en: I18nMessages = {
     'nav.gtdEngage': 'Engage',
     'nav.placeholder': 'This is the "{name}" page',
 
+    // Achievement view
+    'achievement.title': 'Achievements',
+
     // Task Plan view
     'taskPlan.noSelection': 'Select a task on the left',
     'taskPlan.detailTitle': 'Task Details',
