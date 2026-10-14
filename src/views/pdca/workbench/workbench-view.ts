@@ -100,31 +100,17 @@ export class WorkbenchView {
             });
             addBtn.onclick = () => this.showAddCardMenu(addBtn);
 
-            // 保存按钮：退出编辑态并持久化
-            const saveBtn = actions.createEl('button', {
-                cls: 'wb-save-btn',
-                text: t('workbench.saveLayout'),
+            // 退出编辑按钮：退出编辑态并持久化
+            const exitBtn = actions.createEl('button', {
+                cls: 'wb-exit-edit-btn',
+                text: t('workbench.exitEdit'),
             });
-            saveBtn.onclick = () => {
+            exitBtn.onclick = () => {
                 this.editingLayout = false;
                 this.editSnapshot = null;
                 void this.save().then(() => {
                     if (this.container) void this.renderInto(this.container);
                 });
-            };
-
-            // 取消按钮：还原到进入编辑态前的快照
-            const cancelBtn = actions.createEl('button', {
-                cls: 'wb-cancel-btn',
-                text: t('workbench.cancelLayout'),
-            });
-            cancelBtn.onclick = () => {
-                if (this.editSnapshot) {
-                    this.workbenchData.instances = this.editSnapshot.map((i) => ({ ...i }));
-                }
-                this.editingLayout = false;
-                this.editSnapshot = null;
-                void this.renderInto(container);
             };
         }
 
@@ -291,16 +277,51 @@ export class WorkbenchView {
         return result;
     }
 
-    /** 弹出添加卡片菜单：列出所有模板供选择 */
+    /**
+     * 弹出添加卡片菜单：按分类区块列出模板供选择。
+     * 分类顺序为「图标、视图、其他」，每个分类一个区块（带标题），
+     * 区块内每个类型为一个「图标 + 文字」方块，从左到右排列。
+     */
     private showAddCardMenu(anchor: HTMLElement) {
         const menu = anchor.createDiv({ cls: 'wb-add-menu' });
-        for (const tpl of this.templates) {
-            const item = menu.createDiv({ cls: 'wb-add-menu-item', text: tpl.name });
-            item.onclick = () => {
-                this.addCard(tpl);
-                menu.remove();
-            };
+
+        // 分类定义：key 用于 i18n 文案，match 判断模板归属
+        const categories: Array<{
+            key: string;
+            match: (tpl: CardTemplate) => boolean;
+        }> = [
+            { key: 'workbench.category.icon', match: (tpl) => tpl.mode === 'stats' },
+            { key: 'workbench.category.view', match: (tpl) => tpl.mode === 'periodic' },
+            { key: 'workbench.category.other', match: (tpl) => tpl.mode === 'fixed' },
+        ];
+
+        // 已归类的模板 id，用于兜底「其他」区块
+        const assigned = new Set<string>();
+
+        for (const cat of categories) {
+            const items = this.templates.filter((tpl) => !assigned.has(tpl.id) && cat.match(tpl));
+            if (items.length === 0) continue;
+            for (const tpl of items) assigned.add(tpl.id);
+
+            const section = menu.createDiv({ cls: 'wb-add-section' });
+            section.createDiv({ cls: 'wb-add-section-title', text: t(cat.key as never) });
+            const grid = section.createDiv({ cls: 'wb-add-section-grid' });
+            for (const tpl of items) {
+                this.renderAddCardItem(grid, tpl, menu);
+            }
         }
+
+        // 兜底：未被任何分类匹配的模板放入「其他」区块
+        const rest = this.templates.filter((tpl) => !assigned.has(tpl.id));
+        if (rest.length > 0) {
+            const section = menu.createDiv({ cls: 'wb-add-section' });
+            section.createDiv({ cls: 'wb-add-section-title', text: t('workbench.category.other') });
+            const grid = section.createDiv({ cls: 'wb-add-section-grid' });
+            for (const tpl of rest) {
+                this.renderAddCardItem(grid, tpl, menu);
+            }
+        }
+
         // 点击外部关闭
         const close = (e: MouseEvent) => {
             if (!menu.contains(e.target as Node)) {
@@ -309,6 +330,35 @@ export class WorkbenchView {
             }
         };
         window.setTimeout(() => document.addEventListener('click', close), 0);
+    }
+
+    /** 渲染单个「图标 + 文字」方块选项 */
+    private renderAddCardItem(grid: HTMLElement, tpl: CardTemplate, menu: HTMLElement) {
+        const item = grid.createDiv({ cls: 'wb-add-menu-item' });
+        item.createDiv({ cls: 'wb-add-menu-item-icon', text: this.iconForTemplate(tpl) });
+        item.createDiv({ cls: 'wb-add-menu-item-label', text: tpl.name });
+        item.onclick = () => {
+            this.addCard(tpl);
+            menu.remove();
+        };
+    }
+
+    /** 根据模板类型返回一个示例图标（emoji） */
+    private iconForTemplate(tpl: CardTemplate): string {
+        const byId: Record<string, string> = {
+            'usage-days': '📅',
+            'executed-task-count': '✅',
+            'execution-total-duration': '⏱️',
+            'activity-heatmap': '🔥',
+            'category-distribution': '🍩',
+            'day-execution-chart': '📊',
+            'event-completion': '🎯',
+            'task-stats': '📋',
+            'year-goal': '🏆',
+            'weekly-review': '🗓️',
+            'daily-mood': '😊',
+        };
+        return byId[tpl.id] ?? '🧩';
     }
 
     /** 添加一张卡片实例 */

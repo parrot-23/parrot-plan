@@ -465,6 +465,10 @@ export const en: I18nMessages = {
     'workbench.editLayoutActive': 'Editing',
     'workbench.saveLayout': 'Save',
     'workbench.cancelLayout': 'Cancel',
+    'workbench.exitEdit': 'Exit Edit',
+    'workbench.category.icon': 'Icons',
+    'workbench.category.view': 'Views',
+    'workbench.category.other': 'Other',
 
     // Layout scheme modal
     'layout.title': 'Layout Scheme',
