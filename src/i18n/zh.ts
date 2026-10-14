@@ -307,6 +307,7 @@ export const zh = {
 
     // 周面板
     'weekPanel.empty': '暂无任务',
+    'weekPanel.statsTitle': '分类时长',
 
     // 事件层
     'event.scheduled': '已排入"{title}"',

@@ -12,6 +12,10 @@ export interface WeekPanelRefs {
     panel: HTMLElement;
     /** 表头行（.week-panel-header） */
     headerRow: HTMLElement;
+    /** 统计行（.week-panel-stats），每天一个统计单元格 */
+    statsRow: HTMLElement;
+    /** 7 个统计单元格（.week-panel-stats-cell） */
+    statsCells: HTMLElement[];
     /** 7 列容器（.week-panel-columns） */
     columnsRow: HTMLElement;
     /** 7 个日期列（.week-panel-column） */
@@ -41,6 +45,14 @@ export function renderWeekPanel(
         header.setText(days[d - 1]);
     }
 
+    // ===== 统计行（每天一个统计单元格，由调用方填充内容）=====
+    const statsRow = panel.createDiv({ cls: 'week-panel-stats' });
+    const statsCells: HTMLElement[] = [];
+    for (let d = 1; d <= 7; d++) {
+        const cell = statsRow.createDiv({ cls: 'week-panel-stats-cell' });
+        statsCells.push(cell);
+    }
+
     // ===== 7 列日期面板 =====
     const columnsRow = panel.createDiv({ cls: 'week-panel-columns' });
     const dayColumns: HTMLElement[] = [];
@@ -50,5 +62,5 @@ export function renderWeekPanel(
         dayColumns.push(col);
     }
 
-    return { panel, headerRow, columnsRow, dayColumns };
+    return { panel, headerRow, statsRow, statsCells, columnsRow, dayColumns };
 }

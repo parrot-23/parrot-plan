@@ -22,6 +22,8 @@ export class OkrTaskPlanView {
     private addPanelCloseHandler?: (e: MouseEvent) => void;
     /** 当前处于编辑态的板块 id（null 表示无） */
     private editingSectionId: string | null = null;
+    /** OKR 进度方框容器（OKR 信息变更时同步刷新进度） */
+    private progressWrap?: HTMLElement;
 
     constructor(
         app: App,
@@ -75,6 +77,7 @@ export class OkrTaskPlanView {
 
         // 进度方框（当前选中任务的 OKR 条件完成进度）
         const progressWrap = contentPanel.createDiv({ cls: 'okr-progress-wrap' });
+        this.progressWrap = progressWrap;
         this.renderProgressBox(progressWrap);
 
         // 板块信息方框（当前选中项目的板块卡片）
@@ -484,6 +487,7 @@ export class OkrTaskPlanView {
                 cond.type = sel.value as OkrConditionType;
                 void this.save();
                 this.renderOkrBox(wrap);
+                this.refreshProgressBox();
             };
 
             if (cond.type === 'outcome') {
@@ -497,6 +501,7 @@ export class OkrTaskPlanView {
                 textInput.onchange = () => {
                     cond.text = textInput.value;
                     void this.save();
+                    this.refreshProgressBox();
                 };
             } else {
                 // 时长：数字目标值 + 单位
@@ -510,6 +515,7 @@ export class OkrTaskPlanView {
                     const v = Number(target.value);
                     cond.target = Number.isFinite(v) ? v : 0;
                     void this.save();
+                    this.refreshProgressBox();
                 };
 
                 // 单位
@@ -535,6 +541,7 @@ export class OkrTaskPlanView {
         item.okr.conditions.push({ id, type: 'duration', target: 0 });
         await this.save();
         this.renderOkrBox(wrap);
+        this.refreshProgressBox();
     }
 
     /** 删除一条 OKR 条件并保存、刷新 */
@@ -543,6 +550,12 @@ export class OkrTaskPlanView {
         item.okr.conditions = item.okr.conditions.filter(c => c.id !== condId);
         await this.save();
         this.renderOkrBox(wrap);
+        this.refreshProgressBox();
+    }
+
+    /** 同步刷新 OKR 进度方框（OKR 信息变更后调用） */
+    private refreshProgressBox(): void {
+        if (this.progressWrap) this.renderProgressBox(this.progressWrap);
     }
 
     /** 进度方框：当前选中任务的 OKR 条件完成进度（当前值 / 目标值） */

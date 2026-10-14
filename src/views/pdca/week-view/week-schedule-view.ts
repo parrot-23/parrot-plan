@@ -215,12 +215,17 @@ export class WeekScheduleView extends ItemView {
         const calendar = main.createDiv({ cls: 'week-calendar' });
 
         // ===== 周面板（公共组件）：一周七天，每天一列 =====
-        const { dayColumns } = renderWeekPanel(calendar, {
+        const { dayColumns, statsCells } = renderWeekPanel(calendar, {
             onColumnClick: (d) => {
                 // 点击某天列：将左侧选中的任务添加到这一天
                 void this.addTaskToDay(d);
             },
         });
+
+        // 渲染每列顶部的分类时长统计（依据当前时间区间方案）
+        for (let d = 1; d <= 7; d++) {
+            this.renderDayStats(statsCells[d - 1], d);
+        }
 
         // 渲染每天列内的任务清单
         for (let d = 1; d <= 7; d++) {
@@ -234,6 +239,48 @@ export class WeekScheduleView extends ItemView {
     }
 
     // ===== 周面板：单日列 =====
+    /**
+     * 渲染某天列顶部的分类时长统计。
+     * 依据当前激活的时间区间方案，汇总该天各分类的可用时长（分钟）。
+     */
+    private renderDayStats(cell: HTMLElement, day: number) {
+        const dayData = this.getSchemeDays().find(d => d.day === day);
+        const ranges = dayData?.ranges ?? [];
+
+        // 按分类汇总时长（分钟）
+        const totals = new Map<TimeBlockCategoryId, number>();
+        for (const range of ranges) {
+            const minutes = Math.max(0, range.end - range.start);
+            if (minutes === 0) continue;
+            totals.set(range.sort, (totals.get(range.sort) ?? 0) + minutes);
+        }
+
+        if (totals.size === 0) {
+            cell.createDiv({ cls: 'week-panel-stats-empty', text: '—' });
+            return;
+        }
+
+        // 按分类在类别列表中的顺序稳定输出
+        const ordered = this.timeBlockCategoryData.categories.filter(c => totals.has(c.id));
+        for (const cat of ordered) {
+            const minutes = totals.get(cat.id) ?? 0;
+            const item = cell.createDiv({ cls: 'week-panel-stats-item' });
+            item.setCssProps({ '--stats-color': cat.color });
+            item.createSpan({ cls: 'week-panel-stats-dot' });
+            item.createSpan({ cls: 'week-panel-stats-label', text: cat.label });
+            item.createSpan({ cls: 'week-panel-stats-value', text: this.formatDuration(minutes) });
+        }
+    }
+
+    /** 将分钟数格式化为「Xh Ym」/「Ym」形式 */
+    private formatDuration(minutes: number): string {
+        const h = Math.floor(minutes / 60);
+        const m = minutes % 60;
+        if (h > 0 && m > 0) return `${h}h${m}m`;
+        if (h > 0) return `${h}h`;
+        return `${m}m`;
+    }
+
     /** 渲染某天列内的任务清单（当天已排入的任务） */
     private renderDayColumn(col: HTMLElement, day: number) {
         const dayEvents = this.events.filter(
