@@ -85,6 +85,14 @@ export const en: I18nMessages = {
     'gtd.sourceFinance': 'Finance Library',
     'gtd.sourceIntel': 'Intel Library',
 
+    // GTD Clarify view
+    'gtd.clarifyLeftTitle': 'Collected Items',
+    'gtd.clarifyMiddleTitle': 'Select Source',
+    'gtd.clarifyRightTitle': 'Content',
+    'gtd.clarifyNoSource': 'No sources yet, add one in Organize',
+    'gtd.clarifyPlaceholder': 'Write content here…',
+    'gtd.clarifyConfirm': 'Confirm',
+
     // Task Plan view
     'taskPlan.noSelection': 'Select a task on the left',
     'taskPlan.detailTitle': 'Task Details',

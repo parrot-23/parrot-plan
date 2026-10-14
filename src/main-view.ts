@@ -21,6 +21,7 @@ import { ScriptManageView } from './views/story/script-manage-view';
 import { SceneView } from './views/story/scene-view';
 import { GtdCollectView } from './views/gtd/collect-view';
 import { GtdOrganizeView } from './views/gtd/organize-view';
+import { GtdClarifyView } from './views/gtd/clarify-view';
 import type { WorkbenchData } from './datatypes/card';
 import type { GtdData } from './datatypes/gtd';
 import { t } from './i18n';
@@ -102,6 +103,7 @@ export class MainView extends ItemView {
     private sceneView: SceneView;
     private gtdCollectView: GtdCollectView;
     private gtdOrganizeView: GtdOrganizeView;
+    private gtdClarifyView: GtdClarifyView;
     /** 当前一级视图 */
     private activePrimary: PrimaryView = 'pdca';
     /** 当前二级视图（tab） */
@@ -240,6 +242,11 @@ export class MainView extends ItemView {
             gtdData,
             () => this.weekView.save(),
         );
+        this.gtdClarifyView = new GtdClarifyView(
+            this.app,
+            gtdData,
+            () => this.weekView.save(),
+        );
     }
 
     getViewType(): string {
@@ -355,7 +362,7 @@ export class MainView extends ItemView {
 
         this.contentRoot.empty();
         // 清除上一次视图残留在共享容器上的视图类，避免多个视图样式叠加导致布局错乱
-        this.contentRoot.removeClass('today-view', 'year-view', 'task-plan-view', 'swimlane-view', 'workbench-view', 'check-view', 'improve-view', 'achievement-view', 'script-manage-view', 'scene-view', 'gtd-collect-view', 'gtd-organize-view');
+        this.contentRoot.removeClass('today-view', 'year-view', 'task-plan-view', 'swimlane-view', 'workbench-view', 'check-view', 'improve-view', 'achievement-view', 'script-manage-view', 'scene-view', 'gtd-collect-view', 'gtd-organize-view', 'gtd-clarify-view');
 
         // 从其他页面进入周计划视图时，若未选中任务则默认激活「周目标」
         if (this.activeTab === 'week' && this.prevTab !== 'week' && !this.weekView.inboxData.selectedId) {
@@ -435,6 +442,11 @@ export class MainView extends ItemView {
 
         if (this.activeTab === 'gtdOrganize') {
             await this.gtdOrganizeView.renderInto(this.contentRoot);
+            return;
+        }
+
+        if (this.activeTab === 'gtdClarify') {
+            await this.gtdClarifyView.renderInto(this.contentRoot);
             return;
         }
 

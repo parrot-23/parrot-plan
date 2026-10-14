@@ -83,6 +83,14 @@ export const zh = {
     'gtd.sourceFinance': '财务库',
     'gtd.sourceIntel': '情报资讯库',
 
+    // GTD 梳理视图
+    'gtd.clarifyLeftTitle': '收集记录',
+    'gtd.clarifyMiddleTitle': '选择源',
+    'gtd.clarifyRightTitle': '内容编写',
+    'gtd.clarifyNoSource': '暂无源，请先在「组织」中添加',
+    'gtd.clarifyPlaceholder': '在此编写内容…',
+    'gtd.clarifyConfirm': '确认',
+
     // 任务计划视图
     'taskPlan.noSelection': '请在左侧选择一个任务',
     'taskPlan.detailTitle': '任务详情',
