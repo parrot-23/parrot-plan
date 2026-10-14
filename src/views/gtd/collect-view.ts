@@ -77,10 +77,11 @@ export class GtdCollectView {
 
         for (const item of pending) {
             const card = list.createDiv({ cls: 'gtd-collect-card' });
-            card.createDiv({ cls: 'gtd-collect-card-content', text: item.content });
+            // 时间点放在最上面
             const meta = card.createDiv({ cls: 'gtd-collect-card-meta' });
             meta.createSpan({ cls: 'gtd-collect-card-time', text: formatTime(item.createdAt) });
             meta.createSpan({ cls: 'gtd-collect-card-status', text: t('gtd.statusInbox') });
+            card.createDiv({ cls: 'gtd-collect-card-content', text: item.content });
 
             const delBtn = card.createEl('button', {
                 cls: 'gtd-collect-card-delete',
