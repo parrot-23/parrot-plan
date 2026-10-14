@@ -5822,6 +5822,141 @@
     font-size: 13px;
 }
 
+/* ===== GTD 组织视图 ===== */
+.gtd-organize-view {
+    height: 100%;
+    overflow: hidden;
+}
+
+.gtd-organize-layout {
+    display: flex;
+    flex-direction: row;
+    height: 100%;
+}
+
+.gtd-organize-menu {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    width: 160px;
+    flex-shrink: 0;
+    padding: 16px 8px;
+    border-right: 1px solid var(--background-modifier-border);
+}
+
+.gtd-organize-menu-item {
+    text-align: left;
+    padding: 8px 12px;
+    border-radius: 6px;
+    border: none;
+    background: transparent;
+    color: var(--text-normal);
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.gtd-organize-menu-item:hover {
+    background: var(--background-modifier-hover);
+}
+
+.gtd-organize-menu-item.is-active {
+    background: var(--interactive-accent);
+    color: var(--text-on-accent);
+}
+
+.gtd-organize-content {
+    flex: 1;
+    padding: 16px;
+    overflow-y: auto;
+}
+
+.gtd-organize-block {
+    padding: 16px;
+    border-radius: 8px;
+    border: 1px solid var(--background-modifier-border);
+    background: var(--background-secondary);
+}
+
+.gtd-organize-block-title {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text-normal);
+    margin-bottom: 12px;
+}
+
+.gtd-organize-add-row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.gtd-organize-source-select {
+    flex: 1;
+    padding: 6px 10px;
+    border-radius: 6px;
+    border: 1px solid var(--background-modifier-border);
+    background: var(--background-primary);
+    color: var(--text-normal);
+    font-size: 14px;
+}
+
+.gtd-organize-add-btn {
+    padding: 6px 16px;
+    border-radius: 6px;
+    border: none;
+    background: var(--interactive-accent);
+    color: var(--text-on-accent);
+    cursor: pointer;
+    font-size: 14px;
+    flex-shrink: 0;
+}
+
+.gtd-organize-source-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.gtd-organize-source-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 12px;
+    border-radius: 6px;
+    border: 1px solid var(--background-modifier-border);
+    background: var(--background-primary);
+}
+
+.gtd-organize-source-name {
+    font-size: 14px;
+    color: var(--text-normal);
+}
+
+.gtd-organize-source-delete {
+    width: 20px;
+    height: 20px;
+    padding: 0;
+    border: none;
+    border-radius: 4px;
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-size: 16px;
+    line-height: 1;
+}
+
+.gtd-organize-source-delete:hover {
+    background: var(--background-modifier-hover);
+    color: var(--text-normal);
+}
+
+.gtd-organize-empty {
+    padding: 24px;
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 13px;
+}
+
 /* ===== 板块（任务内层结构）===== */
 /* 任务面板中的板块摘要 chip */
 .inbox-item-sections {

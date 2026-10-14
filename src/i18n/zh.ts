@@ -70,6 +70,19 @@ export const zh = {
     'gtd.collectEmpty': '暂无未处理的卡片',
     'gtd.statusInbox': '未处理',
 
+    // GTD 组织视图
+    'gtd.organizeSettings': '设置',
+    'gtd.organizePanel': '组织面板',
+    'gtd.organizePanelPlaceholder': '组织面板开发中',
+    'gtd.sourceBlockTitle': '源',
+    'gtd.sourceAdd': '添加',
+    'gtd.sourceEmpty': '暂无源',
+    'gtd.sourceOkr': '任务OKR',
+    'gtd.sourcePdca': 'PDCA',
+    'gtd.sourceMedia': '影视库',
+    'gtd.sourceFinance': '财务库',
+    'gtd.sourceIntel': '情报资讯库',
+
     // 任务计划视图
     'taskPlan.noSelection': '请在左侧选择一个任务',
     'taskPlan.detailTitle': '任务详情',

@@ -72,6 +72,19 @@ export const en: I18nMessages = {
     'gtd.collectEmpty': 'No unprocessed cards',
     'gtd.statusInbox': 'Unprocessed',
 
+    // GTD Organize view
+    'gtd.organizeSettings': 'Settings',
+    'gtd.organizePanel': 'Organize Panel',
+    'gtd.organizePanelPlaceholder': 'Organize panel coming soon',
+    'gtd.sourceBlockTitle': 'Sources',
+    'gtd.sourceAdd': 'Add',
+    'gtd.sourceEmpty': 'No sources yet',
+    'gtd.sourceOkr': 'Task OKR',
+    'gtd.sourcePdca': 'PDCA',
+    'gtd.sourceMedia': 'Media Library',
+    'gtd.sourceFinance': 'Finance Library',
+    'gtd.sourceIntel': 'Intel Library',
+
     // Task Plan view
     'taskPlan.noSelection': 'Select a task on the left',
     'taskPlan.detailTitle': 'Task Details',

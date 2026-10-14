@@ -173,6 +173,9 @@ export default class ParrotPlanPlugin extends Plugin {
         const initialGtdData = (savedData.gtdData && typeof savedData.gtdData === 'object')
             ? savedData.gtdData as GtdData
             : defaultGtdData();
+        // 兼容旧数据：确保 items / sources 字段存在
+        if (!Array.isArray(initialGtdData.items)) initialGtdData.items = [];
+        if (!Array.isArray(initialGtdData.sources)) initialGtdData.sources = [];
         // 当前正在执行的事件 id（兼容旧数据：默认无）
         const initialExecutingEventId = typeof savedData.executingEventId === 'string'
             ? savedData.executingEventId
