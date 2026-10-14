@@ -6,12 +6,14 @@ import { periodicCardRenderer } from './periodic-card';
 import { statsCardRenderer } from './stats-card';
 import { fixedCardRenderer } from './fixed-card';
 import { calendarCardRenderer } from './calendar-card';
+import { clockCardRenderer } from './clock-card';
 
 const registry: Record<CardMode, CardRenderer> = {
     periodic: periodicCardRenderer,
     stats: statsCardRenderer,
     fixed: fixedCardRenderer,
     calendar: calendarCardRenderer,
+    clock: clockCardRenderer,
 };
 
 /** 按模式获取渲染器 */

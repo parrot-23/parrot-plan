@@ -466,7 +466,6 @@ export const zh = {
     'workbench.exitEdit': '退出编辑',
     'workbench.category.chart': '图表',
     'workbench.category.view': '视图',
-    'workbench.category.calendar': '日历',
     'workbench.category.other': '其他',
 
     // 布局方案弹窗

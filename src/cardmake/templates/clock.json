@@ -1,0 +1,6 @@
+{
+  "id": "clock",
+  "name": "时钟",
+  "mode": "clock",
+  "description": "实时显示当前的时、分、秒"
+}

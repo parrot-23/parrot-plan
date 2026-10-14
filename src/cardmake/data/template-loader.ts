@@ -14,6 +14,7 @@ import usageDays from '../templates/usage-days.json';
 import executedTaskCount from '../templates/executed-task-count.json';
 import executionTotalDuration from '../templates/execution-total-duration.json';
 import calendar from '../templates/calendar.json';
+import clock from '../templates/clock.json';
 
 /** 内置模板列表（构建时内联，随 main.js 一起分发） */
 const BUILTIN_TEMPLATES: CardTemplate[] = [
@@ -29,6 +30,7 @@ const BUILTIN_TEMPLATES: CardTemplate[] = [
     executedTaskCount as CardTemplate,
     executionTotalDuration as CardTemplate,
     calendar as CardTemplate,
+    clock as CardTemplate,
 ];
 
 /** 模板缓存：id → 模板 */

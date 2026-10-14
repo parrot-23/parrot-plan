@@ -294,8 +294,10 @@ export class WorkbenchView {
         }> = [
             { key: 'workbench.category.chart', match: (tpl) => tpl.mode === 'stats' },
             { key: 'workbench.category.view', match: (tpl) => tpl.mode === 'periodic' },
-            { key: 'workbench.category.calendar', match: (tpl) => tpl.mode === 'calendar' },
-            { key: 'workbench.category.other', match: (tpl) => tpl.mode === 'fixed' },
+            {
+                key: 'workbench.category.other',
+                match: (tpl) => tpl.mode === 'fixed' || tpl.mode === 'calendar' || tpl.mode === 'clock',
+            },
         ];
 
         // 已归类的模板 id，用于兜底「其他」区块
@@ -361,6 +363,7 @@ export class WorkbenchView {
             'weekly-review': '🗓️',
             'daily-mood': '😊',
             'calendar': '📆',
+            'clock': '🕐',
         };
         return byId[tpl.id] ?? '🧩';
     }

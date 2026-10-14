@@ -468,7 +468,6 @@ export const en: I18nMessages = {
     'workbench.exitEdit': 'Exit Edit',
     'workbench.category.chart': 'Charts',
     'workbench.category.view': 'Views',
-    'workbench.category.calendar': 'Calendar',
     'workbench.category.other': 'Other',
 
     // Layout scheme modal
