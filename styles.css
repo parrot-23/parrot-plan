@@ -6364,22 +6364,17 @@
     flex-direction: column;
     padding: 16px;
     overflow-y: auto;
+    /* 三栏等宽 */
+    flex: 1 1 0;
+    min-width: 0;
 }
 
 .gtd-clarify-left {
-    width: 240px;
-    flex-shrink: 0;
     border-right: 1px solid var(--background-modifier-border);
 }
 
 .gtd-clarify-middle {
-    width: 200px;
-    flex-shrink: 0;
     border-right: 1px solid var(--background-modifier-border);
-}
-
-.gtd-clarify-right {
-    flex: 1;
 }
 
 .gtd-clarify-col-title {
