@@ -136,6 +136,8 @@ export class WorkbenchView {
 
         // 卡片画布（绝对定位 + 30px 网格）
         const grid = container.createDiv({ cls: 'wb-grid' });
+        // 编辑态：画布显示网格交叉点背景
+        if (this.editingLayout) grid.addClass('is-editing');
 
         if (this.workbenchData.instances.length === 0) {
             grid.createDiv({ cls: 'wb-empty', text: t('workbench.empty') });
