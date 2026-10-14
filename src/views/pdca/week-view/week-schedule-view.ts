@@ -248,18 +248,20 @@ export class WeekScheduleView extends ItemView {
     // ===== 周面板：单日列 =====
     /**
      * 渲染某天列顶部的分类时长统计。
-     * 依据当前激活的时间区间方案，汇总该天各分类的可用时长（分钟）。
+     * 依据本列计划事件的「预估执行时长」，按分类汇总已分配的时长（分钟）。
      */
     private renderDayStats(cell: HTMLElement, day: number) {
-        const dayData = this.getSchemeDays().find(d => d.day === day);
-        const ranges = dayData?.ranges ?? [];
+        const dayEvents = this.events.filter(
+            ev => ev.day === day && ev.weekKey === this.currentWeekKey,
+        );
 
-        // 按分类汇总时长（分钟）
+        // 按分类汇总已分配的预估时长（分钟）
         const totals = new Map<TimeBlockCategoryId, number>();
-        for (const range of ranges) {
-            const minutes = Math.max(0, range.end - range.start);
-            if (minutes === 0) continue;
-            totals.set(range.sort, (totals.get(range.sort) ?? 0) + minutes);
+        for (const ev of dayEvents) {
+            const minutes = ev.estimatedMinutes ?? 0;
+            if (minutes <= 0) continue;
+            const key = ev.categoryId ?? '';
+            totals.set(key, (totals.get(key) ?? 0) + minutes);
         }
 
         if (totals.size === 0) {
@@ -267,8 +269,12 @@ export class WeekScheduleView extends ItemView {
             return;
         }
 
-        // 按分类在类别列表中的顺序稳定输出
+        // 按分类在类别列表中的顺序稳定输出（未分类排在最后）
         const ordered = this.timeBlockCategoryData.categories.filter(c => totals.has(c.id));
+        const uncategorized = totals.get('');
+        if (uncategorized !== undefined) {
+            ordered.push({ id: '', label: t('defaultCategory.uncategorized'), color: '#888888' });
+        }
         for (const cat of ordered) {
             const minutes = totals.get(cat.id) ?? 0;
             const item = cell.createDiv({ cls: 'week-panel-stats-item' });
