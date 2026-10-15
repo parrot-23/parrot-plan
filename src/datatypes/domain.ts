@@ -72,6 +72,19 @@ export interface InboxItem {
     habitTime?: number;
     /** 习惯时间点是否启用（可选，旧任务无此字段，默认未启用） */
     habitTimeEnabled?: boolean;
+    /** 收集篮子：待归入本任务的笔记/条目（可选，旧任务无此字段，供 GTD 梳理阶段放置） */
+    basket?: BasketItem[];
+}
+
+/** 收集篮子条目（GTD 梳理阶段放置到某任务的笔记/条目） */
+export interface BasketItem {
+    id: string;
+    /** 条目文本（笔记内容或标题） */
+    text: string;
+    /** 关联的 vault 文件路径（可选，如 'notes/foo.md'） */
+    path?: string;
+    /** 放入时间（时间戳） */
+    createdAt: number;
 }
 
 /** 任务 OKR 信息（计划值，手填） */

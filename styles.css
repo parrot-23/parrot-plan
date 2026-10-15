@@ -4256,6 +4256,82 @@
     color: var(--text-normal);
 }
 
+/* 收集篮子方框 */
+.okr-basket-body {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.okr-basket-add-row {
+    display: flex;
+    gap: 8px;
+}
+
+.okr-basket-input {
+    flex: 1;
+    padding: 6px 10px;
+    border-radius: 6px;
+    border: 1px solid var(--background-modifier-border);
+    background: var(--background-primary);
+    color: var(--text-normal);
+    font-size: 13px;
+}
+
+.okr-basket-add-btn {
+    flex-shrink: 0;
+    padding: 6px 16px;
+    border-radius: 6px;
+    border: none;
+    background: var(--interactive-accent);
+    color: var(--text-on-accent);
+    cursor: pointer;
+    font-size: 13px;
+}
+
+.okr-basket-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.okr-basket-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 8px 12px;
+    border-radius: 6px;
+    border: 1px solid var(--background-modifier-border);
+    background: var(--background-primary);
+}
+
+.okr-basket-item-text {
+    flex: 1;
+    font-size: 13px;
+    color: var(--text-normal);
+    word-break: break-word;
+}
+
+.okr-basket-item-delete {
+    flex-shrink: 0;
+    width: 20px;
+    height: 20px;
+    padding: 0;
+    border: none;
+    border-radius: 4px;
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-size: 16px;
+    line-height: 1;
+}
+
+.okr-basket-item-delete:hover {
+    background: var(--background-modifier-hover);
+    color: var(--text-normal);
+}
+
 /* 板块卡片（白色背景） */
 .swimlane-section-card {
     flex-shrink: 0;
@@ -6305,6 +6381,26 @@
     display: flex;
     flex-direction: column;
     gap: 8px;
+}
+
+/* 任务页：收集篮子列表 */
+.gtd-organize-basket-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.gtd-organize-basket-item {
+    padding: 8px 12px;
+    border-radius: 6px;
+    border: 1px solid var(--background-modifier-border);
+    background: var(--background-primary);
+}
+
+.gtd-organize-basket-text {
+    font-size: 13px;
+    color: var(--text-normal);
+    word-break: break-word;
 }
 
 .gtd-organize-source-card {

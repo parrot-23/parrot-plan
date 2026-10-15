@@ -73,9 +73,9 @@ export const en: I18nMessages = {
     'gtd.statusInbox': 'Unprocessed',
 
     // GTD Organize view
+    'gtd.organizeTasks': 'Tasks',
+    'gtd.organizeTasksEmpty': 'No tasks yet',
     'gtd.organizeSettings': 'Settings',
-    'gtd.organizePanel': 'Organize Panel',
-    'gtd.organizePanelPlaceholder': 'Organize panel coming soon',
     'gtd.sourceBlockTitle': 'Sources',
     'gtd.sourceAdd': 'Add',
     'gtd.sourceEmpty': 'No sources yet',
@@ -131,6 +131,13 @@ export const en: I18nMessages = {
     'okr.progressTarget': 'Target',
     'okr.progressCurrent': 'Current',
     'okr.progressPercent': '{percent}%',
+
+    // Collection basket
+    'basket.title': 'Collection Basket',
+    'basket.empty': 'No collected items yet',
+    'basket.addPlaceholder': 'Enter content to collect',
+    'basket.add': 'Add',
+    'basket.delete': 'Delete',
 
     // Help
     'help.title': 'Help',

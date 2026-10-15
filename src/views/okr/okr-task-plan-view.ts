@@ -2,7 +2,7 @@ import type { App } from 'obsidian';
 import { Modal, Notice, Setting, setIcon } from 'obsidian';
 
 import type { TimeBlockCategoryData } from '../../shared/timeblock-category-manager';
-import type { InboxData, InboxItem, Section, ChecklistData, StepsData, HabitData, FileData, OkrConditionType } from '../../datatypes/domain';
+import type { InboxData, InboxItem, Section, ChecklistData, StepsData, HabitData, FileData, OkrConditionType, BasketItem } from '../../datatypes/domain';
 import { SECTION_TYPE_META, OKR_CONDITION_META } from '../../datatypes/domain';
 import { renderTaskPanel, FilePathSuggest } from '../../shared/task-panel';
 import { t } from '../../i18n';
@@ -79,6 +79,10 @@ export class OkrTaskPlanView {
         const progressWrap = contentPanel.createDiv({ cls: 'okr-progress-wrap' });
         this.progressWrap = progressWrap;
         this.renderProgressBox(progressWrap);
+
+        // 收集篮子方框（当前选中任务的收集内容，供 GTD 梳理阶段放置笔记）
+        const basketWrap = contentPanel.createDiv({ cls: 'okr-basket-wrap' });
+        this.renderBasketBox(basketWrap);
 
         // 板块信息方框（当前选中项目的板块卡片）
         const sectionsArea = contentPanel.createDiv({ cls: 'swimlane-section-area' });
@@ -615,6 +619,76 @@ export class OkrTaskPlanView {
                 text: t('okr.progressPercent', { percent: String(percent) }),
             });
         }
+    }
+
+    /** 收集篮子方框：当前选中任务的收集内容（供 GTD 梳理阶段放置笔记） */
+    private renderBasketBox(wrap: HTMLElement): void {
+        wrap.empty();
+
+        const selectedId = this.inboxData.selectedId;
+        const item = selectedId
+            ? this.inboxData.items.find(i => i.id === selectedId && !i.removed)
+            : undefined;
+        if (!item) return;
+
+        const area = wrap.createDiv({ cls: 'swimlane-section-area okr-basket-area' });
+        const header = area.createDiv({ cls: 'swimlane-section-area-header' });
+        header.createDiv({ cls: 'swimlane-section-area-title', text: t('basket.title') });
+
+        const body = area.createDiv({ cls: 'okr-basket-body' });
+
+        // 添加行：输入框 + 添加按钮
+        const addRow = body.createDiv({ cls: 'okr-basket-add-row' });
+        const input = addRow.createEl('input', {
+            cls: 'okr-basket-input',
+            attr: { type: 'text', placeholder: t('basket.addPlaceholder') },
+        });
+        const addBtn = addRow.createEl('button', { cls: 'okr-basket-add-btn', text: t('basket.add') });
+        const doAdd = () => {
+            const text = input.value.trim();
+            if (!text) return;
+            const entry: BasketItem = {
+                id: `basket_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+                text,
+                createdAt: Date.now(),
+            };
+            item.basket = [...(item.basket ?? []), entry];
+            void this.save().then(() => this.refreshBasketBox());
+        };
+        addBtn.onclick = doAdd;
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                doAdd();
+            }
+        });
+
+        // 已收集条目列表
+        const list = body.createDiv({ cls: 'okr-basket-list' });
+        const entries = item.basket ?? [];
+        if (entries.length === 0) {
+            list.createDiv({ cls: 'swimlane-sections-empty', text: t('basket.empty') });
+            return;
+        }
+        for (const entry of entries) {
+            const row = list.createDiv({ cls: 'okr-basket-item' });
+            row.createSpan({ cls: 'okr-basket-item-text', text: entry.text });
+            const delBtn = row.createEl('button', {
+                cls: 'okr-basket-item-delete',
+                text: '×',
+                attr: { 'aria-label': t('basket.delete') },
+            });
+            delBtn.onclick = () => {
+                item.basket = (item.basket ?? []).filter((b) => b.id !== entry.id);
+                void this.save().then(() => this.refreshBasketBox());
+            };
+        }
+    }
+
+    /** 同步刷新收集篮子方框（增删后调用） */
+    private refreshBasketBox(): void {
+        const wrap = this.container?.querySelector<HTMLElement>('.okr-basket-wrap');
+        if (wrap) this.renderBasketBox(wrap);
     }
 
     /** 渲染右侧信息表单：项目描述、分类、截止日期（跟随当前选中任务） */

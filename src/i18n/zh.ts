@@ -71,9 +71,9 @@ export const zh = {
     'gtd.statusInbox': '未处理',
 
     // GTD 组织视图
+    'gtd.organizeTasks': '任务',
+    'gtd.organizeTasksEmpty': '暂无任务',
     'gtd.organizeSettings': '设置',
-    'gtd.organizePanel': '组织面板',
-    'gtd.organizePanelPlaceholder': '组织面板开发中',
     'gtd.sourceBlockTitle': '源',
     'gtd.sourceAdd': '添加',
     'gtd.sourceEmpty': '暂无源',
@@ -129,6 +129,13 @@ export const zh = {
     'okr.progressTarget': '目标',
     'okr.progressCurrent': '当前',
     'okr.progressPercent': '{percent}%',
+
+    // 收集篮子
+    'basket.title': '收集篮子',
+    'basket.empty': '暂无收集内容',
+    'basket.addPlaceholder': '输入要收集的内容',
+    'basket.add': '添加',
+    'basket.delete': '删除',
 
     // 帮助
     'help.title': '帮助文档',

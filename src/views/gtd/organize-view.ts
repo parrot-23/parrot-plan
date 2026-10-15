@@ -1,12 +1,13 @@
 // 组织视图（GTD 第二步）：左右结构，左侧菜单切换右侧内容。
-// 菜单：设置（源管理）+ 占位项。
+// 菜单：任务（各任务的收集篮子）+ 设置（源管理）。
 import type { App } from 'obsidian';
 
 import type { GtdData, GtdSourceType } from '../../datatypes/gtd';
+import type { InboxData } from '../../datatypes/domain';
 import { t } from '../../i18n';
 
 /** 左侧菜单项标识 */
-type OrganizeMenu = 'settings' | 'panel';
+type OrganizeMenu = 'tasks' | 'settings';
 
 /** 可添加的源类型（顺序即下拉/按钮顺序） */
 const SOURCE_TYPES: GtdSourceType[] = ['okr', 'pdca', 'media', 'finance', 'intel'];
@@ -26,15 +27,17 @@ const SOURCE_LABEL_KEY: Record<GtdSourceType, 'gtd.sourceOkr' | 'gtd.sourcePdca'
 export class GtdOrganizeView {
     private app: App;
     private gtdData: GtdData;
+    private inboxData: InboxData;
     private save: () => Promise<void>;
     /** 当前选中的左侧菜单 */
-    private activeMenu: OrganizeMenu = 'settings';
+    private activeMenu: OrganizeMenu = 'tasks';
     /** 当前渲染容器（用于菜单切换时局部刷新） */
     private container?: HTMLElement;
 
-    constructor(app: App, gtdData: GtdData, save: () => Promise<void>) {
+    constructor(app: App, gtdData: GtdData, inboxData: InboxData, save: () => Promise<void>) {
         this.app = app;
         this.gtdData = gtdData;
+        this.inboxData = inboxData;
         this.save = save;
     }
 
@@ -47,9 +50,9 @@ export class GtdOrganizeView {
 
         // 左侧菜单
         const menu = layout.createDiv({ cls: 'gtd-organize-menu' });
-        const menuItems: { id: OrganizeMenu; labelKey: 'gtd.organizeSettings' | 'gtd.organizePanel' }[] = [
+        const menuItems: { id: OrganizeMenu; labelKey: 'gtd.organizeTasks' | 'gtd.organizeSettings' }[] = [
+            { id: 'tasks', labelKey: 'gtd.organizeTasks' },
             { id: 'settings', labelKey: 'gtd.organizeSettings' },
-            { id: 'panel', labelKey: 'gtd.organizePanel' },
         ];
         for (const item of menuItems) {
             const btn = menu.createEl('button', {
@@ -67,10 +70,34 @@ export class GtdOrganizeView {
 
         // 右侧内容
         const content = layout.createDiv({ cls: 'gtd-organize-content' });
-        if (this.activeMenu === 'settings') {
-            this.renderSettings(content);
+        if (this.activeMenu === 'tasks') {
+            this.renderTasks(content);
         } else {
-            content.createDiv({ cls: 'gtd-organize-empty', text: t('gtd.organizePanelPlaceholder') });
+            this.renderSettings(content);
+        }
+    }
+
+    /** 任务页：每个任务及其收集篮子 */
+    private renderTasks(container: HTMLElement) {
+        const items = this.inboxData.items.filter((it) => !it.removed);
+        if (items.length === 0) {
+            container.createDiv({ cls: 'gtd-organize-empty', text: t('gtd.organizeTasksEmpty') });
+            return;
+        }
+        for (const item of items) {
+            const block = container.createDiv({ cls: 'gtd-organize-block' });
+            block.createDiv({ cls: 'gtd-organize-block-title', text: item.title });
+
+            const list = block.createDiv({ cls: 'gtd-organize-basket-list' });
+            const entries = item.basket ?? [];
+            if (entries.length === 0) {
+                list.createDiv({ cls: 'gtd-organize-empty', text: t('basket.empty') });
+                continue;
+            }
+            for (const entry of entries) {
+                const row = list.createDiv({ cls: 'gtd-organize-basket-item' });
+                row.createSpan({ cls: 'gtd-organize-basket-text', text: entry.text });
+            }
         }
     }
 
