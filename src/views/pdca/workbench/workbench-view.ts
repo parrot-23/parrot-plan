@@ -102,12 +102,6 @@ export class WorkbenchView {
 
         // 添加卡片按钮：仅编辑态显示
         if (this.editingLayout) {
-            const addBtn = actions.createEl('button', {
-                cls: 'wb-add-btn',
-                text: t('workbench.addCard'),
-            });
-            addBtn.onclick = () => this.showAddCardMenu(addBtn);
-
             // 退出编辑按钮：退出编辑态并持久化
             const exitBtn = actions.createEl('button', {
                 cls: 'wb-exit-edit-btn',
@@ -120,6 +114,12 @@ export class WorkbenchView {
                     if (this.container) void this.renderInto(this.container);
                 });
             };
+
+            const addBtn = actions.createEl('button', {
+                cls: 'wb-add-btn',
+                text: t('workbench.addCard'),
+            });
+            addBtn.onclick = () => this.showAddCardMenu(addBtn);
         }
 
         // 编辑布局按钮：切换编辑态（编辑态下隐藏，避免重复触发）

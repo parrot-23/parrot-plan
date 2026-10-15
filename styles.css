@@ -5651,8 +5651,19 @@
     padding: 6px;
     border: 1px solid var(--background-modifier-border);
     border-radius: 6px;
-    background: var(--background-primary);
+    background: var(--background-primary); 
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    /* 菜单挂在按钮内部，需重置按钮继承的样式（文字颜色、滤镜等） */
+    color: var(--text-normal);
+    font-weight: normal;
+    text-align: left;
+    filter: none;
+    cursor: default;
+}
+
+/* 悬浮菜单时不要触发按钮的 hover 滤镜 */
+.wb-add-btn:hover:has(.wb-add-menu) {
+    filter: none;
 }
 
 /* 分类区块：每个分类一个区块，区块标题占一个方块 */
@@ -5671,7 +5682,6 @@
 .wb-add-section-title {
     padding: 4px 8px;
     border-radius: 4px;
-    background: var(--background-secondary);
     font-size: 12px;
     font-weight: 600;
     color: var(--text-muted);
