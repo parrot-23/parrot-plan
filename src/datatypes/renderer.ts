@@ -14,6 +14,11 @@ export interface CardRenderContext {
     refresh: () => void;
     /** 统一数据提供者（stats 模式统计用，返回完整类型数据） */
     provider: DataProvider;
+    /**
+     * 追加一条 GTD 收集箱条目（collect 模式使用）。
+     * 由上层注入，写入 GtdData.items 并持久化；未注入时该能力不可用。
+     */
+    addGtdItem?: (content: string) => Promise<void>;
 }
 
 /** 卡片渲染器：把一张卡片实例渲染到容器 */

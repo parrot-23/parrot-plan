@@ -213,6 +213,15 @@ export class MainView extends ItemView {
             () => this.weekView.events,
             () => this.weekView.executions,
             () => this.weekView.inboxData.items,
+            async (content: string) => {
+                gtdData.items.push({
+                    id: crypto.randomUUID(),
+                    content,
+                    createdAt: Date.now(),
+                    status: 'inbox',
+                });
+                await this.weekView.save();
+            },
         );
         this.okrView = new OkrView(this.app);
         this.okrTaskPlanView = new OkrTaskPlanView(

@@ -40,7 +40,9 @@ export const collectCardRenderer: CardRenderer = {
                 content,
                 createdAt: Date.now(),
             });
-            void ctx.save().then(() => ctx.refresh());
+            // 同步写入 GTD 收集箱，使其出现在 GTD「收集」视图，供后续梳理流程处理
+            const gtdWrite = ctx.addGtdItem ? ctx.addGtdItem(content) : Promise.resolve();
+            void gtdWrite.then(() => ctx.save()).then(() => ctx.refresh());
         };
         addBtn.onclick = submit;
         input.onkeydown = (e) => {

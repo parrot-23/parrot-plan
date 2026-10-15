@@ -49,6 +49,8 @@ export class WorkbenchView {
     private getExecutions: () => ExecutionRecord[];
     /** 获取收集盒任务（stats 统计用） */
     private getInboxItems: () => InboxItem[];
+    /** 追加一条 GTD 收集箱条目（collect 卡片用） */
+    private addGtdItem: (content: string) => Promise<void>;
     /** 当前渲染容器（用于自刷新） */
     private container?: HTMLElement;
     /** 已加载的模板列表 */
@@ -65,6 +67,7 @@ export class WorkbenchView {
         getEvents: () => EventBlock[],
         getExecutions: () => ExecutionRecord[],
         getInboxItems: () => InboxItem[],
+        addGtdItem: (content: string) => Promise<void>,
     ) {
         this.app = app;
         this.workbenchData = workbenchData;
@@ -72,6 +75,7 @@ export class WorkbenchView {
         this.getEvents = getEvents;
         this.getExecutions = getExecutions;
         this.getInboxItems = getInboxItems;
+        this.addGtdItem = addGtdItem;
     }
 
     /** 当前激活布局的名称（用于工作台标题，与布局管理中的名称保持一致） */
@@ -200,6 +204,7 @@ export class WorkbenchView {
                 save: this.save,
                 refresh: () => void this.renderInto(container),
                 provider: createDataProvider(this.getEvents, this.getExecutions, this.getInboxItems),
+                addGtdItem: this.addGtdItem,
             };
             renderer.render(body, instance, template, ctx);
 
