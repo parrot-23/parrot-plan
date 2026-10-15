@@ -1,18 +1,15 @@
 // 梳理视图（GTD 第三步）：左中右三栏结构。
-// 左：收集视图的未处理卡片；中：组织视图已添加的源；右：内容编写 + 确认按钮。
+// 左：收集视图的未处理卡片；中：选择源面板（顶部按钮切换，当前仅「任务」）；右：内容编写 + 确认按钮。
 import type { App } from 'obsidian';
 
-import type { GtdData, GtdSourceType } from '../../datatypes/gtd';
+import type { GtdData } from '../../datatypes/gtd';
+import type { InboxData } from '../../datatypes/domain';
+import type { TimeBlockCategoryData } from '../../shared/timeblock-category-manager';
+import { renderTaskPanel } from '../../shared/task-panel';
 import { t } from '../../i18n';
 
-/** 源类型 → i18n key */
-const SOURCE_LABEL_KEY: Record<GtdSourceType, 'gtd.sourceOkr' | 'gtd.sourcePdca' | 'gtd.sourceMedia' | 'gtd.sourceFinance' | 'gtd.sourceIntel'> = {
-    okr: 'gtd.sourceOkr',
-    pdca: 'gtd.sourcePdca',
-    media: 'gtd.sourceMedia',
-    finance: 'gtd.sourceFinance',
-    intel: 'gtd.sourceIntel',
-};
+/** 选择源面板的顶部按钮标识（当前仅「任务」） */
+type SourceTab = 'tasks';
 
 /**
  * 梳理视图：与 WorkbenchView 一致，通过 renderInto 渲染到指定容器。
@@ -20,17 +17,27 @@ const SOURCE_LABEL_KEY: Record<GtdSourceType, 'gtd.sourceOkr' | 'gtd.sourcePdca'
 export class GtdClarifyView {
     private app: App;
     private gtdData: GtdData;
+    private inboxData: InboxData;
+    private categoryData: TimeBlockCategoryData;
     private save: () => Promise<void>;
     /** 当前选中的收集卡片 id */
     private selectedItemId?: string;
-    /** 当前选中的源 id */
-    private selectedSourceId?: string;
+    /** 选择源面板当前激活的按钮 */
+    private activeSourceTab: SourceTab = 'tasks';
     /** 当前渲染容器（用于自刷新） */
     private container?: HTMLElement;
 
-    constructor(app: App, gtdData: GtdData, save: () => Promise<void>) {
+    constructor(
+        app: App,
+        gtdData: GtdData,
+        inboxData: InboxData,
+        categoryData: TimeBlockCategoryData,
+        save: () => Promise<void>,
+    ) {
         this.app = app;
         this.gtdData = gtdData;
+        this.inboxData = inboxData;
+        this.categoryData = categoryData;
         this.save = save;
     }
 
@@ -68,31 +75,76 @@ export class GtdClarifyView {
         }
     }
 
-    /** 中栏：组织视图已添加的源 */
+    /** 中栏：选择源面板（顶部按钮切换，当前仅「任务」） */
     private renderMiddle(layout: HTMLElement) {
         const col = layout.createDiv({ cls: 'gtd-clarify-col gtd-clarify-middle' });
         col.createDiv({ cls: 'gtd-clarify-col-title', text: t('gtd.clarifyMiddleTitle') });
 
-        const list = col.createDiv({ cls: 'gtd-clarify-list' });
-        if (this.gtdData.sources.length === 0) {
-            list.createDiv({ cls: 'gtd-clarify-empty', text: t('gtd.clarifyNoSource') });
-            return;
-        }
-        for (const source of this.gtdData.sources) {
-            const card = list.createDiv({ cls: 'gtd-clarify-source' });
-            if (source.id === this.selectedSourceId) card.addClass('is-active');
-            card.setText(t(SOURCE_LABEL_KEY[source.type]));
-            card.onclick = () => {
-                this.selectedSourceId = source.id;
+        // 顶部按钮行
+        const tabs = col.createDiv({ cls: 'gtd-clarify-source-tabs' });
+        const tabItems: { id: SourceTab; labelKey: 'gtd.organizeTasks' }[] = [
+            { id: 'tasks', labelKey: 'gtd.organizeTasks' },
+        ];
+        for (const tab of tabItems) {
+            const btn = tabs.createEl('button', {
+                cls: 'gtd-clarify-source-tab',
+                text: t(tab.labelKey),
+                attr: { 'data-tab': tab.id },
+            });
+            if (tab.id === this.activeSourceTab) btn.addClass('is-active');
+            btn.onclick = () => {
+                if (this.activeSourceTab === tab.id) return;
+                this.activeSourceTab = tab.id;
                 if (this.container) void this.renderInto(this.container);
             };
         }
+
+        // 面板内容
+        const body = col.createDiv({ cls: 'gtd-clarify-source-body' });
+        if (this.activeSourceTab === 'tasks') {
+            this.renderTaskSource(body);
+        }
+    }
+
+    /** 选择源面板内容：任务面板 */
+    private renderTaskSource(container: HTMLElement) {
+        renderTaskPanel(
+            this.app,
+            container,
+            this.inboxData,
+            this.categoryData,
+            async () => {
+                await this.save();
+            },
+            () => {
+                if (this.container) void this.renderInto(this.container);
+            },
+            undefined,
+            async () => {
+                await this.save();
+            },
+            // 梳理视图的选择源面板：隐藏「+」按钮与底部工具栏
+            { hideAddButton: true, hideToolbar: true },
+        );
     }
 
     /** 右栏：内容编写 + 确认按钮 */
     private renderRight(layout: HTMLElement) {
         const col = layout.createDiv({ cls: 'gtd-clarify-col gtd-clarify-right' });
         col.createDiv({ cls: 'gtd-clarify-col-title', text: t('gtd.clarifyRightTitle') });
+
+        // 整理说明行：信息将放入 xxx 任务的收集篮子中
+        const selectedTask = this.inboxData.selectedId
+            ? this.inboxData.items.find((it) => it.id === this.inboxData.selectedId && !it.removed)
+            : undefined;
+        const organizeRow = col.createDiv({ cls: 'gtd-clarify-organize-row' });
+        organizeRow.createSpan({ cls: 'gtd-clarify-organize-label', text: t('gtd.clarifyOrganizeLabel') });
+        organizeRow.createSpan({
+            cls: 'gtd-clarify-organize-text',
+            text: selectedTask
+                ? t('gtd.clarifyOrganizeTarget', { name: selectedTask.title })
+                : t('gtd.clarifyOrganizeNoTarget'),
+        });
 
         const editor = col.createDiv({ cls: 'gtd-clarify-editor' });
         editor.createEl('textarea', {

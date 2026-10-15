@@ -90,6 +90,9 @@ export const zh = {
     'gtd.clarifyNoSource': '暂无源，请先在「组织」中添加',
     'gtd.clarifyPlaceholder': '在此编写内容…',
     'gtd.clarifyConfirm': '确认',
+    'gtd.clarifyOrganizeLabel': '整理',
+    'gtd.clarifyOrganizeTarget': '信息将放入 {name} 任务的收集篮子中',
+    'gtd.clarifyOrganizeNoTarget': '请先在「选择源」中选中一个任务',
 
     // GTD 回顾视图
     'gtd.reviewEmpty': '暂无回顾内容',

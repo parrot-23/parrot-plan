@@ -1276,6 +1276,12 @@
     display: none;
 }
 
+/* 强制隐藏（梳理视图的选择源面板使用） */
+.inbox-toolbar.is-hidden,
+.inbox-add-btn.is-hidden {
+    display: none;
+}
+
 .inbox-toolbar-btn {
     display: flex;
     flex-direction: column;
@@ -6465,6 +6471,66 @@
     font-weight: 600;
     color: var(--text-normal);
     margin-bottom: 12px;
+}
+
+/* 选择源面板：顶部按钮行 */
+.gtd-clarify-source-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 12px;
+}
+
+.gtd-clarify-source-tab {
+    padding: 6px 14px;
+    border-radius: 6px;
+    border: 1px solid var(--background-modifier-border);
+    background: var(--background-secondary);
+    color: var(--text-normal);
+    cursor: pointer;
+    font-size: 13px;
+}
+
+.gtd-clarify-source-tab:hover {
+    background: var(--background-modifier-hover);
+}
+
+.gtd-clarify-source-tab.is-active {
+    background: var(--interactive-accent);
+    color: var(--text-on-accent);
+    border-color: var(--interactive-accent);
+}
+
+/* 选择源面板：内容区（任务面板） */
+.gtd-clarify-source-body {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+/* 内容编写面板：整理说明行 */
+.gtd-clarify-organize-row {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    margin-bottom: 12px;
+    padding: 8px 12px;
+    border-radius: 6px;
+    background: var(--background-secondary);
+}
+
+.gtd-clarify-organize-label {
+    flex-shrink: 0;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-normal);
+}
+
+.gtd-clarify-organize-text {
+    font-size: 13px;
+    color: var(--text-muted);
+    word-break: break-word;
 }
 
 .gtd-clarify-list {

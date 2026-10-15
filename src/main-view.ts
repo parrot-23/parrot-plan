@@ -247,6 +247,8 @@ export class MainView extends ItemView {
         this.gtdClarifyView = new GtdClarifyView(
             this.app,
             gtdData,
+            this.weekView.inboxData,
+            this.weekView.timeBlockCategoryData,
             () => this.weekView.save(),
         );
         this.gtdReviewView = new GtdReviewView(this.app, gtdData);

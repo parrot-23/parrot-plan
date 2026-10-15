@@ -217,6 +217,10 @@ export interface TaskPanelOptions {
     enableProjectFocus?: boolean;
     /** 当前周的计划事件（用于周目标卡片统计已分配时长/次数） */
     events?: EventBlock[];
+    /** 是否隐藏右上角「+」添加按钮（默认显示） */
+    hideAddButton?: boolean;
+    /** 是否隐藏底部工具栏（默认显示） */
+    hideToolbar?: boolean;
 }
 
 export function renderTaskPanel(
@@ -230,7 +234,7 @@ export function renderTaskPanel(
     onUpdate?: (item?: InboxItem) => void | Promise<void>,
     options: TaskPanelOptions = {},
 ) {
-    const { currentWeekKey, enableProjectFocus, events } = options;
+    const { currentWeekKey, enableProjectFocus, events, hideAddButton, hideToolbar } = options;
     container.empty();
     container.addClass('inbox-panel');
 
@@ -242,6 +246,8 @@ export function renderTaskPanel(
 
     // ===== 底部工具栏（初始隐藏）=====
     const toolbar = container.createDiv({ cls: 'inbox-toolbar' });
+    // 需要隐藏时加标记类，由 CSS 强制隐藏（不影响 updateToolbar 的显隐逻辑）
+    if (hideToolbar) toolbar.addClass('is-hidden');
 
     const actions: { id: string; label: string; icon: string }[] = [
         { id: 'detail', label: t('inbox.detail'), icon: '📄' },
@@ -795,6 +801,7 @@ export function renderTaskPanel(
     }
 
     const addBtn = headerActions.createEl('button', { cls: 'inbox-add-btn', text: '+' });
+    if (hideAddButton) addBtn.addClass('is-hidden');
     addBtn.onclick = (e) => {
         // 阻止冒泡到面板空白处，避免打开弹窗时取消选中
         e.stopPropagation();

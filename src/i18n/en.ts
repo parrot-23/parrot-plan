@@ -92,6 +92,9 @@ export const en: I18nMessages = {
     'gtd.clarifyNoSource': 'No sources yet, add one in Organize',
     'gtd.clarifyPlaceholder': 'Write content here…',
     'gtd.clarifyConfirm': 'Confirm',
+    'gtd.clarifyOrganizeLabel': 'Organize',
+    'gtd.clarifyOrganizeTarget': 'Info will be placed into the collection basket of task "{name}"',
+    'gtd.clarifyOrganizeNoTarget': 'Select a task in "Select Source" first',
 
     // GTD Review view
     'gtd.reviewEmpty': 'Nothing to review yet',
