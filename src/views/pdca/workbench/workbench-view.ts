@@ -4,7 +4,7 @@ import { Notice } from 'obsidian';
 
 import type { CardTemplate } from '../../../datatypes/form';
 import type { CardInstance, WorkbenchData } from '../../../datatypes/card';
-import { ensureDefaultLayout } from '../../../datatypes/card';
+import { DEFAULT_LAYOUT_ID, ensureDefaultLayout } from '../../../datatypes/card';
 import { loadAllTemplates } from '../../../cardmake/data/template-loader';
 import { getCardRenderer } from '../../../cardmake/cards/card-registry';
 import type { CardRenderContext } from '../../../datatypes/renderer';
@@ -74,6 +74,14 @@ export class WorkbenchView {
         this.getInboxItems = getInboxItems;
     }
 
+    /** 当前激活布局的名称（用于工作台标题，与布局管理中的名称保持一致） */
+    getActiveLayoutName(): string {
+        const layouts = this.workbenchData.layouts ?? [];
+        const activeId = this.workbenchData.activeLayoutId ?? DEFAULT_LAYOUT_ID;
+        const active = layouts.find(l => l.id === activeId);
+        return active?.name ?? t('layout.defaultName');
+    }
+
     async renderInto(container: HTMLElement): Promise<void> {
         this.container = container;
         container.empty();
@@ -89,7 +97,7 @@ export class WorkbenchView {
 
         // 顶部工具栏：标题 + 编辑布局按钮 + 添加卡片按钮（仅编辑态显示）+ 布局方案按钮
         const toolbar = container.createDiv({ cls: 'wb-toolbar' });
-        toolbar.createDiv({ cls: 'wb-toolbar-title', text: t('workbench.title') });
+        toolbar.createDiv({ cls: 'wb-toolbar-title', text: this.getActiveLayoutName() });
         const actions = toolbar.createDiv({ cls: 'wb-toolbar-actions' });
 
         // 添加卡片按钮：仅编辑态显示

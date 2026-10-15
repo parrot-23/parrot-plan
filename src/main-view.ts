@@ -331,8 +331,12 @@ export class MainView extends ItemView {
         if (!this.secondaryRow) return;
         this.secondaryRow.empty();
         for (const tab of SECONDARY_TABS[this.activePrimary]) {
+            // 工作台二级视图：标签显示当前激活布局的名称（与布局管理保持一致）
+            const label = tab.id === 'workbench'
+                ? this.workbenchView.getActiveLayoutName()
+                : t(tab.labelKey);
             const btn = this.secondaryRow.createEl('button', {
-                text: t(tab.labelKey),
+                text: label,
                 cls: 'parrot-plan-nav-btn',
                 attr: { 'data-tab': tab.id },
             });
