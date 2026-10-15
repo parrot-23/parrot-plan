@@ -263,6 +263,18 @@ export const en: I18nMessages = {
     'improve.goodDetail': 'Completion rate reached {rate}%. Keep up the current pace.',
     'improve.stableTitle': 'Steady execution this week',
     'improve.stableDetail': '{planned} planned, {executed} executed this week. No obvious issues.',
+    'improve.diffPointsTitle': 'Plan vs. execution differences this week',
+    'improve.noDiff': 'No differences this week',
+    'improve.badgeUnexecuted': 'Unexecuted',
+    'improve.badgeReplaced': 'Replaced',
+    'improve.unknownTask': 'Unknown task',
+    'improve.dailyStatsTitle': 'Daily execution (7 days)',
+    'improve.dailyPlanned': 'Planned',
+    'improve.dailyActual': 'Actual',
+    'improve.dailyCompletion': 'Done',
+    'improve.listTitle': 'Improvements',
+    'improve.listEmpty': 'No improvements yet. Click + at the top right to add.',
+    'improve.inputPlaceholder': 'Write an improvement…',
 
     // Year view
     'year.weekLabel': 'Week {week}',

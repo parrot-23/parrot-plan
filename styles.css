@@ -2352,15 +2352,40 @@
     color: var(--text-on-accent);
 }
 
-/* 内容区（可滚动，单列纵向） */
+/* 内容区（左右结构） */
 .improve-body {
     flex: 1;
     min-height: 0;
-    overflow-y: auto;
+    overflow: hidden;
     padding: 16px;
     display: flex;
     flex-direction: column;
+}
+
+.improve-columns {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: row;
     gap: 16px;
+}
+
+.improve-col {
+    min-height: 0;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.improve-col-left {
+    flex: 1 1 60%;
+    min-width: 0;
+}
+
+.improve-col-right {
+    flex: 1 1 40%;
+    min-width: 0;
 }
 
 /* 通用方框 */
@@ -2378,10 +2403,194 @@
     color: var(--text-normal);
 }
 
+.improve-box-title-row {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+}
+
+.improve-box-title-row .improve-box-title {
+    margin-bottom: 0;
+}
+
+.improve-add-btn {
+    width: 26px;
+    height: 26px;
+    padding: 0;
+    line-height: 1;
+    font-size: 16px;
+    cursor: pointer;
+}
+
 .improve-empty {
     color: var(--text-faint);
     font-size: 13px;
     padding: 4px 0;
+}
+
+/* 左块 1：差异点列表 */
+.improve-diff-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.improve-diff-row {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+}
+
+.improve-diff-badge {
+    flex-shrink: 0;
+    padding: 1px 8px;
+    border-radius: 8px;
+    font-size: 12px;
+    color: #fff;
+}
+
+.improve-diff-badge.is-unexecuted {
+    background: #e5534b;
+}
+
+.improve-diff-badge.is-replaced {
+    background: #f2a65a;
+}
+
+.improve-diff-title {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--text-normal);
+}
+
+.improve-diff-meta {
+    flex-shrink: 0;
+    font-size: 12px;
+    color: var(--text-muted);
+}
+
+/* 左块 2：7 天执行情况 */
+.improve-daily-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.improve-daily-day {
+    border-top: 1px solid var(--background-modifier-border);
+    padding-top: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.improve-daily-day:first-child {
+    border-top: none;
+    padding-top: 0;
+}
+
+.improve-daily-day-title {
+    font-size: 13px;
+    font-weight: bold;
+    color: var(--text-normal);
+}
+
+.improve-daily-cat-row {
+    display: flex;
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 8px;
+    font-size: 12px;
+}
+
+.improve-daily-cat-label {
+    flex-shrink: 0;
+    width: 32px;
+    color: var(--text-muted);
+}
+
+.improve-daily-cat-chips {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.improve-daily-cat-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 1px 8px;
+    border-radius: 8px;
+    background: var(--background-primary);
+    border: 1px solid var(--background-modifier-border);
+    color: var(--text-normal);
+}
+
+.improve-daily-cat-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--dot-color, #888888);
+}
+
+.improve-daily-cat-empty {
+    color: var(--text-faint);
+}
+
+.improve-daily-completion {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+}
+
+.improve-daily-completion-label {
+    flex-shrink: 0;
+    width: 32px;
+    color: var(--text-muted);
+}
+
+.improve-daily-completion-value {
+    color: var(--text-normal);
+}
+
+/* 右块：可填写改进项列表 */
+.improve-input-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.improve-input-row {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 6px;
+}
+
+.improve-input {
+    flex: 1;
+    min-width: 0;
+    height: 30px;
+}
+
+.improve-input-del {
+    flex-shrink: 0;
+    width: 26px;
+    height: 26px;
+    padding: 0;
+    line-height: 1;
+    cursor: pointer;
 }
 
 /* 建议列表 */

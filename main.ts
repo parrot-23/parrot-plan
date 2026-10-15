@@ -8,7 +8,7 @@ import type { DayTemplateData } from './src/shared/template-manager';
 
 import { DEFAULT_WEEK_RANGE } from './src/shared/timeblock-data';
 import type { EventBlock, ExecutionRecord } from './src/datatypes/domain';
-import { DEFAULT_INBOX_DATA, type InboxData } from './src/datatypes/domain';
+import { DEFAULT_INBOX_DATA, DEFAULT_IMPROVEMENT_DATA, type InboxData, type ImprovementData } from './src/datatypes/domain';
 import { VIEW_TYPE_MAIN, MainView } from './src/main-view';
 import { defaultWorkbenchData, type WorkbenchData } from './src/datatypes/card';
 import { defaultGtdData, type GtdData } from './src/datatypes/gtd';
@@ -40,6 +40,8 @@ export default class ParrotPlanPlugin extends Plugin {
         workbench: WorkbenchData;
         /** GTD 数据（收集箱等） */
         gtdData: GtdData;
+        /** 改进数据（改进视图右侧可填写列表，按周键存储） */
+        improvementData: ImprovementData;
         /** 当前正在执行的事件 id（日执行视图顶部执行卡片，随主数据一起持久化） */
         executingEventId?: string;
     } | null = null;
@@ -74,6 +76,7 @@ export default class ParrotPlanPlugin extends Plugin {
             plannedWeeks: d.plannedWeeks,
             workbench: d.workbench,
             gtdData: d.gtdData,
+            improvementData: d.improvementData,
             executingEventId: d.executingEventId,
             cacheDirName: this.cacheDirName,
             cacheEnabled: this.cacheEnabled,
@@ -176,6 +179,13 @@ export default class ParrotPlanPlugin extends Plugin {
         // 兼容旧数据：确保 items / sources 字段存在
         if (!Array.isArray(initialGtdData.items)) initialGtdData.items = [];
         if (!Array.isArray(initialGtdData.sources)) initialGtdData.sources = [];
+        // 改进数据（兼容旧数据：默认空）
+        const initialImprovementData = (savedData.improvementData && typeof savedData.improvementData === 'object')
+            ? savedData.improvementData as ImprovementData
+            : DEFAULT_IMPROVEMENT_DATA;
+        if (!initialImprovementData.byWeek || typeof initialImprovementData.byWeek !== 'object') {
+            initialImprovementData.byWeek = {};
+        }
         // 当前正在执行的事件 id（兼容旧数据：默认无）
         const initialExecutingEventId = typeof savedData.executingEventId === 'string'
             ? savedData.executingEventId
@@ -193,6 +203,7 @@ export default class ParrotPlanPlugin extends Plugin {
             plannedWeeks: initialPlannedWeeks,
             workbench: initialWorkbench,
             gtdData: initialGtdData,
+            improvementData: initialImprovementData,
             executingEventId: initialExecutingEventId,
         };
 
@@ -208,7 +219,7 @@ export default class ParrotPlanPlugin extends Plugin {
                 });
                 return new MainView(leaf, this, d.weekRange, d.templateData, d.categoryData,
                     d.events, d.executions, d.inboxData, d.schemeData, d.plannedWeeks, d.workbench,
-                    d.gtdData, this.cacheDirName, d.executingEventId,
+                    d.gtdData, d.improvementData, this.cacheDirName, d.executingEventId,
                 );
             }
         );

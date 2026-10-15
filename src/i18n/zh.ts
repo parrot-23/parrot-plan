@@ -261,6 +261,18 @@ export const zh = {
     'improve.goodDetail': '本周完成率达 {rate}%，保持当前节奏。',
     'improve.stableTitle': '本周执行平稳',
     'improve.stableDetail': '本周计划 {planned} 项，已执行 {executed} 项，暂无明显问题。',
+    'improve.diffPointsTitle': '本周计划执行差异点',
+    'improve.noDiff': '本周暂无差异点',
+    'improve.badgeUnexecuted': '未执行',
+    'improve.badgeReplaced': '被替换',
+    'improve.unknownTask': '未知任务',
+    'improve.dailyStatsTitle': '7 天执行情况',
+    'improve.dailyPlanned': '计划',
+    'improve.dailyActual': '实际',
+    'improve.dailyCompletion': '完成',
+    'improve.listTitle': '改进项',
+    'improve.listEmpty': '暂无改进项，点击右上角 + 添加',
+    'improve.inputPlaceholder': '填写一条改进项…',
 
     // 年视图
     'year.weekLabel': '第{week}周',

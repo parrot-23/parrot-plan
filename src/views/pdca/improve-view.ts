@@ -1,7 +1,7 @@
 import type { App } from 'obsidian';
 
 import type { TimeBlockCategoryData } from '../../shared/timeblock-category-manager';
-import type { InboxData, EventBlock, ExecutionRecord } from '../../datatypes/domain';
+import type { InboxData, EventBlock, ExecutionRecord, ImprovementData, ImprovementItem } from '../../datatypes/domain';
 import { getEventStatus } from '../../datatypes/domain';
 import {
     getCurrentWeekKey,
@@ -10,23 +10,18 @@ import {
     shiftWeekKey,
     getWeeksInYear,
 } from '../../shared/timeblock-data';
-import { t } from '../../i18n';
+import { t, getWeekDays } from '../../i18n';
 
-/** 改进建议的严重程度（决定徽章颜色） */
-type SuggestionLevel = 'good' | 'warn' | 'bad';
-
-/** 单条改进建议 */
-interface Suggestion {
-    level: SuggestionLevel;
-    /** 建议标题（i18n 已求值） */
-    title: string;
-    /** 建议详情（i18n 已求值） */
-    detail: string;
+/** 把分钟数格式化为小时（如 1.5h） */
+function formatHours(minutes: number): string {
+    const hours = minutes / 60;
+    return `${Number(hours.toFixed(1))}h`;
 }
 
 /**
- * 改进视图（PDCA 的 Act）：按周基于「检查」数据自动生成改进建议。
- * 单列纵向布局：周导航 → 改进建议列表。
+ * 改进视图（PDCA 的 Act）：左右结构。
+ * 左侧：本周计划执行差异点 + 7 天每天执行情况。
+ * 右侧：可填写的改进项列表（按周键持久化）。
  * 与 CheckView 一样，通过 renderInto 渲染到指定容器。
  */
 export class ImproveView {
@@ -37,6 +32,10 @@ export class ImproveView {
     private getEvents: () => EventBlock[];
     /** 获取全部执行记录 */
     private getExecutions: () => ExecutionRecord[];
+    /** 改进数据（按周键存储改进项） */
+    private improvementData: ImprovementData;
+    /** 保存回调 */
+    private save: () => Promise<void>;
     /** 当前渲染容器（用于自刷新） */
     private container?: HTMLElement;
     /** 当前改进的周键 */
@@ -48,12 +47,16 @@ export class ImproveView {
         categoryData: TimeBlockCategoryData,
         getEvents: () => EventBlock[],
         getExecutions: () => ExecutionRecord[],
+        improvementData: ImprovementData,
+        save: () => Promise<void>,
     ) {
         this.app = app;
         this.inboxData = inboxData;
         this.categoryData = categoryData;
         this.getEvents = getEvents;
         this.getExecutions = getExecutions;
+        this.improvementData = improvementData;
+        this.save = save;
     }
 
     async renderInto(container: HTMLElement): Promise<void> {
@@ -64,11 +67,18 @@ export class ImproveView {
         // 顶部：周导航
         this.renderWeekNav(container);
 
-        // 内容区（可滚动）
+        // 内容区：左右结构
         const body = container.createDiv({ cls: 'improve-body' });
+        const columns = body.createDiv({ cls: 'improve-columns' });
 
-        // 改进建议列表
-        this.renderSuggestions(body);
+        // 左：差异点 + 7 天执行情况
+        const left = columns.createDiv({ cls: 'improve-col improve-col-left' });
+        this.renderDiffPoints(left);
+        this.renderDailyStats(left);
+
+        // 右：可填写的改进项列表
+        const right = columns.createDiv({ cls: 'improve-col improve-col-right' });
+        this.renderImprovementList(right);
     }
 
     /** 重新渲染自身 */
@@ -129,142 +139,181 @@ export class ImproveView {
         };
     }
 
-    // ===== 改进建议 =====
-    private renderSuggestions(body: HTMLElement) {
-        const box = body.createDiv({ cls: 'improve-box' });
-        box.createDiv({ cls: 'improve-box-title', text: t('improve.suggestionsTitle') });
+    // ===== 左块 1：本周计划执行差异点 =====
+    private renderDiffPoints(col: HTMLElement) {
+        const box = col.createDiv({ cls: 'improve-box' });
+        box.createDiv({ cls: 'improve-box-title', text: t('improve.diffPointsTitle') });
 
-        const suggestions = this.buildSuggestions();
+        const weekEvents = this.getEvents().filter(ev => ev.weekKey === this.currentWeekKey);
+        const weekExecs = this.getExecutions().filter(ex => ex.weekKey === this.currentWeekKey);
+        const timedEvents = weekEvents.filter(ev => !ev.allDay);
 
-        if (suggestions.length === 0) {
-            box.createDiv({ cls: 'improve-empty', text: t('improve.noSuggestion') });
+        // 未执行：计划事件状态为 planned
+        const unexecuted = timedEvents.filter(ev => getEventStatus(ev, weekExecs) === 'planned');
+        // 被替换：replaced=true 的执行记录
+        const replaced = weekExecs.filter(ex => ex.replaced);
+
+        if (unexecuted.length === 0 && replaced.length === 0) {
+            box.createDiv({ cls: 'improve-empty', text: t('improve.noDiff') });
             return;
         }
 
-        const list = box.createDiv({ cls: 'improve-list' });
-        for (const s of suggestions) {
-            const row = list.createDiv({ cls: 'improve-item' });
-            row.createSpan({ cls: `improve-badge is-${s.level}`, text: t(`improve.level.${s.level}`) });
-            const textWrap = row.createDiv({ cls: 'improve-item-text' });
-            textWrap.createDiv({ cls: 'improve-item-title', text: s.title });
-            textWrap.createDiv({ cls: 'improve-item-detail', text: s.detail });
+        const list = box.createDiv({ cls: 'improve-diff-list' });
+        for (const ev of unexecuted) {
+            const row = list.createDiv({ cls: 'improve-diff-row' });
+            row.createSpan({ cls: 'improve-diff-badge is-unexecuted', text: t('improve.badgeUnexecuted') });
+            row.createSpan({ cls: 'improve-diff-title', text: ev.title });
+            row.createSpan({
+                cls: 'improve-diff-meta',
+                text: `${getWeekDays()[ev.day - 1]} ${this.formatMinutes(ev.start)}-${this.formatMinutes(ev.end)}`,
+            });
+        }
+        for (const ex of replaced) {
+            const row = list.createDiv({ cls: 'improve-diff-row' });
+            row.createSpan({ cls: 'improve-diff-badge is-replaced', text: t('improve.badgeReplaced') });
+            const item = ex.inboxId
+                ? this.inboxData.items.find(i => i.id === ex.inboxId && !i.removed)
+                : undefined;
+            const planned = ex.eventId ? this.getEvents().find(e => e.id === ex.eventId) : undefined;
+            const title = item?.title ?? planned?.title ?? t('improve.unknownTask');
+            row.createSpan({ cls: 'improve-diff-title', text: title });
+            row.createSpan({
+                cls: 'improve-diff-meta',
+                text: `${getWeekDays()[ex.day - 1]} ${this.formatMinutes(ex.start)}-${this.formatMinutes(ex.end)}`,
+            });
         }
     }
 
-    /**
-     * 基于当前周的计划/执行数据生成改进建议。
-     * 规则（按优先级）：
-     * 1. 本周无计划 → 提示先制定周计划
-     * 2. 完成率过低 → 建议减少计划量或聚焦重点
-     * 3. 存在未执行 → 建议复盘未执行原因
-     * 4. 存在被替换 → 建议调整计划与实际匹配度
-     * 5. 分类失衡 → 建议均衡各分类
-     * 6. 完成率良好 → 正向反馈
-     */
-    private buildSuggestions(): Suggestion[] {
+    // ===== 左块 2：7 天每天执行情况 =====
+    private renderDailyStats(col: HTMLElement) {
+        const box = col.createDiv({ cls: 'improve-box' });
+        box.createDiv({ cls: 'improve-box-title', text: t('improve.dailyStatsTitle') });
+
         const weekEvents = this.getEvents().filter(ev => ev.weekKey === this.currentWeekKey);
         const weekExecs = this.getExecutions().filter(ex => ex.weekKey === this.currentWeekKey);
+        const days = getWeekDays();
 
-        const timedEvents = weekEvents.filter(ev => !ev.allDay);
-        const plannedCount = timedEvents.length;
+        const list = box.createDiv({ cls: 'improve-daily-list' });
+        for (let day = 1; day <= 7; day++) {
+            const dayBox = list.createDiv({ cls: 'improve-daily-day' });
+            dayBox.createDiv({ cls: 'improve-daily-day-title', text: days[day - 1] });
 
-        // 本周无计划
-        if (plannedCount === 0) {
-            return [{
-                level: 'warn',
-                title: t('improve.noPlanTitle'),
-                detail: t('improve.noPlanDetail'),
-            }];
-        }
-
-        const executedCount = timedEvents.filter(ev => getEventStatus(ev, weekExecs) === 'executed').length;
-        const unexecutedCount = plannedCount - executedCount;
-        const replacedCount = weekExecs.filter(ex => ex.replaced).length;
-        const ratio = plannedCount > 0 ? executedCount / plannedCount : 0;
-
-        const suggestions: Suggestion[] = [];
-
-        // 完成率过低
-        if (ratio < 0.5) {
-            suggestions.push({
-                level: 'bad',
-                title: t('improve.lowRateTitle'),
-                detail: t('improve.lowRateDetail', {
-                    rate: Math.round(ratio * 100),
-                    planned: plannedCount,
-                    executed: executedCount,
-                }),
-            });
-        }
-
-        // 存在未执行
-        if (unexecutedCount > 0) {
-            suggestions.push({
-                level: 'warn',
-                title: t('improve.unexecutedTitle'),
-                detail: t('improve.unexecutedDetail', { count: unexecutedCount }),
-            });
-        }
-
-        // 存在被替换
-        if (replacedCount > 0) {
-            suggestions.push({
-                level: 'warn',
-                title: t('improve.replacedTitle'),
-                detail: t('improve.replacedDetail', { count: replacedCount }),
-            });
-        }
-
-        // 分类失衡：某分类计划占比过高（> 60%）
-        const catCount = new Map<string, number>();
-        for (const ev of timedEvents) {
-            const key = ev.categoryId ?? '__none__';
-            catCount.set(key, (catCount.get(key) ?? 0) + 1);
-        }
-        let dominantKey: string | undefined;
-        let dominantCount = 0;
-        for (const [key, count] of Array.from(catCount.entries())) {
-            if (count > dominantCount) {
-                dominantCount = count;
-                dominantKey = key;
+            // 计划：按分类汇总时长
+            const dayEvents = weekEvents.filter(ev => ev.day === day && !ev.allDay);
+            const plannedByCat = new Map<string, number>();
+            for (const ev of dayEvents) {
+                const key = ev.categoryId ?? '__none__';
+                plannedByCat.set(key, (plannedByCat.get(key) ?? 0) + Math.max(0, ev.end - ev.start));
             }
+            this.renderDailyCatRow(dayBox, t('improve.dailyPlanned'), plannedByCat);
+
+            // 实际：按分类汇总时长（分类取来源任务）
+            const dayExecs = weekExecs.filter(ex => ex.day === day);
+            const actualByCat = new Map<string, number>();
+            for (const ex of dayExecs) {
+                const item = ex.inboxId
+                    ? this.inboxData.items.find(i => i.id === ex.inboxId && !i.removed)
+                    : undefined;
+                const key = item?.categoryId ?? '__none__';
+                actualByCat.set(key, (actualByCat.get(key) ?? 0) + Math.max(0, ex.end - ex.start));
+            }
+            this.renderDailyCatRow(dayBox, t('improve.dailyActual'), actualByCat);
+
+            // 当天计划事件完成情况
+            const executedCount = dayEvents.filter(ev => getEventStatus(ev, weekExecs) === 'executed').length;
+            const completion = dayBox.createDiv({ cls: 'improve-daily-completion' });
+            completion.createSpan({ cls: 'improve-daily-completion-label', text: t('improve.dailyCompletion') });
+            completion.createSpan({
+                cls: 'improve-daily-completion-value',
+                text: `${executedCount}/${dayEvents.length}`,
+            });
         }
-        if (dominantKey && dominantCount / plannedCount > 0.6 && catCount.size > 1) {
-            const cat = dominantKey === '__none__'
+    }
+
+    /** 渲染一天内某口径（计划/实际）的分类时长行 */
+    private renderDailyCatRow(parent: HTMLElement, label: string, byCat: Map<string, number>) {
+        const row = parent.createDiv({ cls: 'improve-daily-cat-row' });
+        row.createSpan({ cls: 'improve-daily-cat-label', text: label });
+        const chips = row.createDiv({ cls: 'improve-daily-cat-chips' });
+        if (byCat.size === 0) {
+            chips.createSpan({ cls: 'improve-daily-cat-empty', text: '—' });
+            return;
+        }
+        for (const [key, minutes] of Array.from(byCat.entries())) {
+            const cat = key === '__none__'
                 ? undefined
-                : this.categoryData.categories.find(c => c.id === dominantKey);
-            const label = cat?.label ?? t('inbox.noCategory');
-            suggestions.push({
-                level: 'warn',
-                title: t('improve.imbalanceTitle'),
-                detail: t('improve.imbalanceDetail', {
-                    label,
-                    percent: Math.round((dominantCount / plannedCount) * 100),
-                }),
-            });
+                : this.categoryData.categories.find(c => c.id === key);
+            const color = cat?.color ?? '#888888';
+            const name = cat?.label ?? t('inbox.noCategory');
+            const chip = chips.createSpan({ cls: 'improve-daily-cat-chip' });
+            const dot = chip.createSpan({ cls: 'improve-daily-cat-dot' });
+            dot.setCssProps({ '--dot-color': color });
+            chip.createSpan({ text: `${name} ${formatHours(minutes)}` });
         }
+    }
 
-        // 完成率良好（无其他问题时给正向反馈）
-        if (suggestions.length === 0 && ratio >= 0.8) {
-            suggestions.push({
-                level: 'good',
-                title: t('improve.goodTitle'),
-                detail: t('improve.goodDetail', { rate: Math.round(ratio * 100) }),
-            });
+    // ===== 右块：可填写的改进项列表 =====
+    private renderImprovementList(col: HTMLElement) {
+        const box = col.createDiv({ cls: 'improve-box' });
+        const titleRow = box.createDiv({ cls: 'improve-box-title-row' });
+        titleRow.createDiv({ cls: 'improve-box-title', text: t('improve.listTitle') });
+        const addBtn = titleRow.createEl('button', { cls: 'improve-add-btn', text: '+' });
+        addBtn.onclick = () => void this.addImprovementItem();
+
+        const items = this.getWeekItems();
+        const list = box.createDiv({ cls: 'improve-input-list' });
+        if (items.length === 0) {
+            list.createDiv({ cls: 'improve-empty', text: t('improve.listEmpty') });
         }
-
-        // 兜底：有数据但未触发任何规则
-        if (suggestions.length === 0) {
-            suggestions.push({
-                level: 'good',
-                title: t('improve.stableTitle'),
-                detail: t('improve.stableDetail', {
-                    planned: plannedCount,
-                    executed: executedCount,
-                }),
+        for (const item of items) {
+            const row = list.createDiv({ cls: 'improve-input-row' });
+            const input = row.createEl('input', {
+                cls: 'improve-input',
+                type: 'text',
+                value: item.text,
             });
+            input.placeholder = t('improve.inputPlaceholder');
+            input.onchange = () => {
+                item.text = input.value;
+                void this.save();
+            };
+            const delBtn = row.createEl('button', { cls: 'improve-input-del', text: '×' });
+            delBtn.onclick = () => void this.removeImprovementItem(item.id);
         }
+    }
 
-        return suggestions;
+    /** 取当前周的改进项列表（不存在则初始化） */
+    private getWeekItems(): ImprovementItem[] {
+        if (!this.improvementData.byWeek[this.currentWeekKey]) {
+            this.improvementData.byWeek[this.currentWeekKey] = [];
+        }
+        return this.improvementData.byWeek[this.currentWeekKey];
+    }
+
+    /** 新增一条改进项 */
+    private async addImprovementItem() {
+        const items = this.getWeekItems();
+        items.push({
+            id: `imp_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
+            text: '',
+            createdAt: Date.now(),
+        });
+        await this.save();
+        await this.refresh();
+    }
+
+    /** 删除一条改进项 */
+    private async removeImprovementItem(id: string) {
+        const items = this.getWeekItems();
+        this.improvementData.byWeek[this.currentWeekKey] = items.filter(i => i.id !== id);
+        await this.save();
+        await this.refresh();
+    }
+
+    /** 把分钟数格式化为 HH:MM */
+    private formatMinutes(minutes: number): string {
+        const h = Math.floor(minutes / 60);
+        const m = minutes % 60;
+        return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
     }
 }

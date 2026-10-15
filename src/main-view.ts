@@ -6,7 +6,7 @@ import type { TimeBlockCategoryData } from './shared/timeblock-category-manager'
 import type { DayTemplateData } from './shared/template-manager';
 import type { InboxData } from './datatypes/domain';
 import { WeekScheduleView } from './views/pdca/week-view/week-schedule-view';
-import type { EventBlock, ExecutionRecord } from './datatypes/domain';
+import type { EventBlock, ExecutionRecord, ImprovementData } from './datatypes/domain';
 import { YearView } from './views/pdca/year-view';
 import { TaskPlanView } from './views/pdca/task-plan-view';
 import { TodayView } from './views/pdca/today-view';
@@ -129,6 +129,7 @@ export class MainView extends ItemView {
         plannedWeeks: string[],
         workbenchData: WorkbenchData,
         gtdData: GtdData,
+        improvementData: ImprovementData,
         cacheDirName: string,
         executingEventId?: string,
     ) {
@@ -194,6 +195,8 @@ export class MainView extends ItemView {
             this.weekView.timeBlockCategoryData,
             () => this.weekView.events,
             () => this.weekView.executions,
+            improvementData,
+            () => this.weekView.save(),
         );
         this.swimlaneView = new SwimlaneView(
             this.app,

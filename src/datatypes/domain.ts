@@ -212,6 +212,25 @@ export const DEFAULT_INBOX_DATA: InboxData = {
     items: [],
 };
 
+/** 单条改进项（改进视图右侧可填写列表） */
+export interface ImprovementItem {
+    id: string;
+    /** 改进内容文本 */
+    text: string;
+    createdAt: number;
+}
+
+/** 改进数据：按周键存储改进项列表 */
+export interface ImprovementData {
+    /** 周键 → 该周的改进项列表 */
+    byWeek: Record<string, ImprovementItem[]>;
+}
+
+/** 默认空改进数据 */
+export const DEFAULT_IMPROVEMENT_DATA: ImprovementData = {
+    byWeek: {},
+};
+
 /**
  * 事件执行状态：日执行时间轴与周计划视图共用。
  * - planned：计划（尚未执行）
