@@ -6562,28 +6562,33 @@
     background: var(--background-modifier-hover);
 }
 
-.gtd-clarify-editor {
-    flex: 1;
+/* 待整理内容预览 */
+.gtd-clarify-preview {
     display: flex;
-    margin-bottom: 12px;
-}
-
-.gtd-clarify-textarea {
-    flex: 1;
-    width: 100%;
-    min-height: 200px;
-    padding: 10px 12px;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 16px;
+    padding: 12px;
     border-radius: 6px;
     border: 1px solid var(--background-modifier-border);
-    background: var(--background-primary);
-    color: var(--text-normal);
+    background: var(--background-secondary);
+}
+
+.gtd-clarify-preview-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-muted);
+}
+
+.gtd-clarify-preview-text {
     font-size: 14px;
-    resize: vertical;
+    color: var(--text-normal);
+    word-break: break-word;
 }
 
 .gtd-clarify-footer {
     display: flex;
-    justify-content: flex-end;
+    justify-content: center;
 }
 
 .gtd-clarify-confirm-btn {

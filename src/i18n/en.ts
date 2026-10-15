@@ -88,13 +88,15 @@ export const en: I18nMessages = {
     // GTD Clarify view
     'gtd.clarifyLeftTitle': 'Collected Items',
     'gtd.clarifyMiddleTitle': 'Select Source',
-    'gtd.clarifyRightTitle': 'Content',
+    'gtd.clarifyRightTitle': 'Organize',
     'gtd.clarifyNoSource': 'No sources yet, add one in Organize',
-    'gtd.clarifyPlaceholder': 'Write content here…',
     'gtd.clarifyConfirm': 'Confirm',
     'gtd.clarifyOrganizeLabel': 'Organize',
     'gtd.clarifyOrganizeTarget': 'Info will be placed into the collection basket of task "{name}"',
     'gtd.clarifyOrganizeNoTarget': 'Select a task in "Select Source" first',
+    'gtd.clarifyPreviewLabel': 'Content to organize',
+    'gtd.clarifyPreviewEmpty': 'Select a record in "Collected Items" first',
+    'gtd.clarifyResult': 'Added "{content}" to the collection basket of task "{name}"',
 
     // GTD Review view
     'gtd.reviewEmpty': 'Nothing to review yet',

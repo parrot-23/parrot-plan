@@ -1,9 +1,10 @@
 // 梳理视图（GTD 第三步）：左中右三栏结构。
 // 左：收集视图的未处理卡片；中：选择源面板（顶部按钮切换，当前仅「任务」）；右：内容编写 + 确认按钮。
 import type { App } from 'obsidian';
+import { Notice } from 'obsidian';
 
 import type { GtdData } from '../../datatypes/gtd';
-import type { InboxData } from '../../datatypes/domain';
+import type { InboxData, BasketItem } from '../../datatypes/domain';
 import type { TimeBlockCategoryData } from '../../shared/timeblock-category-manager';
 import { renderTaskPanel } from '../../shared/task-panel';
 import { t } from '../../i18n';
@@ -128,15 +129,19 @@ export class GtdClarifyView {
         );
     }
 
-    /** 右栏：内容编写 + 确认按钮 */
+    /** 右栏：整理说明 + 确认按钮 */
     private renderRight(layout: HTMLElement) {
         const col = layout.createDiv({ cls: 'gtd-clarify-col gtd-clarify-right' });
         col.createDiv({ cls: 'gtd-clarify-col-title', text: t('gtd.clarifyRightTitle') });
 
-        // 整理说明行：信息将放入 xxx 任务的收集篮子中
         const selectedTask = this.inboxData.selectedId
             ? this.inboxData.items.find((it) => it.id === this.inboxData.selectedId && !it.removed)
             : undefined;
+        const selectedItem = this.selectedItemId
+            ? this.gtdData.items.find((it) => it.id === this.selectedItemId)
+            : undefined;
+
+        // 整理说明行：信息将放入 xxx 任务的收集篮子中
         const organizeRow = col.createDiv({ cls: 'gtd-clarify-organize-row' });
         organizeRow.createSpan({ cls: 'gtd-clarify-organize-label', text: t('gtd.clarifyOrganizeLabel') });
         organizeRow.createSpan({
@@ -146,23 +151,37 @@ export class GtdClarifyView {
                 : t('gtd.clarifyOrganizeNoTarget'),
         });
 
-        const editor = col.createDiv({ cls: 'gtd-clarify-editor' });
-        editor.createEl('textarea', {
-            cls: 'gtd-clarify-textarea',
-            attr: { placeholder: t('gtd.clarifyPlaceholder') },
+        // 待整理内容预览（来自左栏选中的收集记录）
+        const preview = col.createDiv({ cls: 'gtd-clarify-preview' });
+        preview.createDiv({ cls: 'gtd-clarify-preview-label', text: t('gtd.clarifyPreviewLabel') });
+        preview.createDiv({
+            cls: 'gtd-clarify-preview-text',
+            text: selectedItem ? selectedItem.content : t('gtd.clarifyPreviewEmpty'),
         });
 
+        // 确认按钮（居中）
         const footer = col.createDiv({ cls: 'gtd-clarify-footer' });
         const confirmBtn = footer.createEl('button', {
             cls: 'gtd-clarify-confirm-btn',
             text: t('gtd.clarifyConfirm'),
         });
         confirmBtn.onclick = () => {
-            if (!this.selectedItemId) return;
-            const item = this.gtdData.items.find((it) => it.id === this.selectedItemId);
-            if (!item) return;
-            item.status = 'processed';
+            if (!selectedItem || !selectedTask) return;
+
+            // 将收集记录内容放入选中任务的收集篮子
+            const entry: BasketItem = {
+                id: `basket_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+                text: selectedItem.content,
+                createdAt: Date.now(),
+            };
+            selectedTask.basket = [...(selectedTask.basket ?? []), entry];
+
+            selectedItem.status = 'processed';
             this.selectedItemId = undefined;
+            new Notice(t('gtd.clarifyResult', {
+                content: selectedItem.content,
+                name: selectedTask.title,
+            }));
             void this.save().then(() => {
                 if (this.container) void this.renderInto(this.container);
             });
