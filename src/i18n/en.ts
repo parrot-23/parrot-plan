@@ -74,7 +74,7 @@ export const en: I18nMessages = {
 
     // GTD Organize view
     'gtd.organizeTasks': 'Tasks',
-    'gtd.organizeTasksEmpty': 'No tasks yet',
+    'gtd.organizeTasksHint': 'Each task has a collection basket',
     'gtd.organizeSettings': 'Settings',
     'gtd.sourceBlockTitle': 'Sources',
     'gtd.sourceAdd': 'Add',

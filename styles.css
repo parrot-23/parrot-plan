@@ -6383,24 +6383,11 @@
     gap: 8px;
 }
 
-/* 任务页：收集篮子列表 */
-.gtd-organize-basket-list {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-}
-
-.gtd-organize-basket-item {
-    padding: 8px 12px;
-    border-radius: 6px;
-    border: 1px solid var(--background-modifier-border);
-    background: var(--background-primary);
-}
-
-.gtd-organize-basket-text {
-    font-size: 13px;
+/* 任务页：提示文本 */
+.gtd-organize-tasks-hint {
+    padding: 16px;
+    font-size: 14px;
     color: var(--text-normal);
-    word-break: break-word;
 }
 
 .gtd-organize-source-card {

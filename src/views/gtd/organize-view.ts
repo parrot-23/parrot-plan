@@ -3,7 +3,6 @@
 import type { App } from 'obsidian';
 
 import type { GtdData, GtdSourceType } from '../../datatypes/gtd';
-import type { InboxData } from '../../datatypes/domain';
 import { t } from '../../i18n';
 
 /** 左侧菜单项标识 */
@@ -27,17 +26,15 @@ const SOURCE_LABEL_KEY: Record<GtdSourceType, 'gtd.sourceOkr' | 'gtd.sourcePdca'
 export class GtdOrganizeView {
     private app: App;
     private gtdData: GtdData;
-    private inboxData: InboxData;
     private save: () => Promise<void>;
     /** 当前选中的左侧菜单 */
     private activeMenu: OrganizeMenu = 'tasks';
     /** 当前渲染容器（用于菜单切换时局部刷新） */
     private container?: HTMLElement;
 
-    constructor(app: App, gtdData: GtdData, inboxData: InboxData, save: () => Promise<void>) {
+    constructor(app: App, gtdData: GtdData, save: () => Promise<void>) {
         this.app = app;
         this.gtdData = gtdData;
-        this.inboxData = inboxData;
         this.save = save;
     }
 
@@ -77,28 +74,9 @@ export class GtdOrganizeView {
         }
     }
 
-    /** 任务页：每个任务及其收集篮子 */
+    /** 任务页：每个任务具备收集篮子 */
     private renderTasks(container: HTMLElement) {
-        const items = this.inboxData.items.filter((it) => !it.removed);
-        if (items.length === 0) {
-            container.createDiv({ cls: 'gtd-organize-empty', text: t('gtd.organizeTasksEmpty') });
-            return;
-        }
-        for (const item of items) {
-            const block = container.createDiv({ cls: 'gtd-organize-block' });
-            block.createDiv({ cls: 'gtd-organize-block-title', text: item.title });
-
-            const list = block.createDiv({ cls: 'gtd-organize-basket-list' });
-            const entries = item.basket ?? [];
-            if (entries.length === 0) {
-                list.createDiv({ cls: 'gtd-organize-empty', text: t('basket.empty') });
-                continue;
-            }
-            for (const entry of entries) {
-                const row = list.createDiv({ cls: 'gtd-organize-basket-item' });
-                row.createSpan({ cls: 'gtd-organize-basket-text', text: entry.text });
-            }
-        }
+        container.createDiv({ cls: 'gtd-organize-tasks-hint', text: t('gtd.organizeTasksHint') });
     }
 
     /** 设置页：源管理 */

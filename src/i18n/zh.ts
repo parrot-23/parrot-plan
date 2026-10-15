@@ -72,7 +72,7 @@ export const zh = {
 
     // GTD 组织视图
     'gtd.organizeTasks': '任务',
-    'gtd.organizeTasksEmpty': '暂无任务',
+    'gtd.organizeTasksHint': '每个任务具备收集篮子',
     'gtd.organizeSettings': '设置',
     'gtd.sourceBlockTitle': '源',
     'gtd.sourceAdd': '添加',

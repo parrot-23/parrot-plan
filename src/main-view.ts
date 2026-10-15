@@ -242,7 +242,6 @@ export class MainView extends ItemView {
         this.gtdOrganizeView = new GtdOrganizeView(
             this.app,
             gtdData,
-            this.weekView.inboxData,
             () => this.weekView.save(),
         );
         this.gtdClarifyView = new GtdClarifyView(
