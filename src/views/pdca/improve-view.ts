@@ -1,8 +1,9 @@
 import type { App } from 'obsidian';
 
 import type { TimeBlockCategoryData } from '../../shared/timeblock-category-manager';
-import type { InboxData, EventBlock, ExecutionRecord, ImprovementData, ImprovementItem } from '../../datatypes/domain';
+import type { InboxData, EventBlock, ExecutionRecord, ImprovementItem } from '../../datatypes/domain';
 import { getEventStatus } from '../../datatypes/domain';
+import type { PdcaRepo } from '../../repos/pdca-repo';
 import {
     getCurrentWeekKey,
     makeWeekKey,
@@ -32,8 +33,8 @@ export class ImproveView {
     private getEvents: () => EventBlock[];
     /** 获取全部执行记录 */
     private getExecutions: () => ExecutionRecord[];
-    /** 改进数据（按周键存储改进项） */
-    private improvementData: ImprovementData;
+    /** PDCA 领域仓库（改进项增删） */
+    private pdcaRepo: PdcaRepo;
     /** 保存回调 */
     private save: () => Promise<void>;
     /** 当前渲染容器（用于自刷新） */
@@ -47,7 +48,7 @@ export class ImproveView {
         categoryData: TimeBlockCategoryData,
         getEvents: () => EventBlock[],
         getExecutions: () => ExecutionRecord[],
-        improvementData: ImprovementData,
+        pdcaRepo: PdcaRepo,
         save: () => Promise<void>,
     ) {
         this.app = app;
@@ -55,7 +56,7 @@ export class ImproveView {
         this.categoryData = categoryData;
         this.getEvents = getEvents;
         this.getExecutions = getExecutions;
-        this.improvementData = improvementData;
+        this.pdcaRepo = pdcaRepo;
         this.save = save;
     }
 
@@ -284,28 +285,19 @@ export class ImproveView {
 
     /** 取当前周的改进项列表（不存在则初始化） */
     private getWeekItems(): ImprovementItem[] {
-        if (!this.improvementData.byWeek[this.currentWeekKey]) {
-            this.improvementData.byWeek[this.currentWeekKey] = [];
-        }
-        return this.improvementData.byWeek[this.currentWeekKey];
+        return this.pdcaRepo.getWeekImprovements(this.currentWeekKey);
     }
 
     /** 新增一条改进项 */
     private async addImprovementItem() {
-        const items = this.getWeekItems();
-        items.push({
-            id: `imp_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
-            text: '',
-            createdAt: Date.now(),
-        });
+        this.pdcaRepo.addImprovement(this.currentWeekKey, '');
         await this.save();
         await this.refresh();
     }
 
     /** 删除一条改进项 */
     private async removeImprovementItem(id: string) {
-        const items = this.getWeekItems();
-        this.improvementData.byWeek[this.currentWeekKey] = items.filter(i => i.id !== id);
+        this.pdcaRepo.removeImprovement(this.currentWeekKey, id);
         await this.save();
         await this.refresh();
     }

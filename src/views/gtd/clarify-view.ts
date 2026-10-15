@@ -3,8 +3,8 @@
 import type { App } from 'obsidian';
 import { Notice } from 'obsidian';
 
-import type { GtdData } from '../../datatypes/gtd';
-import type { InboxData, BasketItem } from '../../datatypes/domain';
+import type { GtdRepo } from '../../repos/gtd-repo';
+import type { InboxData } from '../../datatypes/domain';
 import type { TimeBlockCategoryData } from '../../shared/timeblock-category-manager';
 import { renderTaskPanel } from '../../shared/task-panel';
 import { t } from '../../i18n';
@@ -17,7 +17,7 @@ type SourceTab = 'tasks';
  */
 export class GtdClarifyView {
     private app: App;
-    private gtdData: GtdData;
+    private gtdRepo: GtdRepo;
     private inboxData: InboxData;
     private categoryData: TimeBlockCategoryData;
     private save: () => Promise<void>;
@@ -30,13 +30,13 @@ export class GtdClarifyView {
 
     constructor(
         app: App,
-        gtdData: GtdData,
+        gtdRepo: GtdRepo,
         inboxData: InboxData,
         categoryData: TimeBlockCategoryData,
         save: () => Promise<void>,
     ) {
         this.app = app;
-        this.gtdData = gtdData;
+        this.gtdRepo = gtdRepo;
         this.inboxData = inboxData;
         this.categoryData = categoryData;
         this.save = save;
@@ -60,7 +60,7 @@ export class GtdClarifyView {
         col.createDiv({ cls: 'gtd-clarify-col-title', text: t('gtd.clarifyLeftTitle') });
 
         const list = col.createDiv({ cls: 'gtd-clarify-list' });
-        const pending = this.gtdData.items.filter((it) => it.status === 'inbox');
+        const pending = this.gtdRepo.getPendingItems();
         if (pending.length === 0) {
             list.createDiv({ cls: 'gtd-clarify-empty', text: t('gtd.collectEmpty') });
             return;
@@ -138,7 +138,7 @@ export class GtdClarifyView {
             ? this.inboxData.items.find((it) => it.id === this.inboxData.selectedId && !it.removed)
             : undefined;
         const selectedItem = this.selectedItemId
-            ? this.gtdData.items.find((it) => it.id === this.selectedItemId)
+            ? this.gtdRepo.data.items.find((it) => it.id === this.selectedItemId)
             : undefined;
 
         // 整理说明行：信息将放入 xxx 任务的收集篮子中
@@ -168,15 +168,9 @@ export class GtdClarifyView {
         confirmBtn.onclick = () => {
             if (!selectedItem || !selectedTask) return;
 
-            // 将收集记录内容放入选中任务的收集篮子
-            const entry: BasketItem = {
-                id: `basket_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
-                text: selectedItem.content,
-                createdAt: Date.now(),
-            };
-            selectedTask.basket = [...(selectedTask.basket ?? []), entry];
+            // 将收集记录内容放入选中任务的收集篮子，并标记为已处理
+            this.gtdRepo.clarify(selectedItem.id, selectedTask);
 
-            selectedItem.status = 'processed';
             this.selectedItemId = undefined;
             new Notice(t('gtd.clarifyResult', {
                 content: selectedItem.content,

@@ -16,6 +16,7 @@ import { t, getWeekDays } from '../../../i18n';
 import { log } from '../../../shared/logger';
 import { EVENT_STATUS_EMOJI, EVENT_STATUS_LABEL_KEY, getEventStatus } from '../../../datatypes/domain';
 import type { EventBlock, ExecutionRecord, EventStatus } from '../../../datatypes/domain';
+import type { PdcaRepo } from '../../../repos/pdca-repo';
 
 export const VIEW_TYPE_WEEK = 'week-schedule-view';
 
@@ -104,6 +105,11 @@ export class WeekScheduleView extends ItemView {
         }
         // 统一委托给插件层的 saveAll，作为唯一保存出口
         await (this.plugin as Plugin & { saveAll: () => Promise<void> }).saveAll();
+    }
+
+    /** 从插件实例获取 PDCA 领域仓库 */
+    private pdcaRepo(): PdcaRepo {
+        return (this.plugin as Plugin & { pdcaRepo: PdcaRepo }).pdcaRepo;
     }
 
     /** 重置为默认数据（清空全部数据后调用） */
@@ -396,8 +402,7 @@ export class WeekScheduleView extends ItemView {
                 delBtn.onclick = async (e) => {
                     e.stopPropagation();
                     // 原地删除，保持数组引用不变（插件持有同一引用）
-                    const idx = this.events.findIndex(x => x.id === ev.id);
-                    if (idx >= 0) this.events.splice(idx, 1);
+                    this.pdcaRepo().removeEvent(ev.id);
                     await this.save();
                     await this.onOpen();
                 };
@@ -537,7 +542,7 @@ export class WeekScheduleView extends ItemView {
             new Notice(t('event.alreadyScheduled', { title: selectedInboxItem.title }));
             return;
         }
-        this.events.push({
+        this.pdcaRepo().addEvent({
             id: `ev_${Date.now()}`,
             day,
             start: 0,
@@ -647,8 +652,7 @@ export class WeekScheduleView extends ItemView {
         delBtn.onclick = async (e) => {
             e.stopPropagation();
             // 原地删除，保持数组引用不变（插件持有同一引用）
-            const idx = this.events.findIndex(x => x.id === ev.id);
-            if (idx >= 0) this.events.splice(idx, 1);
+            this.pdcaRepo().removeEvent(ev.id);
             await this.save();
             await this.onOpen();
         };
@@ -666,7 +670,7 @@ export class WeekScheduleView extends ItemView {
             new Notice(t('event.alreadyScheduled', { title: selectedInboxItem.title }));
             return;
         }
-        this.events.push({
+        this.pdcaRepo().addEvent({
             id: `ev_${Date.now()}`,
             day,
             start: 0,
@@ -739,7 +743,7 @@ export class WeekScheduleView extends ItemView {
                     // 时间点事件可与其他时刻重复；但若当天全天已有该任务，则移除全天事件
                     this.removeAllDayEventForItem(selectedInboxItem, d);
                     // 直接创建事件，标题和分类从收集盒条目继承，并记录来源任务
-                    this.events.push({
+                    this.pdcaRepo().addEvent({
                         id: `ev_${Date.now()}`,
                         day: d,
                         start: startMinutes,
@@ -803,8 +807,7 @@ export class WeekScheduleView extends ItemView {
                     delBtn.onclick = async (e) => {
                         e.stopPropagation();
                         // 原地删除，保持数组引用不变（插件持有同一引用）
-                        const idx = this.events.findIndex(x => x.id === ev.id);
-                        if (idx >= 0) this.events.splice(idx, 1);
+                        this.pdcaRepo().removeEvent(ev.id);
                         await this.save();
                         await this.onOpen();
                     };
@@ -1259,12 +1262,7 @@ export class WeekScheduleView extends ItemView {
         if (this.plannedWeeks.includes(this.currentWeekKey)) plannedBtn.addClass('is-active');
         plannedBtn.onclick = () => {
             void (async () => {
-                const idx = this.plannedWeeks.indexOf(this.currentWeekKey);
-                if (idx >= 0) {
-                    this.plannedWeeks.splice(idx, 1);
-                } else {
-                    this.plannedWeeks.push(this.currentWeekKey);
-                }
+                this.pdcaRepo().togglePlannedWeek(this.currentWeekKey);
                 await this.save();
                 await this.onOpen();
             })();

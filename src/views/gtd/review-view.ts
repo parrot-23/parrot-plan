@@ -2,7 +2,8 @@
 // 左：组织视图已添加的源（菜单）；右：回廊形式的已处理卡片。
 import type { App } from 'obsidian';
 
-import type { GtdData, GtdSourceType } from '../../datatypes/gtd';
+import type { GtdSourceType } from '../../datatypes/gtd';
+import type { GtdRepo } from '../../repos/gtd-repo';
 import { t } from '../../i18n';
 
 /** 源类型 → i18n key */
@@ -30,15 +31,15 @@ function formatTime(ts: number): string {
  */
 export class GtdReviewView {
     private app: App;
-    private gtdData: GtdData;
+    private gtdRepo: GtdRepo;
     /** 当前选中的源 id */
     private selectedSourceId?: string;
     /** 当前渲染容器（用于菜单切换时局部刷新） */
     private container?: HTMLElement;
 
-    constructor(app: App, gtdData: GtdData) {
+    constructor(app: App, gtdRepo: GtdRepo) {
         this.app = app;
-        this.gtdData = gtdData;
+        this.gtdRepo = gtdRepo;
     }
 
     async renderInto(container: HTMLElement): Promise<void> {
@@ -50,14 +51,14 @@ export class GtdReviewView {
 
         // 左侧菜单：已添加的源
         const menu = layout.createDiv({ cls: 'gtd-review-menu' });
-        if (this.gtdData.sources.length === 0) {
+        if (this.gtdRepo.data.sources.length === 0) {
             menu.createDiv({ cls: 'gtd-review-empty', text: t('gtd.clarifyNoSource') });
         } else {
             // 默认选中第一个源
-            if (!this.selectedSourceId || !this.gtdData.sources.some((s) => s.id === this.selectedSourceId)) {
-                this.selectedSourceId = this.gtdData.sources[0].id;
+            if (!this.selectedSourceId || !this.gtdRepo.data.sources.some((s) => s.id === this.selectedSourceId)) {
+                this.selectedSourceId = this.gtdRepo.data.sources[0].id;
             }
-            for (const source of this.gtdData.sources) {
+            for (const source of this.gtdRepo.data.sources) {
                 const btn = menu.createEl('button', {
                     cls: 'gtd-review-menu-item',
                     text: t(SOURCE_LABEL_KEY[source.type]),
@@ -74,7 +75,7 @@ export class GtdReviewView {
 
         // 右侧回廊
         const gallery = layout.createDiv({ cls: 'gtd-review-gallery' });
-        const processed = this.gtdData.items.filter((it) => it.status === 'processed');
+        const processed = this.gtdRepo.getProcessedItems();
         if (processed.length === 0) {
             gallery.createDiv({ cls: 'gtd-review-empty', text: t('gtd.reviewEmpty') });
             return;

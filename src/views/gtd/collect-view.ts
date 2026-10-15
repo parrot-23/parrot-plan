@@ -1,7 +1,7 @@
 // 收集视图（GTD 第一步）：顶部输入框记录信息，下方列出所有未处理的卡片。
 import type { App } from 'obsidian';
 
-import type { GtdData } from '../../datatypes/gtd';
+import type { GtdRepo } from '../../repos/gtd-repo';
 import { t } from '../../i18n';
 
 /** 时间戳格式化为 YYYY-MM-DD HH:MM */
@@ -21,14 +21,14 @@ function formatTime(ts: number): string {
  */
 export class GtdCollectView {
     private app: App;
-    private gtdData: GtdData;
+    private gtdRepo: GtdRepo;
     private save: () => Promise<void>;
     /** 当前渲染容器（用于自刷新） */
     private container?: HTMLElement;
 
-    constructor(app: App, gtdData: GtdData, save: () => Promise<void>) {
+    constructor(app: App, gtdRepo: GtdRepo, save: () => Promise<void>) {
         this.app = app;
-        this.gtdData = gtdData;
+        this.gtdRepo = gtdRepo;
         this.save = save;
     }
 
@@ -51,12 +51,7 @@ export class GtdCollectView {
         const submit = () => {
             const content = input.value.trim();
             if (!content) return;
-            this.gtdData.items.push({
-                id: crypto.randomUUID(),
-                content,
-                createdAt: Date.now(),
-                status: 'inbox',
-            });
+            this.gtdRepo.addItem(content);
             void this.save().then(() => {
                 if (this.container) void this.renderInto(this.container);
             });
@@ -68,7 +63,7 @@ export class GtdCollectView {
 
         // 未处理卡片列表
         const list = container.createDiv({ cls: 'gtd-collect-list' });
-        const pending = this.gtdData.items.filter((it) => it.status === 'inbox');
+        const pending = this.gtdRepo.getPendingItems();
 
         if (pending.length === 0) {
             list.createDiv({ cls: 'gtd-collect-empty', text: t('gtd.collectEmpty') });
@@ -88,7 +83,7 @@ export class GtdCollectView {
                 text: '×',
             });
             delBtn.onclick = () => {
-                this.gtdData.items = this.gtdData.items.filter((it) => it.id !== item.id);
+                this.gtdRepo.removeItem(item.id);
                 void this.save().then(() => {
                     if (this.container) void this.renderInto(this.container);
                 });

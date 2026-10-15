@@ -4,7 +4,8 @@ import { Notice } from 'obsidian';
 
 import type { CardTemplate } from '../../../datatypes/form';
 import type { CardInstance, WorkbenchData } from '../../../datatypes/card';
-import { DEFAULT_LAYOUT_ID, ensureDefaultLayout } from '../../../datatypes/card';
+import { DEFAULT_LAYOUT_ID } from '../../../datatypes/card';
+import type { WorkbenchRepo } from '../../../repos/workbench-repo';
 import { loadAllTemplates } from '../../../cardmake/data/template-loader';
 import { getCardRenderer } from '../../../cardmake/cards/card-registry';
 import type { CardRenderContext } from '../../../datatypes/renderer';
@@ -42,6 +43,7 @@ function snapUp(v: number): number {
 export class WorkbenchView {
     private app: App;
     private workbenchData: WorkbenchData;
+    private workbenchRepo: WorkbenchRepo;
     private save: () => Promise<void>;
     /** 获取全部事件（stats 统计用） */
     private getEvents: () => EventBlock[];
@@ -63,6 +65,7 @@ export class WorkbenchView {
     constructor(
         app: App,
         workbenchData: WorkbenchData,
+        workbenchRepo: WorkbenchRepo,
         save: () => Promise<void>,
         getEvents: () => EventBlock[],
         getExecutions: () => ExecutionRecord[],
@@ -71,6 +74,7 @@ export class WorkbenchView {
     ) {
         this.app = app;
         this.workbenchData = workbenchData;
+        this.workbenchRepo = workbenchRepo;
         this.save = save;
         this.getEvents = getEvents;
         this.getExecutions = getExecutions;
@@ -92,7 +96,7 @@ export class WorkbenchView {
         container.addClass('workbench-view');
 
         // 确保默认布局存在，且始终对应当前工作台展示的内容
-        ensureDefaultLayout(this.workbenchData, t('layout.defaultName'));
+        this.workbenchRepo.ensureDefaultLayout(t('layout.defaultName'));
 
         // 加载模板（首次或缓存失效时）
         if (this.templates.length === 0) {
@@ -394,7 +398,7 @@ export class WorkbenchView {
         if (template.mode === 'stats' && template.source) {
             instance.source = template.source;
         }
-        this.workbenchData.instances.push(instance);
+        this.workbenchRepo.addInstance(instance);
         void this.save().then(() => {
             new Notice(t('workbench.cardAdded', { name: template.name }));
             if (this.container) void this.renderInto(this.container);
@@ -403,9 +407,7 @@ export class WorkbenchView {
 
     /** 删除一张卡片实例 */
     private removeCard(instance: CardInstance) {
-        this.workbenchData.instances = this.workbenchData.instances.filter(
-            (i) => i.id !== instance.id,
-        );
+        this.workbenchRepo.removeInstance(instance.id);
         void this.save().then(() => {
             if (this.container) void this.renderInto(this.container);
         });

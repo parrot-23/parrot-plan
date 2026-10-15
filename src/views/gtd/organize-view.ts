@@ -2,7 +2,8 @@
 // 菜单：任务（各任务的收集篮子）+ 设置（源管理）。
 import type { App } from 'obsidian';
 
-import type { GtdData, GtdSourceType } from '../../datatypes/gtd';
+import type { GtdSourceType } from '../../datatypes/gtd';
+import type { GtdRepo } from '../../repos/gtd-repo';
 import { t } from '../../i18n';
 
 /** 左侧菜单项标识 */
@@ -25,16 +26,16 @@ const SOURCE_LABEL_KEY: Record<GtdSourceType, 'gtd.sourceOkr' | 'gtd.sourcePdca'
  */
 export class GtdOrganizeView {
     private app: App;
-    private gtdData: GtdData;
+    private gtdRepo: GtdRepo;
     private save: () => Promise<void>;
     /** 当前选中的左侧菜单 */
     private activeMenu: OrganizeMenu = 'tasks';
     /** 当前渲染容器（用于菜单切换时局部刷新） */
     private container?: HTMLElement;
 
-    constructor(app: App, gtdData: GtdData, save: () => Promise<void>) {
+    constructor(app: App, gtdRepo: GtdRepo, save: () => Promise<void>) {
         this.app = app;
-        this.gtdData = gtdData;
+        this.gtdRepo = gtdRepo;
         this.save = save;
     }
 
@@ -96,11 +97,7 @@ export class GtdOrganizeView {
         });
         addBtn.onclick = () => {
             const type = select.value as GtdSourceType;
-            this.gtdData.sources.push({
-                id: crypto.randomUUID(),
-                type,
-                createdAt: Date.now(),
-            });
+            this.gtdRepo.addSource(type);
             void this.save().then(() => {
                 if (this.container) void this.renderInto(this.container);
             });
@@ -108,11 +105,11 @@ export class GtdOrganizeView {
 
         // 已添加的源卡片
         const list = block.createDiv({ cls: 'gtd-organize-source-list' });
-        if (this.gtdData.sources.length === 0) {
+        if (this.gtdRepo.data.sources.length === 0) {
             list.createDiv({ cls: 'gtd-organize-empty', text: t('gtd.sourceEmpty') });
             return;
         }
-        for (const source of this.gtdData.sources) {
+        for (const source of this.gtdRepo.data.sources) {
             const card = list.createDiv({ cls: 'gtd-organize-source-card' });
             card.createSpan({ cls: 'gtd-organize-source-name', text: t(SOURCE_LABEL_KEY[source.type]) });
             const delBtn = card.createEl('button', {
@@ -120,7 +117,7 @@ export class GtdOrganizeView {
                 text: '×',
             });
             delBtn.onclick = () => {
-                this.gtdData.sources = this.gtdData.sources.filter((s) => s.id !== source.id);
+                this.gtdRepo.removeSource(source.id);
                 void this.save().then(() => {
                     if (this.container) void this.renderInto(this.container);
                 });

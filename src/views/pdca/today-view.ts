@@ -10,6 +10,7 @@ import type { DailyRange } from '../../shared/timeblock-data';
 import type { EventBlock, ExecutionRecord } from '../../datatypes/domain';
 import { getWeekDays, t } from '../../i18n';
 import { EVENT_STATUS_EMOJI, EVENT_STATUS_LABEL_KEY, getEventStatus, type EventStatus } from '../../datatypes/domain';
+import type { PdcaRepo } from '../../repos/pdca-repo';
 
 /** 把分钟数格式化为 HH:MM */
 function formatMinutes(minutes: number): string {
@@ -38,6 +39,8 @@ export class TodayView {
     private getEvents: () => EventBlock[];
     /** 获取全部执行记录（用于「完成执行计划任务」写入） */
     private getExecutions: () => ExecutionRecord[];
+    /** PDCA 领域仓库（执行记录增删） */
+    private pdcaRepo: PdcaRepo;
     /** 当前渲染容器（用于自刷新） */
     private container?: HTMLElement;
     /** 红线定时器 */
@@ -83,6 +86,7 @@ export class TodayView {
         save: () => Promise<void>,
         getEvents: () => EventBlock[],
         getExecutions: () => ExecutionRecord[],
+        pdcaRepo: PdcaRepo,
         initialExecutingEventId?: string,
         setExecutingEventId?: (id: string | undefined) => void,
         onNavigateToProjectPicture?: (projectId: string) => void,
@@ -94,6 +98,7 @@ export class TodayView {
         this.save = save;
         this.getEvents = getEvents;
         this.getExecutions = getExecutions;
+        this.pdcaRepo = pdcaRepo;
         this.executingEventId = initialExecutingEventId;
         this.setExecutingEventId = setExecutingEventId;
         this.onNavigateToProjectPicture = onNavigateToProjectPicture;
@@ -1209,7 +1214,7 @@ export class TodayView {
         const nowMinutes = now.getHours() * 60 + now.getMinutes();
         const { day, weekKey } = this.getViewDayInfo();
 
-        this.getExecutions().push({
+        this.pdcaRepo.addExecution({
             id: `exec_${Date.now()}`,
             inboxId: running.inboxId,
             day,
@@ -1251,7 +1256,7 @@ export class TodayView {
         const start = this.addUnplannedStart;
         const end = Math.min(24 * 60, start + this.addUnplannedDuration);
 
-        this.getExecutions().push({
+        this.pdcaRepo.addExecution({
             id: `exec_${Date.now()}`,
             inboxId: item.id,
             day,
@@ -1272,7 +1277,7 @@ export class TodayView {
 
         const { day, weekKey } = this.getViewDayInfo();
 
-        this.getExecutions().push({
+        this.pdcaRepo.addExecution({
             id: `exec_${Date.now()}`,
             eventId: ev.id,
             inboxId: ev.inboxId,
@@ -1304,7 +1309,7 @@ export class TodayView {
 
         const { day, weekKey } = this.getViewDayInfo();
 
-        this.getExecutions().push({
+        this.pdcaRepo.addExecution({
             id: `exec_${Date.now()}`,
             eventId: ev.id,
             inboxId: ev.inboxId,
@@ -1331,10 +1336,7 @@ export class TodayView {
     /** 删除当前选中的执行记录 */
     private async deleteSelectedExec(): Promise<void> {
         if (!this.selectedExecId) return;
-        const executions = this.getExecutions();
-        const idx = executions.findIndex(ex => ex.id === this.selectedExecId);
-        if (idx < 0) return;
-        executions.splice(idx, 1);
+        this.pdcaRepo.removeExecution(this.selectedExecId);
         this.selectedExecId = undefined;
         await this.save();
         await this.refresh();
@@ -1375,7 +1377,7 @@ export class TodayView {
         const { day, weekKey } = this.getViewDayInfo();
 
         // 原计划事件不做任何修改；新增替换执行记录：eventId 关联原计划事件，inboxId 为实际执行的任务
-        this.getExecutions().push({
+        this.pdcaRepo.addExecution({
             id: `exec_${Date.now()}`,
             eventId: ev.id,
             inboxId: item.id,

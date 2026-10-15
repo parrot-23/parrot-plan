@@ -1,10 +1,10 @@
 // 剧本场景视图：初始页展示「进入剧本场景」按钮，点击后切换到今天的任务清单。
 import type { App } from 'obsidian';
 
-import type { TimeBlockCategoryData } from '../../shared/timeblock-category-manager';
-import type { EventBlock } from '../../datatypes/domain';
-import { getISOWeek, makeWeekKey } from '../../shared/timeblock-data';
-import { t } from '../../i18n';
+import type { TimeBlockCategoryData } from '../../../shared/timeblock-category-manager';
+import type { EventBlock } from '../../../datatypes/domain';
+import { getISOWeek, makeWeekKey } from '../../../shared/timeblock-data';
+import { t } from '../../../i18n';
 
 /** 分钟数格式化为 HH:MM */
 function formatMinutes(minutes: number): string {

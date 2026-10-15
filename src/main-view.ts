@@ -6,7 +6,7 @@ import type { TimeBlockCategoryData } from './shared/timeblock-category-manager'
 import type { DayTemplateData } from './shared/template-manager';
 import type { InboxData } from './datatypes/domain';
 import { WeekScheduleView } from './views/pdca/week-view/week-schedule-view';
-import type { EventBlock, ExecutionRecord, ImprovementData } from './datatypes/domain';
+import type { EventBlock, ExecutionRecord } from './datatypes/domain';
 import { YearView } from './views/pdca/year-view';
 import { TaskPlanView } from './views/pdca/task-plan-view';
 import { TodayView } from './views/pdca/today-view';
@@ -16,15 +16,18 @@ import { SwimlaneView } from './views/pdca/projectpicture-view';
 import { WorkbenchView } from './views/pdca/workbench/workbench-view';
 import { OkrView } from './views/okr/okr-view';
 import { OkrTaskPlanView } from './views/okr/okr-task-plan-view';
-import { AchievementView } from './views/story/achievement-view';
-import { ScriptManageView } from './views/story/script-manage-view';
-import { SceneView } from './views/story/scene-view';
+import { AchievementView } from './views/okr/story/achievement-view';
+import { ScriptManageView } from './views/okr/story/script-manage-view';
+import { SceneView } from './views/okr/story/scene-view';
 import { GtdCollectView } from './views/gtd/collect-view';
 import { GtdOrganizeView } from './views/gtd/organize-view';
 import { GtdClarifyView } from './views/gtd/clarify-view';
 import { GtdReviewView } from './views/gtd/review-view';
 import type { WorkbenchData } from './datatypes/card';
 import type { GtdData } from './datatypes/gtd';
+import type { GtdRepo } from './repos/gtd-repo';
+import type { PdcaRepo } from './repos/pdca-repo';
+import type { WorkbenchRepo } from './repos/workbench-repo';
 import { t } from './i18n';
 import { log } from './shared/logger';
 import { HelpModal } from './helper/help-modal';
@@ -129,7 +132,6 @@ export class MainView extends ItemView {
         plannedWeeks: string[],
         workbenchData: WorkbenchData,
         gtdData: GtdData,
-        improvementData: ImprovementData,
         cacheDirName: string,
         executingEventId?: string,
     ) {
@@ -173,6 +175,7 @@ export class MainView extends ItemView {
             () => this.weekView.save(),
             () => this.weekView.events,
             () => this.weekView.executions,
+            this.pdcaRepo(),
             executingEventId,
             (id) => {
                 // 写回插件数据源，随 saveAll 一起持久化
@@ -195,7 +198,7 @@ export class MainView extends ItemView {
             this.weekView.timeBlockCategoryData,
             () => this.weekView.events,
             () => this.weekView.executions,
-            improvementData,
+            this.pdcaRepo(),
             () => this.weekView.save(),
         );
         this.swimlaneView = new SwimlaneView(
@@ -209,6 +212,7 @@ export class MainView extends ItemView {
         this.workbenchView = new WorkbenchView(
             this.app,
             workbenchData,
+            this.workbenchRepo(),
             () => this.weekView.save(),
             () => this.weekView.events,
             () => this.weekView.executions,
@@ -244,22 +248,37 @@ export class MainView extends ItemView {
         );
         this.gtdCollectView = new GtdCollectView(
             this.app,
-            gtdData,
+            this.gtdRepo(),
             () => this.weekView.save(),
         );
         this.gtdOrganizeView = new GtdOrganizeView(
             this.app,
-            gtdData,
+            this.gtdRepo(),
             () => this.weekView.save(),
         );
         this.gtdClarifyView = new GtdClarifyView(
             this.app,
-            gtdData,
+            this.gtdRepo(),
             this.weekView.inboxData,
             this.weekView.timeBlockCategoryData,
             () => this.weekView.save(),
         );
-        this.gtdReviewView = new GtdReviewView(this.app, gtdData);
+        this.gtdReviewView = new GtdReviewView(this.app, this.gtdRepo());
+    }
+
+    /** 从插件实例获取 GTD 领域仓库 */
+    private gtdRepo(): GtdRepo {
+        return (this.plugin as Plugin & { gtdRepo: GtdRepo }).gtdRepo;
+    }
+
+    /** 从插件实例获取 PDCA 领域仓库 */
+    private pdcaRepo(): PdcaRepo {
+        return (this.plugin as Plugin & { pdcaRepo: PdcaRepo }).pdcaRepo;
+    }
+
+    /** 从插件实例获取工作台领域仓库 */
+    private workbenchRepo(): WorkbenchRepo {
+        return (this.plugin as Plugin & { workbenchRepo: WorkbenchRepo }).workbenchRepo;
     }
 
     getViewType(): string {

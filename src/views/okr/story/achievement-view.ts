@@ -2,14 +2,14 @@
 // 复用 cardmake 引擎（模板 + 聚合器 + 渲染器），以只读网格展示统计卡片。
 import type { App } from 'obsidian';
 
-import type { CardTemplate } from '../../datatypes/form';
-import type { CardInstance } from '../../datatypes/card';
-import { loadAllTemplates } from '../../cardmake/data/template-loader';
-import { getCardRenderer } from '../../cardmake/cards/card-registry';
-import type { CardRenderContext } from '../../datatypes/renderer';
-import { createDataProvider } from '../../cardmake/data/provider';
-import type { EventBlock, ExecutionRecord, InboxItem } from '../../datatypes/domain';
-import { t } from '../../i18n';
+import type { CardTemplate } from '../../../datatypes/form';
+import type { CardInstance } from '../../../datatypes/card';
+import { loadAllTemplates } from '../../../cardmake/data/template-loader';
+import { getCardRenderer } from '../../../cardmake/cards/card-registry';
+import type { CardRenderContext } from '../../../datatypes/renderer';
+import { createDataProvider } from '../../../cardmake/data/provider';
+import type { EventBlock, ExecutionRecord, InboxItem } from '../../../datatypes/domain';
+import { t } from '../../../i18n';
 
 /** 成就榜单展示的卡片模板 id（按顺序） */
 const ACHIEVEMENT_TEMPLATE_IDS = [
