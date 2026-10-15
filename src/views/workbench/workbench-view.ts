@@ -2,17 +2,17 @@
 import type { App } from 'obsidian';
 import { Notice } from 'obsidian';
 
-import type { CardTemplate } from '../../../datatypes/form';
-import type { CardInstance, WorkbenchData } from '../../../datatypes/card';
-import { DEFAULT_LAYOUT_ID } from '../../../datatypes/card';
-import type { WorkbenchRepo } from '../../../repos/workbench-repo';
-import { loadAllTemplates } from '../../../cardmake/data/template-loader';
-import { getCardRenderer } from '../../../cardmake/cards/card-registry';
-import type { CardRenderContext } from '../../../datatypes/renderer';
-import { createDataProvider } from '../../../cardmake/data/provider';
-import type { EventBlock, ExecutionRecord } from '../../../datatypes/domain';
-import type { InboxItem } from '../../../datatypes/domain';
-import { t } from '../../../i18n';
+import type { CardTemplate } from '../../datatypes/form';
+import type { CardInstance, WorkbenchData } from '../../datatypes/card';
+import { DEFAULT_LAYOUT_ID } from '../../datatypes/card';
+import type { WorkbenchRepo } from '../../repos/workbench-repo';
+import { loadAllTemplates } from '../../cardmake/data/template-loader';
+import { getCardRenderer } from '../../cardmake/cards/card-registry';
+import type { CardRenderContext } from '../../datatypes/renderer';
+import { createDataProvider } from '../../cardmake/data/provider';
+import type { EventBlock, ExecutionRecord } from '../../datatypes/domain';
+import type { InboxItem } from '../../datatypes/domain';
+import { t } from '../../i18n';
 import { LayoutModal } from './layout-modal';
 
 /** 网格单位（像素）：卡片位置与尺寸均吸附到该值的整数倍 */

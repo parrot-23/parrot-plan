@@ -13,7 +13,7 @@ import { TodayView } from './views/pdca/today-view';
 import { CheckView } from './views/pdca/check-view';
 import { ImproveView } from './views/pdca/improve-view';
 import { SwimlaneView } from './views/pdca/projectpicture-view';
-import { WorkbenchView } from './views/pdca/workbench/workbench-view';
+import { WorkbenchView } from './views/workbench/workbench-view';
 import { OkrView } from './views/okr/okr-view';
 import { OkrTaskPlanView } from './views/okr/okr-task-plan-view';
 import { AchievementView } from './views/okr/story/achievement-view';

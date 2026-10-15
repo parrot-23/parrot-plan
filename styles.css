@@ -5759,6 +5759,8 @@
 .wb-grid {
     position: relative;
     min-height: 300px;
+    /* 撑满工作台剩余高度，使背景网格铺满页面 */
+    flex: 1 1 auto;
 }
 
 /* 编辑态画布：显示 30px 网格交叉点背景（用伪元素绘制，避免影响卡片透明度） */
@@ -5767,14 +5769,15 @@
     position: absolute;
     inset: 0;
     pointer-events: none;
+    /* 圆点定位到每个网格单元的左上角（0 0），与卡片边界（col/row × 30px）对齐 */
     background-image: radial-gradient(
-        circle,
-        var(--text-faint) 1px,
-        transparent 1px
+        circle at 0 0,
+        var(--text-muted) 1.4px,
+        transparent 1.4px
     );
     background-size: 30px 30px;
     background-position: 0 0;
-    opacity: 0.7;
+    opacity: 0.9;
 }
 
 .wb-card {

@@ -1,8 +1,8 @@
 import { Modal, type App } from 'obsidian';
 
-import { t } from '../../../i18n';
-import type { WorkbenchData } from '../../../datatypes/card';
-import { DEFAULT_LAYOUT_ID } from '../../../datatypes/card';
+import { t } from '../../i18n';
+import type { WorkbenchData } from '../../datatypes/card';
+import { DEFAULT_LAYOUT_ID } from '../../datatypes/card';
 
 /** 布局方案菜单项定义 */
 interface LayoutMenuItem {
