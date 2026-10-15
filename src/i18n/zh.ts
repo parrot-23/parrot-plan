@@ -513,9 +513,12 @@ export const zh = {
     'workbench.saveLayout': '保存',
     'workbench.cancelLayout': '取消',
     'workbench.exitEdit': '退出编辑',
+    'workbench.category.gtd': 'GTD',
     'workbench.category.chart': '图表',
     'workbench.category.view': '视图',
     'workbench.category.other': '其他',
+    'workbench.collectPlaceholder': '记录一条信息…',
+    'workbench.collectEmpty': '暂无收集记录',
 
     // 布局方案弹窗
     'layout.title': '布局方案',

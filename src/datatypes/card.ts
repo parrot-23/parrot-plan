@@ -10,6 +10,15 @@ export interface CardRecord {
     createdAt: number;
 }
 
+/** 收集记录（collect 模式：输入框卡片逐条追加） */
+export interface CardEntry {
+    id: string;
+    /** 记录内容（用户输入） */
+    content: string;
+    /** 创建时间（毫秒时间戳） */
+    createdAt: number;
+}
+
 /** 卡片实例：工作台上的一张卡片 */
 export interface CardInstance {
     /** 实例 id（添加卡片时生成） */
@@ -20,6 +29,8 @@ export interface CardInstance {
     mode: CardMode;
     /** periodic：周期填写记录 */
     records?: CardRecord[];
+    /** collect：收集记录（输入框卡片逐条追加） */
+    entries?: CardEntry[];
     /** stats：数据来源定义 */
     source?: CardSource;
     /** fixed：填写后固定的值 */

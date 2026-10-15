@@ -1,8 +1,8 @@
 // 表单引擎类型定义：描述表单模板（Schema）与字段类型。
 // 模板是声明式的、静态的，与具体卡片无关。
 
-/** 卡片模式：周期填写 / 来源统计 / 填写后固定 / 日历 / 时钟 */
-export type CardMode = 'periodic' | 'stats' | 'fixed' | 'calendar' | 'clock';
+/** 卡片模式：周期填写 / 来源统计 / 填写后固定 / 日历 / 时钟 / 收集记录 */
+export type CardMode = 'periodic' | 'stats' | 'fixed' | 'calendar' | 'clock' | 'collect';
 
 /** 周期类型（仅 periodic 模式使用） */
 export type CardPeriod = 'day' | 'week' | 'month';

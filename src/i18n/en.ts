@@ -515,9 +515,12 @@ export const en: I18nMessages = {
     'workbench.saveLayout': 'Save',
     'workbench.cancelLayout': 'Cancel',
     'workbench.exitEdit': 'Exit Edit',
+    'workbench.category.gtd': 'GTD',
     'workbench.category.chart': 'Charts',
     'workbench.category.view': 'Views',
     'workbench.category.other': 'Other',
+    'workbench.collectPlaceholder': 'Capture something…',
+    'workbench.collectEmpty': 'No collected items yet',
 
     // Layout scheme modal
     'layout.title': 'Layout Scheme',

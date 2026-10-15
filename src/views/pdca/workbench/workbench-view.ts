@@ -300,6 +300,7 @@ export class WorkbenchView {
             key: string;
             match: (tpl: CardTemplate) => boolean;
         }> = [
+            { key: 'workbench.category.gtd', match: (tpl) => tpl.mode === 'collect' },
             { key: 'workbench.category.chart', match: (tpl) => tpl.mode === 'stats' },
             { key: 'workbench.category.view', match: (tpl) => tpl.mode === 'periodic' },
             {
@@ -372,6 +373,7 @@ export class WorkbenchView {
             'daily-mood': '😊',
             'calendar': '📆',
             'clock': '🕐',
+            'collect-inbox': '📥',
         };
         return byId[tpl.id] ?? '🧩';
     }
