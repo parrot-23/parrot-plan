@@ -1058,7 +1058,7 @@
 
 /* 无 OKR 条目的占位符 */
 .inbox-okr-overlay-placeholder {
-    text-align: center;
+    text-align: left;
     color: var(--text-faint);
     font-size: 11px;
 }

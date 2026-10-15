@@ -1649,65 +1649,30 @@ export class TodayView {
         }
     }
 
-    /** 在当天列上渲染当前查看日期的计划事件（与周计划视图的定位比例一致：80px / 2 小时） */
+    /**
+     * 在当天列上渲染当前查看日期的执行记录卡片（与周计划视图的定位比例一致：80px / 2 小时）。
+     * 时间轴仅显示执行记录卡片（已执行 / 替换 / 新增），不再绘制计划事件卡片。
+     */
     private renderTodayEvents(col: HTMLElement) {
         const { day, weekKey, dayKey } = this.getViewDayInfo();
         // 校验：周键 + 星期几 计算出的日期键应与查看日期一致
         if (makeDayKeyFromWeek(weekKey, day) !== dayKey) return;
 
-        const events = this.getEvents().filter(ev =>
-            ev.day === day && ev.weekKey === weekKey && !ev.allDay,
-        );
-
-        // 收集所有卡片项（计划事件 + 新增执行记录），用于后续气泡聚类
+        // 收集所有卡片项（执行记录），用于后续气泡聚类
         const bubbleItems: { card: HTMLElement; top: number; status: EventStatus; onSelect: () => void }[] = [];
 
-        for (const ev of events) {
-            const card = col.createDiv({ cls: 'event-card event-card-clickable today-event-card' });
-            const top = (ev.start / 120) * 80;
-            card.setCssProps({
-                '--card-top': `${top}px`,
-                '--card-height': `${((ev.end - ev.start) / 120) * 80}px`,
-            });
-            const cat = ev.categoryId
-                ? this.categoryData.categories.find(c => c.id === ev.categoryId)
-                : undefined;
-            card.setCssProps({
-                '--card-color': cat?.color ?? '#888888',
-                '--card-bg': '#eeeeee88',
-            });
-            card.setText(ev.title);
-
-            // 点击事件卡片 → 在中心方框展示详情（再次点击取消选中）
-            if (this.selectedEventId === ev.id) card.addClass('is-selected');
-            card.onclick = (e) => {
-                e.stopPropagation();
-                this.toggleEventSelection(ev.id);
-            };
-
-            bubbleItems.push({
-                card,
-                top,
-                status: getEventStatus(ev, this.getExecutions()),
-                onSelect: () => this.toggleEventSelection(ev.id),
-            });
-        }
-
-        // 非计划执行记录：作为独立区块渲染。
-        // 替换执行记录（replaced=true）虽关联计划事件，但实际执行的是另一任务，需单独显示。
-        const plannedEventIds = new Set(events.map(ev => ev.id));
-        const unplannedExecs = this.getExecutions().filter(ex =>
-            ex.day === day
-            && ex.weekKey === weekKey
-            && (ex.replaced || !(ex.eventId && plannedEventIds.has(ex.eventId))),
+        // 当天全部执行记录：已执行（关联计划事件）/ 替换 / 新增，统一作为执行记录卡片渲染
+        const execs = this.getExecutions().filter(ex =>
+            ex.day === day && ex.weekKey === weekKey,
         );
-        for (const ex of unplannedExecs) {
+        for (const ex of execs) {
             const card = col.createDiv({ cls: 'event-card event-card-exec today-event-card' });
             const top = (ex.start / 120) * 80;
+            // 高度按实际执行时长绘制（80px = 2 小时）；最小 26px 保证至少一行文字可见
+            const height = Math.max(26, ((ex.end - ex.start) / 120) * 80);
             card.setCssProps({
                 '--card-top': `${top}px`,
-                // 新增执行卡片固定高度 40px
-                '--card-height': '40px',
+                '--card-height': `${height}px`,
             });
             const item = ex.inboxId
                 ? this.inboxData.items.find(i => i.id === ex.inboxId && !i.removed)
@@ -1721,7 +1686,7 @@ export class TodayView {
             });
             card.setText(item?.title ?? t('today.statusAdded'));
 
-            // 点击「新增」卡片 → 在中心方框展示详情（再次点击取消选中）
+            // 点击执行记录卡片 → 在中心方框展示详情（再次点击取消选中）
             if (this.selectedExecId === ex.id) card.addClass('is-selected');
             card.onclick = (e) => {
                 e.stopPropagation();
