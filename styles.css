@@ -1003,66 +1003,6 @@
     flex-direction: column;
 }
 
-/* OKR 进度悬浮面板：鼠标悬浮任务面板时，浮在右侧内容区上方 */
-.inbox-okr-overlay {
-    display: none;
-    position: absolute;
-    top: 0;
-    left: 100%;
-    margin-left: 8px;
-    width: 160px;
-    z-index: 20;
-    pointer-events: none;
-}
-
-.inbox-okr-overlay.is-visible {
-    display: block;
-}
-
-/* 单行：与对应任务条目垂直对齐（top / height 由 JS 设置），背景贴合文字 */
-.inbox-okr-overlay-row {
-    position: absolute;
-    left: 0;
-    right: 0;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    gap: 2px;
-    padding: 0 10px;
-    box-sizing: border-box;
-    border-radius: 4px;
-    border: 1px solid var(--background-modifier-border);
-    background: var(--background-primary);
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12);
-}
-
-.inbox-okr-overlay-line {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 6px;
-    font-size: 11px;
-    line-height: 1.3;
-}
-
-.inbox-okr-overlay-label {
-    color: var(--text-muted);
-    flex-shrink: 0;
-}
-
-.inbox-okr-overlay-value {
-    color: var(--text-normal);
-    font-weight: 500;
-    white-space: nowrap;
-}
-
-/* 无 OKR 条目的占位符 */
-.inbox-okr-overlay-placeholder {
-    text-align: left;
-    color: var(--text-faint);
-    font-size: 11px;
-}
-
 .inbox-header {
     display: flex;
     align-items: center;
@@ -2715,6 +2655,73 @@
     padding: 8px 0;
 }
 
+/* 未选中任务时的任务总览：每个任务条目 + OKR 进度 / 成果情况 */
+.task-plan-overview {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.task-plan-overview-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-normal);
+}
+
+.task-plan-overview-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.task-plan-overview-row {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 8px 10px;
+    padding-left: calc(10px + var(--overview-depth, 0) * 16px);
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 8px;
+    background: var(--background-secondary);
+}
+
+.task-plan-overview-item-title {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-normal);
+}
+
+.task-plan-overview-detail {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.task-plan-overview-line {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+    font-size: 12px;
+    line-height: 1.3;
+}
+
+.task-plan-overview-label {
+    color: var(--text-muted);
+    flex-shrink: 0;
+}
+
+.task-plan-overview-value {
+    color: var(--text-normal);
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+.task-plan-overview-empty {
+    font-size: 12px;
+    color: var(--text-faint);
+}
+
 /* 任务详情方框（位于 OKR 信息方框上方） */
 .task-plan-detail-box {
     display: flex;
@@ -2740,6 +2747,12 @@
 
 /* 截止日期输入框 */
 .task-plan-due-input {
+    width: 100%;
+    max-width: 200px;
+}
+
+/* 预估时长输入框（启用习惯时间点时显示） */
+.task-plan-est-input {
     width: 100%;
     max-width: 200px;
 }

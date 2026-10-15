@@ -103,6 +103,8 @@ export const en: I18nMessages = {
 
     // Task Plan view
     'taskPlan.noSelection': 'Select a task on the left',
+    'taskPlan.overviewTitle': 'Task Overview',
+    'taskPlan.overviewNoOkr': 'No OKR conditions',
     'taskPlan.detailTitle': 'Task Details',
     'taskPlan.description': 'Description',
     'taskPlan.editDescription': 'Edit description',

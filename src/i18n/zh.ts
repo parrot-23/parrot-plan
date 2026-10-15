@@ -101,6 +101,8 @@ export const zh = {
 
     // 任务计划视图
     'taskPlan.noSelection': '请在左侧选择一个任务',
+    'taskPlan.overviewTitle': '任务总览',
+    'taskPlan.overviewNoOkr': '暂无 OKR 条件',
     'taskPlan.detailTitle': '任务详情',
     'taskPlan.description': '项目描述',
     'taskPlan.editDescription': '编辑描述',

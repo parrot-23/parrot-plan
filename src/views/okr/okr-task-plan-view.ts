@@ -748,6 +748,75 @@ export class OkrTaskPlanView {
         if (body) this.renderSectionCards(body);
     }
 
+    /** 未选中任务时：在右侧内容区展示所有任务条目及其 OKR 进度、成果情况 */
+    private renderAllTasksOverview(container: HTMLElement): void {
+        const area = container.createDiv({ cls: 'task-plan-overview' });
+        area.createDiv({ cls: 'task-plan-overview-title', text: t('taskPlan.overviewTitle') });
+
+        // 按任务面板的层级顺序（顶层 → 子任务递归）收集所有未移除任务
+        const ordered: { item: InboxItem; depth: number }[] = [];
+        const collect = (parentId: string | undefined, depth: number) => {
+            const children = this.inboxData.items.filter(i => !i.removed && i.parentId === parentId);
+            for (const child of children) {
+                ordered.push({ item: child, depth });
+                collect(child.id, depth + 1);
+            }
+        };
+        collect(undefined, 0);
+
+        if (ordered.length === 0) {
+            area.createDiv({ cls: 'task-plan-empty', text: t('inbox.empty') });
+            return;
+        }
+
+        const list = area.createDiv({ cls: 'task-plan-overview-list' });
+        for (const { item, depth } of ordered) {
+            const row = list.createDiv({ cls: 'task-plan-overview-row' });
+            row.style.setProperty('--overview-depth', String(depth));
+
+            // 任务条目（标题）
+            const titleRow = row.createDiv({ cls: 'task-plan-overview-item' });
+            titleRow.createSpan({ cls: 'task-plan-overview-item-title', text: item.title });
+
+            // OKR 进度 / 成果情况
+            const conditions = item.okr?.conditions ?? [];
+            const detail = row.createDiv({ cls: 'task-plan-overview-detail' });
+
+            if (conditions.length === 0) {
+                detail.createDiv({ cls: 'task-plan-overview-empty', text: t('taskPlan.overviewNoOkr') });
+                continue;
+            }
+
+            // 时长：当前值 / 目标（与 OKR 进度方框一致，当前值暂为 0）
+            const durationConds = conditions.filter(c => c.type === 'duration');
+            if (durationConds.length > 0) {
+                const line = detail.createDiv({ cls: 'task-plan-overview-line' });
+                line.createSpan({
+                    cls: 'task-plan-overview-label',
+                    text: t(OKR_CONDITION_META.duration.labelKey as Parameters<typeof t>[0]),
+                });
+                const unit = t(OKR_CONDITION_META.duration.unitKey as Parameters<typeof t>[0]);
+                const targetSum = durationConds.reduce((sum, c) => sum + (c.target || 0), 0);
+                line.createSpan({ cls: 'task-plan-overview-value', text: `0/${targetSum} ${unit}` });
+            }
+
+            // 成果：已完成数 / 总数
+            const outcomeConds = conditions.filter(c => c.type === 'outcome');
+            if (outcomeConds.length > 0) {
+                const line = detail.createDiv({ cls: 'task-plan-overview-line' });
+                line.createSpan({
+                    cls: 'task-plan-overview-label',
+                    text: t(OKR_CONDITION_META.outcome.labelKey as Parameters<typeof t>[0]),
+                });
+                const doneCount = outcomeConds.filter(c => c.done).length;
+                line.createSpan({
+                    cls: 'task-plan-overview-value',
+                    text: `${doneCount}/${outcomeConds.length}`,
+                });
+            }
+        }
+    }
+
     /** 渲染右侧信息表单：项目描述、分类、截止日期（跟随当前选中任务） */
     private renderInfoForm(container: HTMLElement): void {
         const selectedId = this.inboxData.selectedId;
@@ -756,10 +825,8 @@ export class OkrTaskPlanView {
             : undefined;
 
         if (!item) {
-            container.createDiv({
-                cls: 'task-plan-empty',
-                text: t('taskPlan.noSelection'),
-            });
+            // 未选中任务：在右侧内容区直接展示所有任务条目及其 OKR 进度、成果情况
+            this.renderAllTasksOverview(container);
             return;
         }
 
@@ -918,6 +985,37 @@ export class OkrTaskPlanView {
         };
         hourSelect.onchange = applyHabit;
         minuteSelect.onchange = applyHabit;
+
+        // 预估时长（仅在启用习惯时间点时显示，单位分钟，失焦后自动保存）
+        if (habitEnabled) {
+            const estRow = form.createDiv({ cls: 'task-plan-field' });
+            estRow.createDiv({ cls: 'task-plan-field-label', text: t('weekPanel.estimatedLabel') });
+            const estInput = estRow.createEl('input', {
+                cls: 'task-plan-est-input',
+                type: 'number',
+                attr: {
+                    min: '0',
+                    step: '5',
+                    placeholder: t('weekPanel.estimatedPlaceholder'),
+                },
+            });
+            if (typeof item.estimatedMinutes === 'number' && item.estimatedMinutes > 0) {
+                estInput.value = String(item.estimatedMinutes);
+            }
+            estInput.onchange = () => {
+                void (async () => {
+                    const raw = estInput.value.trim();
+                    const minutes = raw === '' ? undefined : Math.max(0, Math.floor(Number(raw)));
+                    if (minutes === undefined || !Number.isFinite(minutes) || minutes <= 0) {
+                        delete item.estimatedMinutes;
+                    } else {
+                        item.estimatedMinutes = minutes;
+                    }
+                    await this.save();
+                    await this.refresh();
+                })();
+            };
+        }
     }
 
     /** 重新渲染自身 */

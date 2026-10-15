@@ -553,6 +553,10 @@ export class WeekScheduleView extends ItemView {
             allDay: true,
             completed: false,
             weekKey: this.currentWeekKey,
+            // 继承任务的预估时长（未填写时不设置）
+            ...(typeof selectedInboxItem.estimatedMinutes === 'number' && selectedInboxItem.estimatedMinutes > 0
+                ? { estimatedMinutes: selectedInboxItem.estimatedMinutes }
+                : {}),
         });
         // 加入某天时，同时成为该周的周目标
         this.assignItemToDay(selectedInboxItem, day);
@@ -681,6 +685,10 @@ export class WeekScheduleView extends ItemView {
             allDay: true,
             completed: false,
             weekKey: this.currentWeekKey,
+            // 继承任务的预估时长（未填写时不设置）
+            ...(typeof selectedInboxItem.estimatedMinutes === 'number' && selectedInboxItem.estimatedMinutes > 0
+                ? { estimatedMinutes: selectedInboxItem.estimatedMinutes }
+                : {}),
         });
         // 加入某天时，同时成为该周的周目标
         this.assignItemToDay(selectedInboxItem, day);
@@ -753,6 +761,10 @@ export class WeekScheduleView extends ItemView {
                         inboxId: selectedInboxItem.id,
                         completed: false,
                         weekKey: this.currentWeekKey,
+                        // 继承任务的预估时长（未填写时不设置）
+                        ...(typeof selectedInboxItem.estimatedMinutes === 'number' && selectedInboxItem.estimatedMinutes > 0
+                            ? { estimatedMinutes: selectedInboxItem.estimatedMinutes }
+                            : {}),
                     });
                     // 加入某天时，同时成为该周的周目标
                     this.assignItemToDay(selectedInboxItem, d);
