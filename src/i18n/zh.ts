@@ -219,6 +219,16 @@ export const zh = {
 
     // 检查视图（PDCA 的 Check）
     'check.planVsExecTitle': '计划 vs 执行',
+    'check.planSummaryTitle': '本周计划',
+    'check.execSummaryTitle': '本周执行',
+    'check.weekDiffTitle': '本周分配 vs 执行',
+    'check.prevWeekDiffTitle': '上周 vs 本周',
+    'check.diffPlanned': '分配',
+    'check.diffExecuted': '已执行',
+    'check.diffUnexecuted': '未执行',
+    'check.prevWeek': '上周',
+    'check.currWeek': '本周',
+    'check.plannedDuration': '计划时长',
     'check.plannedCount': '计划事件',
     'check.executedCount': '已执行',
     'check.actualDuration': '实际执行记录',

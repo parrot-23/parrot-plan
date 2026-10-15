@@ -221,6 +221,16 @@ export const en: I18nMessages = {
 
     // Check view (PDCA Check)
     'check.planVsExecTitle': 'Plan vs Execution',
+    'check.planSummaryTitle': 'This week plan',
+    'check.execSummaryTitle': 'This week execution',
+    'check.weekDiffTitle': 'This week: planned vs executed',
+    'check.prevWeekDiffTitle': 'Last week vs this week',
+    'check.diffPlanned': 'Planned',
+    'check.diffExecuted': 'Executed',
+    'check.diffUnexecuted': 'Not executed',
+    'check.prevWeek': 'Last week',
+    'check.currWeek': 'This week',
+    'check.plannedDuration': 'Planned duration',
     'check.plannedCount': 'Planned events',
     'check.executedCount': 'Executed',
     'check.actualDuration': 'Actual records',
