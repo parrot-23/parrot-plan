@@ -3789,6 +3789,11 @@
     color: var(--text-muted);
 }
 
+/* 执行记录详情中的时长输入框 */
+.today-detail-duration-input {
+    width: 72px;
+}
+
 .today-detail-empty {
     margin: auto;
     text-align: center;

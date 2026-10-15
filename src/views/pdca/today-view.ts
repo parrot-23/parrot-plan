@@ -1462,6 +1462,34 @@ export class TodayView {
         row.createSpan({ cls: 'today-detail-label', text: `${t('today.timeRange')}:` });
         row.createSpan({ text: `${formatMinutes(ex.start)} - ${formatMinutes(ex.end)}` });
 
+        // 时长（可编辑）：修改后按 start + 时长 重算 end，并保存刷新
+        const durationRow = body.createDiv({ cls: 'today-detail-row' });
+        durationRow.createSpan({ cls: 'today-detail-label', text: `${t('today.addUnplannedDuration')}:` });
+        const durationInput = durationRow.createEl('input', {
+            cls: 'today-detail-duration-input',
+            type: 'number',
+            attr: { min: '5', step: '5' },
+        });
+        durationInput.value = String(Math.max(0, ex.end - ex.start));
+        durationInput.onchange = () => {
+            void (async () => {
+                const raw = durationInput.value.trim();
+                const minutes = Math.max(5, Math.floor(Number(raw)));
+                if (!Number.isFinite(minutes)) {
+                    durationInput.value = String(Math.max(0, ex.end - ex.start));
+                    return;
+                }
+                // 原地修改，保持数组引用不变（插件持有同一引用）
+                const target = this.getExecutions().find(x => x.id === ex.id);
+                if (target) {
+                    target.end = Math.min(1440, target.start + minutes);
+                }
+                await this.save();
+                await this.refresh();
+            })();
+        };
+        durationRow.createSpan({ cls: 'today-detail-label', text: t('today.addUnplannedMinutes') });
+
         const cat = item?.categoryId
             ? this.categoryData.categories.find(c => c.id === item.categoryId)
             : undefined;
