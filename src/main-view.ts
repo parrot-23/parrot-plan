@@ -32,17 +32,16 @@ import { HelpModal } from './helper/help-modal';
 export const VIEW_TYPE_MAIN = 'parrot-plan-main-view';
 
 /** 一级视图标识 */
-type PrimaryView = 'pdca' | 'okr' | 'workbench' | 'story' | 'gtd';
+type PrimaryView = 'pdca' | 'okr' | 'workbench' | 'gtd';
 
 /** 二级视图（tab）标识 */
 type NavTab = 'year' | 'taskPlan' | 'week' | 'today' | 'check' | 'improve' | 'swimlane' | 'workbench' | 'achievement' | 'gtd' | 'okrHome' | 'okrTaskPlan' | 'scene' | 'scriptManage' | 'gtdCollect' | 'gtdOrganize' | 'gtdClarify' | 'gtdReview' | 'gtdEngage';
 
 /** 一级视图定义（顶部第一行） */
-const PRIMARY_VIEWS: { id: PrimaryView; labelKey: 'nav.pdca' | 'nav.okr' | 'nav.workbench' | 'nav.story' | 'nav.gtd' }[] = [
+const PRIMARY_VIEWS: { id: PrimaryView; labelKey: 'nav.pdca' | 'nav.okr' | 'nav.workbench' | 'nav.gtd' }[] = [
     { id: 'workbench', labelKey: 'nav.workbench' },
     { id: 'okr', labelKey: 'nav.okr' },
     { id: 'pdca', labelKey: 'nav.pdca' },
-    { id: 'story', labelKey: 'nav.story' },
     { id: 'gtd', labelKey: 'nav.gtd' },
 ];
 
@@ -56,14 +55,12 @@ const SECONDARY_TABS: Record<PrimaryView, { id: NavTab; labelKey: 'nav.year' | '
     ],
     okr: [
         { id: 'okrTaskPlan', labelKey: 'nav.taskPlan' },
-    ],
-    workbench: [
-        { id: 'workbench', labelKey: 'nav.workbench' },
-    ],
-    story: [
         { id: 'achievement', labelKey: 'nav.achievement' },
         { id: 'scene', labelKey: 'nav.scene' },
         { id: 'scriptManage', labelKey: 'nav.scriptManage' },
+    ],
+    workbench: [
+        { id: 'workbench', labelKey: 'nav.workbench' },
     ],
     gtd: [
         { id: 'gtdCollect', labelKey: 'nav.gtdCollect' },
@@ -79,7 +76,6 @@ const DEFAULT_TAB: Record<PrimaryView, NavTab> = {
     pdca: 'today',
     okr: 'okrTaskPlan',
     workbench: 'workbench',
-    story: 'achievement',
     gtd: 'gtdCollect',
 };
 
@@ -281,7 +277,7 @@ export class MainView extends ItemView {
         // 顶部导航栏：第一行一级视图，第二行二级视图
         const nav = root.createDiv({ cls: 'parrot-plan-nav' });
 
-        // 第一行：一级视图（任务OKR / PDCA / 工作台 / 故事 / GTD）
+        // 第一行：一级视图（工作台 / 任务OKR / PDCA / GTD）
         const primaryRow = nav.createDiv({ cls: 'parrot-plan-nav-primary-row' });
         for (const pv of PRIMARY_VIEWS) {
             const btn = primaryRow.createEl('button', {

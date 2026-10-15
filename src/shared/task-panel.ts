@@ -2,7 +2,7 @@ import { App, Modal, Setting, Notice, AbstractInputSuggest, TFile, setIcon } fro
 import type { TimeBlockCategoryData } from './timeblock-category-manager';
 import { t } from '../i18n';
 import type { InboxItem, InboxData, Section, SectionType, ChecklistData, StepsData, HabitData, FileData, EventBlock } from '../datatypes/domain';
-import { DEFAULT_INBOX_DATA, SECTION_TYPE_META } from '../datatypes/domain';
+import { DEFAULT_INBOX_DATA, OKR_CONDITION_META, SECTION_TYPE_META } from '../datatypes/domain';
 
 /**
  * 任务面板：公共组件。
@@ -312,6 +312,70 @@ export function renderTaskPanel(
         }
     }
 
+    // ===== OKR 进度悬浮面板（鼠标悬浮整个任务面板时，在右侧显示各任务条目的 OKR 进度）=====
+    const okrOverlay = container.createDiv({ cls: 'inbox-okr-overlay' });
+
+    /** 构建悬浮面板内容：与任务条目逐行对齐；无 OKR 的条目显示占位符 */
+    function buildOkrOverlay() {
+        okrOverlay.empty();
+        const itemEls = Array.from(listDiv.querySelectorAll<HTMLElement>('.inbox-item'));
+        const panelRect = container.getBoundingClientRect();
+        for (const itemEl of itemEls) {
+            const id = itemEl.getAttribute('data-id');
+            if (!id) continue;
+            const item = inboxData.items.find(i => i.id === id);
+            const conditions = item?.okr?.conditions ?? [];
+
+            const row = okrOverlay.createDiv({ cls: 'inbox-okr-overlay-row' });
+            // 与任务条目垂直对齐：用相对面板的坐标（考虑列表滚动与偏移）
+            const rect = itemEl.getBoundingClientRect();
+            row.style.top = `${rect.top - panelRect.top}px`;
+            row.style.height = `${rect.height}px`;
+
+            if (conditions.length === 0) {
+                // 无 OKR：显示占位符
+                row.createDiv({ cls: 'inbox-okr-overlay-placeholder', text: '—' });
+                continue;
+            }
+
+            // 时长：当前值 / 目标（与 OKR 进度方框一致，当前值暂为 0）
+            const durationConds = conditions.filter(c => c.type === 'duration');
+            if (durationConds.length > 0) {
+                const line = row.createDiv({ cls: 'inbox-okr-overlay-line' });
+                line.createSpan({
+                    cls: 'inbox-okr-overlay-label',
+                    text: t(OKR_CONDITION_META.duration.labelKey as Parameters<typeof t>[0]),
+                });
+                const unit = t(OKR_CONDITION_META.duration.unitKey as Parameters<typeof t>[0]);
+                const targetSum = durationConds.reduce((sum, c) => sum + (c.target || 0), 0);
+                line.createSpan({ cls: 'inbox-okr-overlay-value', text: `0/${targetSum} ${unit}` });
+            }
+
+            // 成果：已完成数 / 总数
+            const outcomeConds = conditions.filter(c => c.type === 'outcome');
+            if (outcomeConds.length > 0) {
+                const line = row.createDiv({ cls: 'inbox-okr-overlay-line' });
+                line.createSpan({
+                    cls: 'inbox-okr-overlay-label',
+                    text: t(OKR_CONDITION_META.outcome.labelKey as Parameters<typeof t>[0]),
+                });
+                const doneCount = outcomeConds.filter(c => c.done).length;
+                line.createSpan({
+                    cls: 'inbox-okr-overlay-value',
+                    text: `${doneCount}/${outcomeConds.length}`,
+                });
+            }
+        }
+    }
+
+    container.onmouseenter = () => {
+        buildOkrOverlay();
+        okrOverlay.addClass('is-visible');
+    };
+    container.onmouseleave = () => {
+        okrOverlay.removeClass('is-visible');
+    };
+
     // ===== 渲染单个任务（递归）=====
     function renderItem(item: InboxItem, depth: number, recurse = true) {
         const itemEl = listDiv.createDiv({
@@ -358,6 +422,17 @@ export function renderTaskPanel(
         }
 
         titleRow.createSpan({ cls: 'inbox-item-title', text: item.title });
+
+        // 行末状态标记：emoji 图标（避免纯色，防止与任务分类色冲突）
+        const status = item.status ?? 'notStarted';
+        const statusMeta: Record<string, { emoji: string }> = {
+            notStarted: { emoji: '⚪' },
+            inProgress: { emoji: '⏳' },
+            done: { emoji: '✅' },
+        };
+        const meta = statusMeta[status] ?? statusMeta.notStarted;
+        const statusEl = titleRow.createSpan({ cls: `inbox-item-status is-${status}` });
+        statusEl.createSpan({ cls: 'inbox-item-status-icon', text: meta.emoji });
 
         // 展示板块摘要（只读，编辑在详情弹窗中）：仅显示类型图标，不显示名称
         if (item.sections && item.sections.length > 0) {

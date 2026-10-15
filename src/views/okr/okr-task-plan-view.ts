@@ -635,9 +635,13 @@ export class OkrTaskPlanView {
             });
 
             if (cond.type === 'outcome') {
-                // 成果：勾选框形式展示
+                // 成果：勾选框形式展示（勾选状态持久化到 cond.done）
                 const cb = row.createEl('input', { type: 'checkbox', cls: 'okr-progress-checkbox' });
-                cb.checked = false;
+                cb.checked = cond.done ?? false;
+                cb.onchange = () => {
+                    cond.done = cb.checked;
+                    void this.save();
+                };
                 row.createSpan({ cls: 'okr-progress-outcome-text', text: cond.text ?? '' });
                 continue;
             }

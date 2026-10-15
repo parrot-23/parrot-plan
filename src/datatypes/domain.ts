@@ -104,6 +104,8 @@ export interface OkrCondition {
     target: number;
     /** 成果文本（成果类型使用，纯文字描述） */
     text?: string;
+    /** 成果是否已完成（成果类型使用，可选，旧数据无此字段默认未完成） */
+    done?: boolean;
 }
 
 /**
