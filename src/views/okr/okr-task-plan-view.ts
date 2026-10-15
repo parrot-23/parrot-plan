@@ -24,6 +24,10 @@ export class OkrTaskPlanView {
     private editingSectionId: string | null = null;
     /** OKR 进度方框容器（OKR 信息变更时同步刷新进度） */
     private progressWrap?: HTMLElement;
+    /** 收集篮子是否处于「整理」模式 */
+    private basketOrganizeMode = false;
+    /** 整理模式下选中的收集篮子条目 id */
+    private selectedBasketEntryId?: string;
 
     constructor(
         app: App,
@@ -266,6 +270,16 @@ export class OkrTaskPlanView {
         } else if (section.type === 'file') {
             for (const it of (section.data as FileData).items) {
                 const itemEl = this.renderSectionCardItem(itemsEl, '📄', it.text || it.path);
+                // 整理模式且已选中篮子条目：文件作为整理目标（悬停提示 + 点击写入）
+                if (this.basketOrganizeMode && this.selectedBasketEntryId && it.path) {
+                    itemEl.addClass('is-organize-target');
+                    itemEl.setAttribute('title', t('basket.organizeToFile'));
+                    itemEl.onclick = (e) => {
+                        e.stopPropagation();
+                        void this.organizeToFile(item, it.path);
+                    };
+                    continue;
+                }
                 // 点击文件条目：在新标签页打开对应 vault 文件
                 if (it.path) {
                     itemEl.addClass('is-clickable');
@@ -276,6 +290,34 @@ export class OkrTaskPlanView {
                 }
             }
         }
+    }
+
+    /** 将选中的收集篮子条目内容追加到目标文件末尾，并从篮子移除该条目 */
+    private async organizeToFile(item: InboxItem, path: string): Promise<void> {
+        const entryId = this.selectedBasketEntryId;
+        if (!entryId) return;
+        const entry = (item.basket ?? []).find((b) => b.id === entryId);
+        if (!entry) return;
+
+        try {
+            const file = this.app.vault.getAbstractFileByPath(path);
+            if (!file) {
+                new Notice(t('basket.organizeFileMissing'));
+                return;
+            }
+            await this.app.vault.adapter.append(path, `\n${entry.text}\n`);
+        } catch {
+            new Notice(t('basket.organizeFailed'));
+            return;
+        }
+
+        // 写入成功后从篮子移除该条目
+        item.basket = (item.basket ?? []).filter((b) => b.id !== entryId);
+        this.selectedBasketEntryId = undefined;
+        await this.save();
+        this.refreshBasketBox();
+        this.refreshSectionCards();
+        new Notice(t('basket.organizeDone'));
     }
 
     /** 编辑态卡片：右上角删除卡片 / 退出按钮，条目可编辑，底部「+」添加行 */
@@ -635,35 +677,38 @@ export class OkrTaskPlanView {
         const header = area.createDiv({ cls: 'swimlane-section-area-header' });
         header.createDiv({ cls: 'swimlane-section-area-title', text: t('basket.title') });
 
+        // 整理按钮：位于「+」按钮左侧，切换整理模式
+        const organizeBtn = header.createEl('button', {
+            cls: 'okr-basket-organize-btn',
+            text: t('basket.organize'),
+        });
+        if (this.basketOrganizeMode) organizeBtn.addClass('is-active');
+        organizeBtn.onclick = (e) => {
+            e.stopPropagation();
+            this.basketOrganizeMode = !this.basketOrganizeMode;
+            if (!this.basketOrganizeMode) this.selectedBasketEntryId = undefined;
+            this.refreshBasketBox();
+            this.refreshSectionCards();
+        };
+
+        // 添加按钮：放在标题同一行最右侧，点击弹窗输入
+        const addBtn = header.createEl('button', { cls: 'okr-basket-add-btn', text: '+' });
+        addBtn.onclick = (e) => {
+            e.stopPropagation();
+            new BasketAddModal(this.app, (text) => {
+                const entry: BasketItem = {
+                    id: `basket_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+                    text,
+                    createdAt: Date.now(),
+                };
+                item.basket = [...(item.basket ?? []), entry];
+                void this.save().then(() => this.refreshBasketBox());
+            }).open();
+        };
+
         const body = area.createDiv({ cls: 'okr-basket-body' });
 
-        // 添加行：输入框 + 添加按钮
-        const addRow = body.createDiv({ cls: 'okr-basket-add-row' });
-        const input = addRow.createEl('input', {
-            cls: 'okr-basket-input',
-            attr: { type: 'text', placeholder: t('basket.addPlaceholder') },
-        });
-        const addBtn = addRow.createEl('button', { cls: 'okr-basket-add-btn', text: t('basket.add') });
-        const doAdd = () => {
-            const text = input.value.trim();
-            if (!text) return;
-            const entry: BasketItem = {
-                id: `basket_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
-                text,
-                createdAt: Date.now(),
-            };
-            item.basket = [...(item.basket ?? []), entry];
-            void this.save().then(() => this.refreshBasketBox());
-        };
-        addBtn.onclick = doAdd;
-        input.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') {
-                e.preventDefault();
-                doAdd();
-            }
-        });
-
-        // 已收集条目列表
+        // 已收集条目列表（只读，不可删除；整理模式下可选中）
         const list = body.createDiv({ cls: 'okr-basket-list' });
         const entries = item.basket ?? [];
         if (entries.length === 0) {
@@ -673,15 +718,17 @@ export class OkrTaskPlanView {
         for (const entry of entries) {
             const row = list.createDiv({ cls: 'okr-basket-item' });
             row.createSpan({ cls: 'okr-basket-item-text', text: entry.text });
-            const delBtn = row.createEl('button', {
-                cls: 'okr-basket-item-delete',
-                text: '×',
-                attr: { 'aria-label': t('basket.delete') },
-            });
-            delBtn.onclick = () => {
-                item.basket = (item.basket ?? []).filter((b) => b.id !== entry.id);
-                void this.save().then(() => this.refreshBasketBox());
-            };
+            if (this.basketOrganizeMode) {
+                row.addClass('is-organizable');
+                if (entry.id === this.selectedBasketEntryId) row.addClass('is-selected');
+                row.onclick = (e) => {
+                    e.stopPropagation();
+                    this.selectedBasketEntryId =
+                        this.selectedBasketEntryId === entry.id ? undefined : entry.id;
+                    this.refreshBasketBox();
+                    this.refreshSectionCards();
+                };
+            }
         }
     }
 
@@ -689,6 +736,12 @@ export class OkrTaskPlanView {
     private refreshBasketBox(): void {
         const wrap = this.container?.querySelector<HTMLElement>('.okr-basket-wrap');
         if (wrap) this.renderBasketBox(wrap);
+    }
+
+    /** 同步刷新板块信息区（整理模式切换 / 选中条目变化时调用） */
+    private refreshSectionCards(): void {
+        const body = this.container?.querySelector<HTMLElement>('.swimlane-section-area-body');
+        if (body) this.renderSectionCards(body);
     }
 
     /** 渲染右侧信息表单：项目描述、分类、截止日期（跟随当前选中任务） */
@@ -866,6 +919,59 @@ export class OkrTaskPlanView {
     /** 重新渲染自身 */
     private async refresh(): Promise<void> {
         if (this.container) await this.renderInto(this.container);
+    }
+}
+
+// ===== 收集篮子添加弹窗 =====
+class BasketAddModal extends Modal {
+    constructor(
+        app: App,
+        private onSubmit: (text: string) => void,
+    ) {
+        super(app);
+    }
+
+    onOpen() {
+        const { contentEl } = this;
+        contentEl.empty();
+        contentEl.createEl('h3', { text: t('basket.title') });
+
+        let value = '';
+        new Setting(contentEl)
+            .setName(t('basket.addPlaceholder'))
+            .addText(text => {
+                text.setPlaceholder(t('basket.addPlaceholder'));
+                text.onChange(v => { value = v; });
+                text.inputEl.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        this.submit(value);
+                    }
+                });
+                window.setTimeout(() => text.inputEl.focus(), 0);
+            });
+
+        new Setting(contentEl)
+            .addButton(btn => btn
+                .setButtonText(t('basket.add'))
+                .setCta()
+                .onClick(() => this.submit(value))
+            )
+            .addButton(btn => btn
+                .setButtonText(t('common.cancel'))
+                .onClick(() => this.close())
+            );
+    }
+
+    private submit(value: string) {
+        const text = value.trim();
+        if (!text) return;
+        this.onSubmit(text);
+        this.close();
+    }
+
+    onClose() {
+        this.contentEl.empty();
     }
 }
 

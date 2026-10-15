@@ -4269,30 +4269,42 @@
     gap: 10px;
 }
 
-.okr-basket-add-row {
-    display: flex;
-    gap: 8px;
-}
-
-.okr-basket-input {
-    flex: 1;
-    padding: 6px 10px;
-    border-radius: 6px;
-    border: 1px solid var(--background-modifier-border);
-    background: var(--background-primary);
-    color: var(--text-normal);
-    font-size: 13px;
-}
-
+/* 添加按钮：位于标题行最右侧 */
 .okr-basket-add-btn {
+    margin-left: auto;
     flex-shrink: 0;
-    padding: 6px 16px;
+    width: 24px;
+    height: 24px;
+    padding: 0;
     border-radius: 6px;
     border: none;
     background: var(--interactive-accent);
     color: var(--text-on-accent);
     cursor: pointer;
+    font-size: 16px;
+    line-height: 1;
+}
+
+/* 整理按钮：位于「+」按钮左侧 */
+.okr-basket-organize-btn {
+    flex-shrink: 0;
+    padding: 4px 12px;
+    border-radius: 6px;
+    border: 1px solid var(--background-modifier-border);
+    background: var(--background-secondary);
+    color: var(--text-normal);
+    cursor: pointer;
     font-size: 13px;
+}
+
+.okr-basket-organize-btn:hover {
+    background: var(--background-modifier-hover);
+}
+
+.okr-basket-organize-btn.is-active {
+    background: var(--interactive-accent);
+    color: var(--text-on-accent);
+    border-color: var(--interactive-accent);
 }
 
 .okr-basket-list {
@@ -4304,12 +4316,25 @@
 .okr-basket-item {
     display: flex;
     align-items: center;
-    justify-content: space-between;
     gap: 8px;
     padding: 8px 12px;
     border-radius: 6px;
     border: 1px solid var(--background-modifier-border);
     background: var(--background-primary);
+}
+
+/* 整理模式下可点击选中的条目 */
+.okr-basket-item.is-organizable {
+    cursor: pointer;
+}
+
+.okr-basket-item.is-organizable:hover {
+    background: var(--background-modifier-hover);
+}
+
+.okr-basket-item.is-selected {
+    border-color: var(--interactive-accent);
+    background: var(--background-modifier-hover);
 }
 
 .okr-basket-item-text {
@@ -4319,23 +4344,15 @@
     word-break: break-word;
 }
 
-.okr-basket-item-delete {
-    flex-shrink: 0;
-    width: 20px;
-    height: 20px;
-    padding: 0;
-    border: none;
-    border-radius: 4px;
-    background: transparent;
-    color: var(--text-muted);
+/* 整理目标：文件条目（悬停提示 + 可点击写入） */
+.swimlane-section-card-item.is-organize-target {
     cursor: pointer;
-    font-size: 16px;
-    line-height: 1;
+    border-radius: 4px;
+    outline: 1px dashed var(--interactive-accent);
 }
 
-.okr-basket-item-delete:hover {
+.swimlane-section-card-item.is-organize-target:hover {
     background: var(--background-modifier-hover);
-    color: var(--text-normal);
 }
 
 /* 板块卡片（白色背景） */

@@ -143,6 +143,11 @@ export const en: I18nMessages = {
     'basket.addPlaceholder': 'Enter content to collect',
     'basket.add': 'Add',
     'basket.delete': 'Delete',
+    'basket.organize': 'Organize',
+    'basket.organizeToFile': 'Append content to the end of this file',
+    'basket.organizeDone': 'Appended to the end of the file',
+    'basket.organizeFailed': 'Failed to organize, please retry',
+    'basket.organizeFileMissing': 'Target file not found',
 
     // Help
     'help.title': 'Help',

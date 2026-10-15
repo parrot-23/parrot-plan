@@ -141,6 +141,11 @@ export const zh = {
     'basket.addPlaceholder': '输入要收集的内容',
     'basket.add': '添加',
     'basket.delete': '删除',
+    'basket.organize': '整理',
+    'basket.organizeToFile': '将内容整理到该文件末尾',
+    'basket.organizeDone': '已整理到文件末尾',
+    'basket.organizeFailed': '整理失败，请重试',
+    'basket.organizeFileMissing': '目标文件不存在',
 
     // 帮助
     'help.title': '帮助文档',
