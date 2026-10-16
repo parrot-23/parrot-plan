@@ -4767,6 +4767,62 @@
     background: var(--background-modifier-hover);
 }
 
+/* 改进项方框 */
+.okr-improve-body {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+/* 添加按钮：位于标题行最右侧 */
+.okr-improve-add-btn {
+    margin-left: auto;
+    flex-shrink: 0;
+    width: 24px;
+    height: 24px;
+    padding: 0;
+    border-radius: 6px;
+    border: none;
+    background: var(--interactive-accent);
+    color: var(--text-on-accent);
+    cursor: pointer;
+    font-size: 16px;
+    line-height: 1;
+}
+
+.okr-improve-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.okr-improve-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    border-radius: 6px;
+    border: 1px solid var(--background-modifier-border);
+    background: var(--background-primary);
+}
+
+.okr-improve-checkbox {
+    flex-shrink: 0;
+}
+
+.okr-improve-item-text {
+    flex: 1;
+    font-size: 13px;
+    color: var(--text-normal);
+    word-break: break-word;
+}
+
+/* 已完成条目：文本置灰并加删除线 */
+.okr-improve-item.is-done .okr-improve-item-text {
+    color: var(--text-muted);
+    text-decoration: line-through;
+}
+
 /* 板块卡片（白色背景） */
 .swimlane-section-card {
     flex-shrink: 0;

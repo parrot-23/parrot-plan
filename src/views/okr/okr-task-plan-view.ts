@@ -2,7 +2,7 @@ import type { App } from 'obsidian';
 import { Modal, Notice, Setting, setIcon } from 'obsidian';
 
 import type { PlanCategoryData } from '../../shared/plan-category-manager';
-import type { InboxData, InboxItem, Section, ChecklistData, StepsData, HabitData, FileData, OkrConditionType, BasketItem } from '../../datatypes/domain';
+import type { InboxData, InboxItem, Section, ChecklistData, StepsData, HabitData, FileData, OkrConditionType, BasketItem, ImprovementEntry } from '../../datatypes/domain';
 import { SECTION_TYPE_META, OKR_CONDITION_META } from '../../datatypes/domain';
 import { renderTaskPanel, FilePathSuggest } from '../../shared/task-panel';
 import { t } from '../../i18n';
@@ -87,6 +87,10 @@ export class OkrTaskPlanView {
         // 收集篮子方框（当前选中任务的收集内容，供 GTD 梳理阶段放置笔记）
         const basketWrap = contentPanel.createDiv({ cls: 'okr-basket-wrap' });
         this.renderBasketBox(basketWrap);
+
+        // 改进项方框（当前选中任务的改进条目，可勾选完成）
+        const improveWrap = contentPanel.createDiv({ cls: 'okr-improve-wrap' });
+        this.renderImprovementBox(improveWrap);
 
         // 板块信息方框（当前选中项目的板块卡片）
         const sectionsArea = contentPanel.createDiv({ cls: 'swimlane-section-area' });
@@ -742,6 +746,64 @@ export class OkrTaskPlanView {
         if (wrap) this.renderBasketBox(wrap);
     }
 
+    /** 改进项方框：当前选中任务的改进条目（可勾选完成） */
+    private renderImprovementBox(wrap: HTMLElement): void {
+        wrap.empty();
+
+        const selectedId = this.inboxData.selectedId;
+        const item = selectedId
+            ? this.inboxData.items.find(i => i.id === selectedId && !i.removed)
+            : undefined;
+        if (!item) return;
+
+        const area = wrap.createDiv({ cls: 'swimlane-section-area okr-improve-area' });
+        const header = area.createDiv({ cls: 'swimlane-section-area-header' });
+        header.createDiv({ cls: 'swimlane-section-area-title', text: t('improveBox.title') });
+
+        // 添加按钮：放在标题同一行最右侧，点击弹窗输入
+        const addBtn = header.createEl('button', { cls: 'okr-improve-add-btn', text: '+' });
+        addBtn.onclick = (e) => {
+            e.stopPropagation();
+            new ImprovementAddModal(this.app, (text) => {
+                const entry: ImprovementEntry = {
+                    id: `improve_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+                    text,
+                    done: false,
+                    createdAt: Date.now(),
+                };
+                item.improvements = [...(item.improvements ?? []), entry];
+                void this.save().then(() => this.refreshImprovementBox());
+            }).open();
+        };
+
+        const body = area.createDiv({ cls: 'okr-improve-body' });
+        const list = body.createDiv({ cls: 'okr-improve-list' });
+        const entries = item.improvements ?? [];
+        if (entries.length === 0) {
+            list.createDiv({ cls: 'swimlane-sections-empty', text: t('improveBox.empty') });
+            return;
+        }
+        for (const entry of entries) {
+            const row = list.createDiv({ cls: 'okr-improve-item' });
+            if (entry.done) row.addClass('is-done');
+
+            const cb = row.createEl('input', { type: 'checkbox', cls: 'okr-improve-checkbox' });
+            cb.checked = entry.done ?? false;
+            cb.onchange = () => {
+                entry.done = cb.checked;
+                void this.save().then(() => this.refreshImprovementBox());
+            };
+
+            row.createSpan({ cls: 'okr-improve-item-text', text: entry.text });
+        }
+    }
+
+    /** 同步刷新改进项方框（增删 / 勾选后调用） */
+    private refreshImprovementBox(): void {
+        const wrap = this.container?.querySelector<HTMLElement>('.okr-improve-wrap');
+        if (wrap) this.renderImprovementBox(wrap);
+    }
+
     /** 同步刷新板块信息区（整理模式切换 / 选中条目变化时调用） */
     private refreshSectionCards(): void {
         const body = this.container?.querySelector<HTMLElement>('.swimlane-section-area-body');
@@ -1056,6 +1118,59 @@ class BasketAddModal extends Modal {
         new Setting(contentEl)
             .addButton(btn => btn
                 .setButtonText(t('basket.add'))
+                .setCta()
+                .onClick(() => this.submit(value))
+            )
+            .addButton(btn => btn
+                .setButtonText(t('common.cancel'))
+                .onClick(() => this.close())
+            );
+    }
+
+    private submit(value: string) {
+        const text = value.trim();
+        if (!text) return;
+        this.onSubmit(text);
+        this.close();
+    }
+
+    onClose() {
+        this.contentEl.empty();
+    }
+}
+
+// ===== 改进项添加弹窗 =====
+class ImprovementAddModal extends Modal {
+    constructor(
+        app: App,
+        private onSubmit: (text: string) => void,
+    ) {
+        super(app);
+    }
+
+    onOpen() {
+        const { contentEl } = this;
+        contentEl.empty();
+        contentEl.createEl('h3', { text: t('improveBox.title') });
+
+        let value = '';
+        new Setting(contentEl)
+            .setName(t('improveBox.addPlaceholder'))
+            .addText(text => {
+                text.setPlaceholder(t('improveBox.addPlaceholder'));
+                text.onChange(v => { value = v; });
+                text.inputEl.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        this.submit(value);
+                    }
+                });
+                window.setTimeout(() => text.inputEl.focus(), 0);
+            });
+
+        new Setting(contentEl)
+            .addButton(btn => btn
+                .setButtonText(t('improveBox.add'))
                 .setCta()
                 .onClick(() => this.submit(value))
             )

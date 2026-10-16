@@ -149,6 +149,12 @@ export const zh = {
     'basket.organizeFailed': '整理失败，请重试',
     'basket.organizeFileMissing': '目标文件不存在',
 
+    // 改进项方框
+    'improveBox.title': '改进项',
+    'improveBox.empty': '暂无改进项',
+    'improveBox.addPlaceholder': '输入要改进的内容',
+    'improveBox.add': '添加',
+
     // 帮助
     'help.title': '帮助文档',
     'help.todayIntro': '这个插件的核心理念是：**数据主权归用户**。你的日程计划不归属于任何平台的云端，而是保存在你自己的设备上；插件采用自有存储格式，但数据完整、可读、可恢复，即使插件停止维护，文件依然属于你。更关键的是，支持一键导出 Excel/CSV 等通用格式，用户随时可以把多年的日程带走分析、迁移或备份。',

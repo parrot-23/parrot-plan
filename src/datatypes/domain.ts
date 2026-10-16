@@ -86,6 +86,19 @@ export interface InboxItem {
     estimatedMinutes?: number;
     /** 收集篮子：待归入本任务的笔记/条目（可选，旧任务无此字段，供 GTD 梳理阶段放置） */
     basket?: BasketItem[];
+    /** 改进项：本任务的改进条目（可选，旧任务无此字段，可勾选完成） */
+    improvements?: ImprovementEntry[];
+}
+
+/** 改进项条目（任务改进方框内可勾选的条目） */
+export interface ImprovementEntry {
+    id: string;
+    /** 改进内容文本 */
+    text: string;
+    /** 是否已完成（可选，旧数据无此字段默认未完成） */
+    done?: boolean;
+    /** 创建时间（时间戳） */
+    createdAt: number;
 }
 
 /** 收集篮子条目（GTD 梳理阶段放置到某任务的笔记/条目） */
