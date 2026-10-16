@@ -282,6 +282,7 @@ export const zh = {
     'check.empty': '本周暂无计划事件',
     'check.noAbnormal': '本周暂无异常任务',
     'check.dailyTitle': '每日执行情况',
+    'check.todayTitle': '今日执行情况',
     'check.dailyPlanned': '计划',
     'check.dailyActual': '实际',
     'check.dailyDiff': '差异',

@@ -6,6 +6,7 @@ import { getEventStatus } from '../../datatypes/domain';
 import type { DailyRange } from '../../shared/plan-data';
 import {
     getCurrentWeekKey,
+    getCurrentDayKey,
     makeWeekKey,
     parseWeekKey,
     shiftWeekKey,
@@ -71,6 +72,9 @@ export class CheckView {
         this.renderWeekNav(container);
 
         const body = container.createDiv({ cls: 'check-body' });
+
+        // 最顶部：今日执行情况（计划 / 实际 / 差异，含事件数量与时长）
+        this.renderTodaySection(body);
 
         // 上方：按七天逐日展示执行情况（每天一个区块，内部左中右）
         this.renderDailySection(body);
@@ -209,6 +213,128 @@ export class CheckView {
             diff.set(key, (diff.get(key) ?? 0) - minutes);
         }
         return diff;
+    }
+
+    // ===== 最顶部：今日执行情况 =====
+    /**
+     * 今日执行情况：以「今天」为对象，按分类展示计划 / 实际 / 差异，
+     * 每行同时显示事件数量与时长。
+     */
+    private renderTodaySection(body: HTMLElement) {
+        const section = body.createDiv({ cls: 'check-daily-section' });
+        section.createDiv({ cls: 'check-daily-section-title', text: t('check.todayTitle') });
+
+        const todayKey = getCurrentDayKey();
+        // 今天对应的星期几（1=周一 ... 7=周日）
+        const todayDay = ((new Date().getDay() + 6) % 7) + 1;
+
+        // 计划：今天的计划方案区间，按分类统计数量与时长
+        const plannedMap = this.aggregateCountDuration(
+            (this.getPlanSchemeDays().find(d => d.day === todayDay)?.ranges ?? [])
+                .map(r => ({ categoryId: r.sort, minutes: Math.max(0, r.end - r.start) })),
+        );
+
+        // 实际：今天的执行记录，按分类统计数量与时长
+        const actualMap = this.aggregateCountDuration(
+            this.getExecutions()
+                .filter(ex => ex.day === todayDay && ex.weekKey === getCurrentWeekKey())
+                .map(ex => {
+                    const item = ex.inboxId
+                        ? this.inboxData.items.find(i => i.id === ex.inboxId && !i.removed)
+                        : undefined;
+                    return { categoryId: item?.categoryId, minutes: Math.max(0, ex.end - ex.start) };
+                }),
+        );
+
+        const block = section.createDiv({ cls: 'check-daily-block' });
+        block.createDiv({ cls: 'check-daily-block-title', text: todayKey });
+        const cols = block.createDiv({ cls: 'check-daily-cols' });
+        this.renderCountDurationColumn(cols, t('check.dailyPlanned'), plannedMap);
+        this.renderCountDurationColumn(cols, t('check.dailyActual'), actualMap);
+        this.renderCountDurationColumn(cols, t('check.dailyDiff'), this.diffCountDuration(actualMap, plannedMap), true);
+    }
+
+    /** 按分类聚合「数量 + 时长」 */
+    private aggregateCountDuration(
+        entries: { categoryId?: string; minutes: number }[],
+    ): Map<string, { count: number; minutes: number }> {
+        const map = new Map<string, { count: number; minutes: number }>();
+        for (const e of entries) {
+            const key = e.categoryId ?? '__none__';
+            const cur = map.get(key) ?? { count: 0, minutes: 0 };
+            cur.count += 1;
+            cur.minutes += e.minutes;
+            map.set(key, cur);
+        }
+        return map;
+    }
+
+    /** 计算「数量 + 时长」差异映射：a - b（按分类） */
+    private diffCountDuration(
+        a: Map<string, { count: number; minutes: number }>,
+        b: Map<string, { count: number; minutes: number }>,
+    ): Map<string, { count: number; minutes: number }> {
+        const diff = new Map<string, { count: number; minutes: number }>();
+        for (const [key, v] of Array.from(a.entries())) {
+            diff.set(key, { count: v.count, minutes: v.minutes });
+        }
+        for (const [key, v] of Array.from(b.entries())) {
+            const cur = diff.get(key) ?? { count: 0, minutes: 0 };
+            cur.count -= v.count;
+            cur.minutes -= v.minutes;
+            diff.set(key, cur);
+        }
+        return diff;
+    }
+
+    /** 渲染「数量 + 时长」列（计划 / 实际 / 差异） */
+    private renderCountDurationColumn(
+        cols: HTMLElement,
+        title: string,
+        map: Map<string, { count: number; minutes: number }>,
+        showSign = false,
+    ) {
+        const col = cols.createDiv({ cls: 'check-daily-col' });
+        col.createDiv({ cls: 'check-daily-col-title', text: title });
+
+        if (map.size === 0) {
+            col.createDiv({ cls: 'check-daily-empty', text: t('check.dailyEmpty') });
+            return;
+        }
+
+        const list = col.createDiv({ cls: 'check-daily-list' });
+        for (const [key, v] of Array.from(map.entries())) {
+            const cat = key === '__none__'
+                ? undefined
+                : this.categoryData.categories.find(c => c.id === key);
+            const color = cat?.color ?? '#888888';
+            const label = cat?.label ?? t('inbox.noCategory');
+
+            const row = list.createDiv({ cls: 'check-daily-row' });
+            const dot = row.createSpan({ cls: 'check-category-dot' });
+            dot.setCssProps({ '--dot-color': color });
+            row.createSpan({ cls: 'check-daily-name', text: label });
+
+            // 数量
+            const countEl = row.createSpan({ cls: 'check-daily-count' });
+            if (showSign) {
+                const sign = v.count > 0 ? '+' : v.count < 0 ? '-' : '';
+                countEl.setText(`${sign}${Math.abs(v.count)}`);
+            } else {
+                countEl.setText(`${v.count}`);
+            }
+
+            // 时长
+            const valueEl = row.createSpan({ cls: 'check-daily-value' });
+            if (showSign) {
+                const sign = v.minutes > 0 ? '+' : v.minutes < 0 ? '-' : '';
+                valueEl.setText(`${sign}${formatHours(Math.abs(v.minutes))}`);
+                valueEl.toggleClass('is-over', v.minutes > 0);
+                valueEl.toggleClass('is-under', v.minutes < 0);
+            } else {
+                valueEl.setText(formatHours(v.minutes));
+            }
+        }
     }
 
     // ===== 下方：按七天逐日展示执行情况 =====

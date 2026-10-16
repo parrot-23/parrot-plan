@@ -2290,6 +2290,14 @@
     text-align: right;
 }
 
+/* 今日执行情况：每行的事件数量 */
+.check-daily-count {
+    flex-shrink: 0;
+    color: var(--text-faint);
+    min-width: 24px;
+    text-align: right;
+}
+
 .check-daily-value.is-over {
     color: var(--text-success, #2e7d32);
 }
