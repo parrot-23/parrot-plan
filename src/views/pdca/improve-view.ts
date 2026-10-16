@@ -178,7 +178,7 @@ export class ImproveView {
 
     // ===== 左块 2：这周任务执行情况（本周计划中出现的任务，含本周新增 OKR 进度） =====
     private renderWeekTaskStats(col: HTMLElement) {
-        const box = col.createDiv({ cls: 'improve-box' });
+        const box = col.createDiv({ cls: 'improve-box improve-week-task-box' });
         box.createDiv({ cls: 'improve-box-title', text: t('improve.weekTaskTitle') });
 
         const weekEvents = this.getEvents().filter(ev => ev.weekKey === this.currentWeekKey);
@@ -369,6 +369,18 @@ export class ImproveView {
             col.empty();
             this.renderImprovementList(col);
         }
+        // 同步刷新左侧任务块，更新任务行的激活态
+        this.refreshWeekTaskStats();
+    }
+
+    /** 仅刷新左侧「这周任务执行情况」块（更新任务行激活态） */
+    private refreshWeekTaskStats(): void {
+        const box = this.container?.querySelector<HTMLElement>('.improve-week-task-box');
+        if (!box) return;
+        const parent = box.parentElement;
+        if (!parent) return;
+        box.remove();
+        this.renderWeekTaskStats(parent);
     }
 
     /** 取当前周的改进项列表（不存在则初始化） */

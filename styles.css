@@ -2462,7 +2462,7 @@
     align-items: center;
     flex-wrap: wrap;
     gap: 8px;
-    padding-bottom: 8px;
+    padding: 8px 6px;
     border-bottom: 1px solid var(--background-modifier-border);
 }
 
@@ -2561,17 +2561,16 @@
 /* 左侧任务行：可点击（点击后在右侧临时生成改进条目） */
 .improve-week-task-row.is-clickable {
     cursor: pointer;
-    border-radius: 6px;
 }
 
 .improve-week-task-row.is-clickable:hover {
     background: var(--background-modifier-hover);
 }
 
-/* 激活态：当前临时条目对应的任务行 */
+/* 激活态：当前临时条目对应的任务行（鼠标移开后仍保持高亮） */
 .improve-week-task-row.is-active {
-    background: var(--background-modifier-hover);
-    box-shadow: inset 3px 0 0 var(--interactive-accent);
+    outline: 2px solid var(--interactive-accent);
+    outline-offset: -1px;
 }
 
 /* 临时改进条目：任务名方框 + 输入框 + 归档按钮 + 删除按钮 */
