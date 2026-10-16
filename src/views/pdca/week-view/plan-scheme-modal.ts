@@ -2,7 +2,7 @@ import { App, Modal, Setting } from 'obsidian';
 
 import type { TimeBlockCategoryData } from '../../../shared/timeblock-category-manager';
 import { renderTimeBlockCategoryLegend } from '../../../shared/timeblock-category-manager';
-import type { RangeSchemeData, RangeScheme } from '../../../shared/timeblock-data';
+import type { PlanSchemeData, PlanScheme } from '../../../shared/timeblock-data';
 import { hexToTransparent, DEFAULT_SCHEME_ID, ensureDefaultScheme } from '../../../shared/timeblock-data';
 import { renderTemplatePanel, type TemplateViewContext } from '../../../shared/template-manager';
 import { renderWeekGrid } from '../../../shared/week-grid';
@@ -10,14 +10,14 @@ import { RangeEditModal } from './week-schedule-view';
 import { t } from '../../../i18n';
 
 /**
- * 时间区间设置窗口。
+ * 时间计划方案设置窗口。
  * 顶部：当前方案名称 / 方案管理按钮。
  * 主体：左侧图例管理 + 日模板（复用周计划视图的图例管理），右侧日历（复用公共组件 week-grid）。
  * 右侧日历：选中图例后点击网格可添加区间，点击已有色块可编辑，× 可删除；数据写入当前激活方案。
  */
-export class RangeSchemeModal extends Modal {
+export class PlanSchemeModal extends Modal {
     private categoryData: TimeBlockCategoryData;
-    private schemeData: RangeSchemeData;
+    private schemeData: PlanSchemeData;
     private templateCtx: TemplateViewContext;
     private onApplyTemplate: (templateId: string, targetDays: number[]) => void | Promise<void>;
     private onSave: () => Promise<void>;
@@ -30,7 +30,7 @@ export class RangeSchemeModal extends Modal {
     constructor(
         app: App,
         categoryData: TimeBlockCategoryData,
-        schemeData: RangeSchemeData,
+        schemeData: PlanSchemeData,
         templateCtx: TemplateViewContext,
         onApplyTemplate: (templateId: string, targetDays: number[]) => void | Promise<void>,
         onSave: () => Promise<void>,
@@ -51,29 +51,29 @@ export class RangeSchemeModal extends Modal {
         const prevScroll = contentEl.querySelector('.grid-body-row');
         if (prevScroll) this.savedScrollTop = prevScroll.scrollTop;
         contentEl.empty();
-        contentEl.addClass('range-scheme-modal');
+        contentEl.addClass('plan-scheme-modal');
         // 给弹窗容器加类名以撑开宽度（替代 :has 选择器）
-        this.modalEl.addClass('is-range-scheme-modal');
+        this.modalEl.addClass('is-plan-scheme-modal');
 
         // ===== 顶部：当前方案名称 / 方案管理 =====
-        const header = contentEl.createDiv({ cls: 'range-scheme-header' });
-        header.createEl('h3', { text: t('rangeScheme.title') });
+        const header = contentEl.createDiv({ cls: 'plan-scheme-header' });
+        header.createEl('h3', { text: t('planScheme.title') });
 
-        const actions = header.createDiv({ cls: 'range-scheme-actions' });
+        const actions = header.createDiv({ cls: 'plan-scheme-actions' });
 
         // 当前方案名称（纯展示）
         const activeScheme = this.getActiveScheme();
         actions.createSpan({
-            text: activeScheme?.name ?? t('rangeScheme.noActive'),
-            cls: 'range-scheme-current',
+            text: activeScheme?.name ?? t('planScheme.noActive'),
+            cls: 'plan-scheme-current',
         });
 
         const manageBtn = actions.createEl('button', {
-            text: t('rangeScheme.manage'),
-            cls: 'range-scheme-btn',
+            text: t('planScheme.manage'),
+            cls: 'plan-scheme-btn',
         });
         manageBtn.onclick = () => {
-            new SchemeManageModal(this.app, this.schemeData, () => {
+            new PlanSchemeManageModal(this.app, this.schemeData, () => {
                 this.onChange?.();
                 // 方案数据可能变化，重新渲染以刷新当前方案名称
                 this.onOpen();
@@ -81,10 +81,10 @@ export class RangeSchemeModal extends Modal {
         };
 
         // ===== 主体：左右结构 =====
-        const body = contentEl.createDiv({ cls: 'range-scheme-body' });
+        const body = contentEl.createDiv({ cls: 'plan-scheme-body' });
 
         // 左侧：图例管理 + 日模板
-        const legendPanel = body.createDiv({ cls: 'range-scheme-legend' });
+        const legendPanel = body.createDiv({ cls: 'plan-scheme-legend' });
         renderTimeBlockCategoryLegend(
             this.app,
             legendPanel,
@@ -114,7 +114,7 @@ export class RangeSchemeModal extends Modal {
         });
 
         // 右侧：日历
-        const calendarPanel = body.createDiv({ cls: 'range-scheme-calendar' });
+        const calendarPanel = body.createDiv({ cls: 'plan-scheme-calendar' });
         const refs = renderWeekGrid(calendarPanel);
         this.renderRangeLayer(refs.bodyRowInner);
 
@@ -127,7 +127,7 @@ export class RangeSchemeModal extends Modal {
     }
 
     /** 获取当前激活方案（未激活时回退到默认方案） */
-    private getActiveScheme(): RangeScheme | undefined {
+    private getActiveScheme(): PlanScheme | undefined {
         const active = this.schemeData.schemes.find(s => s.id === this.schemeData.activeSchemeId);
         if (active) return active;
         return this.schemeData.schemes.find(s => s.id === DEFAULT_SCHEME_ID)
@@ -217,15 +217,15 @@ export class RangeSchemeModal extends Modal {
  * 方案管理弹窗：对方案进行增删改（CRUD）。
  * 交互参考图例设置弹窗（CategoryConfigModal）：草稿副本 + 列表 + 确认/取消。
  */
-export class SchemeManageModal extends Modal {
-    private schemeData: RangeSchemeData;
-    private draft: RangeScheme[];
+export class PlanSchemeManageModal extends Modal {
+    private schemeData: PlanSchemeData;
+    private draft: PlanScheme[];
     private listEl!: HTMLElement;
     private onConfirm?: () => void;
 
     constructor(
         app: App,
-        schemeData: RangeSchemeData,
+        schemeData: PlanSchemeData,
         onConfirm?: () => void,
     ) {
         super(app);
@@ -244,7 +244,7 @@ export class SchemeManageModal extends Modal {
 
         // 标题 + 右上角 +
         const header = contentEl.createDiv({ cls: 'tbcat-modal-header' });
-        header.createEl('h3', { text: t('rangeScheme.manageTitle') });
+        header.createEl('h3', { text: t('planScheme.manageTitle') });
 
         const addBtn = header.createEl('button', {
             text: '+',
@@ -253,7 +253,7 @@ export class SchemeManageModal extends Modal {
         addBtn.addEventListener('click', () => {
             this.draft.push({
                 id: 'scheme_' + Date.now().toString(36),
-                name: t('rangeScheme.new'),
+                name: t('planScheme.new'),
                 days: [],
             });
             this.renderList();
@@ -274,7 +274,7 @@ export class SchemeManageModal extends Modal {
                 .onClick(() => {
                     this.schemeData.schemes = this.draft;
                     // 兜底：确保默认方案始终存在且位于首位
-                    ensureDefaultScheme(this.schemeData, t('rangeScheme.defaultName'));
+                    ensureDefaultScheme(this.schemeData, t('planScheme.defaultName'));
                     this.onConfirm?.();
                     this.close();
                 }));
@@ -285,7 +285,7 @@ export class SchemeManageModal extends Modal {
 
         if (this.draft.length === 0) {
             this.listEl.createDiv({
-                text: t('rangeScheme.empty'),
+                text: t('planScheme.empty'),
                 cls: 'tbcat-empty',
             });
             return;
@@ -296,7 +296,7 @@ export class SchemeManageModal extends Modal {
 
             // 设为默认
             const defaultBtn = row.createEl('button', {
-                text: t('rangeScheme.isDefault'),
+                text: t('planScheme.isDefault'),
                 cls: 'tbcat-action-btn',
             });
             if (scheme.id === this.schemeData.defaultSchemeId) {
@@ -312,7 +312,7 @@ export class SchemeManageModal extends Modal {
             // 名称
             const name = row.createEl('input', {
                 type: 'text',
-                placeholder: t('rangeScheme.namePlaceholder'),
+                placeholder: t('planScheme.namePlaceholder'),
                 cls: 'tbcat-name',
             });
             name.value = scheme.name;
@@ -326,7 +326,7 @@ export class SchemeManageModal extends Modal {
                     text: '🔒',
                     cls: 'tbcat-lock',
                 });
-                lock.setAttribute('aria-label', t('rangeScheme.defaultLocked'));
+                lock.setAttribute('aria-label', t('planScheme.defaultLocked'));
             } else {
                 const del = row.createEl('button', {
                     text: '✕',
@@ -340,7 +340,7 @@ export class SchemeManageModal extends Modal {
 
             // 切换（设为当前方案）
             const switchBtn = row.createEl('button', {
-                text: t('rangeScheme.switchTo'),
+                text: t('planScheme.switchTo'),
                 cls: 'tbcat-action-btn',
             });
             if (scheme.id === this.schemeData.activeSchemeId) {

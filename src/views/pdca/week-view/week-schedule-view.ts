@@ -2,7 +2,7 @@
 
 import { ItemView, WorkspaceLeaf, Modal, Setting, Notice, App } from 'obsidian';
 import type { Plugin } from 'obsidian';
-import type { WeekRangeData, CategorizedRange, TimeBlockCategoryId, RangeSchemeData, DailyRange, WeekKey } from '../../../shared/timeblock-data';
+import type { WeekRangeData, CategorizedRange, TimeBlockCategoryId, PlanSchemeData, DailyRange, WeekKey } from '../../../shared/timeblock-data';
 import { hexToTransparent, getCurrentWeekKey, makeWeekKey, parseWeekKey, shiftWeekKey, makeDayKeyFromWeek, makeDefaultScheme, DEFAULT_SCHEME_ID, DEFAULT_WEEK_RANGE } from '../../../shared/timeblock-data';
 import type { TimeBlockCategoryData } from '../../../shared/timeblock-category-manager';
 import type { DayTemplateData } from '../../../shared/template-manager';
@@ -11,7 +11,7 @@ import { renderDayTemplateRow } from '../../../shared/template-manager';
 import { renderTaskPanel } from '../../../shared/task-panel';
 import { DEFAULT_INBOX_DATA, type InboxData, type InboxItem } from '../../../datatypes/domain';
 import { renderWeekPanel } from '../../../shared/week-panel';
-import { RangeSchemeModal } from './range-scheme-modal';
+import { PlanSchemeModal } from './plan-scheme-modal';
 import { t, getWeekDays } from '../../../i18n';
 import { log } from '../../../shared/logger';
 import { EVENT_STATUS_EMOJI, EVENT_STATUS_LABEL_KEY, getEventStatus } from '../../../datatypes/domain';
@@ -29,8 +29,8 @@ export class WeekScheduleView extends ItemView {
         dayProperties: [],
     };
     timeBlockCategoryData: TimeBlockCategoryData;
-    /** 时间区间方案数据 */
-    schemeData: RangeSchemeData = { schemes: [] };
+    /** 时间计划方案数据 */
+    planSchemeData: PlanSchemeData = { schemes: [] };
     events: EventBlock[] = [];
     executions: ExecutionRecord[] = [];
     inboxData: InboxData = DEFAULT_INBOX_DATA;
@@ -64,7 +64,7 @@ export class WeekScheduleView extends ItemView {
         events?: EventBlock[],
         executions?: ExecutionRecord[],
         inboxData?: InboxData,
-        schemeData?: RangeSchemeData,
+        planSchemeData?: PlanSchemeData,
         plannedWeeks?: string[],
     ) {
         super(leaf);
@@ -75,7 +75,7 @@ export class WeekScheduleView extends ItemView {
         this.events = events ?? [];
         this.executions = executions ?? [];
         this.inboxData = inboxData ?? DEFAULT_INBOX_DATA;
-        this.schemeData = schemeData ?? { schemes: [] };
+        this.planSchemeData = planSchemeData ?? { schemes: [] };
         this.plannedWeeks = plannedWeeks ?? [];
         log('WeekScheduleView 构造', {
             events: this.events.length,
@@ -129,9 +129,9 @@ export class WeekScheduleView extends ItemView {
             { id: 'play', label: t('defaultCategory.play'), color: '#f2a65a' },
         ];
 
-        this.schemeData.schemes = [makeDefaultScheme(t('rangeScheme.defaultName'))];
-        this.schemeData.activeSchemeId = DEFAULT_SCHEME_ID;
-        this.schemeData.defaultSchemeId = DEFAULT_SCHEME_ID;
+        this.planSchemeData.schemes = [makeDefaultScheme(t('planScheme.defaultName'))];
+        this.planSchemeData.activeSchemeId = DEFAULT_SCHEME_ID;
+        this.planSchemeData.defaultSchemeId = DEFAULT_SCHEME_ID;
 
         this.events.length = 0;
         this.executions.length = 0;
@@ -220,7 +220,7 @@ export class WeekScheduleView extends ItemView {
         // ===== 右侧：顶部工具栏 + 日历 =====
         const main = root.createDiv({ cls: 'week-main' });
 
-        // 右上角工具栏（年周标签、时间区间设置、切换方案、图例）
+        // 右上角工具栏（年周标签、时间计划方案、切换方案、图例）
         this.renderToolbar(main);
 
         // 日历区域
@@ -234,7 +234,7 @@ export class WeekScheduleView extends ItemView {
             },
         });
 
-        // 渲染每列顶部的分类时长统计（依据当前时间区间方案）
+        // 渲染每列顶部的分类时长统计（依据当前时间计划方案）
         for (let d = 1; d <= 7; d++) {
             this.renderDayStats(statsCells[d - 1], d);
         }
@@ -255,12 +255,12 @@ export class WeekScheduleView extends ItemView {
     /**
      * 渲染某天列顶部的分类时长统计。
      * 每个分类显示两行：
-     *   1) 时间区间方案中该分类的可用时长（计划时长）
+     *   1) 时间计划方案中该分类的可用时长（计划时长）
      *   2) 本列计划事件按预估时长汇总的已分配时长
      */
     private renderDayStats(cell: HTMLElement, day: number) {
         // 方案中该天各分类的可用时长（分钟）
-        const dayData = this.getSchemeDays().find(d => d.day === day);
+        const dayData = this.getPlanSchemeDays().find(d => d.day === day);
         const ranges = dayData?.ranges ?? [];
         const planned = new Map<TimeBlockCategoryId, number>();
         for (const range of ranges) {
@@ -710,7 +710,7 @@ export class WeekScheduleView extends ItemView {
             const col = cols[d - 1] as HTMLElement;
 
             // ===== 渲染只读时间区块背景（当前激活方案）=====
-            const dayData = this.getSchemeDays().find(day => day.day === d);
+            const dayData = this.getPlanSchemeDays().find(day => day.day === d);
             const dayRanges = dayData?.ranges ?? [];
             for (const range of dayRanges) {
                 const bgBlock = col.createDiv({ cls: 'range-block range-bg' });
@@ -1280,22 +1280,22 @@ export class WeekScheduleView extends ItemView {
             })();
         };
 
-        // 时间区间设置按钮 + 当前方案下拉框
-        const schemeBar = toolbar.createDiv({ cls: 'range-scheme-bar' });
+        // 时间计划方案按钮 + 当前方案下拉框
+        const schemeBar = toolbar.createDiv({ cls: 'plan-scheme-bar' });
 
-        // 当前时间区间方案下拉框（至少存在默认方案，无需「未选择方案」选项）
-        const schemeSelect = schemeBar.createEl('select', { cls: 'range-scheme-select' });
-        for (const scheme of this.schemeData.schemes) {
+        // 当前时间计划方案下拉框（至少存在默认方案，无需「未选择方案」选项）
+        const schemeSelect = schemeBar.createEl('select', { cls: 'plan-scheme-select' });
+        for (const scheme of this.planSchemeData.schemes) {
             schemeSelect.createEl('option', { text: scheme.name, value: scheme.id });
         }
         // 未激活时默认选中默认方案
-        const activeId = this.schemeData.activeSchemeId
-            ?? this.schemeData.defaultSchemeId
-            ?? this.schemeData.schemes[0]?.id
+        const activeId = this.planSchemeData.activeSchemeId
+            ?? this.planSchemeData.defaultSchemeId
+            ?? this.planSchemeData.schemes[0]?.id
             ?? '';
         schemeSelect.value = activeId;
         schemeSelect.onchange = () => {
-            this.schemeData.activeSchemeId = schemeSelect.value || undefined;
+            this.planSchemeData.activeSchemeId = schemeSelect.value || undefined;
             void (async () => {
                 await this.save();
                 await this.onOpen();
@@ -1333,16 +1333,16 @@ export class WeekScheduleView extends ItemView {
         if (this.moreToolsOpen) {
             const panel = moreToolsWrap.createDiv({ cls: 'more-tools-panel' });
 
-            // 时间区间设置
+            // 时间计划方案
             const schemeBtn = panel.createEl('button', {
-                text: t('rangeScheme.open'),
+                text: t('planScheme.open'),
                 cls: 'more-tools-item',
             });
             schemeBtn.onclick = () => {
-                new RangeSchemeModal(
+                new PlanSchemeModal(
                     this.app,
                     this.timeBlockCategoryData,
-                    this.schemeData,
+                    this.planSchemeData,
                     this,
                     (templateId, targetDays) => this.applyTemplate(templateId, targetDays),
                     () => this.save(),
@@ -1409,24 +1409,24 @@ export class WeekScheduleView extends ItemView {
     }
 
     /** 获取当前激活方案（未激活时回退到默认方案） */
-    private getActiveScheme() {
-        const active = this.schemeData.schemes.find(s => s.id === this.schemeData.activeSchemeId);
+    private getActivePlanScheme() {
+        const active = this.planSchemeData.schemes.find(s => s.id === this.planSchemeData.activeSchemeId);
         if (active) return active;
-        return this.schemeData.schemes.find(s => s.id === DEFAULT_SCHEME_ID)
-            ?? this.schemeData.schemes[0];
+        return this.planSchemeData.schemes.find(s => s.id === DEFAULT_SCHEME_ID)
+            ?? this.planSchemeData.schemes[0];
     }
 
     /** 获取当前激活方案的日区间配置（周无关的模板数据） */
-    getSchemeDays(): DailyRange[] {
-        return this.getActiveScheme()?.days ?? [];
+    getPlanSchemeDays(): DailyRange[] {
+        return this.getActivePlanScheme()?.days ?? [];
     }
 
     /** 应用日模板到指定日期（写入当前激活方案） */
     private async applyTemplate(templateId: string, targetDays: number[]) {
         const tpl = this.dayTemplateData.dayTemplates.find(t => t.id === templateId);
         if (!tpl) { new Notice(t('template.notFound')); return; }
-        const scheme = this.getActiveScheme();
-        if (!scheme) { new Notice(t('rangeScheme.noActive')); return; }
+        const scheme = this.getActivePlanScheme();
+        if (!scheme) { new Notice(t('planScheme.noActive')); return; }
         if (!scheme.days) scheme.days = [];
         for (const day of targetDays) {
             let dayData = scheme.days.find(d => d.day === day);

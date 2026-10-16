@@ -1,7 +1,7 @@
 import { ItemView, WorkspaceLeaf } from 'obsidian';
 import type { Plugin } from 'obsidian';
 
-import type { WeekRangeData, RangeSchemeData } from './shared/timeblock-data';
+import type { WeekRangeData, PlanSchemeData } from './shared/timeblock-data';
 import type { TimeBlockCategoryData } from './shared/timeblock-category-manager';
 import type { DayTemplateData } from './shared/template-manager';
 import type { InboxData } from './datatypes/domain';
@@ -128,7 +128,7 @@ export class MainView extends ItemView {
         events: EventBlock[],
         executions: ExecutionRecord[],
         inboxData: InboxData,
-        schemeData: RangeSchemeData,
+        planSchemeData: PlanSchemeData,
         plannedWeeks: string[],
         workbenchData: WorkbenchData,
         gtdData: GtdData,
@@ -151,7 +151,7 @@ export class MainView extends ItemView {
             events,
             executions,
             inboxData,
-            schemeData,
+            planSchemeData,
             plannedWeeks,
         );
         this.yearView = new YearView(
@@ -183,7 +183,7 @@ export class MainView extends ItemView {
                 if (p.data) p.data.executingEventId = id;
             },
             undefined,
-            () => this.weekView.getSchemeDays(),
+            () => this.weekView.getPlanSchemeDays(),
         );
         this.checkView = new CheckView(
             this.app,
@@ -191,6 +191,7 @@ export class MainView extends ItemView {
             this.weekView.timeBlockCategoryData,
             () => this.weekView.events,
             () => this.weekView.executions,
+            () => this.weekView.getPlanSchemeDays(),
         );
         this.improveView = new ImproveView(
             this.app,

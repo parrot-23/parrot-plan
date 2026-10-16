@@ -75,7 +75,7 @@ export class TodayView {
     /** 跳转到项目全景图的回调（由 MainView 注入，负责切换 tab 并选中当前项目） */
     private onNavigateToProjectPicture?: (projectId: string) => void;
     /** 获取当前激活方案的单日区间配置（用于时间轴左侧分类色条） */
-    private getSchemeDays: () => DailyRange[];
+    private getPlanSchemeDays: () => DailyRange[];
     /** 当前查看的日期（默认今天；可切换到昨天以补充昨日执行信息） */
     private viewDate: Date = new Date();
 
@@ -90,7 +90,7 @@ export class TodayView {
         initialExecutingEventId?: string,
         setExecutingEventId?: (id: string | undefined) => void,
         onNavigateToProjectPicture?: (projectId: string) => void,
-        getSchemeDays?: () => DailyRange[],
+        getPlanSchemeDays?: () => DailyRange[],
     ) {
         this.app = app;
         this.inboxData = inboxData;
@@ -102,7 +102,7 @@ export class TodayView {
         this.executingEventId = initialExecutingEventId;
         this.setExecutingEventId = setExecutingEventId;
         this.onNavigateToProjectPicture = onNavigateToProjectPicture;
-        this.getSchemeDays = getSchemeDays ?? (() => []);
+        this.getPlanSchemeDays = getPlanSchemeDays ?? (() => []);
     }
 
     async renderInto(container: HTMLElement): Promise<void> {
@@ -1669,7 +1669,7 @@ export class TodayView {
      */
     private renderSchemeBars(timeCol: HTMLElement) {
         const { day } = this.getViewDayInfo();
-        const dayData = this.getSchemeDays().find(d => d.day === day);
+        const dayData = this.getPlanSchemeDays().find(d => d.day === day);
         const ranges = dayData?.ranges ?? [];
         for (const range of ranges) {
             const bar = timeCol.createDiv({ cls: 'today-scheme-bar' });

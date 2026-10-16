@@ -11,7 +11,7 @@ export interface TemplateViewContext {
     save(): Promise<void>;
     onOpen(): Promise<void>;
     /** 获取当前激活方案的日区间配置（周无关的模板数据） */
-    getSchemeDays(): DailyRange[];
+    getPlanSchemeDays(): DailyRange[];
 }
 
 /** 日模板 */
@@ -231,7 +231,7 @@ export class TemplateCreateModal extends Modal {
                     }
 
                     // 从当前激活方案的对应星期复制 ranges
-                    const dayData = this.ctx.getSchemeDays().find(d => d.day === sourceDay);
+                    const dayData = this.ctx.getPlanSchemeDays().find(d => d.day === sourceDay);
                     const ranges = (dayData?.ranges ?? []).map(({ id, ...rest }) => rest);
                     
                     this.ctx.dayTemplateData.dayTemplates.push({

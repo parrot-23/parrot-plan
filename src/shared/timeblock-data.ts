@@ -33,16 +33,16 @@ export interface WeekRangeData {
 	weeks?: Record<WeekKey, DailyRange[]>;
 }
 
-/** 时间区间方案：一组命名的时间区块配置（周无关的模板） */
-export interface RangeScheme {
+/** 时间计划方案：一组命名的时间区块配置（周无关的模板） */
+export interface PlanScheme {
 	id: string;
 	name: string;
 	days: DailyRange[];
 }
 
 /** 方案集合（持久化） */
-export interface RangeSchemeData {
-	schemes: RangeScheme[];
+export interface PlanSchemeData {
+	schemes: PlanScheme[];
 	/** 当前激活的方案 */
 	activeSchemeId?: string;
 	/** 默认方案 */
@@ -53,12 +53,12 @@ export interface RangeSchemeData {
 export const DEFAULT_SCHEME_ID = 'default';
 
 /** 生成默认方案对象（name 走 i18n） */
-export function makeDefaultScheme(name: string): RangeScheme {
+export function makeDefaultScheme(name: string): PlanScheme {
 	return { id: DEFAULT_SCHEME_ID, name, days: [] };
 }
 
 /** 确保方案集合中始终存在默认方案，且位于首位 */
-export function ensureDefaultScheme(schemeData: RangeSchemeData, name: string): void {
+export function ensureDefaultScheme(schemeData: PlanSchemeData, name: string): void {
 	const list = schemeData.schemes;
 	const existing = list.find(s => s.id === DEFAULT_SCHEME_ID);
 	if (existing) {

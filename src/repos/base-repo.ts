@@ -3,7 +3,7 @@
 // 视图读引用、写走领域 repo 方法，底层仍是同一个对象引用，保证跨视图同步不破坏。
 import type { Plugin } from 'obsidian';
 
-import type { WeekRangeData, RangeSchemeData } from '../shared/timeblock-data';
+import type { WeekRangeData, PlanSchemeData } from '../shared/timeblock-data';
 import { getCurrentWeekKey, ensureDefaultScheme, DEFAULT_WEEK_RANGE } from '../shared/timeblock-data';
 import type { TimeBlockCategoryData } from '../shared/timeblock-category-manager';
 import { ensureUncategorizedCategory } from '../shared/timeblock-category-manager';
@@ -27,7 +27,7 @@ export interface PluginData {
     events: EventBlock[];
     executions: ExecutionRecord[];
     inboxData: InboxData;
-    schemeData: RangeSchemeData;
+    schemeData: PlanSchemeData;
     /** 已标记为「已制定周计划」的周键列表（如 ["2026-W41"]） */
     plannedWeeks: string[];
     /** 工作台卡片数据 */
@@ -162,9 +162,9 @@ export class BaseRepo {
         // 兼容旧数据：确保「未分类」始终存在且位于首位
         ensureUncategorizedCategory(initialCategoryData);
         const initialInboxData = (savedData.inboxData ?? DEFAULT_INBOX_DATA) as InboxData;
-        const initialSchemeData = (savedData.schemeData ?? { schemes: [] }) as RangeSchemeData;
+        const initialPlanSchemeData = (savedData.schemeData ?? { schemes: [] }) as PlanSchemeData;
         // 兼容旧数据：确保默认方案始终存在且位于首位
-        ensureDefaultScheme(initialSchemeData, t('rangeScheme.defaultName'));
+        ensureDefaultScheme(initialPlanSchemeData, t('planScheme.defaultName'));
         // 已制定周计划的周键列表（兼容旧数据：默认空数组）
         const initialPlannedWeeks = Array.isArray(savedData.plannedWeeks)
             ? savedData.plannedWeeks as string[]
@@ -200,7 +200,7 @@ export class BaseRepo {
             events: (savedData.events ?? []) as EventBlock[],
             executions: (savedData.executions ?? []) as ExecutionRecord[],
             inboxData: initialInboxData,
-            schemeData: initialSchemeData,
+            schemeData: initialPlanSchemeData,
             plannedWeeks: initialPlannedWeeks,
             workbench: initialWorkbench,
             gtdData: initialGtdData,

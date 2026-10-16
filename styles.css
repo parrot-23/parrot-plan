@@ -5280,33 +5280,33 @@
 
 /* ===== 时间区间设置窗口 ===== */
 /* 直接撑开 Obsidian 弹窗容器，保证能容纳左侧图例 + 日历 */
-/* 由 RangeSchemeModal.onOpen 给 modalEl 添加 is-range-scheme-modal 类，避免使用 :has */
-.modal.is-range-scheme-modal {
+/* 由 PlanSchemeModal.onOpen 给 modalEl 添加 is-plan-scheme-modal 类，避免使用 :has */
+.modal.is-plan-scheme-modal {
     width: 760px;
     max-width: 90vw;
 }
-.range-scheme-modal {
+.plan-scheme-modal {
     width: 100%;
 }
 
 /* 顶部：标题 + 方案按钮 */
-.range-scheme-header {
+.plan-scheme-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
     margin-bottom: 12px;
 }
 
-.range-scheme-header h3 {
+.plan-scheme-header h3 {
     margin: 0;
 }
 
-.range-scheme-actions {
+.plan-scheme-actions {
     display: flex;
     gap: 6px;
 }
 
-.range-scheme-btn {
+.plan-scheme-btn {
     padding: 4px 10px;
     border-radius: 4px;
     border: 1px solid var(--background-modifier-border);
@@ -5315,19 +5315,19 @@
     font-size: 13px;
 }
 
-.range-scheme-btn:hover {
+.plan-scheme-btn:hover {
     background: var(--interactive-hover);
 }
 
 /* 当前方案名称（纯展示） */
-.range-scheme-current {
+.plan-scheme-current {
     font-weight: 600;
     color: var(--text-accent);
     align-self: center;
 }
 
 /* 主体：左右结构 */
-.range-scheme-body {
+.plan-scheme-body {
     display: flex;
     flex-direction: row;
     gap: 12px;
@@ -5335,7 +5335,7 @@
 }
 
 /* 左侧：图例管理 */
-.range-scheme-legend {
+.plan-scheme-legend {
     flex-shrink: 0;
     width: 200px;
     overflow-y: auto;
@@ -5344,19 +5344,19 @@
 }
 
 /* 弹窗内图例：标题与分类纵向排列（不影响工具栏中的横向图例） */
-.range-scheme-legend .range-legend {
+.plan-scheme-legend .range-legend {
     flex-direction: column;
     align-items: stretch;
     flex-wrap: nowrap;
 }
 
-.range-scheme-legend .legend-title {
+.plan-scheme-legend .legend-title {
     margin-right: 0;
     margin-bottom: 4px;
 }
 
 /* 右侧：日历 */
-.range-scheme-calendar {
+.plan-scheme-calendar {
     flex: 1;
     min-width: 0;
     display: flex;
@@ -5364,8 +5364,8 @@
     overflow: hidden;
 }
 
-/* 工具栏中的时间区间设置按钮 */
-.range-scheme-bar {
+/* 工具栏中的时间计划方案按钮 */
+.plan-scheme-bar {
     display: flex;
     flex-direction: row;
     align-items: center;
@@ -5550,7 +5550,7 @@
     background: var(--interactive-hover);
 }
 
-.range-scheme-open-btn {
+.plan-scheme-open-btn {
     padding: 6px 10px;
     border-radius: 4px;
     border: 1px solid var(--background-modifier-border);
@@ -5560,12 +5560,12 @@
     white-space: nowrap;
 }
 
-.range-scheme-open-btn:hover {
+.plan-scheme-open-btn:hover {
     background: var(--interactive-hover);
 }
 
 /* 当前方案下拉框 */
-.range-scheme-select {
+.plan-scheme-select {
     padding: 4px 6px;
     border-radius: 4px;
     font-size: 13px;

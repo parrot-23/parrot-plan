@@ -3,6 +3,7 @@ import type { App } from 'obsidian';
 import type { TimeBlockCategoryData } from '../../shared/timeblock-category-manager';
 import type { InboxData, EventBlock, ExecutionRecord } from '../../datatypes/domain';
 import { getEventStatus } from '../../datatypes/domain';
+import type { DailyRange } from '../../shared/timeblock-data';
 import {
     getCurrentWeekKey,
     makeWeekKey,
@@ -38,6 +39,8 @@ export class CheckView {
     private getEvents: () => EventBlock[];
     /** 获取全部执行记录 */
     private getExecutions: () => ExecutionRecord[];
+    /** 获取当前激活的时间计划方案的日区间配置（计划时长的来源） */
+    private getPlanSchemeDays: () => DailyRange[];
     /** 当前渲染容器（用于自刷新） */
     private container?: HTMLElement;
     /** 当前检查的周键 */
@@ -49,12 +52,14 @@ export class CheckView {
         categoryData: TimeBlockCategoryData,
         getEvents: () => EventBlock[],
         getExecutions: () => ExecutionRecord[],
+        getPlanSchemeDays: () => DailyRange[],
     ) {
         this.app = app;
         this.inboxData = inboxData;
         this.categoryData = categoryData;
         this.getEvents = getEvents;
         this.getExecutions = getExecutions;
+        this.getPlanSchemeDays = getPlanSchemeDays;
     }
 
     async renderInto(container: HTMLElement): Promise<void> {
@@ -144,12 +149,14 @@ export class CheckView {
 
         const prevWeekKey = shiftWeekKey(this.currentWeekKey, -1);
 
-        // 本周计划（按分类，排除全天事件）
-        const currPlannedMap = this.aggregateByCategory(
-            this.getEvents()
-                .filter(ev => ev.weekKey === this.currentWeekKey && !ev.allDay)
-                .map(ev => ({ categoryId: ev.categoryId, minutes: Math.max(0, ev.end - ev.start) })),
-        );
+        // 本周计划（来自时间计划方案，按分类汇总七天区间时长）
+        const plannedEntries: { categoryId?: string; minutes: number }[] = [];
+        for (const dayData of this.getPlanSchemeDays()) {
+            for (const r of dayData.ranges ?? []) {
+                plannedEntries.push({ categoryId: r.sort, minutes: Math.max(0, r.end - r.start) });
+            }
+        }
+        const currPlannedMap = this.aggregateByCategory(plannedEntries);
 
         // 本周执行（按分类，分类取来源任务）
         const currActualMap = this.aggregateByCategory(
@@ -210,7 +217,6 @@ export class CheckView {
         const section = body.createDiv({ cls: 'check-daily-section' });
         section.createDiv({ cls: 'check-daily-section-title', text: t('check.dailyTitle') });
 
-        const weekEvents = this.getEvents().filter(ev => ev.weekKey === this.currentWeekKey);
         const weekExecs = this.getExecutions().filter(ex => ex.weekKey === this.currentWeekKey);
         const weekDays = getWeekDays();
 
@@ -220,11 +226,8 @@ export class CheckView {
 
             const cols = block.createDiv({ cls: 'check-daily-cols' });
 
-            // 左：当天计划时长（按分类，排除全天事件）
-            const plannedEntries = weekEvents
-                .filter(ev => ev.day === day && !ev.allDay)
-                .map(ev => ({ categoryId: ev.categoryId, minutes: Math.max(0, ev.end - ev.start) }));
-            const plannedMap = this.aggregateByCategory(plannedEntries);
+            // 左：当天计划时长（来自时间计划方案，按分类）
+            const plannedMap = this.plannedMapForDay(day);
 
             // 中：当天实际执行时长（按分类，分类取来源任务）
             const actualEntries = weekExecs
@@ -238,18 +241,21 @@ export class CheckView {
             const actualMap = this.aggregateByCategory(actualEntries);
 
             // 右：差异（实际 - 计划），按分类
-            const diffMap = new Map<string, number>();
-            for (const [key, minutes] of Array.from(plannedMap.entries())) {
-                diffMap.set(key, (diffMap.get(key) ?? 0) - minutes);
-            }
-            for (const [key, minutes] of Array.from(actualMap.entries())) {
-                diffMap.set(key, (diffMap.get(key) ?? 0) + minutes);
-            }
+            const diffMap = this.diffMap(actualMap, plannedMap);
 
             this.renderDailyColumn(cols, t('check.dailyPlanned'), plannedMap);
             this.renderDailyColumn(cols, t('check.dailyActual'), actualMap);
             this.renderDailyColumn(cols, t('check.dailyDiff'), diffMap, true);
         }
+    }
+
+    /** 某天的计划时长（来自时间计划方案，按分类聚合区间分钟数） */
+    private plannedMapForDay(day: number): Map<string, number> {
+        const dayData = this.getPlanSchemeDays().find(d => d.day === day);
+        const ranges = dayData?.ranges ?? [];
+        return this.aggregateByCategory(
+            ranges.map(r => ({ categoryId: r.sort, minutes: Math.max(0, r.end - r.start) })),
+        );
     }
 
     /** 按分类聚合时长（返回 分类键 → 分钟） */
