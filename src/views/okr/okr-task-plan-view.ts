@@ -969,7 +969,10 @@ export class OkrTaskPlanView {
         const box = container.createDiv({ cls: 'task-plan-detail-box' });
         box.createDiv({ cls: 'task-plan-detail-title', text: t('taskPlan.detailTitle') });
 
-        const form = box.createDiv({ cls: 'task-plan-form' });
+        // 左右两栏：左侧为标题/描述/分类，右侧为属性卡片（截止日期/状态/习惯时间点/预估时长）
+        const body = box.createDiv({ cls: 'task-plan-detail-body' });
+        const form = body.createDiv({ cls: 'task-plan-form' });
+        const metaCard = body.createDiv({ cls: 'task-plan-meta-card' });
 
         // 标题
         form.createEl('h2', { cls: 'task-plan-title', text: item.title });
@@ -1023,7 +1026,7 @@ export class OkrTaskPlanView {
         }
 
         // 截止日期（原生 date 输入框，选择后自动保存）
-        const dueRow = form.createDiv({ cls: 'task-plan-field' });
+        const dueRow = metaCard.createDiv({ cls: 'task-plan-field' });
         dueRow.createDiv({ cls: 'task-plan-field-label', text: t('taskPlan.dueDate') });
         const dueInput = dueRow.createEl('input', {
             cls: 'task-plan-due-input',
@@ -1039,7 +1042,7 @@ export class OkrTaskPlanView {
         };
 
         // 任务状态（按钮组，当前状态高亮，点击后自动保存）
-        const statusRow = form.createDiv({ cls: 'task-plan-field' });
+        const statusRow = metaCard.createDiv({ cls: 'task-plan-field' });
         statusRow.createDiv({ cls: 'task-plan-field-label', text: t('taskPlan.status') });
         const statusGroup = statusRow.createDiv({ cls: 'task-plan-status-group' });
         const statuses: { value: string; labelKey: 'taskPlan.statusNotStarted' | 'taskPlan.statusInProgress' | 'taskPlan.statusDone' }[] = [
@@ -1064,7 +1067,7 @@ export class OkrTaskPlanView {
         }
 
         // 习惯时间点（起始时间：小时下拉 + 分钟下拉，选择后自动保存）
-        const habitRow = form.createDiv({ cls: 'task-plan-field' });
+        const habitRow = metaCard.createDiv({ cls: 'task-plan-field' });
         const habitLabelRow = habitRow.createDiv({ cls: 'task-plan-field-label-row' });
 
         // 启用开关（点击切换，禁用时时间下拉置灰）
@@ -1123,7 +1126,7 @@ export class OkrTaskPlanView {
 
         // 预估时长（仅在启用习惯时间点时显示，单位分钟，失焦后自动保存）
         if (habitEnabled) {
-            const estRow = form.createDiv({ cls: 'task-plan-field' });
+            const estRow = metaCard.createDiv({ cls: 'task-plan-field' });
             estRow.createDiv({ cls: 'task-plan-field-label', text: t('weekPanel.estimatedLabel') });
             const estInput = estRow.createEl('input', {
                 cls: 'task-plan-est-input',

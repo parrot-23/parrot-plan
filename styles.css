@@ -2901,8 +2901,31 @@
     border-bottom: 1px solid var(--background-modifier-border);
 }
 
-.task-plan-detail-box .task-plan-form {
+/* 详情方框左右两栏：左（标题/描述/分类） + 右（属性卡片） */
+.task-plan-detail-body {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+}
+
+.task-plan-detail-body .task-plan-form {
+    flex: 1;
+    min-width: 0;
     padding: 12px 14px;
+}
+
+/* 右侧属性卡片：截止日期 / 任务状态 / 习惯时间点 / 预估时长 */
+.task-plan-meta-card {
+    flex-shrink: 0;
+    width: 220px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin: 12px 14px 12px 0;
+    padding: 12px;
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 8px;
+    background: var(--background-primary);
 }
 
 /* 截止日期输入框 */
