@@ -65,21 +65,13 @@ export class CheckView {
         // 顶部：周导航
         this.renderWeekNav(container);
 
-        // 内容区：三列（左：计划汇总 / 中：执行汇总 / 右：差异项）
         const body = container.createDiv({ cls: 'check-body' });
-        const columns = body.createDiv({ cls: 'check-columns' });
 
-        // 左块：本周计划汇总统计
-        this.renderPlanSummary(columns.createDiv({ cls: 'check-col' }));
-
-        // 中块：本周执行汇总统计
-        this.renderExecSummary(columns.createDiv({ cls: 'check-col' }));
-
-        // 右块：差异项（第一行：本周分配 vs 执行；第二行：上周 vs 本周）
-        this.renderDiffColumn(columns.createDiv({ cls: 'check-col' }));
-
-        // 下方：按七天逐日展示执行情况（每天一个区块，内部左中右）
+        // 上方：按七天逐日展示执行情况（每天一个区块，内部左中右）
         this.renderDailySection(body);
+
+        // 下方：周统计（两行，每行左中右结构）
+        this.renderWeekStats(body);
     }
 
     /** 重新渲染自身 */
@@ -140,72 +132,76 @@ export class CheckView {
         };
     }
 
-    // ===== 左块：本周计划汇总统计 =====
-    private renderPlanSummary(col: HTMLElement) {
-        const box = col.createDiv({ cls: 'check-box' });
-        box.createDiv({ cls: 'check-box-title', text: t('check.planSummaryTitle') });
+    // ===== 下方：周统计（两行，每行左中右结构）=====
+    /**
+     * 周统计：
+     * 第一行：本周计划 + 本周执行 + 差异；
+     * 第二行：上周执行 + 本周执行 + 差异。
+     */
+    private renderWeekStats(body: HTMLElement) {
+        const section = body.createDiv({ cls: 'check-daily-section' });
+        section.createDiv({ cls: 'check-daily-section-title', text: t('check.weekStatsTitle') });
 
-        const weekEvents = this.getEvents().filter(ev => ev.weekKey === this.currentWeekKey);
-        const timedEvents = weekEvents.filter(ev => !ev.allDay);
-        const plannedCount = timedEvents.length;
-        const plannedMinutes = timedEvents.reduce((s, ev) => s + Math.max(0, ev.end - ev.start), 0);
+        const prevWeekKey = shiftWeekKey(this.currentWeekKey, -1);
 
-        const rows = box.createDiv({ cls: 'check-stat-rows' });
-        this.renderStatRow(rows, t('check.plannedCount'), `${plannedCount}`, formatHours(plannedMinutes));
+        // 本周计划（按分类，排除全天事件）
+        const currPlannedMap = this.aggregateByCategory(
+            this.getEvents()
+                .filter(ev => ev.weekKey === this.currentWeekKey && !ev.allDay)
+                .map(ev => ({ categoryId: ev.categoryId, minutes: Math.max(0, ev.end - ev.start) })),
+        );
 
-        // 按分类汇总计划时长
-        this.renderCategoryBreakdown(box, timedEvents.map(ev => ({
-            categoryId: ev.categoryId,
-            minutes: Math.max(0, ev.end - ev.start),
-        })));
+        // 本周执行（按分类，分类取来源任务）
+        const currActualMap = this.aggregateByCategory(
+            this.getExecutions()
+                .filter(ex => ex.weekKey === this.currentWeekKey)
+                .map(ex => {
+                    const item = ex.inboxId
+                        ? this.inboxData.items.find(i => i.id === ex.inboxId && !i.removed)
+                        : undefined;
+                    return { categoryId: item?.categoryId, minutes: Math.max(0, ex.end - ex.start) };
+                }),
+        );
+
+        // 上周执行（按分类）
+        const prevActualMap = this.aggregateByCategory(
+            this.getExecutions()
+                .filter(ex => ex.weekKey === prevWeekKey)
+                .map(ex => {
+                    const item = ex.inboxId
+                        ? this.inboxData.items.find(i => i.id === ex.inboxId && !i.removed)
+                        : undefined;
+                    return { categoryId: item?.categoryId, minutes: Math.max(0, ex.end - ex.start) };
+                }),
+        );
+
+        // 第一行：本周计划 + 本周执行 + 差异（执行 - 计划）
+        const row1 = section.createDiv({ cls: 'check-daily-block' });
+        row1.createDiv({ cls: 'check-daily-block-title', text: t('check.weekRow1Title') });
+        const cols1 = row1.createDiv({ cls: 'check-daily-cols' });
+        this.renderDailyColumn(cols1, t('check.dailyPlanned'), currPlannedMap);
+        this.renderDailyColumn(cols1, t('check.dailyActual'), currActualMap);
+        this.renderDailyColumn(cols1, t('check.dailyDiff'), this.diffMap(currActualMap, currPlannedMap), true);
+
+        // 第二行：上周执行 + 本周执行 + 差异（本周 - 上周）
+        const row2 = section.createDiv({ cls: 'check-daily-block' });
+        row2.createDiv({ cls: 'check-daily-block-title', text: t('check.weekRow2Title') });
+        const cols2 = row2.createDiv({ cls: 'check-daily-cols' });
+        this.renderDailyColumn(cols2, t('check.prevWeekActual'), prevActualMap);
+        this.renderDailyColumn(cols2, t('check.dailyActual'), currActualMap);
+        this.renderDailyColumn(cols2, t('check.dailyDiff'), this.diffMap(currActualMap, prevActualMap), true);
     }
 
-    // ===== 中块：本周执行汇总统计 =====
-    private renderExecSummary(col: HTMLElement) {
-        const box = col.createDiv({ cls: 'check-box' });
-        box.createDiv({ cls: 'check-box-title', text: t('check.execSummaryTitle') });
-
-        const weekExecs = this.getExecutions().filter(ex => ex.weekKey === this.currentWeekKey);
-        const actualMinutes = weekExecs.reduce((s, ex) => s + Math.max(0, ex.end - ex.start), 0);
-
-        const rows = box.createDiv({ cls: 'check-stat-rows' });
-        this.renderStatRow(rows, t('check.actualDuration'), `${weekExecs.length}`, formatHours(actualMinutes));
-
-        // 按分类汇总执行时长（分类取来源任务）
-        this.renderCategoryBreakdown(box, weekExecs.map(ex => {
-            const item = ex.inboxId
-                ? this.inboxData.items.find(i => i.id === ex.inboxId && !i.removed)
-                : undefined;
-            return { categoryId: item?.categoryId, minutes: Math.max(0, ex.end - ex.start) };
-        }));
-    }
-
-    /** 按分类汇总时长（计划 / 执行共用） */
-    private renderCategoryBreakdown(
-        box: HTMLElement,
-        entries: { categoryId?: string; minutes: number }[],
-    ) {
-        const map = new Map<string, number>();
-        for (const e of entries) {
-            const key = e.categoryId ?? '__none__';
-            map.set(key, (map.get(key) ?? 0) + e.minutes);
+    /** 计算差异映射：a - b（按分类） */
+    private diffMap(a: Map<string, number>, b: Map<string, number>): Map<string, number> {
+        const diff = new Map<string, number>();
+        for (const [key, minutes] of Array.from(a.entries())) {
+            diff.set(key, (diff.get(key) ?? 0) + minutes);
         }
-        if (map.size === 0) return;
-
-        const list = box.createDiv({ cls: 'check-category-list' });
-        for (const [key, minutes] of Array.from(map.entries())) {
-            const cat = key === '__none__'
-                ? undefined
-                : this.categoryData.categories.find(c => c.id === key);
-            const color = cat?.color ?? '#888888';
-            const label = cat?.label ?? t('inbox.noCategory');
-
-            const row = list.createDiv({ cls: 'check-category-row' });
-            const dot = row.createSpan({ cls: 'check-category-dot' });
-            dot.setCssProps({ '--dot-color': color });
-            row.createSpan({ cls: 'check-category-name', text: label });
-            row.createSpan({ cls: 'check-category-value', text: formatHours(minutes) });
+        for (const [key, minutes] of Array.from(b.entries())) {
+            diff.set(key, (diff.get(key) ?? 0) - minutes);
         }
+        return diff;
     }
 
     // ===== 下方：按七天逐日展示执行情况 =====
@@ -303,127 +299,5 @@ export class CheckView {
                 valueEl.setText(formatHours(minutes));
             }
         }
-    }
-
-    // ===== 右块：差异项（两行）=====
-    private renderDiffColumn(col: HTMLElement) {
-        // 第一行：本周分配 vs 执行
-        this.renderWeekDiffBox(col);
-
-        // 第二行：上周 vs 本周
-        this.renderPrevWeekDiffBox(col);
-    }
-
-    /** 第一行：本周「分配 vs 执行」的差距 */
-    private renderWeekDiffBox(col: HTMLElement) {
-        const box = col.createDiv({ cls: 'check-box' });
-        box.createDiv({ cls: 'check-box-title', text: t('check.weekDiffTitle') });
-
-        const weekEvents = this.getEvents().filter(ev => ev.weekKey === this.currentWeekKey);
-        const weekExecs = this.getExecutions().filter(ex => ex.weekKey === this.currentWeekKey);
-
-        const timedEvents = weekEvents.filter(ev => !ev.allDay);
-        const plannedCount = timedEvents.length;
-        const executedEvents = timedEvents.filter(ev => getEventStatus(ev, weekExecs) === 'executed');
-        const executedCount = executedEvents.length;
-
-        const rows = box.createDiv({ cls: 'check-stat-rows' });
-        this.renderStatRow(rows, t('check.diffPlanned'), `${plannedCount}`, '');
-        this.renderStatRow(rows, t('check.diffExecuted'), `${executedCount}`, '');
-        this.renderStatRow(
-            rows,
-            t('check.diffUnexecuted'),
-            `${Math.max(0, plannedCount - executedCount)}`,
-            '',
-        );
-
-        // 完成率进度条
-        const ratio = plannedCount > 0 ? executedCount / plannedCount : 0;
-        const barWrap = box.createDiv({ cls: 'check-progress-wrap' });
-        barWrap.createDiv({ cls: 'check-progress-label', text: t('check.completionRate') });
-        const bar = barWrap.createDiv({ cls: 'check-progress-bar' });
-        const fill = bar.createDiv({ cls: 'check-progress-fill' });
-        fill.setCssProps({ '--progress': `${Math.round(ratio * 100)}%` });
-        barWrap.createDiv({ cls: 'check-progress-value', text: `${Math.round(ratio * 100)}%` });
-
-        // 差异明细：未执行 / 被替换
-        const unexecuted = timedEvents.filter(ev => getEventStatus(ev, weekExecs) === 'planned');
-        const replaced = weekExecs.filter(ex => ex.replaced);
-        if (unexecuted.length === 0 && replaced.length === 0) {
-            box.createDiv({ cls: 'check-empty', text: t('check.noAbnormal') });
-            return;
-        }
-        const list = box.createDiv({ cls: 'check-abnormal-list' });
-        for (const ev of unexecuted) {
-            const row = list.createDiv({ cls: 'check-abnormal-row' });
-            row.createSpan({ cls: 'check-abnormal-badge is-unexecuted', text: t('check.badgeUnexecuted') });
-            row.createSpan({ cls: 'check-abnormal-title', text: ev.title });
-            row.createSpan({
-                cls: 'check-abnormal-meta',
-                text: `${getWeekDays()[ev.day - 1]} ${formatMinutes(ev.start)}-${formatMinutes(ev.end)}`,
-            });
-        }
-        for (const ex of replaced) {
-            const row = list.createDiv({ cls: 'check-abnormal-row' });
-            row.createSpan({ cls: 'check-abnormal-badge is-replaced', text: t('check.badgeReplaced') });
-            const item = ex.inboxId
-                ? this.inboxData.items.find(i => i.id === ex.inboxId && !i.removed)
-                : undefined;
-            const planned = ex.eventId ? this.getEvents().find(e => e.id === ex.eventId) : undefined;
-            const title = item?.title ?? planned?.title ?? t('check.unknownTask');
-            row.createSpan({ cls: 'check-abnormal-title', text: title });
-            row.createSpan({
-                cls: 'check-abnormal-meta',
-                text: `${getWeekDays()[ex.day - 1]} ${formatMinutes(ex.start)}-${formatMinutes(ex.end)}`,
-            });
-        }
-    }
-
-    /** 第二行：上周 vs 本周 的对比差异 */
-    private renderPrevWeekDiffBox(col: HTMLElement) {
-        const box = col.createDiv({ cls: 'check-box' });
-        box.createDiv({ cls: 'check-box-title', text: t('check.prevWeekDiffTitle') });
-
-        const prevWeekKey = shiftWeekKey(this.currentWeekKey, -1);
-
-        const stat = (weekKey: string) => {
-            const events = this.getEvents().filter(ev => ev.weekKey === weekKey && !ev.allDay);
-            const execs = this.getExecutions().filter(ex => ex.weekKey === weekKey);
-            const plannedMinutes = events.reduce((s, ev) => s + Math.max(0, ev.end - ev.start), 0);
-            const actualMinutes = execs.reduce((s, ex) => s + Math.max(0, ex.end - ex.start), 0);
-            const executedCount = events.filter(ev => getEventStatus(ev, execs) === 'executed').length;
-            return { plannedCount: events.length, plannedMinutes, execCount: execs.length, actualMinutes, executedCount };
-        };
-
-        const prev = stat(prevWeekKey);
-        const curr = stat(this.currentWeekKey);
-
-        const rows = box.createDiv({ cls: 'check-stat-rows' });
-        // 表头：上周 / 本周
-        const head = rows.createDiv({ cls: 'check-diff-head' });
-        head.createSpan({ cls: 'check-diff-head-label', text: '' });
-        head.createSpan({ cls: 'check-diff-head-col', text: t('check.prevWeek') });
-        head.createSpan({ cls: 'check-diff-head-col', text: t('check.currWeek') });
-
-        this.renderDiffRow(rows, t('check.plannedCount'), `${prev.plannedCount}`, `${curr.plannedCount}`);
-        this.renderDiffRow(rows, t('check.plannedDuration'), formatHours(prev.plannedMinutes), formatHours(curr.plannedMinutes));
-        this.renderDiffRow(rows, t('check.executedCount'), `${prev.executedCount}`, `${curr.executedCount}`);
-        this.renderDiffRow(rows, t('check.actualDuration'), formatHours(prev.actualMinutes), formatHours(curr.actualMinutes));
-    }
-
-    /** 渲染一行对比：标签 + 上周值 + 本周值 */
-    private renderDiffRow(parent: HTMLElement, label: string, prev: string, curr: string) {
-        const row = parent.createDiv({ cls: 'check-diff-row' });
-        row.createSpan({ cls: 'check-diff-label', text: label });
-        row.createSpan({ cls: 'check-diff-prev', text: prev });
-        row.createSpan({ cls: 'check-diff-curr', text: curr });
-    }
-
-    /** 渲染一行统计：标签 + 数量 + 时长 */
-    private renderStatRow(parent: HTMLElement, label: string, count: string, duration: string) {
-        const row = parent.createDiv({ cls: 'check-stat-row' });
-        row.createSpan({ cls: 'check-stat-label', text: label });
-        row.createSpan({ cls: 'check-stat-count', text: count });
-        row.createSpan({ cls: 'check-stat-duration', text: duration });
     }
 }

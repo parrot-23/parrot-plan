@@ -249,6 +249,10 @@ export const en: I18nMessages = {
     'check.dailyActual': 'Actual',
     'check.dailyDiff': 'Diff',
     'check.dailyEmpty': 'None',
+    'check.weekStatsTitle': 'Weekly Stats',
+    'check.weekRow1Title': 'This Week Planned vs Actual',
+    'check.weekRow2Title': 'Last Week Actual vs This Week Actual',
+    'check.prevWeekActual': 'Last Week Actual',
 
     // Improve view (PDCA Act)
     'improve.suggestionsTitle': 'Improvement suggestions',

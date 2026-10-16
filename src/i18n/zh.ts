@@ -247,6 +247,10 @@ export const zh = {
     'check.dailyActual': '实际',
     'check.dailyDiff': '差异',
     'check.dailyEmpty': '暂无',
+    'check.weekStatsTitle': '周统计',
+    'check.weekRow1Title': '本周计划 vs 本周执行',
+    'check.weekRow2Title': '上周执行 vs 本周执行',
+    'check.prevWeekActual': '上周执行',
 
     // 改进视图（PDCA 的 Act）
     'improve.suggestionsTitle': '改进建议',
