@@ -67,15 +67,11 @@ export class TodayView {
     /**
      * 当前「进行中」的任务（点击「开始任务」后设置）。
      * 在时间轴上以透明色块呈现，点击可选中并「完成」/「中断」。
-     * 随主数据一起持久化（通过 setRunningTask 写回）。
+     * 随主数据一起持久化（通过 pdcaRepo.setRunningTask 写回）。
      */
     private runningTask?: RunningTask;
     /** 是否选中了「进行中任务」色块（用于操作区显示「完成 / 中断」按钮） */
     private selectedRunningTask = false;
-    /** 写回「正在执行」事件 id 的回调（用于持久化，随插件数据一起保存） */
-    private setExecutingEventId?: (id: string | undefined) => void;
-    /** 写回「进行中任务」的回调（用于持久化，随插件数据一起保存） */
-    private setRunningTask?: (task: RunningTask | undefined) => void;
     /** 跳转到项目全景图的回调（由 MainView 注入，负责切换 tab 并选中当前项目） */
     private onNavigateToProjectPicture?: (projectId: string) => void;
     /** 获取当前激活方案的单日区间配置（用于时间轴左侧分类色条） */
@@ -94,11 +90,9 @@ export class TodayView {
         getExecutions: () => ExecutionRecord[],
         pdcaRepo: PdcaRepo,
         initialExecutingEventId?: string,
-        setExecutingEventId?: (id: string | undefined) => void,
         onNavigateToProjectPicture?: (projectId: string) => void,
         getPlanSchemeDays?: () => DailyRange[],
         initialRunningTask?: RunningTask,
-        setRunningTask?: (task: RunningTask | undefined) => void,
         inboxRepo?: InboxRepo,
     ) {
         this.app = app;
@@ -109,11 +103,9 @@ export class TodayView {
         this.getExecutions = getExecutions;
         this.pdcaRepo = pdcaRepo;
         this.executingEventId = initialExecutingEventId;
-        this.setExecutingEventId = setExecutingEventId;
         this.onNavigateToProjectPicture = onNavigateToProjectPicture;
         this.getPlanSchemeDays = getPlanSchemeDays ?? (() => []);
         this.runningTask = initialRunningTask;
-        this.setRunningTask = setRunningTask;
         this.inboxRepo = inboxRepo;
     }
 
@@ -1222,7 +1214,7 @@ export class TodayView {
             dayKey,
         };
         // 写回插件数据源，随 saveAll 一起持久化
-        this.setRunningTask?.(this.runningTask);
+        this.pdcaRepo.setRunningTask(this.runningTask);
         // 开始后自动选中该进行中任务，便于直接点击「完成」
         this.selectedRunningTask = true;
         this.selectedEventId = undefined;
@@ -1261,7 +1253,7 @@ export class TodayView {
         });
         const item = this.inboxData.items.find(i => i.id === running.inboxId && !i.removed);
         this.runningTask = undefined;
-        this.setRunningTask?.(undefined);
+        this.pdcaRepo.setRunningTask(undefined);
         this.selectedRunningTask = false;
         await this.save();
         new Notice(t('today.completeDone', { title: item?.title ?? '' }));
@@ -1287,7 +1279,7 @@ export class TodayView {
         });
         const item = this.inboxData.items.find(i => i.id === running.inboxId && !i.removed);
         this.runningTask = undefined;
-        this.setRunningTask?.(undefined);
+        this.pdcaRepo.setRunningTask(undefined);
         this.selectedRunningTask = false;
         await this.save();
         new Notice(t('today.interruptDone', { title: item?.title ?? '' }));
@@ -1361,7 +1353,7 @@ export class TodayView {
      */
     private toggleExecuting(eventId: string): void {
         this.executingEventId = this.executingEventId === eventId ? undefined : eventId;
-        this.setExecutingEventId?.(this.executingEventId);
+        this.pdcaRepo.setExecutingEventId(this.executingEventId);
         void this.save();
         void this.refresh();
     }
@@ -1383,7 +1375,7 @@ export class TodayView {
             weekKey,
         });
         this.executingEventId = undefined;
-        this.setExecutingEventId?.(undefined);
+        this.pdcaRepo.setExecutingEventId(undefined);
         await this.save();
         new Notice(t('today.completeDone', { title: ev.title }));
         await this.refresh();
@@ -1392,7 +1384,7 @@ export class TodayView {
     /** 取消执行：清除「正在执行」状态，不写入执行记录 */
     private cancelExecuting(): void {
         this.executingEventId = undefined;
-        this.setExecutingEventId?.(undefined);
+        this.pdcaRepo.setExecutingEventId(undefined);
         void this.save();
         void this.refresh();
     }

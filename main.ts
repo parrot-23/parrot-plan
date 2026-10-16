@@ -8,6 +8,7 @@ import { WorkbenchRepo } from './src/repos/workbench-repo';
 import { InboxRepo } from './src/repos/inbox-repo';
 import { CategoryRepo } from './src/repos/category-repo';
 import { TemplateRepo } from './src/repos/template-repo';
+import { PlanSchemeRepo } from './src/repos/plan-scheme-repo';
 import { initI18n, t, getLangDebugInfo } from './src/i18n';
 import { initLogger, log } from './src/shared/logger';
 import { downloadImageToCache } from './src/helper/cache-image';
@@ -34,6 +35,9 @@ export default class ParrotPlanPlugin extends Plugin {
 
     /** 日模板领域仓库 */
     templateRepo: TemplateRepo;
+
+    /** 时间计划方案领域仓库 */
+    planSchemeRepo: PlanSchemeRepo;
 
     /**
      * 插件持有的唯一数据源（委托给 BaseRepo）。
@@ -102,6 +106,7 @@ export default class ParrotPlanPlugin extends Plugin {
         this.inboxRepo = new InboxRepo(this.repo);
         this.categoryRepo = new CategoryRepo(this.repo);
         this.templateRepo = new TemplateRepo(this.repo);
+        this.planSchemeRepo = new PlanSchemeRepo(this.repo);
 
         // 注册视图
         this.registerView(
@@ -113,7 +118,7 @@ export default class ParrotPlanPlugin extends Plugin {
                     events: d.events.length,
                     executions: d.executions.length,
                 });
-                return new MainView(leaf, this, d.weekRange, d.templateData, d.categoryData,
+                return new MainView(leaf, this, d.templateData, d.categoryData,
                     d.events, d.executions, d.inboxData, d.schemeData, d.plannedWeeks, d.workbench,
                     d.gtdData, this.cacheDirName, d.executingEventId, d.runningTask,
                 );

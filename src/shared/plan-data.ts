@@ -23,14 +23,6 @@ export interface DailyRange {
 /** 周键：`${年}-W${周号}`，如 2026-W40 */
 export type WeekKey = string;
 
-/** 周区间数据（持久化根节点） */
-export interface WeekRangeData {
-	version: 1;
-	days: DailyRange[];
-	/** 按周键存储的日历区间（从方案复制而来，成为该周的固定区间） */
-	weeks?: Record<WeekKey, DailyRange[]>;
-}
-
 /** 时间计划方案：一组命名的时间区块配置（周无关的模板） */
 export interface PlanScheme {
 	id: string;
@@ -168,30 +160,3 @@ export function makeDayKeyFromWeek(weekKey: WeekKey, day: number): DayKey {
 	monday.setDate(monday.getDate() + (day - 1));
 	return makeDayKey(monday);
 }
-
-// 默认周日程数据（兜底用）
-export const DEFAULT_WEEK_RANGE: WeekRangeData = {
-	version: 1,
-	days: [
-		{
-			day: 1, // 周一
-			ranges: [
-				{ id: 'r1', start: 690, end: 720, sort: 'work' },
-				{ id: 'r2', start: 720, end: 840, sort: 'rest' },
-				{ id: 'r3', start: 1200, end: 1320, sort: 'play' },
-			],
-		},
-		{
-			day: 3, // 周三
-			ranges: [
-				{ id: 'r4', start: 600, end: 960, sort: 'work' },
-			],
-		},
-		{
-			day: 7, // 周六
-			ranges: [
-				{ id: 'r5', start: 240, end: 1080, sort: 'play' },
-			],
-		},
-	],
-};

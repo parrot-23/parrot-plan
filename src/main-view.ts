@@ -1,7 +1,7 @@
 import { ItemView, WorkspaceLeaf } from 'obsidian';
 import type { Plugin } from 'obsidian';
 
-import type { WeekRangeData, PlanSchemeData } from './shared/plan-data';
+import type { PlanSchemeData } from './shared/plan-data';
 import type { PlanCategoryData } from './shared/plan-category-manager';
 import type { DayTemplateData } from './shared/template-manager';
 import type { InboxData } from './datatypes/domain';
@@ -31,6 +31,7 @@ import type { WorkbenchRepo } from './repos/workbench-repo';
 import type { InboxRepo } from './repos/inbox-repo';
 import type { CategoryRepo } from './repos/category-repo';
 import type { TemplateRepo } from './repos/template-repo';
+import type { PlanSchemeRepo } from './repos/plan-scheme-repo';
 import { t } from './i18n';
 import { log } from './shared/logger';
 import { HelpModal } from './helper/help-modal';
@@ -124,7 +125,6 @@ export class MainView extends ItemView {
     constructor(
         leaf: WorkspaceLeaf,
         plugin: Plugin,
-        data: WeekRangeData,
         templateData: DayTemplateData,
         categoryData: PlanCategoryData,
         events: EventBlock[],
@@ -148,7 +148,6 @@ export class MainView extends ItemView {
         this.weekView = new WeekScheduleView(
             leaf,
             plugin,
-            data,
             templateData,
             categoryData,
             events,
@@ -182,19 +181,9 @@ export class MainView extends ItemView {
             () => this.weekView.executions,
             this.pdcaRepo(),
             executingEventId,
-            (id) => {
-                // 写回插件数据源，随 saveAll 一起持久化
-                const p = this.plugin as Plugin & { data?: { executingEventId?: string } };
-                if (p.data) p.data.executingEventId = id;
-            },
             undefined,
             () => this.weekView.getPlanSchemeDays(),
             runningTask,
-            (task) => {
-                // 写回插件数据源，随 saveAll 一起持久化
-                const p = this.plugin as Plugin & { data?: { runningTask?: RunningTask } };
-                if (p.data) p.data.runningTask = task;
-            },
             this.inboxRepo(),
         );
         this.checkView = new CheckView(
@@ -307,6 +296,11 @@ export class MainView extends ItemView {
     /** 从插件实例获取日模板领域仓库 */
     private templateRepo(): TemplateRepo {
         return (this.plugin as Plugin & { templateRepo: TemplateRepo }).templateRepo;
+    }
+
+    /** 从插件实例获取时间计划方案领域仓库 */
+    private planSchemeRepo(): PlanSchemeRepo {
+        return (this.plugin as Plugin & { planSchemeRepo: PlanSchemeRepo }).planSchemeRepo;
     }
 
     getViewType(): string {

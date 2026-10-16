@@ -3,8 +3,8 @@
 // 视图读引用、写走领域 repo 方法，底层仍是同一个对象引用，保证跨视图同步不破坏。
 import type { Plugin } from 'obsidian';
 
-import type { WeekRangeData, PlanSchemeData } from '../shared/plan-data';
-import { getCurrentWeekKey, ensureDefaultScheme, DEFAULT_WEEK_RANGE } from '../shared/plan-data';
+import type { PlanSchemeData } from '../shared/plan-data';
+import { ensureDefaultScheme } from '../shared/plan-data';
 import type { PlanCategoryData } from '../shared/plan-category-manager';
 import { ensureUncategorizedCategory } from '../shared/plan-category-manager';
 import type { DayTemplateData } from '../shared/template-manager';
@@ -21,7 +21,6 @@ export const DEFAULT_CACHE_DIR_NAME = 'parrotPlanCache';
 
 /** 插件持有的全量数据（唯一数据源） */
 export interface PluginData {
-    weekRange: WeekRangeData;
     templateData: DayTemplateData;
     categoryData: PlanCategoryData;
     events: EventBlock[];
@@ -75,8 +74,6 @@ export class BaseRepo {
         if (!d) return;
         await this.plugin.saveData({
             version: 1,
-            days: d.weekRange.days,
-            weeks: d.weekRange.weeks,
             dayTemplateData: d.templateData,
             timeBlockCategoryData: d.categoryData,
             schemeData: d.schemeData,
@@ -146,10 +143,9 @@ export class BaseRepo {
             ],
         };
 
-        if (savedData.version !== 1 || !Array.isArray(savedData.days)) {
+        if (savedData.version !== 1) {
             savedData = {
                 version: 1,
-                days: DEFAULT_WEEK_RANGE.days,
                 dayTemplateData: { dayTemplates: [], dayProperties: [] },
                 timeBlockCategoryData: defaultCategories,
                 inboxData: DEFAULT_INBOX_DATA,
@@ -159,7 +155,6 @@ export class BaseRepo {
             };
         }
 
-        const initialData = migrateWeekRangeData(savedData);
         const initialTemplateData = (savedData.dayTemplateData ?? { dayTemplates: [], dayProperties: [] }) as DayTemplateData;
         const initialCategoryData = (savedData.timeBlockCategoryData ?? defaultCategories) as PlanCategoryData;
         // 兼容旧数据：确保「未分类」始终存在且位于首位
@@ -199,7 +194,6 @@ export class BaseRepo {
 
         // 存入仓库实例，作为唯一数据源（视图重建时从这里读取最新数据）
         this.data = {
-            weekRange: initialData,
             templateData: initialTemplateData,
             categoryData: initialCategoryData,
             events: (savedData.events ?? []) as EventBlock[],
@@ -229,21 +223,4 @@ function parseRunningTask(raw: unknown): RunningTask | undefined {
         return undefined;
     }
     return { inboxId: r.inboxId, start: r.start, dayKey: r.dayKey };
-}
-
-/** 迁移旧版周区间数据：把旧的 days 归入当前周的 weeks */
-function migrateWeekRangeData(savedData: Record<string, unknown>): WeekRangeData {
-    const days = Array.isArray(savedData.days) ? savedData.days : DEFAULT_WEEK_RANGE.days;
-    const weeks = (savedData.weeks && typeof savedData.weeks === 'object')
-        ? savedData.weeks as Record<string, unknown>
-        : {};
-    // 旧数据没有 weeks，把 days 归入当前周
-    if (Object.keys(weeks).length === 0 && Array.isArray(savedData.days)) {
-        weeks[getCurrentWeekKey()] = savedData.days;
-    }
-    return {
-        version: 1,
-        days: days as WeekRangeData['days'],
-        weeks: weeks as WeekRangeData['weeks'],
-    };
 }

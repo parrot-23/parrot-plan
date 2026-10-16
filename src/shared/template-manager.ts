@@ -1,5 +1,5 @@
 import { App, Modal, Setting, Notice } from 'obsidian';
-import type { CategorizedRange, WeekRangeData, DailyRange } from './plan-data';
+import type { CategorizedRange, DailyRange } from './plan-data';
 import type { TemplateRepo } from '../repos/template-repo';
 import { t, getWeekDays } from '../i18n';
 
@@ -7,7 +7,6 @@ import { t, getWeekDays } from '../i18n';
 
 /**主视图标准 */
 export interface TemplateViewContext {
-    rangeData: WeekRangeData;
     dayTemplateData: DayTemplateData;
     save(): Promise<void>;
     onOpen(): Promise<void>;

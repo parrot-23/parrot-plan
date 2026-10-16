@@ -2,8 +2,8 @@
 
 import { ItemView, WorkspaceLeaf, Modal, Setting, Notice, App } from 'obsidian';
 import type { Plugin } from 'obsidian';
-import type { WeekRangeData, CategorizedRange, PlanCategoryId, PlanSchemeData, DailyRange, WeekKey } from '../../shared/plan-data';
-import { hexToTransparent, getCurrentWeekKey, makeWeekKey, parseWeekKey, shiftWeekKey, makeDayKeyFromWeek, makeDefaultScheme, DEFAULT_SCHEME_ID, DEFAULT_WEEK_RANGE } from '../../shared/plan-data';
+import type { CategorizedRange, PlanCategoryId, PlanSchemeData, DailyRange, WeekKey } from '../../shared/plan-data';
+import { hexToTransparent, getCurrentWeekKey, makeWeekKey, parseWeekKey, shiftWeekKey, makeDayKeyFromWeek } from '../../shared/plan-data';
 import type { PlanCategoryData } from '../../shared/plan-category-manager';
 import type { DayTemplateData } from '../../shared/template-manager';
 import { renderPlanCategoryLegend } from '../../shared/plan-category-manager';
@@ -20,12 +20,12 @@ import type { PdcaRepo } from '../../repos/pdca-repo';
 import type { InboxRepo } from '../../repos/inbox-repo';
 import type { CategoryRepo } from '../../repos/category-repo';
 import type { TemplateRepo } from '../../repos/template-repo';
+import type { PlanSchemeRepo } from '../../repos/plan-scheme-repo';
 
 export const VIEW_TYPE_WEEK = 'week-schedule-view';
 
 export class WeekScheduleView extends ItemView {
     plugin: Plugin;
-    rangeData: WeekRangeData;
     // 日模板数据。
     dayTemplateData: DayTemplateData = {
         dayTemplates: [],
@@ -63,7 +63,7 @@ export class WeekScheduleView extends ItemView {
     private estimateOutsideHandler: ((e: MouseEvent) => void) | null = null;
 
     // Obsidian 旧 API：ItemView 构造函数只接受 leaf
-    constructor(leaf: WorkspaceLeaf, plugin: Plugin, data: WeekRangeData, templateData: DayTemplateData, categoryData: PlanCategoryData,
+    constructor(leaf: WorkspaceLeaf, plugin: Plugin, templateData: DayTemplateData, categoryData: PlanCategoryData,
         events?: EventBlock[],
         executions?: ExecutionRecord[],
         inboxData?: InboxData,
@@ -72,7 +72,6 @@ export class WeekScheduleView extends ItemView {
     ) {
         super(leaf);
         this.plugin = plugin;
-        this.rangeData = data;
         this.dayTemplateData = templateData;
         this.planCategoryData = categoryData;
         this.events = events ?? [];
@@ -125,13 +124,15 @@ export class WeekScheduleView extends ItemView {
         return (this.plugin as Plugin & { categoryRepo: CategoryRepo }).categoryRepo;
     }
 
+    /** 从插件实例获取时间计划方案领域仓库 */
+    private planSchemeRepo(): PlanSchemeRepo {
+        return (this.plugin as Plugin & { planSchemeRepo: PlanSchemeRepo }).planSchemeRepo;
+    }
+
     /** 重置为默认数据（清空全部数据后调用） */
     resetData() {
         // 注意：子视图（年/当日/泳道）持有 inboxData、planCategoryData 的引用，
         // 因此这里必须「原地清空」而非重新赋值，否则子视图仍指向旧对象。
-        this.rangeData.days = DEFAULT_WEEK_RANGE.days;
-        this.rangeData.weeks = {};
-
         this.templateRepo.clear();
 
         this.categoryRepo().replaceAll([
@@ -141,12 +142,10 @@ export class WeekScheduleView extends ItemView {
             { id: 'play', label: t('defaultCategory.play'), color: '#f2a65a' },
         ]);
 
-        this.planSchemeData.schemes = [makeDefaultScheme(t('planScheme.defaultName'))];
-        this.planSchemeData.activeSchemeId = DEFAULT_SCHEME_ID;
-        this.planSchemeData.defaultSchemeId = DEFAULT_SCHEME_ID;
+        this.planSchemeRepo().resetToDefault(t('planScheme.defaultName'));
 
         this.events.length = 0;
-        this.executions.length = 0;
+        this.pdcaRepo().clearExecutions();
 
         this.inboxRepo().clear();
 
@@ -1005,7 +1004,7 @@ export class WeekScheduleView extends ItemView {
             ?? '';
         schemeSelect.value = activeId;
         schemeSelect.onchange = () => {
-            this.planSchemeData.activeSchemeId = schemeSelect.value || undefined;
+            this.planSchemeRepo().setActiveSchemeId(schemeSelect.value || undefined);
             void (async () => {
                 await this.save();
                 await this.onOpen();
@@ -1061,6 +1060,7 @@ export class WeekScheduleView extends ItemView {
                         void this.onOpen();
                     },
                     this.categoryRepo(),
+                    this.planSchemeRepo(),
                 ).open();
             };
 
@@ -1121,10 +1121,7 @@ export class WeekScheduleView extends ItemView {
 
     /** 获取当前激活方案（未激活时回退到默认方案） */
     private getActivePlanScheme() {
-        const active = this.planSchemeData.schemes.find(s => s.id === this.planSchemeData.activeSchemeId);
-        if (active) return active;
-        return this.planSchemeData.schemes.find(s => s.id === DEFAULT_SCHEME_ID)
-            ?? this.planSchemeData.schemes[0];
+        return this.planSchemeRepo().getActiveScheme();
     }
 
     /** 获取当前激活方案的日区间配置（周无关的模板数据） */
@@ -1143,14 +1140,12 @@ export class WeekScheduleView extends ItemView {
         if (!tpl) { new Notice(t('template.notFound')); return; }
         const scheme = this.getActivePlanScheme();
         if (!scheme) { new Notice(t('planScheme.noActive')); return; }
-        if (!scheme.days) scheme.days = [];
+        const repo = this.planSchemeRepo();
         for (const day of targetDays) {
-            let dayData = scheme.days.find(d => d.day === day);
-            if (!dayData) { dayData = { day, ranges: [] }; scheme.days.push(dayData); }
-            dayData.ranges = tpl.ranges.map(range => ({
+            repo.setDayRanges(scheme.id, day, tpl.ranges.map(range => ({
                 ...range,
                 id: `r_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
-            }));
+            })));
             this.templateRepo.setDayProperty(day, templateId);
         }
         await this.save();

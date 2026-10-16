@@ -1,10 +1,10 @@
 // PDCA 领域仓库：封装计划事件、执行记录、周计划标记、改进项的增删改业务逻辑。
 // 视图不再直接 push/splice 数据，改调本仓库方法；底层仍操作 base-repo 持有的同一引用。
-import type { EventBlock, ExecutionRecord, ImprovementData, ImprovementItem } from '../datatypes/domain';
+import type { EventBlock, ExecutionRecord, ImprovementData, ImprovementItem, RunningTask } from '../datatypes/domain';
 import type { BaseRepo } from './base-repo';
 
 /**
- * PDCA 领域仓库：只管 events / executions / plannedWeeks / improvementData。
+ * PDCA 领域仓库：只管 events / executions / plannedWeeks / improvementData / 执行状态。
  * 通过 baseRepo 拿到数据引用，写操作后由调用方触发 baseRepo.saveAll()。
  */
 export class PdcaRepo {
@@ -32,6 +32,16 @@ export class PdcaRepo {
     /** 改进数据引用（视图读取用） */
     get improvementData(): ImprovementData {
         return this.baseRepo.data!.improvementData;
+    }
+
+    /** 当前正在执行的事件 id（视图读取用） */
+    get executingEventId(): string | undefined {
+        return this.baseRepo.data!.executingEventId;
+    }
+
+    /** 当前进行中的任务（视图读取用） */
+    get runningTask(): RunningTask | undefined {
+        return this.baseRepo.data!.runningTask;
     }
 
     // ===== 计划事件 =====
@@ -70,6 +80,23 @@ export class PdcaRepo {
     updateExecution(id: string, patch: Partial<ExecutionRecord>): void {
         const target = this.executions.find(x => x.id === id);
         if (target) Object.assign(target, patch);
+    }
+
+    /** 清空全部执行记录（重置数据用，原地清空保持数组引用不变） */
+    clearExecutions(): void {
+        this.executions.length = 0;
+    }
+
+    // ===== 执行状态（正在执行的事件 / 进行中的任务）=====
+
+    /** 设置当前正在执行的事件 id（传 undefined 清除） */
+    setExecutingEventId(id: string | undefined): void {
+        this.baseRepo.data!.executingEventId = id;
+    }
+
+    /** 设置当前进行中的任务（传 undefined 清除） */
+    setRunningTask(task: RunningTask | undefined): void {
+        this.baseRepo.data!.runningTask = task;
     }
 
     // ===== 周计划标记 =====

@@ -3,6 +3,7 @@ import { App, Modal, Setting } from 'obsidian';
 import type { PlanCategoryData } from './plan-category-manager';
 import { renderPlanCategoryLegend } from './plan-category-manager';
 import type { CategoryRepo } from '../repos/category-repo';
+import type { PlanSchemeRepo } from '../repos/plan-scheme-repo';
 import type { PlanSchemeData, PlanScheme } from './plan-data';
 import { hexToTransparent, DEFAULT_SCHEME_ID, ensureDefaultScheme } from './plan-data';
 import { renderTemplatePanel, type TemplateViewContext } from './template-manager';
@@ -29,6 +30,8 @@ export class PlanSchemeModal extends Modal {
     private savedScrollTop: number | null = null;
     /** 分类领域仓库（图例配置保存走仓库方法，保证跨视图一致） */
     private categoryRepo?: CategoryRepo;
+    /** 时间计划方案领域仓库（区间增删改走仓库方法，保证跨视图一致） */
+    private planSchemeRepo?: PlanSchemeRepo;
 
     constructor(
         app: App,
@@ -39,6 +42,7 @@ export class PlanSchemeModal extends Modal {
         onSave: () => Promise<void>,
         onChange?: () => void,
         categoryRepo?: CategoryRepo,
+        planSchemeRepo?: PlanSchemeRepo,
     ) {
         super(app);
         this.categoryData = categoryData;
@@ -48,6 +52,7 @@ export class PlanSchemeModal extends Modal {
         this.onSave = onSave;
         this.onChange = onChange;
         this.categoryRepo = categoryRepo;
+        this.planSchemeRepo = planSchemeRepo;
     }
 
     onOpen() {
@@ -82,7 +87,7 @@ export class PlanSchemeModal extends Modal {
                 this.onChange?.();
                 // 方案数据可能变化，重新渲染以刷新当前方案名称
                 this.onOpen();
-            }).open();
+            }, this.planSchemeRepo).open();
         };
 
         // ===== 主体：左右结构 =====
@@ -158,14 +163,18 @@ export class PlanSchemeModal extends Modal {
                 const y = e.clientY - rect.top;
                 const startMinutes = Math.floor((y / 80) * 120 / 30) * 30;
                 new RangeEditModal(this.app, startMinutes, (start, end, sort) => {
-                    if (!scheme.days) scheme.days = [];
-                    let dayData = scheme.days.find(day => day.day === d);
-                    if (!dayData) {
-                        dayData = { day: d, ranges: [] };
-                        scheme.days.push(dayData);
-                    }
                     const id = `r_${Date.now()}`;
-                    dayData.ranges.push({ id, start, end, sort });
+                    if (this.planSchemeRepo) {
+                        this.planSchemeRepo.addRange(scheme.id, d, { id, start, end, sort });
+                    } else {
+                        if (!scheme.days) scheme.days = [];
+                        let dayData = scheme.days.find(day => day.day === d);
+                        if (!dayData) {
+                            dayData = { day: d, ranges: [] };
+                            scheme.days.push(dayData);
+                        }
+                        dayData.ranges.push({ id, start, end, sort });
+                    }
                     void (async () => {
                         await this.onSave();
                         this.onOpen();
@@ -193,9 +202,13 @@ export class PlanSchemeModal extends Modal {
                 block.onclick = (e) => {
                     e.stopPropagation();
                     new RangeEditModal(this.app, 0, (start, end, sort) => {
-                        range.start = start;
-                        range.end = end;
-                        range.sort = sort;
+                        if (this.planSchemeRepo) {
+                            this.planSchemeRepo.updateRange(scheme!.id, d, range.id, { start, end, sort });
+                        } else {
+                            range.start = start;
+                            range.end = end;
+                            range.sort = sort;
+                        }
                         void (async () => {
                             await this.onSave();
                             this.onOpen();
@@ -207,7 +220,11 @@ export class PlanSchemeModal extends Modal {
                 delBtn.setText('×');
                 delBtn.onclick = async (e) => {
                     e.stopPropagation();
-                    dayData!.ranges = dayData!.ranges.filter(r => r.id !== range.id);
+                    if (this.planSchemeRepo) {
+                        this.planSchemeRepo.removeRange(scheme!.id, d, range.id);
+                    } else {
+                        dayData!.ranges = dayData!.ranges.filter(r => r.id !== range.id);
+                    }
                     await this.onSave();
                     this.onOpen();
                 };
@@ -229,15 +246,19 @@ export class PlanSchemeManageModal extends Modal {
     private draft: PlanScheme[];
     private listEl!: HTMLElement;
     private onConfirm?: () => void;
+    /** 时间计划方案领域仓库（保存走仓库方法，保证跨视图一致） */
+    private planSchemeRepo?: PlanSchemeRepo;
 
     constructor(
         app: App,
         schemeData: PlanSchemeData,
         onConfirm?: () => void,
+        planSchemeRepo?: PlanSchemeRepo,
     ) {
         super(app);
         this.schemeData = schemeData;
         this.onConfirm = onConfirm;
+        this.planSchemeRepo = planSchemeRepo;
         // 拷贝一份草稿，取消不影响原数据
         this.draft = schemeData.schemes.map(s => ({
             ...s,
@@ -279,9 +300,15 @@ export class PlanSchemeManageModal extends Modal {
                 .setButtonText(t('common.confirm'))
                 .setCta()
                 .onClick(() => {
-                    this.schemeData.schemes = this.draft;
-                    // 兜底：确保默认方案始终存在且位于首位
-                    ensureDefaultScheme(this.schemeData, t('planScheme.defaultName'));
+                    if (this.planSchemeRepo) {
+                        this.planSchemeRepo.replaceAll(this.draft);
+                        // 兜底：确保默认方案始终存在且位于首位
+                        this.planSchemeRepo.ensureDefault(t('planScheme.defaultName'));
+                    } else {
+                        this.schemeData.schemes = this.draft;
+                        // 兜底：确保默认方案始终存在且位于首位
+                        ensureDefaultScheme(this.schemeData, t('planScheme.defaultName'));
+                    }
                     this.onConfirm?.();
                     this.close();
                 }));
@@ -310,8 +337,13 @@ export class PlanSchemeManageModal extends Modal {
                 defaultBtn.addClass('is-active');
             }
             defaultBtn.addEventListener('click', () => {
-                this.schemeData.schemes = this.draft;
-                this.schemeData.defaultSchemeId = scheme.id;
+                if (this.planSchemeRepo) {
+                    this.planSchemeRepo.replaceAll(this.draft);
+                    this.planSchemeRepo.setDefaultSchemeId(scheme.id);
+                } else {
+                    this.schemeData.schemes = this.draft;
+                    this.schemeData.defaultSchemeId = scheme.id;
+                }
                 this.onConfirm?.();
                 this.renderList();
             });
@@ -354,8 +386,13 @@ export class PlanSchemeManageModal extends Modal {
                 switchBtn.addClass('is-active');
             }
             switchBtn.addEventListener('click', () => {
-                this.schemeData.schemes = this.draft;
-                this.schemeData.activeSchemeId = scheme.id;
+                if (this.planSchemeRepo) {
+                    this.planSchemeRepo.replaceAll(this.draft);
+                    this.planSchemeRepo.setActiveSchemeId(scheme.id);
+                } else {
+                    this.schemeData.schemes = this.draft;
+                    this.schemeData.activeSchemeId = scheme.id;
+                }
                 this.onConfirm?.();
                 this.renderList();
             });
