@@ -20,7 +20,7 @@ import { AchievementView } from './views/okr/achievement-view';
 import { ScriptManageView } from './views/okr/script-manage-view';
 import { SceneView } from './views/okr/scene-view';
 import { GtdCollectView } from './views/gtd/collect-view';
-import { GtdOrganizeView } from './views/gtd/organize-view';
+import { GtdConfigView } from './views/gtd/organize-view';
 import { GtdClarifyView } from './views/gtd/clarify-view';
 import { GtdReviewView } from './views/gtd/review-view';
 import type { WorkbenchData } from './datatypes/card';
@@ -38,7 +38,7 @@ export const VIEW_TYPE_MAIN = 'parrot-plan-main-view';
 type PrimaryView = 'pdca' | 'okr' | 'workbench' | 'gtd';
 
 /** 二级视图（tab）标识 */
-type NavTab = 'year' | 'taskPlan' | 'week' | 'today' | 'check' | 'improve' | 'swimlane' | 'workbench' | 'achievement' | 'gtd' | 'okrHome' | 'okrTaskPlan' | 'scene' | 'scriptManage' | 'gtdCollect' | 'gtdOrganize' | 'gtdClarify' | 'gtdReview' | 'gtdEngage';
+type NavTab = 'year' | 'taskPlan' | 'week' | 'today' | 'check' | 'improve' | 'swimlane' | 'workbench' | 'achievement' | 'gtd' | 'okrHome' | 'okrTaskPlan' | 'scene' | 'scriptManage' | 'gtdCollect' | 'gtdConfig' | 'gtdClarify' | 'gtdReview' | 'gtdEngage';
 
 /** 一级视图定义（顶部第一行） */
 const PRIMARY_VIEWS: { id: PrimaryView; labelKey: 'nav.pdca' | 'nav.okr' | 'nav.workbench' | 'nav.gtd' }[] = [
@@ -49,7 +49,7 @@ const PRIMARY_VIEWS: { id: PrimaryView; labelKey: 'nav.pdca' | 'nav.okr' | 'nav.
 ];
 
 /** 二级视图定义（顶部第二行，按一级视图分组；label 存 i18n key，渲染时再求值） */
-const SECONDARY_TABS: Record<PrimaryView, { id: NavTab; labelKey: 'nav.year' | 'nav.taskPlan' | 'nav.week' | 'nav.today' | 'nav.check' | 'nav.improve' | 'nav.projectPicture' | 'nav.workbench' | 'nav.achievement' | 'nav.gtd' | 'nav.okr' | 'nav.scene' | 'nav.scriptManage' | 'nav.gtdCollect' | 'nav.gtdOrganize' | 'nav.gtdClarify' | 'nav.gtdReview' | 'nav.gtdEngage' }[]> = {
+const SECONDARY_TABS: Record<PrimaryView, { id: NavTab; labelKey: 'nav.year' | 'nav.taskPlan' | 'nav.week' | 'nav.today' | 'nav.check' | 'nav.improve' | 'nav.projectPicture' | 'nav.workbench' | 'nav.achievement' | 'nav.gtd' | 'nav.okr' | 'nav.scene' | 'nav.scriptManage' | 'nav.gtdCollect' | 'nav.gtdConfig' | 'nav.gtdClarify' | 'nav.gtdReview' | 'nav.gtdEngage' }[]> = {
     pdca: [
         { id: 'week', labelKey: 'nav.week' },
         { id: 'today', labelKey: 'nav.today' },
@@ -67,10 +67,9 @@ const SECONDARY_TABS: Record<PrimaryView, { id: NavTab; labelKey: 'nav.year' | '
     ],
     gtd: [
         { id: 'gtdCollect', labelKey: 'nav.gtdCollect' },
-        { id: 'gtdOrganize', labelKey: 'nav.gtdOrganize' },
         { id: 'gtdClarify', labelKey: 'nav.gtdClarify' },
         { id: 'gtdReview', labelKey: 'nav.gtdReview' },
-        { id: 'gtdEngage', labelKey: 'nav.gtdEngage' },
+        { id: 'gtdConfig', labelKey: 'nav.gtdConfig' },
     ],
 };
 
@@ -102,7 +101,7 @@ export class MainView extends ItemView {
     private scriptManageView: ScriptManageView;
     private sceneView: SceneView;
     private gtdCollectView: GtdCollectView;
-    private gtdOrganizeView: GtdOrganizeView;
+    private gtdConfigView: GtdConfigView;
     private gtdClarifyView: GtdClarifyView;
     private gtdReviewView: GtdReviewView;
     /** 当前一级视图 */
@@ -259,7 +258,7 @@ export class MainView extends ItemView {
             this.gtdRepo(),
             () => this.weekView.save(),
         );
-        this.gtdOrganizeView = new GtdOrganizeView(
+        this.gtdConfigView = new GtdConfigView(
             this.app,
             this.gtdRepo(),
             () => this.weekView.save(),
@@ -406,7 +405,7 @@ export class MainView extends ItemView {
 
         this.contentRoot.empty();
         // 清除上一次视图残留在共享容器上的视图类，避免多个视图样式叠加导致布局错乱
-        this.contentRoot.removeClass('today-view', 'year-view', 'task-plan-view', 'swimlane-view', 'workbench-view', 'check-view', 'improve-view', 'achievement-view', 'script-manage-view', 'scene-view', 'gtd-collect-view', 'gtd-organize-view', 'gtd-clarify-view', 'gtd-review-view');
+        this.contentRoot.removeClass('today-view', 'year-view', 'task-plan-view', 'swimlane-view', 'workbench-view', 'check-view', 'improve-view', 'achievement-view', 'script-manage-view', 'scene-view', 'gtd-collect-view', 'gtd-config-view', 'gtd-clarify-view', 'gtd-review-view');
 
         // 从其他页面进入周计划视图时，若未选中任务则默认激活「周目标」
         if (this.activeTab === 'week' && this.prevTab !== 'week' && !this.weekView.inboxData.selectedId) {
@@ -484,8 +483,8 @@ export class MainView extends ItemView {
             return;
         }
 
-        if (this.activeTab === 'gtdOrganize') {
-            await this.gtdOrganizeView.renderInto(this.contentRoot);
+        if (this.activeTab === 'gtdConfig') {
+            await this.gtdConfigView.renderInto(this.contentRoot);
             return;
         }
 

@@ -4,7 +4,7 @@ import type { App } from 'obsidian';
 import { Notice } from 'obsidian';
 
 import type { GtdRepo } from '../../repos/gtd-repo';
-import type { InboxData } from '../../datatypes/domain';
+import type { InboxData, InboxItem } from '../../datatypes/domain';
 import type { PlanCategoryData } from '../../shared/plan-category-manager';
 import { renderTaskPanel } from '../../shared/task-panel';
 import { t } from '../../i18n';
@@ -25,6 +25,8 @@ export class GtdClarifyView {
     private selectedItemId?: string;
     /** 选择源面板当前激活的按钮 */
     private activeSourceTab: SourceTab = 'tasks';
+    /** 右栏是否处于「创建新任务」表单模式 */
+    private creatingTask = false;
     /** 当前渲染容器（用于自刷新） */
     private container?: HTMLElement;
 
@@ -129,9 +131,16 @@ export class GtdClarifyView {
         );
     }
 
-    /** 右栏：整理说明 + 确认按钮 */
+    /** 右栏：整理说明 + 确认按钮（或「创建新任务」表单） */
     private renderRight(layout: HTMLElement) {
         const col = layout.createDiv({ cls: 'gtd-clarify-col gtd-clarify-right' });
+
+        // 创建新任务表单模式
+        if (this.creatingTask) {
+            this.renderCreateTaskForm(col);
+            return;
+        }
+
         col.createDiv({ cls: 'gtd-clarify-col-title', text: t('gtd.clarifyRightTitle') });
 
         const selectedTask = this.inboxData.selectedId
@@ -159,7 +168,7 @@ export class GtdClarifyView {
             text: selectedItem ? selectedItem.content : t('gtd.clarifyPreviewEmpty'),
         });
 
-        // 确认按钮（居中）
+        // 底部按钮：确认 + 创建为新任务
         const footer = col.createDiv({ cls: 'gtd-clarify-footer' });
         const confirmBtn = footer.createEl('button', {
             cls: 'gtd-clarify-confirm-btn',
@@ -179,6 +188,108 @@ export class GtdClarifyView {
             void this.save().then(() => {
                 if (this.container) void this.renderInto(this.container);
             });
+        };
+
+        // 创建为新任务：切换到创建表单
+        const createBtn = footer.createEl('button', {
+            cls: 'gtd-clarify-create-btn',
+            text: t('gtd.clarifyCreateTask'),
+        });
+        createBtn.onclick = () => {
+            if (!selectedItem) return;
+            this.creatingTask = true;
+            if (this.container) void this.renderInto(this.container);
+        };
+    }
+
+    /** 右栏：创建新任务表单（标题 + 描述 + 分类 + 确认/取消） */
+    private renderCreateTaskForm(col: HTMLElement) {
+        const selectedTask = this.inboxData.selectedId
+            ? this.inboxData.items.find((it) => it.id === this.inboxData.selectedId && !it.removed)
+            : undefined;
+        const selectedItem = this.selectedItemId
+            ? this.gtdRepo.data.items.find((it) => it.id === this.selectedItemId)
+            : undefined;
+
+        // 标题：有选中任务时显示为「创建新任务（xx 的子任务）」
+        col.createDiv({
+            cls: 'gtd-clarify-col-title',
+            text: selectedTask
+                ? t('gtd.clarifyCreateSubTitle', { name: selectedTask.title })
+                : t('gtd.clarifyCreateTitle'),
+        });
+
+        const form = col.createDiv({ cls: 'gtd-clarify-create-form' });
+
+        // 标题输入框
+        form.createDiv({ cls: 'gtd-clarify-create-label', text: t('gtd.clarifyCreateNameLabel') });
+        const nameInput = form.createEl('input', {
+            cls: 'gtd-clarify-create-input',
+            type: 'text',
+            attr: { placeholder: t('gtd.clarifyCreateNamePlaceholder') },
+        });
+
+        // 描述：预填收集记录内容（可编辑）
+        form.createDiv({ cls: 'gtd-clarify-create-label', text: t('gtd.clarifyCreateDescLabel') });
+        const descInput = form.createEl('textarea', { cls: 'gtd-clarify-create-textarea' });
+        descInput.value = selectedItem ? selectedItem.content : '';
+
+        // 分类下拉
+        form.createDiv({ cls: 'gtd-clarify-create-label', text: t('gtd.clarifyCreateCategoryLabel') });
+        const catSelect = form.createEl('select', { cls: 'gtd-clarify-create-select' });
+        for (const cat of this.categoryData.categories) {
+            catSelect.createEl('option', { text: cat.label, value: cat.id });
+        }
+
+        // 底部按钮：确认 + 取消
+        const footer = col.createDiv({ cls: 'gtd-clarify-footer' });
+        const confirmBtn = footer.createEl('button', {
+            cls: 'gtd-clarify-confirm-btn',
+            text: t('gtd.clarifyCreateConfirm'),
+        });
+        confirmBtn.onclick = () => {
+            const title = nameInput.value.trim();
+            if (!title) {
+                new Notice(t('gtd.clarifyCreateNameRequired'));
+                return;
+            }
+            if (!selectedItem) return;
+
+            // 创建新任务（有选中任务时作为其子任务）
+            const item: InboxItem = {
+                id: `inbox_${Date.now()}`,
+                title,
+                description: descInput.value.trim(),
+                categoryId: catSelect.value || undefined,
+                createdAt: Date.now(),
+            };
+            if (selectedTask) {
+                item.parentId = selectedTask.id;
+                // 确保父任务展开，便于看到新子任务
+                if (this.inboxData.collapsedIds) {
+                    this.inboxData.collapsedIds = this.inboxData.collapsedIds.filter(id => id !== selectedTask.id);
+                }
+            }
+            this.inboxData.items.push(item);
+
+            // 标记收集记录为已处理
+            selectedItem.status = 'processed';
+
+            this.creatingTask = false;
+            this.selectedItemId = undefined;
+            new Notice(t('gtd.clarifyCreateResult', { name: title }));
+            void this.save().then(() => {
+                if (this.container) void this.renderInto(this.container);
+            });
+        };
+
+        const cancelBtn = footer.createEl('button', {
+            cls: 'gtd-clarify-cancel-btn',
+            text: t('gtd.clarifyCreateCancel'),
+        });
+        cancelBtn.onclick = () => {
+            this.creatingTask = false;
+            if (this.container) void this.renderInto(this.container);
         };
     }
 }

@@ -6953,8 +6953,8 @@
     font-size: 13px;
 }
 
-/* ===== GTD 组织视图 ===== */
-.gtd-organize-view {
+/* ===== GTD 配置视图 ===== */
+.gtd-config-view {
     height: 100%;
     overflow: hidden;
 }
@@ -7248,6 +7248,7 @@
 .gtd-clarify-footer {
     display: flex;
     justify-content: center;
+    gap: 10px;
 }
 
 .gtd-clarify-confirm-btn {
@@ -7258,6 +7259,53 @@
     color: var(--text-on-accent);
     cursor: pointer;
     font-size: 14px;
+}
+
+/* 创建为新任务按钮：位于确认按钮右侧 */
+.gtd-clarify-create-btn {
+    padding: 8px 24px;
+    border-radius: 6px;
+    border: 1px solid var(--interactive-accent);
+    background: var(--background-primary);
+    color: var(--interactive-accent);
+    cursor: pointer;
+    font-size: 14px;
+}
+
+/* 取消按钮 */
+.gtd-clarify-cancel-btn {
+    padding: 8px 24px;
+    border-radius: 6px;
+    border: 1px solid var(--background-modifier-border);
+    background: var(--background-secondary);
+    color: var(--text-normal);
+    cursor: pointer;
+    font-size: 14px;
+}
+
+/* 创建新任务表单 */
+.gtd-clarify-create-form {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 16px;
+}
+
+.gtd-clarify-create-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-muted);
+}
+
+.gtd-clarify-create-input,
+.gtd-clarify-create-select {
+    width: 100%;
+}
+
+.gtd-clarify-create-textarea {
+    width: 100%;
+    min-height: 80px;
+    resize: vertical;
 }
 
 .gtd-clarify-empty {

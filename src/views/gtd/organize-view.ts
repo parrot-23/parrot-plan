@@ -7,7 +7,7 @@ import type { GtdRepo } from '../../repos/gtd-repo';
 import { t } from '../../i18n';
 
 /** 左侧菜单项标识 */
-type OrganizeMenu = 'tasks' | 'settings';
+type OrganizeMenu = 'tasks' | 'sources';
 
 /** 可添加的源类型（顺序即下拉/按钮顺序） */
 const SOURCE_TYPES: GtdSourceType[] = ['okr', 'pdca', 'media', 'finance', 'intel'];
@@ -22,9 +22,9 @@ const SOURCE_LABEL_KEY: Record<GtdSourceType, 'gtd.sourceOkr' | 'gtd.sourcePdca'
 };
 
 /**
- * 组织视图：与 WorkbenchView 一致，通过 renderInto 渲染到指定容器。
+ * 配置视图：与 WorkbenchView 一致，通过 renderInto 渲染到指定容器。
  */
-export class GtdOrganizeView {
+export class GtdConfigView {
     private app: App;
     private gtdRepo: GtdRepo;
     private save: () => Promise<void>;
@@ -42,15 +42,15 @@ export class GtdOrganizeView {
     async renderInto(container: HTMLElement): Promise<void> {
         this.container = container;
         container.empty();
-        container.addClass('gtd-organize-view');
+        container.addClass('gtd-config-view');
 
         const layout = container.createDiv({ cls: 'gtd-organize-layout' });
 
         // 左侧菜单
         const menu = layout.createDiv({ cls: 'gtd-organize-menu' });
-        const menuItems: { id: OrganizeMenu; labelKey: 'gtd.organizeTasks' | 'gtd.organizeSettings' }[] = [
+        const menuItems: { id: OrganizeMenu; labelKey: 'gtd.organizeTasks' | 'gtd.organizeManageSources' }[] = [
             { id: 'tasks', labelKey: 'gtd.organizeTasks' },
-            { id: 'settings', labelKey: 'gtd.organizeSettings' },
+            { id: 'sources', labelKey: 'gtd.organizeManageSources' },
         ];
         for (const item of menuItems) {
             const btn = menu.createEl('button', {
@@ -71,7 +71,7 @@ export class GtdOrganizeView {
         if (this.activeMenu === 'tasks') {
             this.renderTasks(content);
         } else {
-            this.renderSettings(content);
+            this.renderSources(content);
         }
     }
 
@@ -80,8 +80,8 @@ export class GtdOrganizeView {
         container.createDiv({ cls: 'gtd-organize-tasks-hint', text: t('gtd.organizeTasksHint') });
     }
 
-    /** 设置页：源管理 */
-    private renderSettings(container: HTMLElement) {
+    /** 管理源页：源管理 */
+    private renderSources(container: HTMLElement) {
         const block = container.createDiv({ cls: 'gtd-organize-block' });
         block.createDiv({ cls: 'gtd-organize-block-title', text: t('gtd.sourceBlockTitle') });
 
