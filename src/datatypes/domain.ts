@@ -26,6 +26,16 @@ export interface EventBlock {
     weekKey?: WeekKey;
 }
 
+/** 进行中任务（日执行视图点击「开始任务」后写入，随主数据一起持久化） */
+export interface RunningTask {
+    /** 来源收集盒任务 id */
+    inboxId: string;
+    /** 起始时间（当天分钟数） */
+    start: number;
+    /** 所属日期键（如 2026-10-16） */
+    dayKey: string;
+}
+
 /** 执行记录（日执行视图写入） */
 export interface ExecutionRecord {
     id: string;

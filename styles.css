@@ -4278,6 +4278,69 @@
     outline-offset: -1px;
 }
 
+/* 进行中任务进度方框（位于任务层级方框下方，仅选中进行中任务时显示） */
+.today-running-progress-box {
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 10px;
+    background: var(--background-secondary);
+    overflow: hidden;
+}
+
+.today-running-progress-title {
+    flex-shrink: 0;
+    padding: 10px 14px;
+    font-size: 14px;
+    font-weight: 600;
+    border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.today-running-progress-body {
+    padding: 12px 14px;
+}
+
+/* 进度条：左侧起始时间，中间进度轨道，右侧当前（末尾）时间 */
+.today-running-progress-bar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.today-running-progress-start,
+.today-running-progress-end {
+    flex-shrink: 0;
+    font-size: 13px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    color: var(--text-normal);
+}
+
+.today-running-progress-track {
+    flex: 1;
+    min-width: 0;
+    height: 10px;
+    border-radius: 5px;
+    background: var(--background-modifier-border);
+    overflow: hidden;
+}
+
+.today-running-progress-fill {
+    width: 100%;
+    height: 100%;
+    border-radius: 5px;
+    /* 斜向条纹背景，突出进行中 */
+    background-image: repeating-linear-gradient(
+        45deg,
+        var(--interactive-accent) 0,
+        var(--interactive-accent) 6px,
+        color-mix(in srgb, var(--interactive-accent) 45%, #ffffff) 6px,
+        color-mix(in srgb, var(--interactive-accent) 45%, #ffffff) 12px
+    );
+    background-color: var(--interactive-accent);
+}
+
 /* 事件状态气泡：贴在区块内部左侧（图标 + 文字，不使用颜色分类） */
 .event-status-bubble {
     position: absolute;

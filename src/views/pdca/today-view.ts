@@ -7,7 +7,7 @@ import type { InboxData, InboxItem, ChecklistData, StepsData, HabitData, FileDat
 import { SECTION_TYPE_META, OKR_CONDITION_META } from '../../datatypes/domain';
 import { getCurrentDayKey, getISOWeek, makeDayKey, makeDayKeyFromWeek, makeWeekKey } from '../../shared/plan-data';
 import type { DailyRange } from '../../shared/plan-data';
-import type { EventBlock, ExecutionRecord } from '../../datatypes/domain';
+import type { EventBlock, ExecutionRecord, RunningTask } from '../../datatypes/domain';
 import { getWeekDays, t } from '../../i18n';
 import { EVENT_STATUS_EMOJI, EVENT_STATUS_LABEL_KEY, getEventStatus, type EventStatus } from '../../datatypes/domain';
 import type { PdcaRepo } from '../../repos/pdca-repo';
@@ -65,13 +65,16 @@ export class TodayView {
     private executingEventId?: string;
     /**
      * 当前「进行中」的任务（点击「开始任务」后设置）。
-     * 在时间轴上以透明色块呈现，点击可选中并「完成」。
+     * 在时间轴上以透明色块呈现，点击可选中并「完成」/「中断」。
+     * 随主数据一起持久化（通过 setRunningTask 写回）。
      */
-    private runningTask?: { inboxId: string; start: number; dayKey: string };
-    /** 是否选中了「进行中任务」色块（用于操作区显示「完成」按钮） */
+    private runningTask?: RunningTask;
+    /** 是否选中了「进行中任务」色块（用于操作区显示「完成 / 中断」按钮） */
     private selectedRunningTask = false;
     /** 写回「正在执行」事件 id 的回调（用于持久化，随插件数据一起保存） */
     private setExecutingEventId?: (id: string | undefined) => void;
+    /** 写回「进行中任务」的回调（用于持久化，随插件数据一起保存） */
+    private setRunningTask?: (task: RunningTask | undefined) => void;
     /** 跳转到项目全景图的回调（由 MainView 注入，负责切换 tab 并选中当前项目） */
     private onNavigateToProjectPicture?: (projectId: string) => void;
     /** 获取当前激活方案的单日区间配置（用于时间轴左侧分类色条） */
@@ -91,6 +94,8 @@ export class TodayView {
         setExecutingEventId?: (id: string | undefined) => void,
         onNavigateToProjectPicture?: (projectId: string) => void,
         getPlanSchemeDays?: () => DailyRange[],
+        initialRunningTask?: RunningTask,
+        setRunningTask?: (task: RunningTask | undefined) => void,
     ) {
         this.app = app;
         this.inboxData = inboxData;
@@ -103,6 +108,8 @@ export class TodayView {
         this.setExecutingEventId = setExecutingEventId;
         this.onNavigateToProjectPicture = onNavigateToProjectPicture;
         this.getPlanSchemeDays = getPlanSchemeDays ?? (() => []);
+        this.runningTask = initialRunningTask;
+        this.setRunningTask = setRunningTask;
     }
 
     async renderInto(container: HTMLElement): Promise<void> {
@@ -135,6 +142,8 @@ export class TodayView {
         const centerPanel = container.createDiv({ cls: 'today-center-panel' });
         this.renderDateBox(centerPanel);
         this.renderHierarchyBox(centerPanel);
+        // 进行中任务进度方框（位于任务层级方框下方）
+        this.renderRunningProgressBox(centerPanel);
         // OKR 执行进度方框（位于任务层级方框与任务详情方框之间）
         this.renderOkrProgressBox(centerPanel);
         // 新增非计划事件模式：在任务详情方框的位置展示「执行非计划事件方框」
@@ -243,10 +252,11 @@ export class TodayView {
             this.clearAllSelection();
         };
 
-        // 中间：当前时段任务卡片 + 正在执行的任务卡片（并排，当前时段任务在开头）
+        // 中间：当前时段任务卡片 + 正在执行的任务卡片 + 进行中任务卡片（并排，当前时段任务在开头）
         const midSide = box.createDiv({ cls: 'today-date-mid' });
         this.renderCurrentSlotCard(midSide);
         this.renderExecutingCard(midSide);
+        this.renderRunningCard(midSide);
 
         // 右侧：日目标完成情况（大卡片 + 两张小卡片）
         const stats = this.computeDayStats();
@@ -323,6 +333,46 @@ export class TodayView {
         card.onclick = () => {
             this.toggleEventSelection(ev.id);
         };
+    }
+
+    /**
+     * 渲染「进行中」任务卡片（位于日期信息旁边）。
+     * 点击「开始任务」后展示任务内容与起始时间，背景使用斜向条纹突出进行中；无则不显示。
+     */
+    private renderRunningCard(box: HTMLElement) {
+        const running = this.runningTask;
+        if (!running) return;
+        // 仅当进行中任务属于当前查看日期时显示
+        const { dayKey } = this.getViewDayInfo();
+        if (running.dayKey !== dayKey) return;
+
+        const item = this.inboxData.items.find(i => i.id === running.inboxId && !i.removed);
+        if (!item) return;
+
+        const card = box.createDiv({ cls: 'today-executing-card today-running-card' });
+        const cat = item.categoryId
+            ? this.categoryData.categories.find(c => c.id === item.categoryId)
+            : undefined;
+        card.setCssProps({ '--exec-color': cat?.color ?? '#4c8dff' });
+        card.createDiv({ cls: 'today-executing-label', text: t('today.runningLabel') });
+        card.createDiv({ cls: 'today-executing-name', text: item.title });
+        card.createDiv({
+            cls: 'today-executing-time',
+            text: `${formatMinutes(running.start)} - ${formatMinutes(this.nowMinutes())}`,
+        });
+
+        // 点击卡片 → 选中该进行中任务，同步更新任务层级 / 进度方框 / 操作按钮
+        card.addClass('is-clickable');
+        if (this.selectedRunningTask) card.addClass('is-selected');
+        card.onclick = () => {
+            this.toggleRunningTaskSelection();
+        };
+    }
+
+    /** 当前时刻换算为当天分钟数 */
+    private nowMinutes(): number {
+        const now = new Date();
+        return now.getHours() * 60 + now.getMinutes();
     }
 
     /**
@@ -517,6 +567,33 @@ export class TodayView {
 
             row.createSpan({ cls: 'today-hierarchy-name', text: item.title });
         });
+    }
+
+    /**
+     * 进行中任务进度方框：仅在选中「进行中任务」时显示（位于任务层级方框下方）。
+     * 从左到右展示进度：左侧为起始时间点，右侧为不断增加的末尾时间点。
+     */
+    private renderRunningProgressBox(panel: HTMLElement) {
+        const running = this.runningTask;
+        if (!running || !this.selectedRunningTask) return;
+        // 仅当进行中任务属于当前查看日期时显示
+        const { dayKey } = this.getViewDayInfo();
+        if (running.dayKey !== dayKey) return;
+
+        const item = this.inboxData.items.find(i => i.id === running.inboxId && !i.removed);
+        if (!item) return;
+
+        const box = panel.createDiv({ cls: 'today-running-progress-box' });
+        box.createDiv({ cls: 'today-running-progress-title', text: t('today.runningProgressTitle') });
+
+        const body = box.createDiv({ cls: 'today-running-progress-body' });
+
+        // 进度条：左侧起始时间，右侧当前（末尾）时间
+        const bar = body.createDiv({ cls: 'today-running-progress-bar' });
+        bar.createSpan({ cls: 'today-running-progress-start', text: formatMinutes(running.start) });
+        const track = bar.createDiv({ cls: 'today-running-progress-track' });
+        track.createDiv({ cls: 'today-running-progress-fill' });
+        bar.createSpan({ cls: 'today-running-progress-end', text: formatMinutes(this.nowMinutes()) });
     }
 
     /**
@@ -974,7 +1051,7 @@ export class TodayView {
         const selectedItem = this.getSelectedItem();
         const row = panel.createDiv({ cls: 'today-action-row' });
 
-        // 选中「进行中任务」色块：显示「完成」按钮
+        // 选中「进行中任务」色块：显示「完成 / 中断」按钮（两者都会写入一条执行记录）
         if (this.selectedRunningTask && this.runningTask) {
             const finishBtn = row.createEl('button', {
                 cls: 'today-action-btn mod-cta',
@@ -982,6 +1059,14 @@ export class TodayView {
             });
             finishBtn.onclick = () => {
                 void this.finishRunningTask();
+            };
+
+            const interruptBtn = row.createEl('button', {
+                cls: 'today-action-btn mod-warning',
+                text: t('today.interruptRunning'),
+            });
+            interruptBtn.onclick = () => {
+                void this.interruptRunningTask();
             };
             return;
         }
@@ -1194,10 +1279,13 @@ export class TodayView {
             start: now.getHours() * 60 + now.getMinutes(),
             dayKey,
         };
+        // 写回插件数据源，随 saveAll 一起持久化
+        this.setRunningTask?.(this.runningTask);
         // 开始后自动选中该进行中任务，便于直接点击「完成」
         this.selectedRunningTask = true;
         this.selectedEventId = undefined;
         this.selectedExecId = undefined;
+        void this.save();
         void this.refresh();
     }
 
@@ -1231,9 +1319,36 @@ export class TodayView {
         });
         const item = this.inboxData.items.find(i => i.id === running.inboxId && !i.removed);
         this.runningTask = undefined;
+        this.setRunningTask?.(undefined);
         this.selectedRunningTask = false;
         await this.save();
         new Notice(t('today.completeDone', { title: item?.title ?? '' }));
+        await this.refresh();
+    }
+
+    /** 中断进行中任务：写入执行记录（start=开始时刻，end=当前时刻），并清除进行中状态 */
+    private async interruptRunningTask(): Promise<void> {
+        const running = this.runningTask;
+        if (!running) return;
+
+        const now = new Date();
+        const nowMinutes = now.getHours() * 60 + now.getMinutes();
+        const { day, weekKey } = this.getViewDayInfo();
+
+        this.pdcaRepo.addExecution({
+            id: `exec_${Date.now()}`,
+            inboxId: running.inboxId,
+            day,
+            start: running.start,
+            end: Math.max(running.start, nowMinutes),
+            weekKey,
+        });
+        const item = this.inboxData.items.find(i => i.id === running.inboxId && !i.removed);
+        this.runningTask = undefined;
+        this.setRunningTask?.(undefined);
+        this.selectedRunningTask = false;
+        await this.save();
+        new Notice(t('today.interruptDone', { title: item?.title ?? '' }));
         await this.refresh();
     }
 

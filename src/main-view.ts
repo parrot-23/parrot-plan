@@ -6,7 +6,7 @@ import type { PlanCategoryData } from './shared/plan-category-manager';
 import type { DayTemplateData } from './shared/template-manager';
 import type { InboxData } from './datatypes/domain';
 import { WeekScheduleView } from './views/pdca/week-schedule-view';
-import type { EventBlock, ExecutionRecord } from './datatypes/domain';
+import type { EventBlock, ExecutionRecord, RunningTask } from './datatypes/domain';
 import { YearView } from './views/pdca/year-view';
 import { TaskPlanView } from './views/pdca/task-plan-view';
 import { TodayView } from './views/pdca/today-view';
@@ -134,6 +134,7 @@ export class MainView extends ItemView {
         gtdData: GtdData,
         cacheDirName: string,
         executingEventId?: string,
+        runningTask?: RunningTask,
     ) {
         super(leaf);
         this.plugin = plugin;
@@ -184,6 +185,12 @@ export class MainView extends ItemView {
             },
             undefined,
             () => this.weekView.getPlanSchemeDays(),
+            runningTask,
+            (task) => {
+                // 写回插件数据源，随 saveAll 一起持久化
+                const p = this.plugin as Plugin & { data?: { runningTask?: RunningTask } };
+                if (p.data) p.data.runningTask = task;
+            },
         );
         this.checkView = new CheckView(
             this.app,

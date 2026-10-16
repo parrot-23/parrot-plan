@@ -8,7 +8,7 @@ import { getCurrentWeekKey, ensureDefaultScheme, DEFAULT_WEEK_RANGE } from '../s
 import type { PlanCategoryData } from '../shared/plan-category-manager';
 import { ensureUncategorizedCategory } from '../shared/plan-category-manager';
 import type { DayTemplateData } from '../shared/template-manager';
-import type { EventBlock, ExecutionRecord, InboxData, ImprovementData } from '../datatypes/domain';
+import type { EventBlock, ExecutionRecord, InboxData, ImprovementData, RunningTask } from '../datatypes/domain';
 import { DEFAULT_INBOX_DATA, DEFAULT_IMPROVEMENT_DATA } from '../datatypes/domain';
 import type { WorkbenchData } from '../datatypes/card';
 import { defaultWorkbenchData } from '../datatypes/card';
@@ -38,6 +38,8 @@ export interface PluginData {
     improvementData: ImprovementData;
     /** 当前正在执行的事件 id（日执行视图顶部执行卡片，随主数据一起持久化） */
     executingEventId?: string;
+    /** 当前进行中的任务（日执行视图点击「开始任务」后写入，随主数据一起持久化） */
+    runningTask?: RunningTask;
 }
 
 /**
@@ -86,6 +88,7 @@ export class BaseRepo {
             gtdData: d.gtdData,
             improvementData: d.improvementData,
             executingEventId: d.executingEventId,
+            runningTask: d.runningTask,
             cacheDirName: this.cacheDirName,
             cacheEnabled: this.cacheEnabled,
             helpDismissed: this.helpDismissed,
@@ -191,6 +194,8 @@ export class BaseRepo {
         const initialExecutingEventId = typeof savedData.executingEventId === 'string'
             ? savedData.executingEventId
             : undefined;
+        // 当前进行中的任务（兼容旧数据：默认无）
+        const initialRunningTask = parseRunningTask(savedData.runningTask);
 
         // 存入仓库实例，作为唯一数据源（视图重建时从这里读取最新数据）
         this.data = {
@@ -206,6 +211,7 @@ export class BaseRepo {
             gtdData: initialGtdData,
             improvementData: initialImprovementData,
             executingEventId: initialExecutingEventId,
+            runningTask: initialRunningTask,
         };
     }
 
@@ -213,6 +219,16 @@ export class BaseRepo {
     async clearAll(): Promise<void> {
         await this.plugin.saveData({});
     }
+}
+
+/** 解析持久化的进行中任务（兼容旧数据 / 非法数据：返回 undefined） */
+function parseRunningTask(raw: unknown): RunningTask | undefined {
+    if (!raw || typeof raw !== 'object') return undefined;
+    const r = raw as Record<string, unknown>;
+    if (typeof r.inboxId !== 'string' || typeof r.start !== 'number' || typeof r.dayKey !== 'string') {
+        return undefined;
+    }
+    return { inboxId: r.inboxId, start: r.start, dayKey: r.dayKey };
 }
 
 /** 迁移旧版周区间数据：把旧的 days 归入当前周的 weeks */
