@@ -234,6 +234,7 @@ export class MainView extends ItemView {
             this.weekView.planCategoryData,
             () => this.weekView.save(),
             this.inboxRepo(),
+            () => this.weekView.executions,
         );
         this.achievementView = new AchievementView(
             this.app,
@@ -301,6 +302,21 @@ export class MainView extends ItemView {
     /** 从插件实例获取时间计划方案领域仓库 */
     private planSchemeRepo(): PlanSchemeRepo {
         return (this.plugin as Plugin & { planSchemeRepo: PlanSchemeRepo }).planSchemeRepo;
+    }
+
+    /** 是否启用剧本模式（关闭时隐藏「剧本场景」「剧本管理」二级视图） */
+    private isScriptModeEnabled(): boolean {
+        return (this.plugin as Plugin & { scriptModeEnabled?: boolean }).scriptModeEnabled === true;
+    }
+
+    /** 剧本模式关闭时需要隐藏的二级视图 */
+    private static readonly SCRIPT_MODE_TABS: NavTab[] = ['scene', 'scriptManage'];
+
+    /** 当前一级视图下应展示的二级视图（按剧本模式开关过滤） */
+    private visibleSecondaryTabs(): { id: NavTab; labelKey: Parameters<typeof t>[0] }[] {
+        const tabs = SECONDARY_TABS[this.activePrimary];
+        if (this.isScriptModeEnabled()) return tabs;
+        return tabs.filter(tab => !MainView.SCRIPT_MODE_TABS.includes(tab.id));
     }
 
     getViewType(): string {
@@ -379,7 +395,7 @@ export class MainView extends ItemView {
     private renderSecondaryTabs() {
         if (!this.secondaryRow) return;
         this.secondaryRow.empty();
-        for (const tab of SECONDARY_TABS[this.activePrimary]) {
+        for (const tab of this.visibleSecondaryTabs()) {
             // 工作台二级视图：标签显示当前激活布局的名称（与布局管理保持一致）
             const label = tab.id === 'workbench'
                 ? this.workbenchView.getActiveLayoutName()
@@ -401,6 +417,12 @@ export class MainView extends ItemView {
 
     /** 根据当前 tab 渲染内容区 */
     private async renderContent() {
+        // 剧本模式关闭时，若当前停留在被隐藏的二级视图，回退到默认二级视图
+        if (!this.isScriptModeEnabled() && MainView.SCRIPT_MODE_TABS.includes(this.activeTab)) {
+            this.activeTab = DEFAULT_TAB[this.activePrimary];
+            this.lastTabByPrimary[this.activePrimary] = this.activeTab;
+            this.renderSecondaryTabs();
+        }
         log('MainView.renderContent', {
             tab: this.activeTab,
             events: this.weekView.events.length,

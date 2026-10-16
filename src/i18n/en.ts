@@ -128,6 +128,11 @@ export const en: I18nMessages = {
     'taskPlan.habitTime': 'Habit time',
     'taskPlan.plannedWeeks': 'Planned weeks',
     'taskPlan.emptyValue': '—',
+    'taskPlan.statsTitle': 'Statistics',
+    'taskPlan.statsExecCount': 'Executions',
+    'taskPlan.statsTotalDuration': 'Total duration',
+    'taskPlan.durationHourMinute': '{hours} h {minutes} min',
+    'taskPlan.durationMinute': '{minutes} min',
 
     // OKR info
     'okr.title': 'OKR Info',
@@ -149,6 +154,8 @@ export const en: I18nMessages = {
     'okr.progressTarget': 'Target',
     'okr.progressCurrent': 'Current',
     'okr.progressPercent': '{percent}%',
+    'okr.edit': 'Edit',
+    'okr.exitEdit': 'Exit',
 
     // Collection basket
     'basket.title': 'Collection Basket',
@@ -359,6 +366,9 @@ export const en: I18nMessages = {
     'settings.cacheEnabledDesc': 'When disabled, the cache feature will no longer be used.',
     'settings.cacheDirName': 'Cache folder name',
     'settings.cacheDirNameDesc': 'Name of the folder used to store plugin cache files. Defaults to parrotPlanCache.',
+    'settings.scriptMode': 'Script mode',
+    'settings.scriptModeEnabled': 'Enable script mode',
+    'settings.scriptModeEnabledDesc': 'When disabled, the "Scene" and "Script management" secondary views will be hidden.',
     'settings.data': 'Data',
     'settings.clearData': 'Clear data',
     'settings.clearDataDesc': 'Delete all tasks, events, time ranges and settings, restoring defaults. This cannot be undone.',

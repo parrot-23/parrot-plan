@@ -2,7 +2,7 @@ import type { App } from 'obsidian';
 import { Modal, Notice, Setting, setIcon } from 'obsidian';
 
 import type { PlanCategoryData } from '../../shared/plan-category-manager';
-import type { InboxData, InboxItem, Section, ChecklistData, StepsData, HabitData, FileData, OkrConditionType, BasketItem, ImprovementEntry } from '../../datatypes/domain';
+import type { InboxData, InboxItem, Section, ChecklistData, StepsData, HabitData, FileData, OkrConditionType, BasketItem, ImprovementEntry, ExecutionRecord } from '../../datatypes/domain';
 import type { InboxRepo } from '../../repos/inbox-repo';
 import { SECTION_TYPE_META, OKR_CONDITION_META } from '../../datatypes/domain';
 import { renderTaskPanel, FilePathSuggest } from '../../shared/task-panel';
@@ -23,14 +23,20 @@ export class OkrTaskPlanView {
     private addPanelCloseHandler?: (e: MouseEvent) => void;
     /** 当前处于编辑态的板块 id（null 表示无） */
     private editingSectionId: string | null = null;
-    /** OKR 进度方框容器（OKR 信息变更时同步刷新进度） */
-    private progressWrap?: HTMLElement;
+    /** OKR 方框容器（进度/编辑态切换时自刷新） */
+    private okrWrap?: HTMLElement;
+    /** OKR 方框是否处于编辑态（true 显示可编辑条目，false 显示进度） */
+    private okrEditMode = false;
+    /** 上次渲染时选中的任务 id（用于切换任务时退出 OKR 编辑态） */
+    private lastOkrSelectedId?: string;
     /** 收集篮子是否处于「整理」模式 */
     private basketOrganizeMode = false;
     /** 整理模式下选中的收集篮子条目 id */
     private selectedBasketEntryId?: string;
     /** 收集盒领域仓库（任务面板增删改走仓库方法，保证跨视图一致） */
     private inboxRepo?: InboxRepo;
+    /** 执行记录访问器（用于统计当前任务的执行次数与总时长） */
+    private getExecutions: () => ExecutionRecord[];
 
     constructor(
         app: App,
@@ -38,12 +44,14 @@ export class OkrTaskPlanView {
         categoryData: PlanCategoryData,
         save: () => Promise<void>,
         inboxRepo?: InboxRepo,
+        getExecutions?: () => ExecutionRecord[],
     ) {
         this.app = app;
         this.inboxData = inboxData;
         this.categoryData = categoryData;
         this.save = save;
         this.inboxRepo = inboxRepo;
+        this.getExecutions = getExecutions ?? (() => []);
     }
 
     async renderInto(container: HTMLElement): Promise<void> {
@@ -76,18 +84,23 @@ export class OkrTaskPlanView {
             { enableProjectFocus: true, inboxRepo: this.inboxRepo },
         );
 
-        // 右侧：内容区（当前选中任务的信息表单 + OKR 信息 + 板块信息）
+        // 右侧：内容区（当前选中任务的信息表单 + 统计信息 + OKR 信息 + 板块信息）
         const contentPanel = container.createDiv({ cls: 'task-plan-content-panel' });
         this.renderInfoForm(contentPanel);
 
-        // OKR 信息方框（当前选中任务的 OKR 条件）
-        const okrWrap = contentPanel.createDiv({ cls: 'okr-wrap' });
-        this.renderOkrBox(okrWrap);
+        // 统计信息方框（当前选中任务的执行次数与总执行时长）
+        const statsWrap = contentPanel.createDiv({ cls: 'okr-stats-wrap' });
+        this.renderStatsBox(statsWrap);
 
-        // 进度方框（当前选中任务的 OKR 条件完成进度）
-        const progressWrap = contentPanel.createDiv({ cls: 'okr-progress-wrap' });
-        this.progressWrap = progressWrap;
-        this.renderProgressBox(progressWrap);
+        // OKR 方框（进度展示 + 编辑态切换，合并原「OKR 信息」与「OKR 进度」两个方框）
+        // 切换选中任务时退出编辑态，避免编辑态残留到另一个任务
+        if (this.lastOkrSelectedId !== this.inboxData.selectedId) {
+            this.okrEditMode = false;
+            this.lastOkrSelectedId = this.inboxData.selectedId;
+        }
+        const okrWrap = contentPanel.createDiv({ cls: 'okr-wrap' });
+        this.okrWrap = okrWrap;
+        this.renderOkrBox(okrWrap);
 
         // 收集篮子方框（当前选中任务的收集内容，供 GTD 梳理阶段放置笔记）
         const basketWrap = contentPanel.createDiv({ cls: 'okr-basket-wrap' });
@@ -500,7 +513,60 @@ export class OkrTaskPlanView {
         return SECTION_TYPE_META[type].icon;
     }
 
-    /** OKR 信息方框：当前选中任务的 OKR 条件列表（每行：条件类型 + 目标值） */
+    /**
+     * 统计信息方框：当前选中任务的执行统计（已执行次数、总执行时长）。
+     * 数据来源为执行记录（按 inboxId 聚合），无选中任务时不渲染。
+     */
+    private renderStatsBox(wrap: HTMLElement): void {
+        wrap.empty();
+
+        const selectedId = this.inboxData.selectedId;
+        const item = selectedId
+            ? this.inboxData.items.find(i => i.id === selectedId && !i.removed)
+            : undefined;
+        if (!item) return;
+
+        // 按任务聚合执行记录：次数 = 记录条数，时长 = 各条 end-start 之和（分钟）
+        const execs = this.getExecutions().filter(ex => ex.inboxId === item.id);
+        const count = execs.length;
+        const totalMinutes = execs.reduce(
+            (sum, ex) => sum + Math.max(0, (ex.end ?? ex.start) - ex.start),
+            0,
+        );
+
+        const area = wrap.createDiv({ cls: 'swimlane-section-area okr-stats-area' });
+        const header = area.createDiv({ cls: 'swimlane-section-area-header' });
+        header.createDiv({ cls: 'swimlane-section-area-title', text: t('taskPlan.statsTitle') });
+
+        const body = area.createDiv({ cls: 'okr-stats-body' });
+
+        // 已执行次数
+        const countRow = body.createDiv({ cls: 'okr-stats-row' });
+        countRow.createSpan({ cls: 'okr-stats-label', text: t('taskPlan.statsExecCount') });
+        countRow.createSpan({ cls: 'okr-stats-value', text: `${count} ${t('okr.unitTimes')}` });
+
+        // 总执行时长
+        const durationRow = body.createDiv({ cls: 'okr-stats-row' });
+        durationRow.createSpan({ cls: 'okr-stats-label', text: t('taskPlan.statsTotalDuration') });
+        durationRow.createSpan({ cls: 'okr-stats-value', text: this.formatDuration(totalMinutes) });
+    }
+
+    /** 将分钟数格式化为「X 小时 Y 分钟」/「Y 分钟」 */
+    private formatDuration(minutes: number): string {
+        const total = Math.max(0, Math.round(minutes));
+        const hours = Math.floor(total / 60);
+        const mins = total % 60;
+        if (hours > 0) {
+            return t('taskPlan.durationHourMinute', { hours: String(hours), minutes: String(mins) });
+        }
+        return t('taskPlan.durationMinute', { minutes: String(mins) });
+    }
+
+    /**
+     * OKR 方框（合并原「OKR 信息」与「OKR 进度」）：
+     * - 默认展示进度内容，右上角为「编辑」按钮；
+     * - 点击「编辑」进入编辑态，展示可编辑条目，右上角为「退出」按钮。
+     */
     private renderOkrBox(wrap: HTMLElement): void {
         wrap.empty();
 
@@ -512,13 +578,37 @@ export class OkrTaskPlanView {
 
         const area = wrap.createDiv({ cls: 'swimlane-section-area okr-area' });
         const header = area.createDiv({ cls: 'swimlane-section-area-header' });
-        header.createDiv({ cls: 'swimlane-section-area-title', text: t('okr.title') });
-        const addBtn = header.createEl('button', { cls: 'okr-add-btn', text: t('okr.addCondition') });
-        addBtn.onclick = (e) => {
-            e.stopPropagation();
-            void this.addOkrCondition(item, wrap);
-        };
+        header.createDiv({ cls: 'swimlane-section-area-title', text: t('okr.progressTitle') });
 
+        if (this.okrEditMode) {
+            // 编辑态：右上角「退出」按钮 + 「添加条件」按钮
+            const actions = header.createDiv({ cls: 'okr-header-actions' });
+            const addBtn = actions.createEl('button', { cls: 'okr-add-btn', text: t('okr.addCondition') });
+            addBtn.onclick = (e) => {
+                e.stopPropagation();
+                void this.addOkrCondition(item, wrap);
+            };
+            const exitBtn = actions.createEl('button', { cls: 'okr-edit-btn', text: t('okr.exitEdit') });
+            exitBtn.onclick = (e) => {
+                e.stopPropagation();
+                this.okrEditMode = false;
+                this.renderOkrBox(wrap);
+            };
+            this.renderOkrEditBody(area, item, wrap);
+        } else {
+            // 展示态：右上角「编辑」按钮
+            const editBtn = header.createEl('button', { cls: 'okr-edit-btn', text: t('okr.edit') });
+            editBtn.onclick = (e) => {
+                e.stopPropagation();
+                this.okrEditMode = true;
+                this.renderOkrBox(wrap);
+            };
+            this.renderOkrProgressBody(area, item);
+        }
+    }
+
+    /** OKR 编辑态内容：可编辑的条件条目列表 */
+    private renderOkrEditBody(area: HTMLElement, item: InboxItem, wrap: HTMLElement): void {
         const body = area.createDiv({ cls: 'okr-body' });
         const conditions = item.okr?.conditions ?? [];
         if (conditions.length === 0) {
@@ -542,7 +632,6 @@ export class OkrTaskPlanView {
                 cond.type = sel.value as OkrConditionType;
                 void this.save();
                 this.renderOkrBox(wrap);
-                this.refreshProgressBox();
             };
 
             if (cond.type === 'outcome') {
@@ -556,7 +645,6 @@ export class OkrTaskPlanView {
                 textInput.onchange = () => {
                     cond.text = textInput.value;
                     void this.save();
-                    this.refreshProgressBox();
                 };
             } else {
                 // 时长：数字目标值 + 单位
@@ -570,7 +658,6 @@ export class OkrTaskPlanView {
                     const v = Number(target.value);
                     cond.target = Number.isFinite(v) ? v : 0;
                     void this.save();
-                    this.refreshProgressBox();
                 };
 
                 // 单位
@@ -589,44 +676,8 @@ export class OkrTaskPlanView {
         }
     }
 
-    /** 添加一条 OKR 条件并保存、刷新 */
-    private async addOkrCondition(item: InboxItem, wrap: HTMLElement): Promise<void> {
-        const id = `okr_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
-        if (!item.okr) item.okr = { conditions: [] };
-        item.okr.conditions.push({ id, type: 'duration', target: 0 });
-        await this.save();
-        this.renderOkrBox(wrap);
-        this.refreshProgressBox();
-    }
-
-    /** 删除一条 OKR 条件并保存、刷新 */
-    private async deleteOkrCondition(item: InboxItem, condId: string, wrap: HTMLElement): Promise<void> {
-        if (!item.okr) return;
-        item.okr.conditions = item.okr.conditions.filter(c => c.id !== condId);
-        await this.save();
-        this.renderOkrBox(wrap);
-        this.refreshProgressBox();
-    }
-
-    /** 同步刷新 OKR 进度方框（OKR 信息变更后调用） */
-    private refreshProgressBox(): void {
-        if (this.progressWrap) this.renderProgressBox(this.progressWrap);
-    }
-
-    /** 进度方框：当前选中任务的 OKR 条件完成进度（当前值 / 目标值） */
-    private renderProgressBox(wrap: HTMLElement): void {
-        wrap.empty();
-
-        const selectedId = this.inboxData.selectedId;
-        const item = selectedId
-            ? this.inboxData.items.find(i => i.id === selectedId && !i.removed)
-            : undefined;
-        if (!item) return;
-
-        const area = wrap.createDiv({ cls: 'swimlane-section-area okr-progress-area' });
-        const header = area.createDiv({ cls: 'swimlane-section-area-header' });
-        header.createDiv({ cls: 'swimlane-section-area-title', text: t('okr.progressTitle') });
-
+    /** OKR 展示态内容：条件完成进度（当前值 / 目标值） */
+    private renderOkrProgressBody(area: HTMLElement, item: InboxItem): void {
         const body = area.createDiv({ cls: 'okr-progress-body' });
         const conditions = item.okr?.conditions ?? [];
         if (conditions.length === 0) {
@@ -674,6 +725,23 @@ export class OkrTaskPlanView {
                 text: t('okr.progressPercent', { percent: String(percent) }),
             });
         }
+    }
+
+    /** 添加一条 OKR 条件并保存、刷新 */
+    private async addOkrCondition(item: InboxItem, wrap: HTMLElement): Promise<void> {
+        const id = `okr_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+        if (!item.okr) item.okr = { conditions: [] };
+        item.okr.conditions.push({ id, type: 'duration', target: 0 });
+        await this.save();
+        this.renderOkrBox(wrap);
+    }
+
+    /** 删除一条 OKR 条件并保存、刷新 */
+    private async deleteOkrCondition(item: InboxItem, condId: string, wrap: HTMLElement): Promise<void> {
+        if (!item.okr) return;
+        item.okr.conditions = item.okr.conditions.filter(c => c.id !== condId);
+        await this.save();
+        this.renderOkrBox(wrap);
     }
 
     /** 收集篮子方框：当前选中任务的收集内容（供 GTD 梳理阶段放置笔记） */

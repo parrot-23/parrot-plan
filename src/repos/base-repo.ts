@@ -60,6 +60,9 @@ export class BaseRepo {
     /** 是否已勾选「不再提示」帮助弹窗（随主数据一起持久化） */
     helpDismissed = false;
 
+    /** 是否启用剧本模式（随主数据一起持久化，默认关闭） */
+    scriptModeEnabled = false;
+
     constructor(plugin: Plugin) {
         this.plugin = plugin;
     }
@@ -89,6 +92,7 @@ export class BaseRepo {
             cacheDirName: this.cacheDirName,
             cacheEnabled: this.cacheEnabled,
             helpDismissed: this.helpDismissed,
+            scriptModeEnabled: this.scriptModeEnabled,
         });
     }
 
@@ -107,6 +111,12 @@ export class BaseRepo {
     /** 保存「不再提示」帮助弹窗标记 */
     async saveHelpDismissed(dismissed: boolean): Promise<void> {
         this.helpDismissed = dismissed;
+        await this.saveAll();
+    }
+
+    /** 保存是否启用剧本模式 */
+    async saveScriptModeEnabled(enabled: boolean): Promise<void> {
+        this.scriptModeEnabled = enabled;
         await this.saveAll();
     }
 
@@ -132,6 +142,11 @@ export class BaseRepo {
         // 读取「不再提示」帮助弹窗标记（兼容旧数据：默认未勾选）
         this.helpDismissed = typeof savedData.helpDismissed === 'boolean'
             ? savedData.helpDismissed
+            : false;
+
+        // 读取是否启用剧本模式（兼容旧数据：默认关闭）
+        this.scriptModeEnabled = typeof savedData.scriptModeEnabled === 'boolean'
+            ? savedData.scriptModeEnabled
             : false;
 
         const defaultCategories: PlanCategoryData = {

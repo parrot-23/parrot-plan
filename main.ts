@@ -63,6 +63,11 @@ export default class ParrotPlanPlugin extends Plugin {
         return this.repo.helpDismissed;
     }
 
+    /** 是否启用剧本模式（随主数据一起持久化，默认关闭） */
+    get scriptModeEnabled(): boolean {
+        return this.repo.scriptModeEnabled;
+    }
+
     /**
      * 唯一的数据保存出口（委托给 BaseRepo）。
      * 所有视图与设置项都通过此方法保存。
@@ -84,6 +89,11 @@ export default class ParrotPlanPlugin extends Plugin {
     /** 保存「不再提示」帮助弹窗标记 */
     async saveHelpDismissed(dismissed: boolean): Promise<void> {
         await this.repo.saveHelpDismissed(dismissed);
+    }
+
+    /** 保存是否启用剧本模式 */
+    async saveScriptModeEnabled(enabled: boolean): Promise<void> {
+        await this.repo.saveScriptModeEnabled(enabled);
     }
 
     async onload() {
@@ -259,6 +269,27 @@ class ParrotPlanSettingTab extends PluginSettingTab {
                     if (!this.plugin.cacheEnabled) {
                         setting.settingEl.addClass('parrot-setting-disabled');
                     }
+                },
+            },
+            {
+                name: t('settings.scriptMode'),
+                searchable: false,
+                render: (setting) => {
+                    setting.setName(t('settings.scriptMode')).setHeading();
+                },
+            },
+            {
+                name: t('settings.scriptModeEnabled'),
+                desc: t('settings.scriptModeEnabledDesc'),
+                render: (setting) => {
+                    setting
+                        .setName(t('settings.scriptModeEnabled'))
+                        .setDesc(t('settings.scriptModeEnabledDesc'))
+                        .addToggle((toggle) => {
+                            toggle.setValue(this.plugin.scriptModeEnabled).onChange(async (value) => {
+                                await this.plugin.saveScriptModeEnabled(value);
+                            });
+                        });
                 },
             },
             {

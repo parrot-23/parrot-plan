@@ -126,6 +126,11 @@ export const zh = {
     'taskPlan.habitTime': '习惯时间点',
     'taskPlan.plannedWeeks': '已计划周数',
     'taskPlan.emptyValue': '—',
+    'taskPlan.statsTitle': '统计信息',
+    'taskPlan.statsExecCount': '已执行次数',
+    'taskPlan.statsTotalDuration': '总执行时长',
+    'taskPlan.durationHourMinute': '{hours} 小时 {minutes} 分钟',
+    'taskPlan.durationMinute': '{minutes} 分钟',
 
     // OKR 信息
     'okr.title': 'OKR 信息',
@@ -147,6 +152,8 @@ export const zh = {
     'okr.progressTarget': '目标',
     'okr.progressCurrent': '当前',
     'okr.progressPercent': '{percent}%',
+    'okr.edit': '编辑',
+    'okr.exitEdit': '退出',
 
     // 收集篮子
     'basket.title': '收集篮子',
@@ -357,6 +364,9 @@ export const zh = {
     'settings.cacheEnabledDesc': '关闭后将不再使用缓存功能。',
     'settings.cacheDirName': '缓存目录名称',
     'settings.cacheDirNameDesc': '用于存放插件缓存文件的目录名称，默认为 parrotPlanCache。',
+    'settings.scriptMode': '剧本模式',
+    'settings.scriptModeEnabled': '启用剧本模式',
+    'settings.scriptModeEnabledDesc': '关闭后，「剧本场景」与「剧本管理」两个二级视图将被隐藏。',
     'settings.data': '数据',
     'settings.clearData': '清空数据',
     'settings.clearDataDesc': '删除全部任务、事件、时间区间与配置，恢复为默认状态。此操作不可撤销。',
