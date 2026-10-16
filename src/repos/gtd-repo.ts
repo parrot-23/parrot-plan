@@ -32,9 +32,10 @@ export class GtdRepo {
         return item;
     }
 
-    /** 删除一条收集箱条目 */
+    /** 删除一条收集箱条目（原地替换数组内容，保持数组引用不变） */
     removeItem(id: string): void {
-        this.data.items = this.data.items.filter((it) => it.id !== id);
+        const items = this.data.items;
+        items.splice(0, items.length, ...items.filter((it) => it.id !== id));
     }
 
     /** 追加一个源（组织视图设置页） */
@@ -48,9 +49,10 @@ export class GtdRepo {
         return source;
     }
 
-    /** 删除一个源 */
+    /** 删除一个源（原地替换数组内容，保持数组引用不变） */
     removeSource(id: string): void {
-        this.data.sources = this.data.sources.filter((s) => s.id !== id);
+        const sources = this.data.sources;
+        sources.splice(0, sources.length, ...sources.filter((s) => s.id !== id));
     }
 
     /** 未处理条目（收集/梳理视图左栏） */

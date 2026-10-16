@@ -63,6 +63,11 @@ export class PdcaRepo {
         if (target) Object.assign(target, patch);
     }
 
+    /** 清空全部计划事件（重置数据用，原地清空保持数组引用不变） */
+    clearEvents(): void {
+        this.events.length = 0;
+    }
+
     // ===== 执行记录 =====
 
     /** 追加一条执行记录（原地 push，保持数组引用不变） */

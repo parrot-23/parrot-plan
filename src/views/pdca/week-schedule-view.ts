@@ -144,7 +144,7 @@ export class WeekScheduleView extends ItemView {
 
         this.planSchemeRepo().resetToDefault(t('planScheme.defaultName'));
 
-        this.events.length = 0;
+        this.pdcaRepo().clearEvents();
         this.pdcaRepo().clearExecutions();
 
         this.inboxRepo().clear();
