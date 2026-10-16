@@ -1,5 +1,5 @@
 import { App, Modal, Setting, Notice } from 'obsidian';
-import type { CategorizedRange, WeekRangeData, DailyRange } from './timeblock-data';
+import type { CategorizedRange, WeekRangeData, DailyRange } from './plan-data';
 import { t, getWeekDays } from '../i18n';
 
 // 数据全部由 main.ts 中的主视图，自己持有。

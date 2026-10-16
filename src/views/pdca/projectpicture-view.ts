@@ -1,6 +1,6 @@
 import type { App } from 'obsidian';
 
-import type { TimeBlockCategoryData } from '../../shared/timeblock-category-manager';
+import type { PlanCategoryData } from '../../shared/plan-category-manager';
 import type { InboxData, InboxItem, Section, ChecklistData, StepsData, HabitData, FileData } from '../../datatypes/domain';
 import { renderTaskPanel } from '../../shared/task-panel';
 import type { ExecutionRecord, EventBlock } from '../../datatypes/domain';
@@ -20,7 +20,7 @@ import { createDataProvider } from '../../cardmake/data/provider';
 export class SwimlaneView {
     private app: App;
     private inboxData: InboxData;
-    private categoryData: TimeBlockCategoryData;
+    private categoryData: PlanCategoryData;
     private save: () => Promise<void>;
     /** 获取执行记录（用于绘制执行线） */
     private getExecutions: () => ExecutionRecord[];
@@ -38,7 +38,7 @@ export class SwimlaneView {
     constructor(
         app: App,
         inboxData: InboxData,
-        categoryData: TimeBlockCategoryData,
+        categoryData: PlanCategoryData,
         save: () => Promise<void>,
         getExecutions: () => ExecutionRecord[],
         getEvents: () => EventBlock[],

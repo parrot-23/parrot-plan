@@ -1,7 +1,5 @@
-// timeblock-data.ts
-export type TimeBlockCategoryId = string;
-
-/** 时间块的分类（类别） */
+// plan-data.ts
+export type PlanCategoryId = string;
 
 /** 时间区间，以分钟计（0–1440） */
 export interface TimeRange {
@@ -12,7 +10,7 @@ export interface TimeRange {
 
 /** 带分类的时间区间 */
 export interface CategorizedRange extends TimeRange {
-	sort: TimeBlockCategoryId;
+	sort: PlanCategoryId;
 }
 
 /** 单日区间数据 */
@@ -197,4 +195,3 @@ export const DEFAULT_WEEK_RANGE: WeekRangeData = {
 		},
 	],
 };
-

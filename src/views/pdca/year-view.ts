@@ -1,11 +1,11 @@
 import type { App } from 'obsidian';
 import { Notice } from 'obsidian';
 
-import type { TimeBlockCategoryData } from '../../shared/timeblock-category-manager';
+import type { PlanCategoryData } from '../../shared/plan-category-manager';
 import type { InboxData } from '../../datatypes/domain';
 import { renderTaskPanel } from '../../shared/task-panel';
 import { renderYearWeekGrid } from '../../shared/year-week-grid';
-import { makeWeekKey } from '../../shared/timeblock-data';
+import { makeWeekKey } from '../../shared/plan-data';
 import { t } from '../../i18n';
 
 /**
@@ -15,7 +15,7 @@ import { t } from '../../i18n';
 export class YearView {
     private app: App;
     private inboxData: InboxData;
-    private categoryData: TimeBlockCategoryData;
+    private categoryData: PlanCategoryData;
     private save: () => Promise<void>;
     /** 未选中任务时点击周格子 → 跳转到该周的周计划 */
     private onJumpToWeek?: (weekKey: string) => void;
@@ -27,7 +27,7 @@ export class YearView {
     constructor(
         app: App,
         inboxData: InboxData,
-        categoryData: TimeBlockCategoryData,
+        categoryData: PlanCategoryData,
         save: () => Promise<void>,
         onJumpToWeek?: (weekKey: string) => void,
         getPlannedWeeks?: () => string[],

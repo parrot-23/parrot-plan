@@ -2,7 +2,7 @@
 // 菜单：官方剧本 / 本地剧本 / 设置。
 import type { App } from 'obsidian';
 
-import { t } from '../../../i18n';
+import { t } from '../../i18n';
 
 /** 左侧菜单项标识 */
 type ScriptMenu = 'official' | 'local' | 'settings';

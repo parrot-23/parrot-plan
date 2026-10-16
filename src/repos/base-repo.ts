@@ -3,10 +3,10 @@
 // 视图读引用、写走领域 repo 方法，底层仍是同一个对象引用，保证跨视图同步不破坏。
 import type { Plugin } from 'obsidian';
 
-import type { WeekRangeData, PlanSchemeData } from '../shared/timeblock-data';
-import { getCurrentWeekKey, ensureDefaultScheme, DEFAULT_WEEK_RANGE } from '../shared/timeblock-data';
-import type { TimeBlockCategoryData } from '../shared/timeblock-category-manager';
-import { ensureUncategorizedCategory } from '../shared/timeblock-category-manager';
+import type { WeekRangeData, PlanSchemeData } from '../shared/plan-data';
+import { getCurrentWeekKey, ensureDefaultScheme, DEFAULT_WEEK_RANGE } from '../shared/plan-data';
+import type { PlanCategoryData } from '../shared/plan-category-manager';
+import { ensureUncategorizedCategory } from '../shared/plan-category-manager';
 import type { DayTemplateData } from '../shared/template-manager';
 import type { EventBlock, ExecutionRecord, InboxData, ImprovementData } from '../datatypes/domain';
 import { DEFAULT_INBOX_DATA, DEFAULT_IMPROVEMENT_DATA } from '../datatypes/domain';
@@ -23,7 +23,7 @@ export const DEFAULT_CACHE_DIR_NAME = 'parrotPlanCache';
 export interface PluginData {
     weekRange: WeekRangeData;
     templateData: DayTemplateData;
-    categoryData: TimeBlockCategoryData;
+    categoryData: PlanCategoryData;
     events: EventBlock[];
     executions: ExecutionRecord[];
     inboxData: InboxData;
@@ -134,7 +134,7 @@ export class BaseRepo {
             ? savedData.helpDismissed
             : false;
 
-        const defaultCategories: TimeBlockCategoryData = {
+        const defaultCategories: PlanCategoryData = {
             categories: [
                 { id: 'uncategorized', label: t('defaultCategory.uncategorized'), color: '#888888' },
                 { id: 'work', label: t('defaultCategory.work'), color: '#4c8dff' },
@@ -158,7 +158,7 @@ export class BaseRepo {
 
         const initialData = migrateWeekRangeData(savedData);
         const initialTemplateData = (savedData.dayTemplateData ?? { dayTemplates: [], dayProperties: [] }) as DayTemplateData;
-        const initialCategoryData = (savedData.timeBlockCategoryData ?? defaultCategories) as TimeBlockCategoryData;
+        const initialCategoryData = (savedData.timeBlockCategoryData ?? defaultCategories) as PlanCategoryData;
         // 兼容旧数据：确保「未分类」始终存在且位于首位
         ensureUncategorizedCategory(initialCategoryData);
         const initialInboxData = (savedData.inboxData ?? DEFAULT_INBOX_DATA) as InboxData;

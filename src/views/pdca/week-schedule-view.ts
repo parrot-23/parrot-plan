@@ -2,21 +2,21 @@
 
 import { ItemView, WorkspaceLeaf, Modal, Setting, Notice, App } from 'obsidian';
 import type { Plugin } from 'obsidian';
-import type { WeekRangeData, CategorizedRange, TimeBlockCategoryId, PlanSchemeData, DailyRange, WeekKey } from '../../../shared/timeblock-data';
-import { hexToTransparent, getCurrentWeekKey, makeWeekKey, parseWeekKey, shiftWeekKey, makeDayKeyFromWeek, makeDefaultScheme, DEFAULT_SCHEME_ID, DEFAULT_WEEK_RANGE } from '../../../shared/timeblock-data';
-import type { TimeBlockCategoryData } from '../../../shared/timeblock-category-manager';
-import type { DayTemplateData } from '../../../shared/template-manager';
-import { renderTimeBlockCategoryLegend } from '../../../shared/timeblock-category-manager';
-import { renderDayTemplateRow } from '../../../shared/template-manager';
-import { renderTaskPanel } from '../../../shared/task-panel';
-import { DEFAULT_INBOX_DATA, type InboxData, type InboxItem } from '../../../datatypes/domain';
-import { renderWeekPanel } from '../../../shared/week-panel';
-import { PlanSchemeModal } from './plan-scheme-modal';
-import { t, getWeekDays } from '../../../i18n';
-import { log } from '../../../shared/logger';
-import { EVENT_STATUS_EMOJI, EVENT_STATUS_LABEL_KEY, getEventStatus } from '../../../datatypes/domain';
-import type { EventBlock, ExecutionRecord, EventStatus } from '../../../datatypes/domain';
-import type { PdcaRepo } from '../../../repos/pdca-repo';
+import type { WeekRangeData, CategorizedRange, PlanCategoryId, PlanSchemeData, DailyRange, WeekKey } from '../../shared/plan-data';
+import { hexToTransparent, getCurrentWeekKey, makeWeekKey, parseWeekKey, shiftWeekKey, makeDayKeyFromWeek, makeDefaultScheme, DEFAULT_SCHEME_ID, DEFAULT_WEEK_RANGE } from '../../shared/plan-data';
+import type { PlanCategoryData } from '../../shared/plan-category-manager';
+import type { DayTemplateData } from '../../shared/template-manager';
+import { renderPlanCategoryLegend } from '../../shared/plan-category-manager';
+import { renderDayTemplateRow } from '../../shared/template-manager';
+import { renderTaskPanel } from '../../shared/task-panel';
+import { DEFAULT_INBOX_DATA, type InboxData, type InboxItem } from '../../datatypes/domain';
+import { renderWeekPanel } from '../../shared/week-panel';
+import { PlanSchemeModal } from '../../shared/plan-scheme-modal';
+import { t, getWeekDays } from '../../i18n';
+import { log } from '../../shared/logger';
+import { EVENT_STATUS_EMOJI, EVENT_STATUS_LABEL_KEY, getEventStatus } from '../../datatypes/domain';
+import type { EventBlock, ExecutionRecord, EventStatus } from '../../datatypes/domain';
+import type { PdcaRepo } from '../../repos/pdca-repo';
 
 export const VIEW_TYPE_WEEK = 'week-schedule-view';
 
@@ -28,7 +28,7 @@ export class WeekScheduleView extends ItemView {
         dayTemplates: [],
         dayProperties: [],
     };
-    timeBlockCategoryData: TimeBlockCategoryData;
+    planCategoryData: PlanCategoryData;
     /** 时间计划方案数据 */
     planSchemeData: PlanSchemeData = { schemes: [] };
     events: EventBlock[] = [];
@@ -60,7 +60,7 @@ export class WeekScheduleView extends ItemView {
     private estimateOutsideHandler: ((e: MouseEvent) => void) | null = null;
 
     // Obsidian 旧 API：ItemView 构造函数只接受 leaf
-    constructor(leaf: WorkspaceLeaf, plugin: Plugin, data: WeekRangeData, templateData: DayTemplateData, categoryData: TimeBlockCategoryData,
+    constructor(leaf: WorkspaceLeaf, plugin: Plugin, data: WeekRangeData, templateData: DayTemplateData, categoryData: PlanCategoryData,
         events?: EventBlock[],
         executions?: ExecutionRecord[],
         inboxData?: InboxData,
@@ -71,7 +71,7 @@ export class WeekScheduleView extends ItemView {
         this.plugin = plugin;
         this.rangeData = data;
         this.dayTemplateData = templateData;
-        this.timeBlockCategoryData = categoryData;
+        this.planCategoryData = categoryData;
         this.events = events ?? [];
         this.executions = executions ?? [];
         this.inboxData = inboxData ?? DEFAULT_INBOX_DATA;
@@ -114,7 +114,7 @@ export class WeekScheduleView extends ItemView {
 
     /** 重置为默认数据（清空全部数据后调用） */
     resetData() {
-        // 注意：子视图（年/当日/泳道）持有 inboxData、timeBlockCategoryData 的引用，
+        // 注意：子视图（年/当日/泳道）持有 inboxData、planCategoryData 的引用，
         // 因此这里必须「原地清空」而非重新赋值，否则子视图仍指向旧对象。
         this.rangeData.days = DEFAULT_WEEK_RANGE.days;
         this.rangeData.weeks = {};
@@ -122,7 +122,7 @@ export class WeekScheduleView extends ItemView {
         this.dayTemplateData.dayTemplates = [];
         this.dayTemplateData.dayProperties = [];
 
-        this.timeBlockCategoryData.categories = [
+        this.planCategoryData.categories = [
             { id: 'uncategorized', label: t('defaultCategory.uncategorized'), color: '#888888' },
             { id: 'work', label: t('defaultCategory.work'), color: '#4c8dff' },
             { id: 'rest', label: t('defaultCategory.rest'), color: '#43b581' },
@@ -198,7 +198,7 @@ export class WeekScheduleView extends ItemView {
             this.app,
             taskPanel,
             this.inboxData,
-            this.timeBlockCategoryData,
+            this.planCategoryData,
             async () => {
                 // onAdd 回调
                 await this.save();
@@ -262,7 +262,7 @@ export class WeekScheduleView extends ItemView {
         // 方案中该天各分类的可用时长（分钟）
         const dayData = this.getPlanSchemeDays().find(d => d.day === day);
         const ranges = dayData?.ranges ?? [];
-        const planned = new Map<TimeBlockCategoryId, number>();
+        const planned = new Map<PlanCategoryId, number>();
         for (const range of ranges) {
             const minutes = Math.max(0, range.end - range.start);
             if (minutes === 0) continue;
@@ -273,7 +273,7 @@ export class WeekScheduleView extends ItemView {
         const dayEvents = this.events.filter(
             ev => ev.day === day && ev.weekKey === this.currentWeekKey,
         );
-        const allocated = new Map<TimeBlockCategoryId, number>();
+        const allocated = new Map<PlanCategoryId, number>();
         for (const ev of dayEvents) {
             const minutes = ev.estimatedMinutes ?? 0;
             if (minutes <= 0) continue;
@@ -282,7 +282,7 @@ export class WeekScheduleView extends ItemView {
         }
 
         // 合并出现过的分类（方案 + 已分配），按类别列表顺序稳定输出
-        const keys = new Set<TimeBlockCategoryId>();
+        const keys = new Set<PlanCategoryId>();
         planned.forEach((_v, k) => keys.add(k));
         allocated.forEach((_v, k) => keys.add(k));
         if (keys.size === 0) {
@@ -290,7 +290,7 @@ export class WeekScheduleView extends ItemView {
             return;
         }
 
-        const ordered = this.timeBlockCategoryData.categories.filter(c => keys.has(c.id));
+        const ordered = this.planCategoryData.categories.filter(c => keys.has(c.id));
         if (keys.has('')) {
             ordered.push({ id: '', label: t('defaultCategory.uncategorized'), color: '#888888' });
         }
@@ -367,7 +367,7 @@ export class WeekScheduleView extends ItemView {
         for (const { ev, habit } of ordered) {
             const chip = col.createDiv({ cls: 'week-panel-task' });
             const cat = ev.categoryId
-                ? this.timeBlockCategoryData.categories.find(c => c.id === ev.categoryId)
+                ? this.planCategoryData.categories.find(c => c.id === ev.categoryId)
                 : undefined;
             chip.setCssProps({ '--chip-color': cat?.color ?? '#888888' });
 
@@ -634,7 +634,7 @@ export class WeekScheduleView extends ItemView {
     private renderAllDaySquare(cell: HTMLElement, ev: EventBlock) {
         const square = cell.createDiv({ cls: 'all-day-square' });
         const cat = ev.categoryId
-            ? this.timeBlockCategoryData.categories.find(c => c.id === ev.categoryId)
+            ? this.planCategoryData.categories.find(c => c.id === ev.categoryId)
             : undefined;
         square.setCssProps({ '--chip-color': cat?.color ?? '#888888' });
         // 方块内不显示文字，用 title 提示任务名
@@ -645,7 +645,7 @@ export class WeekScheduleView extends ItemView {
     private renderAllDayChip(cell: HTMLElement, ev: EventBlock) {
         const chip = cell.createDiv({ cls: 'all-day-chip' });
         const cat = ev.categoryId
-            ? this.timeBlockCategoryData.categories.find(c => c.id === ev.categoryId)
+            ? this.planCategoryData.categories.find(c => c.id === ev.categoryId)
             : undefined;
         chip.setCssProps({ '--chip-color': cat?.color ?? '#888888' });
         chip.setText(ev.title);
@@ -714,7 +714,7 @@ export class WeekScheduleView extends ItemView {
             const dayRanges = dayData?.ranges ?? [];
             for (const range of dayRanges) {
                 const bgBlock = col.createDiv({ cls: 'range-block range-bg' });
-                const cat = this.timeBlockCategoryData.categories.find(c => c.id === range.sort);
+                const cat = this.planCategoryData.categories.find(c => c.id === range.sort);
                 const rawColor = cat?.color ?? '#888888';
                 const afColor = this.hexToTransparent(rawColor, 0.5);
 
@@ -791,7 +791,7 @@ export class WeekScheduleView extends ItemView {
             for (const ev of dayEvents) {
                 const card = this.createEventCard(col, ev);
                 const cat = ev.categoryId
-                    ? this.timeBlockCategoryData.categories.find(c => c.id === ev.categoryId)
+                    ? this.planCategoryData.categories.find(c => c.id === ev.categoryId)
                     : undefined;
 
                 const rawColor = cat?.color ?? '#888888';
@@ -827,7 +827,7 @@ export class WeekScheduleView extends ItemView {
 
                 card.onclick = (e) => {
                     e.stopPropagation();
-                    new EventEditModal(this.app, ev.start, ev.end, this.timeBlockCategoryData,
+                    new EventEditModal(this.app, ev.start, ev.end, this.planCategoryData,
                         (note, start, end, categoryId) => {
                             // 名称来源于任务，不可修改；仅更新备注、时间、分类
                             ev.note = note || undefined;
@@ -906,7 +906,7 @@ export class WeekScheduleView extends ItemView {
 
             // 分类
             const cat = ev.categoryId
-                ? this.timeBlockCategoryData.categories.find(c => c.id === ev.categoryId)
+                ? this.planCategoryData.categories.find(c => c.id === ev.categoryId)
                 : undefined;
             const catRow = tip.createDiv({ cls: 'event-tooltip-row' });
             catRow.createSpan({ cls: 'event-tooltip-label', text: t('eventTooltip.category') });
@@ -1105,7 +1105,7 @@ export class WeekScheduleView extends ItemView {
         });
 
         const cat = ev.categoryId
-            ? this.timeBlockCategoryData.categories.find(c => c.id === ev.categoryId)
+            ? this.planCategoryData.categories.find(c => c.id === ev.categoryId)
             : undefined;
         const catRow = card.createDiv({ cls: 'event-tooltip-row' });
         catRow.createSpan({ cls: 'event-tooltip-label', text: t('eventTooltip.category') });
@@ -1153,7 +1153,7 @@ export class WeekScheduleView extends ItemView {
         });
 
         const cat = item?.categoryId
-            ? this.timeBlockCategoryData.categories.find(c => c.id === item.categoryId)
+            ? this.planCategoryData.categories.find(c => c.id === item.categoryId)
             : undefined;
         const catRow = card.createDiv({ cls: 'event-tooltip-row' });
         catRow.createSpan({ cls: 'event-tooltip-label', text: t('eventTooltip.category') });
@@ -1304,10 +1304,10 @@ export class WeekScheduleView extends ItemView {
 
         // 图例（日历顶部：不显示配置按钮）
         const legendContainer = toolbar.createDiv({ cls: 'legend-container' });
-        renderTimeBlockCategoryLegend(
+        renderPlanCategoryLegend(
             this.app,
             legendContainer,
-            this.timeBlockCategoryData,
+            this.planCategoryData,
             () => {
                 void this.onOpen();
             },
@@ -1341,7 +1341,7 @@ export class WeekScheduleView extends ItemView {
             schemeBtn.onclick = () => {
                 new PlanSchemeModal(
                     this.app,
-                    this.timeBlockCategoryData,
+                    this.planCategoryData,
                     this.planSchemeData,
                     this,
                     (templateId, targetDays) => this.applyTemplate(templateId, targetDays),
@@ -1604,15 +1604,15 @@ export class WeekScheduleView extends ItemView {
 export class RangeEditModal extends Modal {
     private start: number;
     private end: number;
-    private sort: TimeBlockCategoryId;
-    private onSubmit: (start: number, end: number, sort: TimeBlockCategoryId) => void;
-    private categoryData: TimeBlockCategoryData;
+    private sort: PlanCategoryId;
+    private onSubmit: (start: number, end: number, sort: PlanCategoryId) => void;
+    private categoryData: PlanCategoryData;
 
     constructor(
         app: App,
         defaultStart: number,
-        onSubmit: (start: number, end: number, sort: TimeBlockCategoryId) => void,
-        categoryData: TimeBlockCategoryData,
+        onSubmit: (start: number, end: number, sort: PlanCategoryId) => void,
+        categoryData: PlanCategoryData,
         defaultRange?: CategorizedRange, // ✅ 新增可选默认值
         defaultSort?: string // 图例选中的分类
     ) {
@@ -1628,7 +1628,7 @@ export class RangeEditModal extends Modal {
         } else {
             this.start = defaultStart;
             this.end = defaultStart + 120;
-            this.sort = (defaultSort as TimeBlockCategoryId) ?? categoryData.categories[0]?.id ?? 'work';
+            this.sort = (defaultSort as PlanCategoryId) ?? categoryData.categories[0]?.id ?? 'work';
         }
     }
 
@@ -1716,7 +1716,7 @@ class EventEditModal extends Modal {
         app: App,
         defaultStart: number,
         defaultEnd: number,
-        private categoryData: TimeBlockCategoryData,
+        private categoryData: PlanCategoryData,
         private onSubmit: (note: string, start: number, end: number, categoryId?: string) => void,
         private defaultEvent?: EventBlock,
     ) {

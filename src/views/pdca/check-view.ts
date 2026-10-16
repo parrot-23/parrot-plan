@@ -1,16 +1,16 @@
 import type { App } from 'obsidian';
 
-import type { TimeBlockCategoryData } from '../../shared/timeblock-category-manager';
+import type { PlanCategoryData } from '../../shared/plan-category-manager';
 import type { InboxData, EventBlock, ExecutionRecord } from '../../datatypes/domain';
 import { getEventStatus } from '../../datatypes/domain';
-import type { DailyRange } from '../../shared/timeblock-data';
+import type { DailyRange } from '../../shared/plan-data';
 import {
     getCurrentWeekKey,
     makeWeekKey,
     parseWeekKey,
     shiftWeekKey,
     getWeeksInYear,
-} from '../../shared/timeblock-data';
+} from '../../shared/plan-data';
 import { t, getWeekDays } from '../../i18n';
 
 /** 把分钟数格式化为小时（如 1.5h） */
@@ -34,7 +34,7 @@ function formatMinutes(minutes: number): string {
 export class CheckView {
     private app: App;
     private inboxData: InboxData;
-    private categoryData: TimeBlockCategoryData;
+    private categoryData: PlanCategoryData;
     /** 获取全部计划事件 */
     private getEvents: () => EventBlock[];
     /** 获取全部执行记录 */
@@ -49,7 +49,7 @@ export class CheckView {
     constructor(
         app: App,
         inboxData: InboxData,
-        categoryData: TimeBlockCategoryData,
+        categoryData: PlanCategoryData,
         getEvents: () => EventBlock[],
         getExecutions: () => ExecutionRecord[],
         getPlanSchemeDays: () => DailyRange[],

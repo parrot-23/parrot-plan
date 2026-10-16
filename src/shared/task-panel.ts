@@ -1,5 +1,5 @@
 import { App, Modal, Setting, Notice, AbstractInputSuggest, TFile, setIcon } from 'obsidian';
-import type { TimeBlockCategoryData } from './timeblock-category-manager';
+import type { PlanCategoryData } from './plan-category-manager';
 import { t } from '../i18n';
 import type { InboxItem, InboxData, Section, SectionType, ChecklistData, StepsData, HabitData, FileData, EventBlock } from '../datatypes/domain';
 import { DEFAULT_INBOX_DATA, SECTION_TYPE_META } from '../datatypes/domain';
@@ -81,7 +81,7 @@ class InboxAddPanel {
         private anchor: HTMLElement,
         private onSubmit: (item: InboxItem) => void,
         /** 分类数据（用于新建时直接选择分类） */
-        private categoryData: TimeBlockCategoryData,
+        private categoryData: PlanCategoryData,
         /** 父任务标题（添加子任务时显示） */
         private parentTitle?: string,
     ) {
@@ -227,7 +227,7 @@ export function renderTaskPanel(
     app: App,
     container: HTMLElement,
     inboxData: InboxData,
-    categoryData: TimeBlockCategoryData,
+    categoryData: PlanCategoryData,
     onAdd: (item: InboxItem) => void | Promise<void>,
     onRefresh: () => void,
     onAction?: (action: string, item: InboxItem) => void | Promise<void>,
@@ -931,7 +931,7 @@ class InboxDetailModal extends Modal {
     constructor(
         app: App,
         private item: InboxItem,
-        private categoryData: TimeBlockCategoryData,
+        private categoryData: PlanCategoryData,
         private onSave: (updated: { title: string; description: string; categoryId?: string; sections?: Section[] }) => void | Promise<void>,
     ) {
         super(app);

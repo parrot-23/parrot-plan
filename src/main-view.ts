@@ -1,11 +1,11 @@
 import { ItemView, WorkspaceLeaf } from 'obsidian';
 import type { Plugin } from 'obsidian';
 
-import type { WeekRangeData, PlanSchemeData } from './shared/timeblock-data';
-import type { TimeBlockCategoryData } from './shared/timeblock-category-manager';
+import type { WeekRangeData, PlanSchemeData } from './shared/plan-data';
+import type { PlanCategoryData } from './shared/plan-category-manager';
 import type { DayTemplateData } from './shared/template-manager';
 import type { InboxData } from './datatypes/domain';
-import { WeekScheduleView } from './views/pdca/week-view/week-schedule-view';
+import { WeekScheduleView } from './views/pdca/week-schedule-view';
 import type { EventBlock, ExecutionRecord } from './datatypes/domain';
 import { YearView } from './views/pdca/year-view';
 import { TaskPlanView } from './views/pdca/task-plan-view';
@@ -16,9 +16,9 @@ import { SwimlaneView } from './views/pdca/projectpicture-view';
 import { WorkbenchView } from './views/workbench/workbench-view';
 import { OkrView } from './views/okr/okr-view';
 import { OkrTaskPlanView } from './views/okr/okr-task-plan-view';
-import { AchievementView } from './views/okr/story/achievement-view';
-import { ScriptManageView } from './views/okr/story/script-manage-view';
-import { SceneView } from './views/okr/story/scene-view';
+import { AchievementView } from './views/okr/achievement-view';
+import { ScriptManageView } from './views/okr/script-manage-view';
+import { SceneView } from './views/okr/scene-view';
 import { GtdCollectView } from './views/gtd/collect-view';
 import { GtdOrganizeView } from './views/gtd/organize-view';
 import { GtdClarifyView } from './views/gtd/clarify-view';
@@ -124,7 +124,7 @@ export class MainView extends ItemView {
         plugin: Plugin,
         data: WeekRangeData,
         templateData: DayTemplateData,
-        categoryData: TimeBlockCategoryData,
+        categoryData: PlanCategoryData,
         events: EventBlock[],
         executions: ExecutionRecord[],
         inboxData: InboxData,
@@ -157,7 +157,7 @@ export class MainView extends ItemView {
         this.yearView = new YearView(
             this.app,
             this.weekView.inboxData,
-            this.weekView.timeBlockCategoryData,
+            this.weekView.planCategoryData,
             () => this.weekView.save(),
             undefined,
             () => this.weekView.plannedWeeks,
@@ -165,13 +165,13 @@ export class MainView extends ItemView {
         this.taskPlanView = new TaskPlanView(
             this.app,
             this.weekView.inboxData,
-            this.weekView.timeBlockCategoryData,
+            this.weekView.planCategoryData,
             () => this.weekView.save(),
         );
         this.todayView = new TodayView(
             this.app,
             this.weekView.inboxData,
-            this.weekView.timeBlockCategoryData,
+            this.weekView.planCategoryData,
             () => this.weekView.save(),
             () => this.weekView.events,
             () => this.weekView.executions,
@@ -188,7 +188,7 @@ export class MainView extends ItemView {
         this.checkView = new CheckView(
             this.app,
             this.weekView.inboxData,
-            this.weekView.timeBlockCategoryData,
+            this.weekView.planCategoryData,
             () => this.weekView.events,
             () => this.weekView.executions,
             () => this.weekView.getPlanSchemeDays(),
@@ -196,7 +196,7 @@ export class MainView extends ItemView {
         this.improveView = new ImproveView(
             this.app,
             this.weekView.inboxData,
-            this.weekView.timeBlockCategoryData,
+            this.weekView.planCategoryData,
             () => this.weekView.events,
             () => this.weekView.executions,
             this.pdcaRepo(),
@@ -205,7 +205,7 @@ export class MainView extends ItemView {
         this.swimlaneView = new SwimlaneView(
             this.app,
             this.weekView.inboxData,
-            this.weekView.timeBlockCategoryData,
+            this.weekView.planCategoryData,
             () => this.weekView.save(),
             () => this.weekView.executions,
             () => this.weekView.events,
@@ -232,7 +232,7 @@ export class MainView extends ItemView {
         this.okrTaskPlanView = new OkrTaskPlanView(
             this.app,
             this.weekView.inboxData,
-            this.weekView.timeBlockCategoryData,
+            this.weekView.planCategoryData,
             () => this.weekView.save(),
         );
         this.achievementView = new AchievementView(
@@ -244,7 +244,7 @@ export class MainView extends ItemView {
         this.scriptManageView = new ScriptManageView(this.app);
         this.sceneView = new SceneView(
             this.app,
-            this.weekView.timeBlockCategoryData,
+            this.weekView.planCategoryData,
             () => this.weekView.events,
         );
         this.gtdCollectView = new GtdCollectView(
@@ -261,7 +261,7 @@ export class MainView extends ItemView {
             this.app,
             this.gtdRepo(),
             this.weekView.inboxData,
-            this.weekView.timeBlockCategoryData,
+            this.weekView.planCategoryData,
             () => this.weekView.save(),
         );
         this.gtdReviewView = new GtdReviewView(this.app, this.gtdRepo());

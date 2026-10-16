@@ -1,16 +1,16 @@
 import { App, Modal, Setting, Notice } from 'obsidian';
-import type { TimeBlockCategoryId } from './timeblock-data';
+import type { PlanCategoryId } from './plan-data';
 import { t } from '../i18n';
 
 
-export interface TimeBlockCategory {
-    id: TimeBlockCategoryId;
+export interface PlanCategory {
+    id: PlanCategoryId;
     label: string;
     color?: string;
 }
 
-export interface TimeBlockCategoryData {
-    categories: TimeBlockCategory[];
+export interface PlanCategoryData {
+    categories: PlanCategory[];
 }
 
 /** 未分类：固定 id 与颜色，作为默认分类，不可删除 */
@@ -18,7 +18,7 @@ export const UNCATEGORIZED_CATEGORY_ID = 'uncategorized';
 export const UNCATEGORIZED_CATEGORY_COLOR = '#888888';
 
 /** 生成「未分类」分类对象（label 走 i18n） */
-export function makeUncategorizedCategory(): TimeBlockCategory {
+export function makeUncategorizedCategory(): PlanCategory {
     return {
         id: UNCATEGORIZED_CATEGORY_ID,
         label: t('defaultCategory.uncategorized'),
@@ -27,7 +27,7 @@ export function makeUncategorizedCategory(): TimeBlockCategory {
 }
 
 /** 确保分类列表中始终存在「未分类」，且位于首位（作为默认选择） */
-export function ensureUncategorizedCategory(categoryData: TimeBlockCategoryData): void {
+export function ensureUncategorizedCategory(categoryData: PlanCategoryData): void {
     const list = categoryData.categories;
     const existing = list.find(c => c.id === UNCATEGORIZED_CATEGORY_ID);
     if (existing) {
@@ -41,10 +41,10 @@ export function ensureUncategorizedCategory(categoryData: TimeBlockCategoryData)
     }
 }
 
-export function renderTimeBlockCategoryLegend(    
+export function renderPlanCategoryLegend(    
     app: App,
     container: HTMLElement,
-    categoryData: TimeBlockCategoryData,
+    categoryData: PlanCategoryData,
     onChange?: () => void,
     selectedId?: string,
     onSelect?: (id: string) => void,
@@ -77,14 +77,14 @@ export function renderTimeBlockCategoryLegend(
 
 
 export class CategoryConfigModal extends Modal {
-    private categoryData: TimeBlockCategoryData;
-    private draft: TimeBlockCategory[];
+    private categoryData: PlanCategoryData;
+    private draft: PlanCategory[];
     private listEl!: HTMLElement;
     private onConfirm?: () => void;
 
     constructor(
         app: App, 
-        categoryData: TimeBlockCategoryData,
+        categoryData: PlanCategoryData,
         onConfirm?: () => void
     ) {
         super(app);

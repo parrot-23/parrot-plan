@@ -5,7 +5,7 @@ import { Notice } from 'obsidian';
 
 import type { GtdRepo } from '../../repos/gtd-repo';
 import type { InboxData } from '../../datatypes/domain';
-import type { TimeBlockCategoryData } from '../../shared/timeblock-category-manager';
+import type { PlanCategoryData } from '../../shared/plan-category-manager';
 import { renderTaskPanel } from '../../shared/task-panel';
 import { t } from '../../i18n';
 
@@ -19,7 +19,7 @@ export class GtdClarifyView {
     private app: App;
     private gtdRepo: GtdRepo;
     private inboxData: InboxData;
-    private categoryData: TimeBlockCategoryData;
+    private categoryData: PlanCategoryData;
     private save: () => Promise<void>;
     /** 当前选中的收集卡片 id */
     private selectedItemId?: string;
@@ -32,7 +32,7 @@ export class GtdClarifyView {
         app: App,
         gtdRepo: GtdRepo,
         inboxData: InboxData,
-        categoryData: TimeBlockCategoryData,
+        categoryData: PlanCategoryData,
         save: () => Promise<void>,
     ) {
         this.app = app;

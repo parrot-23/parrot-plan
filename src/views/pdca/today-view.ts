@@ -1,12 +1,12 @@
 import type { App } from 'obsidian';
 import { Notice, setIcon } from 'obsidian';
 
-import type { TimeBlockCategoryData } from '../../shared/timeblock-category-manager';
-import { UNCATEGORIZED_CATEGORY_ID } from '../../shared/timeblock-category-manager';
+import type { PlanCategoryData } from '../../shared/plan-category-manager';
+import { UNCATEGORIZED_CATEGORY_ID } from '../../shared/plan-category-manager';
 import type { InboxData, InboxItem, ChecklistData, StepsData, HabitData, FileData } from '../../datatypes/domain';
 import { SECTION_TYPE_META, OKR_CONDITION_META } from '../../datatypes/domain';
-import { getCurrentDayKey, getISOWeek, makeDayKey, makeDayKeyFromWeek, makeWeekKey } from '../../shared/timeblock-data';
-import type { DailyRange } from '../../shared/timeblock-data';
+import { getCurrentDayKey, getISOWeek, makeDayKey, makeDayKeyFromWeek, makeWeekKey } from '../../shared/plan-data';
+import type { DailyRange } from '../../shared/plan-data';
 import type { EventBlock, ExecutionRecord } from '../../datatypes/domain';
 import { getWeekDays, t } from '../../i18n';
 import { EVENT_STATUS_EMOJI, EVENT_STATUS_LABEL_KEY, getEventStatus, type EventStatus } from '../../datatypes/domain';
@@ -33,7 +33,7 @@ function formatHours(minutes: number): string {
 export class TodayView {
     private app: App;
     private inboxData: InboxData;
-    private categoryData: TimeBlockCategoryData;
+    private categoryData: PlanCategoryData;
     private save: () => Promise<void>;
     /** 获取全部事件（用于在时间轴上展示今天的计划事件） */
     private getEvents: () => EventBlock[];
@@ -82,7 +82,7 @@ export class TodayView {
     constructor(
         app: App,
         inboxData: InboxData,
-        categoryData: TimeBlockCategoryData,
+        categoryData: PlanCategoryData,
         save: () => Promise<void>,
         getEvents: () => EventBlock[],
         getExecutions: () => ExecutionRecord[],

@@ -1,7 +1,7 @@
 import type { App } from 'obsidian';
 import { Modal, Notice, Setting, setIcon } from 'obsidian';
 
-import type { TimeBlockCategoryData } from '../../shared/timeblock-category-manager';
+import type { PlanCategoryData } from '../../shared/plan-category-manager';
 import type { InboxData, InboxItem, Section, ChecklistData, StepsData, HabitData, FileData, OkrConditionType, BasketItem } from '../../datatypes/domain';
 import { SECTION_TYPE_META, OKR_CONDITION_META } from '../../datatypes/domain';
 import { renderTaskPanel, FilePathSuggest } from '../../shared/task-panel';
@@ -14,7 +14,7 @@ import { t } from '../../i18n';
 export class OkrTaskPlanView {
     private app: App;
     private inboxData: InboxData;
-    private categoryData: TimeBlockCategoryData;
+    private categoryData: PlanCategoryData;
     private save: () => Promise<void>;
     /** 当前渲染容器（用于自刷新） */
     private container?: HTMLElement;
@@ -32,7 +32,7 @@ export class OkrTaskPlanView {
     constructor(
         app: App,
         inboxData: InboxData,
-        categoryData: TimeBlockCategoryData,
+        categoryData: PlanCategoryData,
         save: () => Promise<void>,
     ) {
         this.app = app;

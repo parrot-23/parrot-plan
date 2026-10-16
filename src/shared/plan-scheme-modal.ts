@@ -1,13 +1,13 @@
 import { App, Modal, Setting } from 'obsidian';
 
-import type { TimeBlockCategoryData } from '../../../shared/timeblock-category-manager';
-import { renderTimeBlockCategoryLegend } from '../../../shared/timeblock-category-manager';
-import type { PlanSchemeData, PlanScheme } from '../../../shared/timeblock-data';
-import { hexToTransparent, DEFAULT_SCHEME_ID, ensureDefaultScheme } from '../../../shared/timeblock-data';
-import { renderTemplatePanel, type TemplateViewContext } from '../../../shared/template-manager';
-import { renderWeekGrid } from '../../../shared/week-grid';
-import { RangeEditModal } from './week-schedule-view';
-import { t } from '../../../i18n';
+import type { PlanCategoryData } from './plan-category-manager';
+import { renderPlanCategoryLegend } from './plan-category-manager';
+import type { PlanSchemeData, PlanScheme } from './plan-data';
+import { hexToTransparent, DEFAULT_SCHEME_ID, ensureDefaultScheme } from './plan-data';
+import { renderTemplatePanel, type TemplateViewContext } from './template-manager';
+import { renderWeekGrid } from './week-grid';
+import { RangeEditModal } from '../views/pdca/week-schedule-view';
+import { t } from '../i18n';
 
 /**
  * 时间计划方案设置窗口。
@@ -16,7 +16,7 @@ import { t } from '../../../i18n';
  * 右侧日历：选中图例后点击网格可添加区间，点击已有色块可编辑，× 可删除；数据写入当前激活方案。
  */
 export class PlanSchemeModal extends Modal {
-    private categoryData: TimeBlockCategoryData;
+    private categoryData: PlanCategoryData;
     private schemeData: PlanSchemeData;
     private templateCtx: TemplateViewContext;
     private onApplyTemplate: (templateId: string, targetDays: number[]) => void | Promise<void>;
@@ -29,7 +29,7 @@ export class PlanSchemeModal extends Modal {
 
     constructor(
         app: App,
-        categoryData: TimeBlockCategoryData,
+        categoryData: PlanCategoryData,
         schemeData: PlanSchemeData,
         templateCtx: TemplateViewContext,
         onApplyTemplate: (templateId: string, targetDays: number[]) => void | Promise<void>,
@@ -85,7 +85,7 @@ export class PlanSchemeModal extends Modal {
 
         // 左侧：图例管理 + 日模板
         const legendPanel = body.createDiv({ cls: 'plan-scheme-legend' });
-        renderTimeBlockCategoryLegend(
+        renderPlanCategoryLegend(
             this.app,
             legendPanel,
             this.categoryData,

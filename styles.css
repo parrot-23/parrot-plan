@@ -891,7 +891,7 @@
 }
 
 /* 图例容器相对定位（已有则跳过） */
-.timeblock-category-legend {
+.plan-category-legend {
     position: relative;
 }
 

@@ -1,7 +1,7 @@
 // calendar 模式渲染器：展示一个可翻月的日历，并标记有执行记录的日期。
 // 既不属于图表（stats），也不属于表单（periodic / fixed），是独立的展示型卡片。
 import type { CardRenderer } from '../../datatypes/renderer';
-import { makeDayKeyFromWeek } from '../../shared/timeblock-data';
+import { makeDayKeyFromWeek } from '../../shared/plan-data';
 
 /** 星期表头（周一为起始） */
 const WEEKDAY_LABELS = ['一', '二', '三', '四', '五', '六', '日'];

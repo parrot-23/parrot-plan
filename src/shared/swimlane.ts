@@ -1,6 +1,6 @@
 import type { InboxItem, ExecutionRecord } from '../datatypes/domain';
-import type { TimeBlockCategoryData } from './timeblock-category-manager';
-import { parseWeekKey, makeWeekKey, makeDayKeyFromWeek, getISOWeek } from './timeblock-data';
+import type { PlanCategoryData } from './plan-category-manager';
+import { parseWeekKey, makeWeekKey, makeDayKeyFromWeek, getISOWeek } from './plan-data';
 import { t } from '../i18n';
 
 /** 泳道图渲染选项 */
@@ -8,7 +8,7 @@ export interface SwimlaneOptions {
     /** 可见任务列表（按任务面板显示顺序，已过滤折叠/移除） */
     tasks: InboxItem[];
     /** 分类数据（用于任务标题前的分类色点） */
-    categoryData: TimeBlockCategoryData;
+    categoryData: PlanCategoryData;
     /** 当前选中任务 id（用于高亮） */
     selectedId?: string;
     /** 当前显示年份 */
