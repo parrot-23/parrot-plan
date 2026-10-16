@@ -179,10 +179,9 @@ export class TodayView {
         panel.createDiv({ cls: 'today-task-list-title', text: t('today.taskListTitle') });
 
         const { day, weekKey } = this.getViewDayInfo();
-        // 当天计划事件（含全天），按开始时间排序
+        // 当天计划事件（统一为全天事件）
         const dayEvents = this.getEvents()
-            .filter(ev => ev.day === day && ev.weekKey === weekKey)
-            .sort((a, b) => a.start - b.start);
+            .filter(ev => ev.day === day && ev.weekKey === weekKey);
 
         const list = panel.createDiv({ cls: 'today-task-list' });
 
@@ -209,11 +208,8 @@ export class TodayView {
 
             row.createSpan({ cls: 'today-task-list-name', text: ev.title });
 
-            // 时间标签（全天事件显示「全天」）
-            const timeText = ev.allDay
-                ? t('allday.label')
-                : `${formatMinutes(ev.start)}-${formatMinutes(ev.end)}`;
-            row.createSpan({ cls: 'today-task-list-time', text: timeText });
+            // 计划事件统一为全天事件
+            row.createSpan({ cls: 'today-task-list-time', text: t('allday.label') });
 
             // 点击选中该任务（再次点击取消），并清除时间轴事件选中
             row.onclick = (e) => {
@@ -252,9 +248,8 @@ export class TodayView {
             this.clearAllSelection();
         };
 
-        // 中间：当前时段任务卡片 + 正在执行的任务卡片 + 进行中任务卡片（并排，当前时段任务在开头）
+        // 中间：正在执行的任务卡片 + 进行中任务卡片（并排）
         const midSide = box.createDiv({ cls: 'today-date-mid' });
-        this.renderCurrentSlotCard(midSide);
         this.renderExecutingCard(midSide);
         this.renderRunningCard(midSide);
 
@@ -320,12 +315,7 @@ export class TodayView {
         card.setCssProps({ '--exec-color': cat?.color ?? '#e0b400' });
         card.createDiv({ cls: 'today-executing-label', text: t('today.executingLabel') });
         card.createDiv({ cls: 'today-executing-name', text: ev.title });
-        card.createDiv({
-            cls: 'today-executing-time',
-            text: ev.allDay
-                ? t('today.allDay')
-                : `${formatMinutes(ev.start)} - ${formatMinutes(ev.end)}`,
-        });
+        card.createDiv({ cls: 'today-executing-time', text: t('today.allDay') });
 
         // 点击卡片 → 选中该事件，同步更新任务层级 / 任务详情 / 操作按钮
         card.addClass('is-clickable');
@@ -376,39 +366,6 @@ export class TodayView {
     }
 
     /**
-     * 渲染「当前时间段任务」卡片（位于日期信息旁边）。
-     * 根据当前时刻匹配今天时间轴上覆盖此刻的计划事件，展示其内容；
-     * 点击卡片 → 选中该事件，在下方任务详情方框中显示详情。无匹配事件时不显示。
-     */
-    private renderCurrentSlotCard(box: HTMLElement) {
-        const ev = this.getCurrentSlotEvent();
-        if (!ev) return;
-        // 已进入执行（正在执行卡片已展示）或已执行完成时，不再重复显示当前时段卡片
-        if (this.executingEventId === ev.id) return;
-        if (getEventStatus(ev, this.getExecutions()) === 'executed') return;
-
-        const card = box.createDiv({ cls: 'today-currentslot-card' });
-        // 底色跟随事件分类颜色
-        const cat = ev.categoryId
-            ? this.categoryData.categories.find(c => c.id === ev.categoryId)
-            : undefined;
-        card.setCssProps({ '--slot-color': cat?.color ?? '#4c8dff' });
-        card.createDiv({ cls: 'today-currentslot-label', text: t('today.currentSlotLabel') });
-        card.createDiv({ cls: 'today-currentslot-name', text: ev.title });
-        card.createDiv({
-            cls: 'today-currentslot-time',
-            text: `${formatMinutes(ev.start)} - ${formatMinutes(ev.end)}`,
-        });
-
-        // 点击卡片 → 选中该事件，在下方任务详情方框中显示
-        card.addClass('is-clickable');
-        if (this.selectedEventId === ev.id) card.addClass('is-selected');
-        card.onclick = () => {
-            this.toggleEventSelection(ev.id);
-        };
-    }
-
-    /**
      * 当前查看日期对应的信息：星期几（1=周一 ... 7=周日）、周键、日期键。
      * 所有「今天」相关的计算都应基于此，以支持切换到昨天查看。
      */
@@ -422,29 +379,6 @@ export class TodayView {
     /** 当前查看的是否为今天 */
     private isViewingToday(): boolean {
         return makeDayKey(this.viewDate) === getCurrentDayKey();
-    }
-
-    /**
-     * 获取当前时间段应进行的计划事件：今天时间轴上覆盖当前时刻的事件。
-     * 若同一时刻有多个事件，取开始时间最晚的一个（最贴近当前时段）。
-     */
-    private getCurrentSlotEvent(): EventBlock | undefined {
-        // 仅在查看今天时展示「当前时段任务」
-        if (!this.isViewingToday()) return undefined;
-        const now = new Date();
-        const { day, weekKey } = this.getViewDayInfo();
-        const nowMinutes = now.getHours() * 60 + now.getMinutes();
-
-        const candidates = this.getEvents().filter(ev =>
-            ev.weekKey === weekKey
-            && ev.day === day
-            && !ev.allDay
-            && ev.start <= nowMinutes
-            && nowMinutes < ev.end,
-        );
-        if (candidates.length === 0) return undefined;
-        // 取开始时间最晚的一个
-        return candidates.reduce((a, b) => (b.start > a.start ? b : a));
     }
 
     /** 渲染单张统计卡片（标签 + 数值 + 进度条） */
@@ -984,7 +918,8 @@ export class TodayView {
         let totalMinutes = 0;
         let executedMinutes = 0;
         for (const ev of events) {
-            const duration = Math.max(0, ev.end - ev.start);
+            // 计划事件统一为全天事件，时长口径改用预估执行时长（未填写按 0 计）
+            const duration = Math.max(0, ev.estimatedMinutes ?? 0);
             const isExecuted = getEventStatus(ev, executions) === 'executed';
             totalMinutes += duration;
             if (isExecuted) executedMinutes += duration;
@@ -1544,11 +1479,7 @@ export class TodayView {
 
         const row = body.createDiv({ cls: 'today-detail-row' });
         row.createSpan({ cls: 'today-detail-label', text: `${t('today.timeRange')}:` });
-        row.createSpan({
-            text: ev.allDay
-                ? t('today.allDay')
-                : `${formatMinutes(ev.start)} - ${formatMinutes(ev.end)}`,
-        });
+        row.createSpan({ text: t('today.allDay') });
 
         const cat = ev.categoryId
             ? this.categoryData.categories.find(c => c.id === ev.categoryId)

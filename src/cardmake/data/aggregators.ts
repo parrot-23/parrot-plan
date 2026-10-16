@@ -110,7 +110,8 @@ function aggregateCategoryDistribution(source: CardSource, provider: DataProvide
     if (target === 'event') {
         for (const ev of provider.getEvents()) {
             const cat = ev.categoryId ?? 'uncategorized';
-            const val = metric === 'duration' ? Math.max(0, ev.end - ev.start) : 1;
+            // 计划事件统一为全天事件，时长口径改用预估执行时长（未填写按 0 计）
+            const val = metric === 'duration' ? Math.max(0, ev.estimatedMinutes ?? 0) : 1;
             buckets.set(cat, (buckets.get(cat) ?? 0) + val);
         }
     } else {
@@ -230,8 +231,9 @@ function aggregatePlanHeatmap(source: CardSource, provider: DataProvider): Aggre
         if (!ev.weekKey || !ev.day) continue;
         if (visibleIds && ev.inboxId && !visibleIds.has(ev.inboxId)) continue;
         const dateKey = makeDayKeyFromWeek(ev.weekKey, ev.day);
+        // 计划事件统一为全天事件，时长口径改用预估执行时长（未填写按 0 计）
         const val = metric === 'duration'
-            ? Math.max(0, ev.end - ev.start)
+            ? Math.max(0, ev.estimatedMinutes ?? 0)
             : 1;
         buckets.set(dateKey, (buckets.get(dateKey) ?? 0) + val);
     }

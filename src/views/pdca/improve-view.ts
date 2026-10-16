@@ -2,7 +2,7 @@ import type { App } from 'obsidian';
 
 import type { PlanCategoryData } from '../../shared/plan-category-manager';
 import type { InboxData, EventBlock, ExecutionRecord, ImprovementItem } from '../../datatypes/domain';
-import { getEventStatus } from '../../datatypes/domain';
+import { getEventStatus, OKR_CONDITION_META } from '../../datatypes/domain';
 import type { PdcaRepo } from '../../repos/pdca-repo';
 import {
     getCurrentWeekKey,
@@ -72,10 +72,10 @@ export class ImproveView {
         const body = container.createDiv({ cls: 'improve-body' });
         const columns = body.createDiv({ cls: 'improve-columns' });
 
-        // 左：差异点 + 7 天执行情况
+        // 左：本周计划执行情况 + 本周任务执行情况
         const left = columns.createDiv({ cls: 'improve-col improve-col-left' });
-        this.renderDiffPoints(left);
-        this.renderDailyStats(left);
+        this.renderWeekPlanStats(left);
+        this.renderWeekTaskStats(left);
 
         // 右：可填写的改进项列表
         const right = columns.createDiv({ cls: 'improve-col improve-col-right' });
@@ -140,116 +140,95 @@ export class ImproveView {
         };
     }
 
-    // ===== 左块 1：本周计划执行差异点 =====
-    private renderDiffPoints(col: HTMLElement) {
+    // ===== 左块 1：这周计划执行情况（周一~周日小方块，展示计划 vs 执行的差异） =====
+    private renderWeekPlanStats(col: HTMLElement) {
         const box = col.createDiv({ cls: 'improve-box' });
-        box.createDiv({ cls: 'improve-box-title', text: t('improve.diffPointsTitle') });
-
-        const weekEvents = this.getEvents().filter(ev => ev.weekKey === this.currentWeekKey);
-        const weekExecs = this.getExecutions().filter(ex => ex.weekKey === this.currentWeekKey);
-        const timedEvents = weekEvents.filter(ev => !ev.allDay);
-
-        // 未执行：计划事件状态为 planned
-        const unexecuted = timedEvents.filter(ev => getEventStatus(ev, weekExecs) === 'planned');
-        // 被替换：replaced=true 的执行记录
-        const replaced = weekExecs.filter(ex => ex.replaced);
-
-        if (unexecuted.length === 0 && replaced.length === 0) {
-            box.createDiv({ cls: 'improve-empty', text: t('improve.noDiff') });
-            return;
-        }
-
-        const list = box.createDiv({ cls: 'improve-diff-list' });
-        for (const ev of unexecuted) {
-            const row = list.createDiv({ cls: 'improve-diff-row' });
-            row.createSpan({ cls: 'improve-diff-badge is-unexecuted', text: t('improve.badgeUnexecuted') });
-            row.createSpan({ cls: 'improve-diff-title', text: ev.title });
-            row.createSpan({
-                cls: 'improve-diff-meta',
-                text: `${getWeekDays()[ev.day - 1]} ${this.formatMinutes(ev.start)}-${this.formatMinutes(ev.end)}`,
-            });
-        }
-        for (const ex of replaced) {
-            const row = list.createDiv({ cls: 'improve-diff-row' });
-            row.createSpan({ cls: 'improve-diff-badge is-replaced', text: t('improve.badgeReplaced') });
-            const item = ex.inboxId
-                ? this.inboxData.items.find(i => i.id === ex.inboxId && !i.removed)
-                : undefined;
-            const planned = ex.eventId ? this.getEvents().find(e => e.id === ex.eventId) : undefined;
-            const title = item?.title ?? planned?.title ?? t('improve.unknownTask');
-            row.createSpan({ cls: 'improve-diff-title', text: title });
-            row.createSpan({
-                cls: 'improve-diff-meta',
-                text: `${getWeekDays()[ex.day - 1]} ${this.formatMinutes(ex.start)}-${this.formatMinutes(ex.end)}`,
-            });
-        }
-    }
-
-    // ===== 左块 2：7 天每天执行情况 =====
-    private renderDailyStats(col: HTMLElement) {
-        const box = col.createDiv({ cls: 'improve-box' });
-        box.createDiv({ cls: 'improve-box-title', text: t('improve.dailyStatsTitle') });
+        box.createDiv({ cls: 'improve-box-title', text: t('improve.weekPlanTitle') });
 
         const weekEvents = this.getEvents().filter(ev => ev.weekKey === this.currentWeekKey);
         const weekExecs = this.getExecutions().filter(ex => ex.weekKey === this.currentWeekKey);
         const days = getWeekDays();
 
-        const list = box.createDiv({ cls: 'improve-daily-list' });
+        const grid = box.createDiv({ cls: 'improve-week-grid' });
         for (let day = 1; day <= 7; day++) {
-            const dayBox = list.createDiv({ cls: 'improve-daily-day' });
-            dayBox.createDiv({ cls: 'improve-daily-day-title', text: days[day - 1] });
+            const cell = grid.createDiv({ cls: 'improve-week-cell' });
+            cell.createDiv({ cls: 'improve-week-cell-title', text: days[day - 1] });
 
-            // 计划：按分类汇总时长
-            const dayEvents = weekEvents.filter(ev => ev.day === day && !ev.allDay);
-            const plannedByCat = new Map<string, number>();
-            for (const ev of dayEvents) {
-                const key = ev.categoryId ?? '__none__';
-                plannedByCat.set(key, (plannedByCat.get(key) ?? 0) + Math.max(0, ev.end - ev.start));
-            }
-            this.renderDailyCatRow(dayBox, t('improve.dailyPlanned'), plannedByCat);
-
-            // 实际：按分类汇总时长（分类取来源任务）
-            const dayExecs = weekExecs.filter(ex => ex.day === day);
-            const actualByCat = new Map<string, number>();
-            for (const ex of dayExecs) {
-                const item = ex.inboxId
-                    ? this.inboxData.items.find(i => i.id === ex.inboxId && !i.removed)
-                    : undefined;
-                const key = item?.categoryId ?? '__none__';
-                actualByCat.set(key, (actualByCat.get(key) ?? 0) + Math.max(0, ex.end - ex.start));
-            }
-            this.renderDailyCatRow(dayBox, t('improve.dailyActual'), actualByCat);
-
-            // 当天计划事件完成情况
+            // 事件差异：当天计划事件数 vs 已执行事件数（已完成 / 计划总数）
+            // 计划事件现为全天事件（含习惯时间点），故不再按 allDay 过滤
+            const dayEvents = weekEvents.filter(ev => ev.day === day);
             const executedCount = dayEvents.filter(ev => getEventStatus(ev, weekExecs) === 'executed').length;
-            const completion = dayBox.createDiv({ cls: 'improve-daily-completion' });
-            completion.createSpan({ cls: 'improve-daily-completion-label', text: t('improve.dailyCompletion') });
-            completion.createSpan({
-                cls: 'improve-daily-completion-value',
-                text: `${executedCount}/${dayEvents.length}`,
+            const eventRow = cell.createDiv({ cls: 'improve-week-cell-row' });
+            eventRow.createSpan({ cls: 'improve-week-cell-label', text: t('improve.weekCellEvent') });
+            eventRow.createSpan({
+                cls: 'improve-week-cell-value',
+                text: `${executedCount} / ${dayEvents.length}`,
             });
         }
     }
 
-    /** 渲染一天内某口径（计划/实际）的分类时长行 */
-    private renderDailyCatRow(parent: HTMLElement, label: string, byCat: Map<string, number>) {
-        const row = parent.createDiv({ cls: 'improve-daily-cat-row' });
-        row.createSpan({ cls: 'improve-daily-cat-label', text: label });
-        const chips = row.createDiv({ cls: 'improve-daily-cat-chips' });
-        if (byCat.size === 0) {
-            chips.createSpan({ cls: 'improve-daily-cat-empty', text: '—' });
+    // ===== 左块 2：这周任务执行情况（本周计划中出现的任务，含本周新增 OKR 进度） =====
+    private renderWeekTaskStats(col: HTMLElement) {
+        const box = col.createDiv({ cls: 'improve-box' });
+        box.createDiv({ cls: 'improve-box-title', text: t('improve.weekTaskTitle') });
+
+        const weekEvents = this.getEvents().filter(ev => ev.weekKey === this.currentWeekKey);
+        const weekExecs = this.getExecutions().filter(ex => ex.weekKey === this.currentWeekKey);
+
+        // 本周计划中出现的任务（按来源 inboxId 去重，保持首次出现顺序）
+        const taskIds: string[] = [];
+        for (const ev of weekEvents) {
+            if (ev.inboxId && !taskIds.includes(ev.inboxId)) taskIds.push(ev.inboxId);
+        }
+        const tasks = taskIds
+            .map(id => this.inboxData.items.find(i => i.id === id && !i.removed))
+            .filter((i): i is NonNullable<typeof i> => !!i);
+
+        if (tasks.length === 0) {
+            box.createDiv({ cls: 'improve-empty', text: t('improve.weekTaskEmpty') });
             return;
         }
-        for (const [key, minutes] of Array.from(byCat.entries())) {
-            const cat = key === '__none__'
-                ? undefined
-                : this.categoryData.categories.find(c => c.id === key);
-            const color = cat?.color ?? '#888888';
-            const name = cat?.label ?? t('inbox.noCategory');
-            const chip = chips.createSpan({ cls: 'improve-daily-cat-chip' });
-            const dot = chip.createSpan({ cls: 'improve-daily-cat-dot' });
-            dot.setCssProps({ '--dot-color': color });
-            chip.createSpan({ text: `${name} ${formatHours(minutes)}` });
+
+        const list = box.createDiv({ cls: 'improve-week-task-list' });
+        for (const item of tasks) {
+            const row = list.createDiv({ cls: 'improve-week-task-row' });
+
+            // 分类色点 + 任务名
+            const cat = item.categoryId
+                ? this.categoryData.categories.find(c => c.id === item.categoryId)
+                : undefined;
+            const dot = row.createSpan({ cls: 'improve-week-task-dot' });
+            dot.setCssProps({ '--dot-color': cat?.color ?? '#888888' });
+            row.createSpan({ cls: 'improve-week-task-name', text: item.title });
+
+            // 本周执行情况：执行次数 + 总时长
+            const execs = weekExecs.filter(ex => ex.inboxId === item.id);
+            const totalMinutes = execs.reduce((s, ex) => s + Math.max(0, ex.end - ex.start), 0);
+            const meta = row.createDiv({ cls: 'improve-week-task-meta' });
+            meta.createSpan({
+                cls: 'improve-week-task-chip',
+                text: t('improve.weekTaskExecCount', { count: String(execs.length) }),
+            });
+            meta.createSpan({
+                cls: 'improve-week-task-chip',
+                text: t('improve.weekTaskDuration', { duration: formatHours(totalMinutes) }),
+            });
+
+            // 本周新增 OKR 进度：仅统计本周执行记录带来的增量
+            const conditions = item.okr?.conditions ?? [];
+            if (conditions.length > 0) {
+                const okrRow = row.createDiv({ cls: 'improve-week-task-okr' });
+                okrRow.createSpan({ cls: 'improve-week-task-okr-label', text: t('improve.weekTaskOkrNew') });
+                for (const cond of conditions) {
+                    const unit = t(OKR_CONDITION_META[cond.type].unitKey as Parameters<typeof t>[0]);
+                    // 时长类型：本周执行总时长；成果类型：本周执行次数
+                    const added = cond.type === 'duration' ? totalMinutes : execs.length;
+                    okrRow.createSpan({
+                        cls: 'improve-week-task-okr-chip',
+                        text: `+${added} ${unit}`,
+                    });
+                }
+            }
         }
     }
 
@@ -300,12 +279,5 @@ export class ImproveView {
         this.pdcaRepo.removeImprovement(this.currentWeekKey, id);
         await this.save();
         await this.refresh();
-    }
-
-    /** 把分钟数格式化为 HH:MM */
-    private formatMinutes(minutes: number): string {
-        const h = Math.floor(minutes / 60);
-        const m = minutes % 60;
-        return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
     }
 }

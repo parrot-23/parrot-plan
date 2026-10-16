@@ -477,12 +477,13 @@ export function renderTaskPanel(
         }
 
         // 统计本周已分配的计划事件：时长（分钟累加）与次数
+        // 计划事件统一为全天事件，时长口径改用预估执行时长（未填写按 0 计）
         let totalMinutes = 0;
         let count = 0;
         if (events && currentWeekKey) {
             for (const ev of events) {
                 if (ev.inboxId === item.id && ev.weekKey === currentWeekKey) {
-                    totalMinutes += Math.max(0, ev.end - ev.start);
+                    totalMinutes += Math.max(0, ev.estimatedMinutes ?? 0);
                     count += 1;
                 }
             }

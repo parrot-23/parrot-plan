@@ -6,13 +6,6 @@ import type { EventBlock } from '../../datatypes/domain';
 import { getISOWeek, makeWeekKey } from '../../shared/plan-data';
 import { t } from '../../i18n';
 
-/** 分钟数格式化为 HH:MM */
-function formatMinutes(minutes: number): string {
-    const h = Math.floor(minutes / 60);
-    const m = minutes % 60;
-    return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
-}
-
 /**
  * 剧本场景视图：与 WorkbenchView 一致，通过 renderInto 渲染到指定容器。
  * 两种状态：初始页（按钮 + 说明）/ 任务清单页（今天的计划事件）。
@@ -80,13 +73,12 @@ export class SceneView {
 
         const list = container.createDiv({ cls: 'scene-task-list' });
 
-        // 今天的计划事件（含全天），按开始时间排序
+        // 今天的计划事件（统一为全天事件）
         const now = new Date();
         const day = (now.getDay() + 6) % 7 + 1;
         const weekKey = makeWeekKey(now.getFullYear(), getISOWeek(now));
         const dayEvents = this.getEvents()
-            .filter(ev => ev.day === day && ev.weekKey === weekKey)
-            .sort((a, b) => a.start - b.start);
+            .filter(ev => ev.day === day && ev.weekKey === weekKey);
 
         if (dayEvents.length === 0) {
             list.createDiv({ cls: 'scene-task-empty', text: t('scene.empty') });
@@ -102,10 +94,7 @@ export class SceneView {
             row.setCssProps({ '--chip-color': cat?.color ?? '#888888' });
             row.createSpan({ cls: 'scene-task-name', text: ev.title });
 
-            const timeText = ev.allDay
-                ? t('allday.label')
-                : `${formatMinutes(ev.start)}-${formatMinutes(ev.end)}`;
-            row.createSpan({ cls: 'scene-task-time', text: timeText });
+            row.createSpan({ cls: 'scene-task-time', text: t('allday.label') });
         }
     }
 }

@@ -1447,62 +1447,6 @@
     z-index: 1;
 }
 
-/* 可点击的事件卡片 */
-.event-card-clickable {
-    cursor: pointer;
-}
-
-/* 周计划视图：计划事件卡片使用灰白色条纹背景 */
-.event-card-striped {
-    background-image: repeating-linear-gradient(
-        45deg,
-        #ffffff 0,
-        #ffffff 5px,
-        #f9f9f9 5px,
-        #f9f9f9 10px
-    );
-}
-
-/* 执行层：未经过的时间点（灰色） */
-.event-card-pending {
-    border-top: 5px solid #bbbbbb;
-    background-color: #eeeeee88;
-    color: #999999;
-}
-
-.event-delete-btn {
-    position: absolute;
-    top: 1px;
-    right: 3px;
-    width: 16px;
-    height: 16px;
-    line-height: 14px;
-    text-align: center;
-    font-size: 16px;
-    font-weight: bold;
-    color: var(--text-on-accent);
-    background-color: #888;
-    cursor: pointer;
-    opacity: 0;
-    border-radius: 50%;
-    z-index: 2;
-}
-
-.event-card:hover .event-delete-btn {
-    opacity: 1;
-}
-
-/* 事件卡片左上角的执行情况图标（叠加显示，不改变卡片本身） */
-.event-status-icon-badge {
-    position: absolute;
-    top: -10px;
-    left: -3px;
-    font-size: 14px;
-    line-height: 1;
-    pointer-events: none;
-    z-index: 2;
-}
-
 /* ===== 事件悬浮提示卡片 ===== */
 .event-tooltip {
     position: fixed;
@@ -2461,138 +2405,128 @@
     padding: 4px 0;
 }
 
-/* 左块 1：差异点列表 */
-.improve-diff-list {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-}
-
-.improve-diff-row {
+/* 左块 1：这周计划执行情况（周一~周日小方块） */
+.improve-week-grid {
     display: flex;
     flex-direction: row;
-    align-items: center;
     gap: 8px;
-    font-size: 13px;
 }
 
-.improve-diff-badge {
-    flex-shrink: 0;
-    padding: 1px 8px;
-    border-radius: 8px;
-    font-size: 12px;
-    color: #fff;
-}
-
-.improve-diff-badge.is-unexecuted {
-    background: #e5534b;
-}
-
-.improve-diff-badge.is-replaced {
-    background: #f2a65a;
-}
-
-.improve-diff-title {
-    flex: 1;
+.improve-week-cell {
+    flex: 1 1 0;
     min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 8px 6px;
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 8px;
+    background: var(--background-primary);
+}
+
+.improve-week-cell-title {
+    font-size: 12px;
+    font-weight: bold;
+    text-align: center;
     color: var(--text-normal);
 }
 
-.improve-diff-meta {
-    flex-shrink: 0;
-    font-size: 12px;
-    color: var(--text-muted);
+.improve-week-cell-row {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1px;
 }
 
-/* 左块 2：7 天执行情况 */
-.improve-daily-list {
+.improve-week-cell-label {
+    font-size: 10px;
+    color: var(--text-faint);
+}
+
+.improve-week-cell-value {
+    font-size: 12px;
+    font-variant-numeric: tabular-nums;
+    color: var(--text-normal);
+}
+
+/* 左块 2：这周任务执行情况 */
+.improve-week-task-list {
     display: flex;
     flex-direction: column;
     gap: 10px;
 }
 
-.improve-daily-day {
-    border-top: 1px solid var(--background-modifier-border);
-    padding-top: 8px;
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-}
-
-.improve-daily-day:first-child {
-    border-top: none;
-    padding-top: 0;
-}
-
-.improve-daily-day-title {
-    font-size: 13px;
-    font-weight: bold;
-    color: var(--text-normal);
-}
-
-.improve-daily-cat-row {
+.improve-week-task-row {
     display: flex;
     flex-direction: row;
-    align-items: flex-start;
-    gap: 8px;
-    font-size: 12px;
-}
-
-.improve-daily-cat-label {
-    flex-shrink: 0;
-    width: 32px;
-    color: var(--text-muted);
-}
-
-.improve-daily-cat-chips {
-    flex: 1;
-    min-width: 0;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-}
-
-.improve-daily-cat-chip {
-    display: inline-flex;
     align-items: center;
-    gap: 4px;
-    padding: 1px 8px;
-    border-radius: 8px;
-    background: var(--background-primary);
-    border: 1px solid var(--background-modifier-border);
-    color: var(--text-normal);
+    flex-wrap: wrap;
+    gap: 8px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--background-modifier-border);
 }
 
-.improve-daily-cat-dot {
+.improve-week-task-row:last-child {
+    padding-bottom: 0;
+    border-bottom: none;
+}
+
+.improve-week-task-dot {
+    flex-shrink: 0;
     width: 8px;
     height: 8px;
     border-radius: 50%;
     background: var(--dot-color, #888888);
 }
 
-.improve-daily-cat-empty {
-    color: var(--text-faint);
+.improve-week-task-name {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 13px;
+    color: var(--text-normal);
 }
 
-.improve-daily-completion {
+.improve-week-task-meta {
+    flex-shrink: 0;
     display: flex;
     flex-direction: row;
-    align-items: center;
-    gap: 8px;
-    font-size: 12px;
+    gap: 6px;
 }
 
-.improve-daily-completion-label {
-    flex-shrink: 0;
-    width: 32px;
+.improve-week-task-chip {
+    padding: 1px 8px;
+    border-radius: 8px;
+    font-size: 12px;
+    background: var(--background-primary);
+    border: 1px solid var(--background-modifier-border);
     color: var(--text-muted);
 }
 
-.improve-daily-completion-value {
-    color: var(--text-normal);
+.improve-week-task-okr {
+    flex-basis: 100%;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px;
+    padding-left: 16px;
+}
+
+.improve-week-task-okr-label {
+    font-size: 11px;
+    color: var(--text-faint);
+}
+
+.improve-week-task-okr-chip {
+    padding: 1px 8px;
+    border-radius: 8px;
+    font-size: 12px;
+    font-variant-numeric: tabular-nums;
+    color: var(--text-on-accent);
+    background: var(--interactive-accent);
 }
 
 /* 右块：可填写改进项列表 */
@@ -3454,54 +3388,6 @@
     white-space: nowrap;
 }
 
-/* 中间：当前时段任务卡片（按当前时间匹配，点击查看详情） */
-.today-currentslot-card {
-    /* 宽度与右侧「计划总数 / 已完成」大卡片保持一致；正在执行卡片为其两倍 */
-    flex-shrink: 0;
-    width: 130px;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    gap: 2px;
-    padding: 8px 12px;
-    border: 1px solid color-mix(in srgb, var(--slot-color, #4c8dff) 60%, var(--background-modifier-border));
-    border-left: 3px solid var(--slot-color, #4c8dff);
-    border-radius: 8px;
-    background-color: color-mix(in srgb, var(--slot-color, #4c8dff) 10%, var(--background-secondary));
-}
-
-.today-currentslot-card.is-clickable {
-    cursor: pointer;
-}
-
-.today-currentslot-card.is-selected {
-    border-color: var(--interactive-accent);
-    outline: 2px solid var(--interactive-accent);
-    outline-offset: -1px;
-}
-
-.today-currentslot-label {
-    font-size: 11px;
-    font-weight: 700;
-    color: var(--text-muted);
-    white-space: nowrap;
-}
-
-.today-currentslot-name {
-    font-size: 15px;
-    font-weight: 700;
-    color: var(--text-normal);
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-.today-currentslot-time {
-    font-size: 11px;
-    color: var(--text-muted);
-    white-space: nowrap;
-}
-
 /* 右侧：日目标完成情况（大卡片 + 两张小卡片） */
 .today-date-stats {
     display: flex;
@@ -4167,13 +4053,6 @@
 .event-card.is-selected .event-status-bubble {
     outline: 2px solid var(--interactive-accent);
     outline-offset: -1px;
-}
-
-/* 左侧任务面板选中对应任务时，高亮事件卡片（边框） */
-.event-card.is-task-selected {
-    outline: 2px solid var(--text-accent);
-    outline-offset: -1px;
-    z-index: 5;
 }
 
 /* 中间：当天时间轴（紧贴左侧任务面板） */

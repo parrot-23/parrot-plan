@@ -727,134 +727,9 @@ export class WeekScheduleView extends ItemView {
                 });
             }
 
-            // 点击空白 → 新建事件（后续接弹窗）
-            col.onclick = async (e) => {
-                const target = e.target as HTMLElement;
-                if (target.closest('.event-card')) return;
+            // 计划事件统一为全天事件（在顶部全天面板展示），日历列不再创建/渲染时间点事件
 
-                // 已制定周计划时计划已固定，不允许再创建计划
-                if (this.plannedWeeks.includes(this.currentWeekKey)) {
-                    new Notice(t('event.weekPlannedLocked'));
-                    return;
-                }
-
-                const rect = col.getBoundingClientRect();
-                const y = e.clientY - rect.top;
-                // 限制在一天范围内（列可能被拉伸到高于 24 小时的高度）
-                const rawStart = Math.floor((y / 80) * 120 / 30) * 30;
-                const startMinutes = Math.max(0, Math.min(rawStart, 1440 - 60));
-                const endMinutes = startMinutes + 60;
-
-                // ===== 新增：检查收集盒是否有选中条目 =====
-                const selectedInboxItem = this.getSelectedInboxItem();
-                if (selectedInboxItem) {
-                    // 时间点事件可与其他时刻重复；但若当天全天已有该任务，则移除全天事件
-                    this.removeAllDayEventForItem(selectedInboxItem, d);
-                    // 直接创建事件，标题和分类从收集盒条目继承，并记录来源任务
-                    this.pdcaRepo().addEvent({
-                        id: `ev_${Date.now()}`,
-                        day: d,
-                        start: startMinutes,
-                        end: endMinutes,
-                        title: this.getSelectedEventTitle(selectedInboxItem),
-                        categoryId: selectedInboxItem.categoryId,
-                        inboxId: selectedInboxItem.id,
-                        completed: false,
-                        weekKey: this.currentWeekKey,
-                        // 继承任务的预估时长（未填写时不设置）
-                        ...(typeof selectedInboxItem.estimatedMinutes === 'number' && selectedInboxItem.estimatedMinutes > 0
-                            ? { estimatedMinutes: selectedInboxItem.estimatedMinutes }
-                            : {}),
-                    });
-                    // 加入某天时，同时成为该周的周目标
-                    this.assignItemToDay(selectedInboxItem, d);
-                    log('分配计划事件（时间点）', {
-                        weekKey: this.currentWeekKey,
-                        day: d,
-                        start: startMinutes,
-                        end: endMinutes,
-                        title: selectedInboxItem.title,
-                        inboxId: selectedInboxItem.id,
-                    });
-                    await this.save();
-                    await this.onOpen();
-                    new Notice(t('event.scheduled', { title: selectedInboxItem.title }));
-                    return;
-                }
-
-                // ===== 未选中任务：事件名称来源于任务，必须先选择任务 =====
-                new Notice(t('event.needSelectTask'));
-            };
-
-            // 渲染已有事件（排除全天事件，仅当前周）
-            const dayEvents = this.events.filter(ev => ev.day === d && !ev.allDay && ev.weekKey === this.currentWeekKey);
-            for (const ev of dayEvents) {
-                const card = this.createEventCard(col, ev);
-                const cat = ev.categoryId
-                    ? this.planCategoryData.categories.find(c => c.id === ev.categoryId)
-                    : undefined;
-
-                const rawColor = cat?.color ?? '#888888';
-                card.addClass('event-card-clickable');
-                // 灰白色条纹背景（周计划视图专用）
-                card.addClass('event-card-striped');
-                card.setCssProps({
-                    '--card-color': rawColor,
-                    '--card-bg': '#eeeeee88',
-                });
-
-                // 执行情况图标（当前周已制定周计划时显示，叠加在卡片左上角，不改变卡片本身）
-                if (this.plannedWeeks.includes(this.currentWeekKey)) {
-                    const status = getEventStatus(ev, this.executions);
-                    card.createDiv({
-                        cls: `event-status-icon-badge is-${status}`,
-                        text: EVENT_STATUS_EMOJI[status],
-                    });
-                }
-
-                // ===== 右上角 × 删除按钮（已制定周计划激活时计划已固定，不允许删除，故不显示） =====
-                if (!this.plannedWeeks.includes(this.currentWeekKey)) {
-                    const delBtn = card.createDiv({ cls: 'event-delete-btn' });
-                    delBtn.setText('×');
-                    delBtn.onclick = async (e) => {
-                        e.stopPropagation();
-                        // 原地删除，保持数组引用不变（插件持有同一引用）
-                        this.pdcaRepo().removeEvent(ev.id);
-                        await this.save();
-                        await this.onOpen();
-                    };
-                }
-
-                card.onclick = (e) => {
-                    e.stopPropagation();
-                    new EventEditModal(this.app, ev.start, ev.end, this.planCategoryData,
-                        (note, start, end, categoryId) => {
-                            // 名称来源于任务，不可修改；仅更新备注、时间、分类
-                            ev.note = note || undefined;
-                            ev.start = start;
-                            ev.end = end;
-                            ev.categoryId = categoryId;
-                            void (async () => {
-                                await this.save();
-                                await this.onOpen();
-                            })();
-                        }, ev
-                    ).open();
-                };
-
-                // 左侧任务面板选中该任务时，高亮对应事件卡片
-                if (this.inboxData.selectedId && ev.inboxId === this.inboxData.selectedId) {
-                    card.addClass('is-task-selected');
-                }
-
-                // 悬浮提示：展示事件详细信息
-                // 已制定周计划时，改为按背景网格 2 小时区间悬浮（见下方），卡片本身不再显示提示
-                if (!this.plannedWeeks.includes(this.currentWeekKey)) {
-                    this.attachEventTooltip(card, ev);
-                }
-            }
-
-            // 已制定周计划：按背景网格 2 小时区间悬浮，显示该区间内所有计划/执行信息
+            // 已制定周计划：按背景网格 2 小时区间悬浮，显示该区间内的执行信息
             if (this.plannedWeeks.includes(this.currentWeekKey)) {
                 this.attachRangeHover(col, d);
             }
@@ -862,17 +737,6 @@ export class WeekScheduleView extends ItemView {
 
         // 当前时间红线（仅当天列）
         this.renderCurrentTimeLine(bodyRowInner);
-    }
-
-    // ===== 公共：事件卡片（仅定位 + 基础外观）=====
-    private createEventCard(col: HTMLElement, ev: EventBlock, title?: string): HTMLElement {
-        const card = col.createDiv({ cls: 'event-card' });
-        card.setCssProps({
-            '--card-top': `${(ev.start / 120) * 80}px`,
-            '--card-height': `${((ev.end - ev.start) / 120) * 80}px`,
-        });
-        card.setText(title ?? ev.title);
-        return card;
     }
 
     /** 分钟数 → HH:MM */
@@ -883,87 +747,9 @@ export class WeekScheduleView extends ItemView {
     }
 
     /**
-     * 给事件卡片绑定悬浮提示：鼠标移入时在卡片旁显示详细信息
-     * （标题、时间、分类、执行状态），移出时移除。
-     */
-    private attachEventTooltip(card: HTMLElement, ev: EventBlock) {
-        let tip: HTMLElement | null = null;
-
-        const show = () => {
-            if (tip) return;
-            tip = document.body.createDiv({ cls: 'event-tooltip' });
-
-            // 标题
-            tip.createDiv({ cls: 'event-tooltip-title', text: ev.title });
-
-            // 时间
-            const timeText = ev.allDay
-                ? t('eventTooltip.allDay')
-                : `${this.formatMinutes(ev.start)} - ${this.formatMinutes(ev.end)}`;
-            const timeRow = tip.createDiv({ cls: 'event-tooltip-row' });
-            timeRow.createSpan({ cls: 'event-tooltip-label', text: t('eventTooltip.time') });
-            timeRow.createSpan({ cls: 'event-tooltip-value', text: timeText });
-
-            // 分类
-            const cat = ev.categoryId
-                ? this.planCategoryData.categories.find(c => c.id === ev.categoryId)
-                : undefined;
-            const catRow = tip.createDiv({ cls: 'event-tooltip-row' });
-            catRow.createSpan({ cls: 'event-tooltip-label', text: t('eventTooltip.category') });
-            const catValue = catRow.createSpan({ cls: 'event-tooltip-value' });
-            if (cat) {
-                const dot = catValue.createSpan({ cls: 'event-tooltip-dot' });
-                dot.setCssProps({ '--dot-color': cat.color });
-                catValue.createSpan({ text: cat.label });
-            } else {
-                catValue.setText(t('inbox.noCategory'));
-            }
-
-            // 执行状态（仅当前周已制定周计划时才有意义）
-            if (this.plannedWeeks.includes(this.currentWeekKey)) {
-                const status = getEventStatus(ev, this.executions);
-                const statusRow = tip.createDiv({ cls: 'event-tooltip-row' });
-                statusRow.createSpan({ cls: 'event-tooltip-label', text: t('eventTooltip.status') });
-                statusRow.createSpan({
-                    cls: 'event-tooltip-value',
-                    text: `${EVENT_STATUS_EMOJI[status]} ${t(EVENT_STATUS_LABEL_KEY[status])}`,
-                });
-            }
-
-            // 定位：优先显示在卡片右侧，空间不足则显示在左侧
-            const rect = card.getBoundingClientRect();
-            const tipRect = tip.getBoundingClientRect();
-            let left = rect.right + 8;
-            if (left + tipRect.width > window.innerWidth) {
-                left = rect.left - tipRect.width - 8;
-            }
-            let top = rect.top;
-            if (top + tipRect.height > window.innerHeight) {
-                top = window.innerHeight - tipRect.height - 8;
-            }
-            tip.setCssProps({
-                '--tip-left': `${Math.max(8, left)}px`,
-                '--tip-top': `${Math.max(8, top)}px`,
-            });
-        };
-
-        const hide = () => {
-            if (tip) {
-                tip.remove();
-                tip = null;
-            }
-        };
-
-        card.addEventListener('mouseenter', show);
-        card.addEventListener('mouseleave', hide);
-    }
-
-    /**
      * 已制定周计划时：按背景网格的 2 小时区间悬浮。
-     * 鼠标在某天列的某个 2 小时区间内移动时，显示该区间内的所有事件：
-     * - 第 1 列：原计划信息（区间内所有计划事件，每个一张详细卡片，从上到下）
-     * - 第 2 列：执行信息（区间内所有执行记录）；若某执行记录关联的计划事件被替换过，
-     *   则该执行卡片与第 1 列对应的原计划卡片行对齐。
+     * 鼠标在某天列的某个 2 小时区间内移动时，显示该区间内的所有执行记录。
+     * （计划事件统一为全天事件，在顶部全天面板展示，不再按时间点出现在日历列）
      */
     private attachRangeHover(col: HTMLElement, day: number) {
         let tip: HTMLElement | null = null;
@@ -983,67 +769,21 @@ export class WeekScheduleView extends ItemView {
 
             const rangeEnd = rangeStart + 120;
 
-            // 区间内所有计划事件（按开始时间排序）
-            const plannedEvents = this.events
-                .filter(ev => ev.day === day && !ev.allDay && ev.weekKey === this.currentWeekKey
-                    && ev.start < rangeEnd && ev.end > rangeStart)
-                .sort((a, b) => a.start - b.start);
-
             // 区间内所有执行记录（按开始时间排序）
             const execs = this.executions
                 .filter(ex => ex.day === day && ex.weekKey === this.currentWeekKey
                     && ex.start < rangeEnd && ex.end > rangeStart)
                 .sort((a, b) => a.start - b.start);
 
-            // 两列容器
+            // 单列容器：执行信息
             const cols = tip.createDiv({ cls: 'range-hover-cols' });
-
-            // ===== 第 1 列：原计划 =====
-            const plannedCol = cols.createDiv({ cls: 'range-hover-col' });
-            plannedCol.createDiv({ cls: 'range-hover-col-title', text: t('eventTooltip.plannedCol') });
-            // 记录每个计划事件在第 1 列中的行号（用于第 2 列对齐）
-            const plannedRowIndex = new Map<string, number>();
-            if (plannedEvents.length === 0) {
-                plannedCol.createDiv({ cls: 'range-hover-empty', text: t('eventTooltip.none') });
-            } else {
-                plannedEvents.forEach((ev, idx) => {
-                    plannedRowIndex.set(ev.id, idx);
-                    this.renderRangeHoverCard(plannedCol, ev);
-                });
-            }
-
-            // ===== 第 2 列：执行 =====
             const execCol = cols.createDiv({ cls: 'range-hover-col' });
             execCol.createDiv({ cls: 'range-hover-col-title', text: t('eventTooltip.execCol') });
             if (execs.length === 0) {
                 execCol.createDiv({ cls: 'range-hover-empty', text: t('eventTooltip.none') });
             } else {
-                // 先按「是否替换了某原计划」分组：替换的按原计划行号对齐，其余顺序排列
-                const aligned = new Map<number, ExecutionRecord>();
-                const unaligned: ExecutionRecord[] = [];
                 for (const ex of execs) {
-                    const planned = ex.eventId
-                        ? this.events.find(e => e.id === ex.eventId)
-                        : undefined;
-                    // 替换执行记录 → 与第 1 列对应原计划卡片对齐
-                    if (ex.replaced && planned && plannedRowIndex.has(planned.id)) {
-                        aligned.set(plannedRowIndex.get(planned.id)!, ex);
-                    } else {
-                        unaligned.push(ex);
-                    }
-                }
-
-                // 按第 1 列行数逐行渲染：对齐的执行卡片放在对应行，其余依次填充空行
-                const totalRows = Math.max(plannedEvents.length, aligned.size + unaligned.length);
-                let unalignedIdx = 0;
-                for (let row = 0; row < totalRows; row++) {
-                    const ex = aligned.get(row) ?? unaligned[unalignedIdx++];
-                    if (ex) {
-                        this.renderRangeHoverExecCard(execCol, ex);
-                    } else {
-                        // 占位，保持与第 1 列行对齐
-                        execCol.createDiv({ cls: 'range-hover-placeholder' });
-                    }
+                    this.renderRangeHoverExecCard(execCol, ex);
                 }
             }
 
@@ -1090,42 +830,6 @@ export class WeekScheduleView extends ItemView {
         });
 
         col.addEventListener('mouseleave', hide);
-    }
-
-    /** 渲染区间悬浮中的「计划事件」详细卡片（与现有悬浮提示字段一致） */
-    private renderRangeHoverCard(parent: HTMLElement, ev: EventBlock) {
-        const card = parent.createDiv({ cls: 'range-hover-card' });
-        card.createDiv({ cls: 'event-tooltip-title', text: ev.title });
-
-        const timeRow = card.createDiv({ cls: 'event-tooltip-row' });
-        timeRow.createSpan({ cls: 'event-tooltip-label', text: t('eventTooltip.time') });
-        timeRow.createSpan({
-            cls: 'event-tooltip-value',
-            text: `${this.formatMinutes(ev.start)} - ${this.formatMinutes(ev.end)}`,
-        });
-
-        const cat = ev.categoryId
-            ? this.planCategoryData.categories.find(c => c.id === ev.categoryId)
-            : undefined;
-        const catRow = card.createDiv({ cls: 'event-tooltip-row' });
-        catRow.createSpan({ cls: 'event-tooltip-label', text: t('eventTooltip.category') });
-        const catValue = catRow.createSpan({ cls: 'event-tooltip-value' });
-        if (cat) {
-            const dot = catValue.createSpan({ cls: 'event-tooltip-dot' });
-            dot.setCssProps({ '--dot-color': cat.color });
-            catValue.createSpan({ text: cat.label });
-        } else {
-            catValue.setText(t('inbox.noCategory'));
-        }
-
-        // 第 1 列仅展示计划情况：状态固定为「计划」，不反映执行信息（执行情况在第 2 列展示）
-        const status: EventStatus = 'planned';
-        const statusRow = card.createDiv({ cls: 'event-tooltip-row' });
-        statusRow.createSpan({ cls: 'event-tooltip-label', text: t('eventTooltip.status') });
-        statusRow.createSpan({
-            cls: 'event-tooltip-value',
-            text: `${EVENT_STATUS_EMOJI[status]} ${t(EVENT_STATUS_LABEL_KEY[status])}`,
-        });
     }
 
     /** 渲染区间悬浮中的「执行记录」详细卡片 */
@@ -1558,27 +1262,13 @@ export class WeekScheduleView extends ItemView {
         return `${item.title} · ${sectionName}`;
     }
 
-    /** 判断某任务在当前周的某天是否已排入任何事件（全天或时间点） */
+    /** 判断某任务在当前周的某天是否已排入事件 */
     private hasAnyEventForItem(item: InboxItem, day: number): boolean {
         return this.events.some(ev =>
             ev.inboxId === item.id
             && ev.day === day
             && ev.weekKey === this.currentWeekKey,
         );
-    }
-
-    /** 移除某任务在当前周某天的全天事件（用于时间点事件创建时替换全天事件） */
-    private removeAllDayEventForItem(item: InboxItem, day: number): void {
-        // 原地删除，保持数组引用不变（插件持有同一引用）
-        for (let i = this.events.length - 1; i >= 0; i--) {
-            const ev = this.events[i];
-            if (ev.inboxId === item.id
-                && ev.day === day
-                && ev.weekKey === this.currentWeekKey
-                && ev.allDay) {
-                this.events.splice(i, 1);
-            }
-        }
     }
 
     /**
@@ -1701,96 +1391,6 @@ export class RangeEditModal extends Modal {
         this.contentEl.empty();
     }
 
-}
-
-
-
-class EventEditModal extends Modal {
-    private title: string = '';
-    private note: string = '';
-    private start: number;
-    private end: number;
-    private categoryId: string;
-
-    constructor(
-        app: App,
-        defaultStart: number,
-        defaultEnd: number,
-        private categoryData: PlanCategoryData,
-        private onSubmit: (note: string, start: number, end: number, categoryId?: string) => void,
-        private defaultEvent?: EventBlock,
-    ) {
-        super(app);
-        this.start = defaultStart;
-        this.end = defaultEnd;
-        this.categoryId = categoryData.categories[0]?.id ?? '';
-        if (defaultEvent) {
-            this.title = defaultEvent.title;
-            this.note = defaultEvent.note ?? '';
-            this.start = defaultEvent.start;
-            this.end = defaultEvent.end;
-            this.categoryId = defaultEvent.categoryId ?? this.categoryId;
-        }
-    }
-
-    onOpen() {
-        const { contentEl } = this;
-        contentEl.empty();
-        contentEl.createEl('h3', { text: t('event.edit') });
-
-        // 事件名称来源于任务，只读展示，不可编辑
-        new Setting(contentEl)
-            .setName(t('event.title'))
-            .setDesc(t('event.titleFromTask'))
-            .addText(text => {
-                text.setValue(this.title).setDisabled(true);
-            });
-
-        new Setting(contentEl).setName(t('event.startTime')).addDropdown(dd => {
-            for (let h = 0; h < 24; h++) {
-                for (let m of [0, 30]) {
-                    const val = h * 60 + m;
-                    dd.addOption(String(val), `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`);
-                }
-            }
-            dd.setValue(String(this.start)).onChange(val => this.start = Number(val));
-        });
-
-        new Setting(contentEl).setName(t('event.endTime')).addDropdown(dd => {
-            for (let h = 0; h < 24; h++) {
-                for (let m of [0, 30]) {
-                    const val = h * 60 + m;
-                    dd.addOption(String(val), `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`);
-                }
-            }
-            dd.addOption('1440', '24:00');
-            dd.setValue(String(this.end)).onChange(val => this.end = Number(val));
-        });
-
-        new Setting(contentEl).setName(t('event.category')).addDropdown(dd => {
-            dd.addOption('', t('event.noCategory'));
-            for (const cat of this.categoryData.categories) {
-                dd.addOption(cat.id, cat.label);
-            }
-            dd.setValue(this.categoryId).onChange(val => this.categoryId = val);
-        });
-
-        // 额外备注（可编辑）
-        new Setting(contentEl).setName(t('event.note')).addTextArea(text => {
-            text.setPlaceholder(t('event.notePlaceholder')).setValue(this.note)
-                .onChange(val => this.note = val);
-            text.inputEl.rows = 3;
-        });
-
-        new Setting(contentEl)
-            .addButton(btn => btn.setButtonText(t('common.save')).setCta().onClick(() => {
-                this.onSubmit(this.note.trim(), this.start, this.end, this.categoryId || undefined);
-                this.close();
-            }))
-            .addButton(btn => btn.setButtonText(t('common.cancel')).onClick(() => this.close()));
-    }
-
-    onClose() { this.contentEl.empty(); }
 }
 
 /** 复制某天事件弹窗：单选一天 */
