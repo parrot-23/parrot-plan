@@ -506,10 +506,6 @@ export class MainView extends ItemView {
         // 清除上一次视图残留在共享容器上的视图类，避免多个视图样式叠加导致布局错乱
         this.contentRoot.removeClass('today-view', 'year-view', 'task-plan-view', 'swimlane-view', 'workbench-view', 'check-view', 'improve-view', 'achievement-view', 'script-manage-view', 'scene-view', 'gtd-collect-view', 'gtd-config-view', 'gtd-clarify-view', 'gtd-review-view');
 
-        // 从其他页面进入周计划视图时，若未选中任务则默认激活「周目标」
-        if (this.activeTab === 'week' && this.prevTab !== 'week' && !this.weekView.inboxData.selectedId) {
-            this.inboxRepo().data.weekGoalOnly = true;
-        }
         // 从其他页面进入日执行视图时，始终回到今天
         if (this.activeTab === 'today' && this.prevTab !== 'today') {
             this.todayView.resetToToday();

@@ -22,8 +22,10 @@ export class GtdClarifyView {
     private inboxData: InboxData;
     private categoryData: PlanCategoryData;
     private save: () => Promise<void>;
-    /** 当前选中的收集卡片 id */
-    private selectedItemId?: string;
+    /** 当前选中的收集卡片 id 集合（支持 Ctrl 多选 / Shift 连选） */
+    private selectedItemIds: Set<string> = new Set();
+    /** 最近一次点击的收集卡片 id（用于 Shift 连选的锚点） */
+    private lastClickedItemId?: string;
     /** 选择源面板当前激活的按钮 */
     private activeSourceTab: SourceTab = 'tasks';
     /** 右栏是否处于「创建新任务」表单模式 */
@@ -64,7 +66,9 @@ export class GtdClarifyView {
     /** 左栏：收集视图的未处理卡片 */
     private renderLeft(layout: HTMLElement) {
         const col = layout.createDiv({ cls: 'gtd-clarify-col gtd-clarify-left' });
-        col.createDiv({ cls: 'gtd-clarify-col-title', text: t('gtd.clarifyLeftTitle') });
+        const titleRow = col.createDiv({ cls: 'gtd-clarify-col-title-row' });
+        titleRow.createDiv({ cls: 'gtd-clarify-col-title', text: t('gtd.clarifyLeftTitle') });
+        titleRow.createSpan({ cls: 'gtd-clarify-multiselect-hint', text: t('gtd.clarifyMultiSelectHint') });
 
         const list = col.createDiv({ cls: 'gtd-clarify-list' });
         const pending = this.gtdRepo.getPendingItems();
@@ -74,13 +78,42 @@ export class GtdClarifyView {
         }
         for (const item of pending) {
             const card = list.createDiv({ cls: 'gtd-clarify-item' });
-            if (item.id === this.selectedItemId) card.addClass('is-active');
+            if (this.selectedItemIds.has(item.id)) card.addClass('is-active');
             card.setText(item.content);
-            card.onclick = () => {
-                this.selectedItemId = item.id;
-                if (this.container) void this.renderInto(this.container);
+            card.onclick = (e) => {
+                this.handleItemClick(item.id, pending, e);
             };
         }
+    }
+
+    /**
+     * 处理收集卡片点击：
+     * - 普通点击：单选该卡片
+     * - Ctrl/Cmd 点击：切换该卡片的选中状态（多选）
+     * - Shift 点击：从上次点击的锚点到当前卡片之间连选
+     */
+    private handleItemClick(id: string, pending: { id: string }[], e: MouseEvent): void {
+        if (e.shiftKey && this.lastClickedItemId) {
+            const ids = pending.map(it => it.id);
+            const from = ids.indexOf(this.lastClickedItemId);
+            const to = ids.indexOf(id);
+            if (from !== -1 && to !== -1) {
+                const [start, end] = from < to ? [from, to] : [to, from];
+                this.selectedItemIds = new Set(ids.slice(start, end + 1));
+            } else {
+                this.selectedItemIds = new Set([id]);
+            }
+        } else if (e.ctrlKey || e.metaKey) {
+            // 切换当前卡片的选中状态
+            if (this.selectedItemIds.has(id)) this.selectedItemIds.delete(id);
+            else this.selectedItemIds.add(id);
+            this.lastClickedItemId = id;
+        } else {
+            // 普通点击：单选
+            this.selectedItemIds = new Set([id]);
+            this.lastClickedItemId = id;
+        }
+        if (this.container) void this.renderInto(this.container);
     }
 
     /** 中栏：选择源面板（顶部按钮切换，当前仅「任务」） */
@@ -151,9 +184,8 @@ export class GtdClarifyView {
         const selectedTask = this.inboxData.selectedId
             ? this.inboxData.items.find((it) => it.id === this.inboxData.selectedId && !it.removed)
             : undefined;
-        const selectedItem = this.selectedItemId
-            ? this.gtdRepo.data.items.find((it) => it.id === this.selectedItemId)
-            : undefined;
+        const selectedItems = this.getSelectedItems();
+        const isMulti = selectedItems.length > 1;
 
         // 整理说明行：信息将放入 xxx 任务的收集篮子中
         const organizeRow = col.createDiv({ cls: 'gtd-clarify-organize-row' });
@@ -165,13 +197,17 @@ export class GtdClarifyView {
                 : t('gtd.clarifyOrganizeNoTarget'),
         });
 
-        // 待整理内容预览（来自左栏选中的收集记录）
+        // 待整理内容预览（来自左栏选中的收集记录，多选时逐条列出）
         const preview = col.createDiv({ cls: 'gtd-clarify-preview' });
         preview.createDiv({ cls: 'gtd-clarify-preview-label', text: t('gtd.clarifyPreviewLabel') });
-        preview.createDiv({
-            cls: 'gtd-clarify-preview-text',
-            text: selectedItem ? selectedItem.content : t('gtd.clarifyPreviewEmpty'),
-        });
+        if (selectedItems.length === 0) {
+            preview.createDiv({ cls: 'gtd-clarify-preview-text', text: t('gtd.clarifyPreviewEmpty') });
+        } else {
+            const previewList = preview.createDiv({ cls: 'gtd-clarify-preview-list' });
+            for (const it of selectedItems) {
+                previewList.createDiv({ cls: 'gtd-clarify-preview-text', text: it.content });
+            }
+        }
 
         // 底部按钮：确认 + 创建为新任务
         const footer = col.createDiv({ cls: 'gtd-clarify-footer' });
@@ -180,14 +216,17 @@ export class GtdClarifyView {
             text: t('gtd.clarifyConfirm'),
         });
         confirmBtn.onclick = () => {
-            if (!selectedItem || !selectedTask) return;
+            if (selectedItems.length === 0 || !selectedTask) return;
 
-            // 将收集记录内容放入选中任务的收集篮子，并标记为已处理
-            this.gtdRepo.clarify(selectedItem.id, selectedTask);
+            // 将选中的收集记录内容逐条放入选中任务的收集篮子，并标记为已处理
+            for (const it of selectedItems) {
+                this.gtdRepo.clarify(it.id, selectedTask);
+            }
 
-            this.selectedItemId = undefined;
+            this.selectedItemIds.clear();
+            this.lastClickedItemId = undefined;
             new Notice(t('gtd.clarifyResult', {
-                content: selectedItem.content,
+                content: selectedItems.map(it => it.content).join('、'),
                 name: selectedTask.title,
             }));
             void this.save().then(() => {
@@ -195,16 +234,22 @@ export class GtdClarifyView {
             });
         };
 
-        // 创建为新任务：切换到创建表单
+        // 创建为新任务：切换到创建表单（多选时不可用）
         const createBtn = footer.createEl('button', {
             cls: 'gtd-clarify-create-btn',
             text: t('gtd.clarifyCreateTask'),
         });
+        createBtn.disabled = isMulti || selectedItems.length === 0;
         createBtn.onclick = () => {
-            if (!selectedItem) return;
+            if (isMulti || selectedItems.length === 0) return;
             this.creatingTask = true;
             if (this.container) void this.renderInto(this.container);
         };
+    }
+
+    /** 当前选中的收集记录（按左栏顺序） */
+    private getSelectedItems() {
+        return this.gtdRepo.getPendingItems().filter(it => this.selectedItemIds.has(it.id));
     }
 
     /** 右栏：创建新任务表单（标题 + 描述 + 分类 + 确认/取消） */
@@ -212,9 +257,7 @@ export class GtdClarifyView {
         const selectedTask = this.inboxData.selectedId
             ? this.inboxData.items.find((it) => it.id === this.inboxData.selectedId && !it.removed)
             : undefined;
-        const selectedItem = this.selectedItemId
-            ? this.gtdRepo.data.items.find((it) => it.id === this.selectedItemId)
-            : undefined;
+        const selectedItem = this.getSelectedItems()[0];
 
         // 标题：有选中任务时显示为「创建新任务（xx 的子任务）」
         col.createDiv({
@@ -287,7 +330,8 @@ export class GtdClarifyView {
             selectedItem.status = 'processed';
 
             this.creatingTask = false;
-            this.selectedItemId = undefined;
+            this.selectedItemIds.clear();
+            this.lastClickedItemId = undefined;
             new Notice(t('gtd.clarifyCreateResult', { name: title }));
             void this.save().then(() => {
                 if (this.container) void this.renderInto(this.container);

@@ -87,6 +87,7 @@ export const zh = {
 
     // GTD 梳理视图
     'gtd.clarifyLeftTitle': '收集记录',
+    'gtd.clarifyMultiSelectHint': '（可多选）',
     'gtd.clarifyMiddleTitle': '选择源',
     'gtd.clarifyRightTitle': '整理',
     'gtd.clarifyNoSource': '暂无源，请先在「组织」中添加',

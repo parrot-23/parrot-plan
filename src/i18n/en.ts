@@ -89,6 +89,7 @@ export const en: I18nMessages = {
 
     // GTD Clarify view
     'gtd.clarifyLeftTitle': 'Collected Items',
+    'gtd.clarifyMultiSelectHint': '(multi-select)',
     'gtd.clarifyMiddleTitle': 'Select Source',
     'gtd.clarifyRightTitle': 'Organize',
     'gtd.clarifyNoSource': 'No sources yet, add one in Organize',

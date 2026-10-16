@@ -2905,16 +2905,17 @@
 .task-plan-detail-body {
     display: flex;
     align-items: flex-start;
-    gap: 12px;
+    /* 间距与卡片宽度一致 */
+    gap: 220px;
 }
 
 .task-plan-detail-body .task-plan-form {
-    flex: 1;
+    flex: 0 1 auto;
     min-width: 0;
     padding: 12px 14px;
 }
 
-/* 右侧属性卡片：截止日期 / 任务状态 / 习惯时间点 / 预估时长 */
+/* 右侧属性卡片：任务状态 / 习惯时间点 / 预估时长（紧贴左侧内容） */
 .task-plan-meta-card {
     flex-shrink: 0;
     width: 220px;
@@ -7472,6 +7473,24 @@
     margin-bottom: 12px;
 }
 
+/* 标题行：标题 + 多选提示（同一行） */
+.gtd-clarify-col-title-row {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    margin-bottom: 12px;
+}
+
+.gtd-clarify-col-title-row .gtd-clarify-col-title {
+    margin-bottom: 0;
+}
+
+.gtd-clarify-multiselect-hint {
+    font-size: 12px;
+    font-weight: 400;
+    color: var(--text-muted);
+}
+
 /* 选择源面板：顶部按钮行 */
 .gtd-clarify-source-tabs {
     display: flex;
@@ -7585,6 +7604,20 @@
     word-break: break-word;
 }
 
+/* 多选时的预览列表：逐条列出选中的收集记录 */
+.gtd-clarify-preview-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    max-height: 240px;
+    overflow-y: auto;
+}
+
+.gtd-clarify-preview-list .gtd-clarify-preview-text {
+    padding-left: 10px;
+    border-left: 2px solid var(--background-modifier-border);
+}
+
 .gtd-clarify-footer {
     display: flex;
     justify-content: center;
@@ -7610,6 +7643,12 @@
     color: var(--interactive-accent);
     cursor: pointer;
     font-size: 14px;
+}
+
+/* 多选时不可用 */
+.gtd-clarify-create-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
 }
 
 /* 取消按钮 */
