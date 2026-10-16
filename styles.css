@@ -2928,12 +2928,6 @@
     background: var(--background-primary);
 }
 
-/* 截止日期输入框 */
-.task-plan-due-input {
-    width: 100%;
-    max-width: 200px;
-}
-
 /* 预估时长输入框（启用习惯时间点时显示） */
 .task-plan-est-input {
     width: 100%;

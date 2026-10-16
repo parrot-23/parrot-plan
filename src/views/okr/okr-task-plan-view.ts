@@ -1025,22 +1025,6 @@ export class OkrTaskPlanView {
             catValue.setText(t('taskPlan.emptyValue'));
         }
 
-        // 截止日期（原生 date 输入框，选择后自动保存）
-        const dueRow = metaCard.createDiv({ cls: 'task-plan-field' });
-        dueRow.createDiv({ cls: 'task-plan-field-label', text: t('taskPlan.dueDate') });
-        const dueInput = dueRow.createEl('input', {
-            cls: 'task-plan-due-input',
-            type: 'date',
-        });
-        dueInput.value = item.dueDate ?? '';
-        dueInput.onchange = () => {
-            void (async () => {
-                item.dueDate = dueInput.value || undefined;
-                await this.save();
-                await this.refresh();
-            })();
-        };
-
         // 任务状态（按钮组，当前状态高亮，点击后自动保存）
         const statusRow = metaCard.createDiv({ cls: 'task-plan-field' });
         statusRow.createDiv({ cls: 'task-plan-field-label', text: t('taskPlan.status') });
