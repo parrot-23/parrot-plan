@@ -39,4 +39,10 @@ export class WorkbenchRepo {
     removeInstance(id: string): void {
         this.data.instances = this.instances.filter(i => i.id !== id);
     }
+
+    /** 更新一张卡片实例（原地修改，保持实例引用不变） */
+    updateInstance(id: string, patch: Partial<CardInstance>): void {
+        const target = this.instances.find(i => i.id === id);
+        if (target) Object.assign(target, patch);
+    }
 }

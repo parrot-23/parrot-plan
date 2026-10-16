@@ -6,6 +6,7 @@ import type { CardTemplate } from '../../datatypes/form';
 import type { CardInstance, WorkbenchData } from '../../datatypes/card';
 import { DEFAULT_LAYOUT_ID } from '../../datatypes/card';
 import type { WorkbenchRepo } from '../../repos/workbench-repo';
+import type { GtdRepo } from '../../repos/gtd-repo';
 import { loadAllTemplates } from '../../cardmake/data/template-loader';
 import { getCardRenderer } from '../../cardmake/cards/card-registry';
 import type { CardRenderContext } from '../../datatypes/renderer';
@@ -53,6 +54,8 @@ export class WorkbenchView {
     private getInboxItems: () => InboxItem[];
     /** 追加一条 GTD 收集箱条目（collect 卡片用） */
     private addGtdItem: (content: string) => Promise<void>;
+    /** GTD 领域仓库（collect 卡片读取/删除收集箱条目用，与 GTD 视图共用同一数据源） */
+    private gtdRepo: GtdRepo;
     /** 当前渲染容器（用于自刷新） */
     private container?: HTMLElement;
     /** 已加载的模板列表 */
@@ -71,6 +74,7 @@ export class WorkbenchView {
         getExecutions: () => ExecutionRecord[],
         getInboxItems: () => InboxItem[],
         addGtdItem: (content: string) => Promise<void>,
+        gtdRepo: GtdRepo,
     ) {
         this.app = app;
         this.workbenchData = workbenchData;
@@ -80,6 +84,7 @@ export class WorkbenchView {
         this.getExecutions = getExecutions;
         this.getInboxItems = getInboxItems;
         this.addGtdItem = addGtdItem;
+        this.gtdRepo = gtdRepo;
     }
 
     /** 当前激活布局的名称（用于工作台标题，与布局管理中的名称保持一致） */
@@ -165,8 +170,7 @@ export class WorkbenchView {
         for (const instance of this.workbenchData.instances) {
             const pos = positions.get(instance.id);
             if (pos) {
-                instance.col = pos.col;
-                instance.row = pos.row;
+                this.workbenchRepo.updateInstance(instance.id, { col: pos.col, row: pos.row });
             }
         }
 
@@ -209,6 +213,11 @@ export class WorkbenchView {
                 refresh: () => void this.renderInto(container),
                 provider: createDataProvider(this.getEvents, this.getExecutions, this.getInboxItems),
                 addGtdItem: this.addGtdItem,
+                getGtdItems: () => this.gtdRepo.data.items,
+                removeGtdItem: async (id: string) => {
+                    this.gtdRepo.removeItem(id);
+                    await this.save();
+                },
             };
             renderer.render(body, instance, template, ctx);
 
@@ -477,8 +486,7 @@ export class WorkbenchView {
                 if (dir.includes('s')) h = Math.max(MIN_H, startH + dy);
                 if (dir.includes('n')) h = Math.max(MIN_H, startH - dy);
                 // 松开时向上取整到 30 的倍数
-                instance.width = snapUp(w);
-                instance.height = snapUp(h);
+                this.workbenchRepo.updateInstance(instance.id, { width: snapUp(w), height: snapUp(h) });
                 // 调整尺寸后做碰撞避让
                 this.resolveCollisions();
                 void this.save().then(() => {
@@ -534,8 +542,10 @@ export class WorkbenchView {
                 // 落点吸附网格，写回实例坐标；超出左右边界时贴边
                 const left = clampLeft(snap(startLeft + (ev.clientX - startX)));
                 const top = Math.max(0, snap(startTop + (ev.clientY - startY)));
-                instance.col = Math.round(left / GRID);
-                instance.row = Math.round(top / GRID);
+                this.workbenchRepo.updateInstance(instance.id, {
+                    col: Math.round(left / GRID),
+                    row: Math.round(top / GRID),
+                });
                 // 拖动后做碰撞避让
                 this.resolveCollisions();
                 void this.save().then(() => {
@@ -587,7 +597,7 @@ export class WorkbenchView {
                         // 下方卡片向下移动到上方卡片底部
                         const newRow = Math.round((upper.rect.row * GRID + upper.rect.h) / GRID);
                         if (newRow > lower.rect.row) {
-                            lower.inst.row = newRow;
+                            this.workbenchRepo.updateInstance(lower.inst.id, { row: newRow });
                             lower.rect.row = newRow;
                             changed = true;
                         }

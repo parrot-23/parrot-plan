@@ -1,5 +1,6 @@
 import { App, Modal, Setting, Notice } from 'obsidian';
 import type { CategorizedRange, WeekRangeData, DailyRange } from './plan-data';
+import type { TemplateRepo } from '../repos/template-repo';
 import { t, getWeekDays } from '../i18n';
 
 // 数据全部由 main.ts 中的主视图，自己持有。
@@ -12,6 +13,8 @@ export interface TemplateViewContext {
     onOpen(): Promise<void>;
     /** 获取当前激活方案的日区间配置（周无关的模板数据） */
     getPlanSchemeDays(): DailyRange[];
+    /** 日模板领域仓库（提供后，模板增删改走仓库方法，保证跨视图一致） */
+    templateRepo?: TemplateRepo;
 }
 
 /** 日模板 */
@@ -150,15 +153,20 @@ export function renderTemplatePanel(
         }
 
         new ConfirmDeleteModal(app, tpl.name, async () => {
-            // 1. 从 dayTemplates 移除
-            ctx.dayTemplateData.dayTemplates = ctx.dayTemplateData.dayTemplates.filter(
-                t => t.id !== selectedTemplateId
-            );
+            if (ctx.templateRepo) {
+                // 从 dayTemplates 移除，并清理 dayProperties 里的引用
+                ctx.templateRepo.removeTemplate(selectedTemplateId!);
+            } else {
+                // 1. 从 dayTemplates 移除
+                ctx.dayTemplateData.dayTemplates = ctx.dayTemplateData.dayTemplates.filter(
+                    t => t.id !== selectedTemplateId
+                );
 
-            // 2. 清理 dayProperties 里的引用（不影响网格，纯卫生）
-            ctx.dayTemplateData.dayProperties = ctx.dayTemplateData.dayProperties.filter(
-                p => p.templateId !== selectedTemplateId
-            );
+                // 2. 清理 dayProperties 里的引用（不影响网格，纯卫生）
+                ctx.dayTemplateData.dayProperties = ctx.dayTemplateData.dayProperties.filter(
+                    p => p.templateId !== selectedTemplateId
+                );
+            }
 
             // 3. 清空选中态
             selectedTemplateId = null;
@@ -234,11 +242,16 @@ export class TemplateCreateModal extends Modal {
                     const dayData = this.ctx.getPlanSchemeDays().find(d => d.day === sourceDay);
                     const ranges = (dayData?.ranges ?? []).map(({ id, ...rest }) => rest);
                     
-                    this.ctx.dayTemplateData.dayTemplates.push({
+                    const newTpl: DayTemplate = {
                         id: crypto.randomUUID(),
                         name,
                         ranges,
-                    });
+                    };
+                    if (this.ctx.templateRepo) {
+                        this.ctx.templateRepo.addTemplate(newTpl);
+                    } else {
+                        this.ctx.dayTemplateData.dayTemplates.push(newTpl);
+                    }
 
                     await this.ctx.save();
                     this.onCreated();

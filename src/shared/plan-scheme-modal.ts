@@ -2,6 +2,7 @@ import { App, Modal, Setting } from 'obsidian';
 
 import type { PlanCategoryData } from './plan-category-manager';
 import { renderPlanCategoryLegend } from './plan-category-manager';
+import type { CategoryRepo } from '../repos/category-repo';
 import type { PlanSchemeData, PlanScheme } from './plan-data';
 import { hexToTransparent, DEFAULT_SCHEME_ID, ensureDefaultScheme } from './plan-data';
 import { renderTemplatePanel, type TemplateViewContext } from './template-manager';
@@ -26,6 +27,8 @@ export class PlanSchemeModal extends Modal {
     private selectedCategoryId?: string;
     /** 重渲染前保存的日历滚动位置，用于无感知刷新 */
     private savedScrollTop: number | null = null;
+    /** 分类领域仓库（图例配置保存走仓库方法，保证跨视图一致） */
+    private categoryRepo?: CategoryRepo;
 
     constructor(
         app: App,
@@ -35,6 +38,7 @@ export class PlanSchemeModal extends Modal {
         onApplyTemplate: (templateId: string, targetDays: number[]) => void | Promise<void>,
         onSave: () => Promise<void>,
         onChange?: () => void,
+        categoryRepo?: CategoryRepo,
     ) {
         super(app);
         this.categoryData = categoryData;
@@ -43,6 +47,7 @@ export class PlanSchemeModal extends Modal {
         this.onApplyTemplate = onApplyTemplate;
         this.onSave = onSave;
         this.onChange = onChange;
+        this.categoryRepo = categoryRepo;
     }
 
     onOpen() {
@@ -100,6 +105,8 @@ export class PlanSchemeModal extends Modal {
                 this.selectedCategoryId = this.selectedCategoryId === id ? undefined : id;
                 this.onOpen();
             },
+            true,
+            this.categoryRepo,
         );
 
         // 日模板（图例下方）

@@ -3,6 +3,7 @@ import { Modal, Notice, Setting, setIcon } from 'obsidian';
 
 import type { PlanCategoryData } from '../../shared/plan-category-manager';
 import type { InboxData, InboxItem, Section, ChecklistData, StepsData, HabitData, FileData, OkrConditionType, BasketItem, ImprovementEntry } from '../../datatypes/domain';
+import type { InboxRepo } from '../../repos/inbox-repo';
 import { SECTION_TYPE_META, OKR_CONDITION_META } from '../../datatypes/domain';
 import { renderTaskPanel, FilePathSuggest } from '../../shared/task-panel';
 import { t } from '../../i18n';
@@ -28,17 +29,21 @@ export class OkrTaskPlanView {
     private basketOrganizeMode = false;
     /** 整理模式下选中的收集篮子条目 id */
     private selectedBasketEntryId?: string;
+    /** 收集盒领域仓库（任务面板增删改走仓库方法，保证跨视图一致） */
+    private inboxRepo?: InboxRepo;
 
     constructor(
         app: App,
         inboxData: InboxData,
         categoryData: PlanCategoryData,
         save: () => Promise<void>,
+        inboxRepo?: InboxRepo,
     ) {
         this.app = app;
         this.inboxData = inboxData;
         this.categoryData = categoryData;
         this.save = save;
+        this.inboxRepo = inboxRepo;
     }
 
     async renderInto(container: HTMLElement): Promise<void> {
@@ -68,7 +73,7 @@ export class OkrTaskPlanView {
             async () => {
                 await this.save();
             },
-            { enableProjectFocus: true },
+            { enableProjectFocus: true, inboxRepo: this.inboxRepo },
         );
 
         // 右侧：内容区（当前选中任务的信息表单 + OKR 信息 + 板块信息）

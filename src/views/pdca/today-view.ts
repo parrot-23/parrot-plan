@@ -11,6 +11,7 @@ import type { EventBlock, ExecutionRecord, RunningTask } from '../../datatypes/d
 import { getWeekDays, t } from '../../i18n';
 import { EVENT_STATUS_EMOJI, EVENT_STATUS_LABEL_KEY, getEventStatus, type EventStatus } from '../../datatypes/domain';
 import type { PdcaRepo } from '../../repos/pdca-repo';
+import type { InboxRepo } from '../../repos/inbox-repo';
 
 /** 把分钟数格式化为 HH:MM */
 function formatMinutes(minutes: number): string {
@@ -81,6 +82,8 @@ export class TodayView {
     private getPlanSchemeDays: () => DailyRange[];
     /** 当前查看的日期（默认今天；可切换到昨天以补充昨日执行信息） */
     private viewDate: Date = new Date();
+    /** 收集盒领域仓库（任务选中状态走仓库方法，保证跨视图一致） */
+    private inboxRepo?: InboxRepo;
 
     constructor(
         app: App,
@@ -96,6 +99,7 @@ export class TodayView {
         getPlanSchemeDays?: () => DailyRange[],
         initialRunningTask?: RunningTask,
         setRunningTask?: (task: RunningTask | undefined) => void,
+        inboxRepo?: InboxRepo,
     ) {
         this.app = app;
         this.inboxData = inboxData;
@@ -110,6 +114,7 @@ export class TodayView {
         this.getPlanSchemeDays = getPlanSchemeDays ?? (() => []);
         this.runningTask = initialRunningTask;
         this.setRunningTask = setRunningTask;
+        this.inboxRepo = inboxRepo;
     }
 
     async renderInto(container: HTMLElement): Promise<void> {
@@ -219,9 +224,11 @@ export class TodayView {
                 this.selectedExecId = undefined;
                 this.selectedRunningTask = false;
                 if (this.inboxData.selectedId === item.id) {
-                    this.inboxData.selectedId = undefined;
+                    if (this.inboxRepo) this.inboxRepo.setSelectedId(undefined);
+                    else this.inboxData.selectedId = undefined;
                 } else {
-                    this.inboxData.selectedId = item.id;
+                    if (this.inboxRepo) this.inboxRepo.setSelectedId(item.id);
+                    else this.inboxData.selectedId = item.id;
                 }
                 void this.refresh();
             };
@@ -1533,10 +1540,7 @@ export class TodayView {
                     return;
                 }
                 // 原地修改，保持数组引用不变（插件持有同一引用）
-                const target = this.getExecutions().find(x => x.id === ex.id);
-                if (target) {
-                    target.end = Math.min(1440, target.start + minutes);
-                }
+                this.pdcaRepo.updateExecution(ex.id, { end: Math.min(1440, ex.start + minutes) });
                 await this.save();
                 await this.refresh();
             })();
@@ -1926,7 +1930,8 @@ export class TodayView {
 
     /** 清除左侧任务面板的选中状态（同步 lastSelectedItemId，避免下次渲染误判为选中变化） */
     private clearInboxSelection(): void {
-        this.inboxData.selectedId = undefined;
+        if (this.inboxRepo) this.inboxRepo.setSelectedId(undefined);
+        else this.inboxData.selectedId = undefined;
         this.lastSelectedItemId = undefined;
     }
 

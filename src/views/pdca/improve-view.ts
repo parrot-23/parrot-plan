@@ -5,6 +5,7 @@ import type { PlanCategoryData } from '../../shared/plan-category-manager';
 import type { InboxData, EventBlock, ExecutionRecord, ImprovementItem, ImprovementEntry } from '../../datatypes/domain';
 import { getEventStatus, OKR_CONDITION_META } from '../../datatypes/domain';
 import type { PdcaRepo } from '../../repos/pdca-repo';
+import type { InboxRepo } from '../../repos/inbox-repo';
 import {
     getCurrentWeekKey,
     makeWeekKey,
@@ -47,6 +48,8 @@ export class ImproveView {
      * 切换任务行时丢弃旧的、换成新任务的；输入内容并归档后才写入对应任务的改进项。
      */
     private pendingImprovement?: { taskId: string; taskTitle: string; text: string };
+    /** 收集盒领域仓库（任务改进项写入走仓库方法，保证跨视图一致） */
+    private inboxRepo?: InboxRepo;
 
     constructor(
         app: App,
@@ -56,6 +59,7 @@ export class ImproveView {
         getExecutions: () => ExecutionRecord[],
         pdcaRepo: PdcaRepo,
         save: () => Promise<void>,
+        inboxRepo?: InboxRepo,
     ) {
         this.app = app;
         this.inboxData = inboxData;
@@ -64,6 +68,7 @@ export class ImproveView {
         this.getExecutions = getExecutions;
         this.pdcaRepo = pdcaRepo;
         this.save = save;
+        this.inboxRepo = inboxRepo;
     }
 
     async renderInto(container: HTMLElement): Promise<void> {
@@ -275,7 +280,7 @@ export class ImproveView {
             });
             input.placeholder = t('improve.inputPlaceholder');
             input.onchange = () => {
-                item.text = input.value;
+                this.pdcaRepo.updateImprovement(this.currentWeekKey, item.id, input.value);
                 void this.save();
             };
             const delBtn = row.createEl('button', { cls: 'improve-input-del', text: '×' });
@@ -355,7 +360,12 @@ export class ImproveView {
             done: false,
             createdAt: Date.now(),
         };
-        task.improvements = [...(task.improvements ?? []), entry];
+        const nextImprovements = [...(task.improvements ?? []), entry];
+        if (this.inboxRepo) {
+            this.inboxRepo.updateItem(task.id, { improvements: nextImprovements });
+        } else {
+            task.improvements = nextImprovements;
+        }
         await this.save();
         new Notice(t('improve.archiveDone', { title: pending.taskTitle }));
         this.pendingImprovement = undefined;

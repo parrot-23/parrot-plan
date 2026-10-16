@@ -5,6 +5,9 @@ import { BaseRepo, DEFAULT_CACHE_DIR_NAME, type PluginData } from './src/repos/b
 import { GtdRepo } from './src/repos/gtd-repo';
 import { PdcaRepo } from './src/repos/pdca-repo';
 import { WorkbenchRepo } from './src/repos/workbench-repo';
+import { InboxRepo } from './src/repos/inbox-repo';
+import { CategoryRepo } from './src/repos/category-repo';
+import { TemplateRepo } from './src/repos/template-repo';
 import { initI18n, t, getLangDebugInfo } from './src/i18n';
 import { initLogger, log } from './src/shared/logger';
 import { downloadImageToCache } from './src/helper/cache-image';
@@ -22,6 +25,15 @@ export default class ParrotPlanPlugin extends Plugin {
 
     /** 工作台领域仓库 */
     workbenchRepo: WorkbenchRepo;
+
+    /** 收集盒领域仓库 */
+    inboxRepo: InboxRepo;
+
+    /** 分类领域仓库 */
+    categoryRepo: CategoryRepo;
+
+    /** 日模板领域仓库 */
+    templateRepo: TemplateRepo;
 
     /**
      * 插件持有的唯一数据源（委托给 BaseRepo）。
@@ -87,6 +99,9 @@ export default class ParrotPlanPlugin extends Plugin {
         this.gtdRepo = new GtdRepo(this.repo);
         this.pdcaRepo = new PdcaRepo(this.repo);
         this.workbenchRepo = new WorkbenchRepo(this.repo);
+        this.inboxRepo = new InboxRepo(this.repo);
+        this.categoryRepo = new CategoryRepo(this.repo);
+        this.templateRepo = new TemplateRepo(this.repo);
 
         // 注册视图
         this.registerView(

@@ -28,6 +28,9 @@ import type { GtdData } from './datatypes/gtd';
 import type { GtdRepo } from './repos/gtd-repo';
 import type { PdcaRepo } from './repos/pdca-repo';
 import type { WorkbenchRepo } from './repos/workbench-repo';
+import type { InboxRepo } from './repos/inbox-repo';
+import type { CategoryRepo } from './repos/category-repo';
+import type { TemplateRepo } from './repos/template-repo';
 import { t } from './i18n';
 import { log } from './shared/logger';
 import { HelpModal } from './helper/help-modal';
@@ -161,12 +164,14 @@ export class MainView extends ItemView {
             () => this.weekView.save(),
             undefined,
             () => this.weekView.plannedWeeks,
+            this.inboxRepo(),
         );
         this.taskPlanView = new TaskPlanView(
             this.app,
             this.weekView.inboxData,
             this.weekView.planCategoryData,
             () => this.weekView.save(),
+            this.inboxRepo(),
         );
         this.todayView = new TodayView(
             this.app,
@@ -190,6 +195,7 @@ export class MainView extends ItemView {
                 const p = this.plugin as Plugin & { data?: { runningTask?: RunningTask } };
                 if (p.data) p.data.runningTask = task;
             },
+            this.inboxRepo(),
         );
         this.checkView = new CheckView(
             this.app,
@@ -207,6 +213,7 @@ export class MainView extends ItemView {
             () => this.weekView.executions,
             this.pdcaRepo(),
             () => this.weekView.save(),
+            this.inboxRepo(),
         );
         this.swimlaneView = new SwimlaneView(
             this.app,
@@ -215,6 +222,7 @@ export class MainView extends ItemView {
             () => this.weekView.save(),
             () => this.weekView.executions,
             () => this.weekView.events,
+            this.inboxRepo(),
         );
         this.workbenchView = new WorkbenchView(
             this.app,
@@ -225,14 +233,10 @@ export class MainView extends ItemView {
             () => this.weekView.executions,
             () => this.weekView.inboxData.items,
             async (content: string) => {
-                gtdData.items.push({
-                    id: crypto.randomUUID(),
-                    content,
-                    createdAt: Date.now(),
-                    status: 'inbox',
-                });
+                this.gtdRepo().addItem(content);
                 await this.weekView.save();
             },
+            this.gtdRepo(),
         );
         this.okrView = new OkrView(this.app);
         this.okrTaskPlanView = new OkrTaskPlanView(
@@ -240,6 +244,7 @@ export class MainView extends ItemView {
             this.weekView.inboxData,
             this.weekView.planCategoryData,
             () => this.weekView.save(),
+            this.inboxRepo(),
         );
         this.achievementView = new AchievementView(
             this.app,
@@ -269,6 +274,7 @@ export class MainView extends ItemView {
             this.weekView.inboxData,
             this.weekView.planCategoryData,
             () => this.weekView.save(),
+            this.inboxRepo(),
         );
         this.gtdReviewView = new GtdReviewView(this.app, this.gtdRepo());
     }
@@ -286,6 +292,21 @@ export class MainView extends ItemView {
     /** 从插件实例获取工作台领域仓库 */
     private workbenchRepo(): WorkbenchRepo {
         return (this.plugin as Plugin & { workbenchRepo: WorkbenchRepo }).workbenchRepo;
+    }
+
+    /** 从插件实例获取收集盒领域仓库 */
+    private inboxRepo(): InboxRepo {
+        return (this.plugin as Plugin & { inboxRepo: InboxRepo }).inboxRepo;
+    }
+
+    /** 从插件实例获取分类领域仓库 */
+    private categoryRepo(): CategoryRepo {
+        return (this.plugin as Plugin & { categoryRepo: CategoryRepo }).categoryRepo;
+    }
+
+    /** 从插件实例获取日模板领域仓库 */
+    private templateRepo(): TemplateRepo {
+        return (this.plugin as Plugin & { templateRepo: TemplateRepo }).templateRepo;
     }
 
     getViewType(): string {
@@ -409,7 +430,7 @@ export class MainView extends ItemView {
 
         // 从其他页面进入周计划视图时，若未选中任务则默认激活「周目标」
         if (this.activeTab === 'week' && this.prevTab !== 'week' && !this.weekView.inboxData.selectedId) {
-            this.weekView.inboxData.weekGoalOnly = true;
+            this.inboxRepo().data.weekGoalOnly = true;
         }
         this.prevTab = this.activeTab;
 

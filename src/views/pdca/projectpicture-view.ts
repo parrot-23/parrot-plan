@@ -2,6 +2,7 @@ import type { App } from 'obsidian';
 
 import type { PlanCategoryData } from '../../shared/plan-category-manager';
 import type { InboxData, InboxItem, Section, ChecklistData, StepsData, HabitData, FileData } from '../../datatypes/domain';
+import type { InboxRepo } from '../../repos/inbox-repo';
 import { renderTaskPanel } from '../../shared/task-panel';
 import type { ExecutionRecord, EventBlock } from '../../datatypes/domain';
 import { renderSwimlane } from '../../shared/swimlane';
@@ -34,6 +35,8 @@ export class SwimlaneView {
     private searchOpen = false;
     /** 搜索关键词 */
     private searchQuery = '';
+    /** 收集盒领域仓库（任务面板增删改走仓库方法，保证跨视图一致） */
+    private inboxRepo?: InboxRepo;
 
     constructor(
         app: App,
@@ -42,6 +45,7 @@ export class SwimlaneView {
         save: () => Promise<void>,
         getExecutions: () => ExecutionRecord[],
         getEvents: () => EventBlock[],
+        inboxRepo?: InboxRepo,
     ) {
         this.app = app;
         this.inboxData = inboxData;
@@ -49,6 +53,7 @@ export class SwimlaneView {
         this.save = save;
         this.getExecutions = getExecutions;
         this.getEvents = getEvents;
+        this.inboxRepo = inboxRepo;
     }
 
     async renderInto(container: HTMLElement): Promise<void> {
@@ -79,6 +84,7 @@ export class SwimlaneView {
             async () => {
                 await this.save();
             },
+            { inboxRepo: this.inboxRepo },
         );
 
         // 右侧：泳道图
@@ -198,7 +204,8 @@ export class SwimlaneView {
 
             row.onclick = () => {
                 // 切换项目全景图的中心主题：聚焦到该任务
-                this.inboxData.projectFocusId = item.id;
+                if (this.inboxRepo) this.inboxRepo.setProjectFocusId(item.id);
+                else this.inboxData.projectFocusId = item.id;
                 this.searchOpen = false;
                 this.searchQuery = '';
                 void (async () => {

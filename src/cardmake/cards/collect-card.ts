@@ -34,13 +34,7 @@ export const collectCardRenderer: CardRenderer = {
         const submit = () => {
             const content = input.value.trim();
             if (!content) return;
-            const entries = instance.entries ?? (instance.entries = []);
-            entries.push({
-                id: crypto.randomUUID(),
-                content,
-                createdAt: Date.now(),
-            });
-            // 同步写入 GTD 收集箱，使其出现在 GTD「收集」视图，供后续梳理流程处理
+            // 直接写入 GTD 收集箱（GtdData.items），与 GTD「收集」视图共用同一数据源
             const gtdWrite = ctx.addGtdItem ? ctx.addGtdItem(content) : Promise.resolve();
             void gtdWrite.then(() => ctx.save()).then(() => ctx.refresh());
         };
@@ -49,9 +43,9 @@ export const collectCardRenderer: CardRenderer = {
             if (e.key === 'Enter') submit();
         };
 
-        // 已收集记录列表（最新的在最上面）
+        // 已收集记录列表（最新的在最上面）：读取 GTD 收集箱未处理条目，与 GTD 视图保持同步
         const list = body.createDiv({ cls: 'wb-collect-list' });
-        const entries = instance.entries ?? [];
+        const entries = (ctx.getGtdItems?.() ?? []).filter((it) => it.status === 'inbox');
         if (entries.length === 0) {
             list.createDiv({ cls: 'wb-collect-empty', text: t('workbench.collectEmpty') });
             return;
@@ -67,8 +61,8 @@ export const collectCardRenderer: CardRenderer = {
                 text: '×',
             });
             delBtn.onclick = () => {
-                instance.entries = (instance.entries ?? []).filter((it) => it.id !== entry.id);
-                void ctx.save().then(() => ctx.refresh());
+                const gtdRemove = ctx.removeGtdItem ? ctx.removeGtdItem(entry.id) : Promise.resolve();
+                void gtdRemove.then(() => ctx.save()).then(() => ctx.refresh());
             };
         }
     },

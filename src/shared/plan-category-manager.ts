@@ -1,5 +1,6 @@
 import { App, Modal, Setting, Notice } from 'obsidian';
 import type { PlanCategoryId } from './plan-data';
+import type { CategoryRepo } from '../repos/category-repo';
 import { t } from '../i18n';
 
 
@@ -50,6 +51,8 @@ export function renderPlanCategoryLegend(
     onSelect?: (id: string) => void,
     /** 是否显示配置（齿轮）按钮，默认显示 */
     showConfigButton: boolean = true,
+    /** 分类领域仓库（提供后，配置弹窗保存走仓库方法，保证跨视图一致） */
+    categoryRepo?: CategoryRepo,
 ): void {
     const legend = container.createDiv({ cls: 'range-legend' });
     legend.createDiv({ text: t('category.legend'), cls: 'legend-title' });
@@ -61,7 +64,7 @@ export function renderPlanCategoryLegend(
         gearBtn.onclick = () => {
             new CategoryConfigModal(app, categoryData, () => {
                  onChange?.();
-            }).open();
+            }, categoryRepo).open();
         };
     }
 
@@ -81,15 +84,19 @@ export class CategoryConfigModal extends Modal {
     private draft: PlanCategory[];
     private listEl!: HTMLElement;
     private onConfirm?: () => void;
+    /** 分类领域仓库（提供后，保存走仓库方法，保证跨视图一致） */
+    private categoryRepo?: CategoryRepo;
 
     constructor(
         app: App, 
         categoryData: PlanCategoryData,
-        onConfirm?: () => void
+        onConfirm?: () => void,
+        categoryRepo?: CategoryRepo,
     ) {
         super(app);
         this.categoryData = categoryData;
         this.onConfirm = onConfirm;
+        this.categoryRepo = categoryRepo;
         // 拷贝一份草稿，取消不影响原数据
         this.draft = categoryData.categories.map(c => ({ ...c }));
     }
@@ -129,9 +136,15 @@ export class CategoryConfigModal extends Modal {
                 .setCta()
                 .onClick(() => {
                     // 先不接 main.ts，验证用
-                    this.categoryData.categories = this.draft;
-                    // 兜底：确保「未分类」始终存在且位于首位
-                    ensureUncategorizedCategory(this.categoryData);
+                    if (this.categoryRepo) {
+                        this.categoryRepo.replaceAll(this.draft);
+                        // 兜底：确保「未分类」始终存在且位于首位
+                        this.categoryRepo.ensureUncategorized();
+                    } else {
+                        this.categoryData.categories = this.draft;
+                        // 兜底：确保「未分类」始终存在且位于首位
+                        ensureUncategorizedCategory(this.categoryData);
+                    }
                     this.onConfirm?.();
                     this.close();
                 }));

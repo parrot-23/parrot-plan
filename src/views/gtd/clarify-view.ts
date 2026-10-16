@@ -4,6 +4,7 @@ import type { App } from 'obsidian';
 import { Notice } from 'obsidian';
 
 import type { GtdRepo } from '../../repos/gtd-repo';
+import type { InboxRepo } from '../../repos/inbox-repo';
 import type { InboxData, InboxItem } from '../../datatypes/domain';
 import type { PlanCategoryData } from '../../shared/plan-category-manager';
 import { renderTaskPanel } from '../../shared/task-panel';
@@ -29,6 +30,8 @@ export class GtdClarifyView {
     private creatingTask = false;
     /** 当前渲染容器（用于自刷新） */
     private container?: HTMLElement;
+    /** 收集盒领域仓库（任务面板增删改走仓库方法，保证跨视图一致） */
+    private inboxRepo?: InboxRepo;
 
     constructor(
         app: App,
@@ -36,12 +39,14 @@ export class GtdClarifyView {
         inboxData: InboxData,
         categoryData: PlanCategoryData,
         save: () => Promise<void>,
+        inboxRepo?: InboxRepo,
     ) {
         this.app = app;
         this.gtdRepo = gtdRepo;
         this.inboxData = inboxData;
         this.categoryData = categoryData;
         this.save = save;
+        this.inboxRepo = inboxRepo;
     }
 
     async renderInto(container: HTMLElement): Promise<void> {
@@ -127,7 +132,7 @@ export class GtdClarifyView {
                 await this.save();
             },
             // 梳理视图的选择源面板：隐藏「+」按钮与底部工具栏
-            { hideAddButton: true, hideToolbar: true },
+            { hideAddButton: true, hideToolbar: true, inboxRepo: this.inboxRepo },
         );
     }
 
@@ -266,11 +271,17 @@ export class GtdClarifyView {
             if (selectedTask) {
                 item.parentId = selectedTask.id;
                 // 确保父任务展开，便于看到新子任务
-                if (this.inboxData.collapsedIds) {
+                if (this.inboxRepo) {
+                    this.inboxRepo.expand(selectedTask.id);
+                } else if (this.inboxData.collapsedIds) {
                     this.inboxData.collapsedIds = this.inboxData.collapsedIds.filter(id => id !== selectedTask.id);
                 }
             }
-            this.inboxData.items.push(item);
+            if (this.inboxRepo) {
+                this.inboxRepo.addItem(item);
+            } else {
+                this.inboxData.items.push(item);
+            }
 
             // 标记收集记录为已处理
             selectedItem.status = 'processed';

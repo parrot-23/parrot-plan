@@ -17,6 +17,9 @@ import { log } from '../../shared/logger';
 import { EVENT_STATUS_EMOJI, EVENT_STATUS_LABEL_KEY, getEventStatus } from '../../datatypes/domain';
 import type { EventBlock, ExecutionRecord, EventStatus } from '../../datatypes/domain';
 import type { PdcaRepo } from '../../repos/pdca-repo';
+import type { InboxRepo } from '../../repos/inbox-repo';
+import type { CategoryRepo } from '../../repos/category-repo';
+import type { TemplateRepo } from '../../repos/template-repo';
 
 export const VIEW_TYPE_WEEK = 'week-schedule-view';
 
@@ -112,6 +115,16 @@ export class WeekScheduleView extends ItemView {
         return (this.plugin as Plugin & { pdcaRepo: PdcaRepo }).pdcaRepo;
     }
 
+    /** 从插件实例获取收集盒领域仓库 */
+    private inboxRepo(): InboxRepo {
+        return (this.plugin as Plugin & { inboxRepo: InboxRepo }).inboxRepo;
+    }
+
+    /** 从插件实例获取分类领域仓库 */
+    private categoryRepo(): CategoryRepo {
+        return (this.plugin as Plugin & { categoryRepo: CategoryRepo }).categoryRepo;
+    }
+
     /** 重置为默认数据（清空全部数据后调用） */
     resetData() {
         // 注意：子视图（年/当日/泳道）持有 inboxData、planCategoryData 的引用，
@@ -119,15 +132,14 @@ export class WeekScheduleView extends ItemView {
         this.rangeData.days = DEFAULT_WEEK_RANGE.days;
         this.rangeData.weeks = {};
 
-        this.dayTemplateData.dayTemplates = [];
-        this.dayTemplateData.dayProperties = [];
+        this.templateRepo.clear();
 
-        this.planCategoryData.categories = [
+        this.categoryRepo().replaceAll([
             { id: 'uncategorized', label: t('defaultCategory.uncategorized'), color: '#888888' },
             { id: 'work', label: t('defaultCategory.work'), color: '#4c8dff' },
             { id: 'rest', label: t('defaultCategory.rest'), color: '#43b581' },
             { id: 'play', label: t('defaultCategory.play'), color: '#f2a65a' },
-        ];
+        ]);
 
         this.planSchemeData.schemes = [makeDefaultScheme(t('planScheme.defaultName'))];
         this.planSchemeData.activeSchemeId = DEFAULT_SCHEME_ID;
@@ -136,10 +148,7 @@ export class WeekScheduleView extends ItemView {
         this.events.length = 0;
         this.executions.length = 0;
 
-        this.inboxData.items.length = 0;
-        this.inboxData.selectedId = undefined;
-        this.inboxData.collapsedIds = [];
-        this.inboxData.weekGoalOnly = false;
+        this.inboxRepo().clear();
 
         this.currentWeekKey = getCurrentWeekKey();
     }
@@ -214,7 +223,7 @@ export class WeekScheduleView extends ItemView {
             async (item) => {              // onUpdate 回调
                 await this.save();
             },
-            { currentWeekKey: this.currentWeekKey, events: this.events },  // 用于「周目标」筛选与统计
+            { currentWeekKey: this.currentWeekKey, events: this.events, inboxRepo: this.inboxRepo() },  // 用于「周目标」筛选与统计
         );
 
         // ===== 右侧：顶部工具栏 + 日历 =====
@@ -444,13 +453,10 @@ export class WeekScheduleView extends ItemView {
                 return;
             }
             // 原地修改，保持数组引用不变（插件持有同一引用）
-            const target = this.events.find(x => x.id === ev.id);
-            if (target) {
-                if (minutes === undefined || minutes === 0) {
-                    delete target.estimatedMinutes;
-                } else {
-                    target.estimatedMinutes = minutes;
-                }
+            if (minutes === undefined || minutes === 0) {
+                this.pdcaRepo().updateEvent(ev.id, { estimatedMinutes: undefined });
+            } else {
+                this.pdcaRepo().updateEvent(ev.id, { estimatedMinutes: minutes });
             }
             this.closeEstimatePopover();
             await this.save();
@@ -1054,6 +1060,7 @@ export class WeekScheduleView extends ItemView {
                         void this.save();
                         void this.onOpen();
                     },
+                    this.categoryRepo(),
                 ).open();
             };
 
@@ -1125,6 +1132,11 @@ export class WeekScheduleView extends ItemView {
         return this.getActivePlanScheme()?.days ?? [];
     }
 
+    /** 日模板领域仓库（作为 TemplateViewContext 提供给模板面板，保证跨视图一致） */
+    get templateRepo(): TemplateRepo {
+        return (this.plugin as Plugin & { templateRepo: TemplateRepo }).templateRepo;
+    }
+
     /** 应用日模板到指定日期（写入当前激活方案） */
     private async applyTemplate(templateId: string, targetDays: number[]) {
         const tpl = this.dayTemplateData.dayTemplates.find(t => t.id === templateId);
@@ -1139,9 +1151,7 @@ export class WeekScheduleView extends ItemView {
                 ...range,
                 id: `r_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
             }));
-            let prop = this.dayTemplateData.dayProperties.find(p => p.day === day);
-            if (prop) { prop.templateId = templateId; }
-            else { this.dayTemplateData.dayProperties.push({ day, templateId }); }
+            this.templateRepo.setDayProperty(day, templateId);
         }
         await this.save();
         await this.onOpen();
@@ -1169,7 +1179,7 @@ export class WeekScheduleView extends ItemView {
         let added = 0;
         for (const day of days) {
             for (const tpl of this.clipboardEvents) {
-                this.events.push({
+                this.pdcaRepo().addEvent({
                     ...tpl,
                     id: `ev_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
                     day,
@@ -1204,7 +1214,7 @@ export class WeekScheduleView extends ItemView {
         }
         let added = 0;
         for (const tpl of this.clipboardWeekEvents) {
-            this.events.push({
+            this.pdcaRepo().addEvent({
                 ...tpl,
                 id: `ev_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
                 weekKey: this.currentWeekKey,
@@ -1277,14 +1287,8 @@ export class WeekScheduleView extends ItemView {
      */
     private assignItemToDay(item: InboxItem, day: number): void {
         const dayKey = makeDayKeyFromWeek(this.currentWeekKey, day);
-        const dayKeys = item.assignedDayKeys ?? [];
-        if (!dayKeys.includes(dayKey)) {
-            item.assignedDayKeys = [...dayKeys, dayKey];
-        }
-        const weekKeys = item.assignedWeekKeys ?? [];
-        if (!weekKeys.includes(this.currentWeekKey)) {
-            item.assignedWeekKeys = [...weekKeys, this.currentWeekKey];
-        }
+        this.inboxRepo().assignToDay(item.id, dayKey);
+        this.inboxRepo().assignToWeek(item.id, this.currentWeekKey);
     }
 
 }

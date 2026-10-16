@@ -66,6 +66,12 @@ export class PdcaRepo {
         if (idx >= 0) this.executions.splice(idx, 1);
     }
 
+    /** 更新一条执行记录（原地修改，保持数组引用不变） */
+    updateExecution(id: string, patch: Partial<ExecutionRecord>): void {
+        const target = this.executions.find(x => x.id === id);
+        if (target) Object.assign(target, patch);
+    }
+
     // ===== 周计划标记 =====
 
     /** 切换某周「已制定周计划」标记；返回切换后是否已标记 */
@@ -109,5 +115,11 @@ export class PdcaRepo {
     removeImprovement(weekKey: string, id: string): void {
         const items = this.getWeekImprovements(weekKey);
         this.improvementData.byWeek[weekKey] = items.filter(i => i.id !== id);
+    }
+
+    /** 更新一条改进项的文本（原地修改，保持数组引用不变） */
+    updateImprovement(weekKey: string, id: string, text: string): void {
+        const target = this.getWeekImprovements(weekKey).find(i => i.id === id);
+        if (target) target.text = text;
     }
 }

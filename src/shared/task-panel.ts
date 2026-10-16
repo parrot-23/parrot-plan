@@ -3,6 +3,7 @@ import type { PlanCategoryData } from './plan-category-manager';
 import { t } from '../i18n';
 import type { InboxItem, InboxData, Section, SectionType, ChecklistData, StepsData, HabitData, FileData, EventBlock } from '../datatypes/domain';
 import { DEFAULT_INBOX_DATA, SECTION_TYPE_META } from '../datatypes/domain';
+import type { InboxRepo } from '../repos/inbox-repo';
 
 /**
  * 任务面板：公共组件。
@@ -221,6 +222,8 @@ export interface TaskPanelOptions {
     hideAddButton?: boolean;
     /** 是否隐藏底部工具栏（默认显示） */
     hideToolbar?: boolean;
+    /** 收集盒领域仓库（提供后，任务增删改/折叠/选中均走仓库方法，保证跨视图一致） */
+    inboxRepo?: InboxRepo;
 }
 
 export function renderTaskPanel(
@@ -234,7 +237,7 @@ export function renderTaskPanel(
     onUpdate?: (item?: InboxItem) => void | Promise<void>,
     options: TaskPanelOptions = {},
 ) {
-    const { currentWeekKey, enableProjectFocus, events, hideAddButton, hideToolbar } = options;
+    const { currentWeekKey, enableProjectFocus, events, hideAddButton, hideToolbar, inboxRepo } = options;
     container.empty();
     container.addClass('inbox-panel');
 
@@ -271,10 +274,19 @@ export function renderTaskPanel(
             if (action.id === 'detail') {
                 // 查看/编辑任务详情
                 new InboxDetailModal(app, item, categoryData, async (updated) => {
-                    item.title = updated.title;
-                    item.description = updated.description;
-                    item.categoryId = updated.categoryId;
-                    item.sections = updated.sections;
+                    if (inboxRepo) {
+                        inboxRepo.updateItem(item.id, {
+                            title: updated.title,
+                            description: updated.description,
+                            categoryId: updated.categoryId,
+                            sections: updated.sections,
+                        });
+                    } else {
+                        item.title = updated.title;
+                        item.description = updated.description;
+                        item.categoryId = updated.categoryId;
+                        item.sections = updated.sections;
+                    }
                     if (onUpdate) await onUpdate(item);
                     renderList();
                     onRefresh();
@@ -284,12 +296,19 @@ export function renderTaskPanel(
                 new ConfirmDeleteInboxModal(app, item.title, async () => {
                     // 连同所有后代一起移除
                     const ids = [item.id, ...collectDescendantIds(inboxData, item.id)];
-                    for (const id of ids) {
-                        const target = inboxData.items.find(i => i.id === id);
-                        if (target) target.removed = true;
-                    }
-                    if (inboxData.selectedId && ids.includes(inboxData.selectedId)) {
-                        inboxData.selectedId = undefined;
+                    if (inboxRepo) {
+                        inboxRepo.removeItems(ids);
+                        if (inboxData.selectedId && ids.includes(inboxData.selectedId)) {
+                            inboxRepo.setSelectedId(undefined);
+                        }
+                    } else {
+                        for (const id of ids) {
+                            const target = inboxData.items.find(i => i.id === id);
+                            if (target) target.removed = true;
+                        }
+                        if (inboxData.selectedId && ids.includes(inboxData.selectedId)) {
+                            inboxData.selectedId = undefined;
+                        }
                     }
                     if (onUpdate) await onUpdate(item);
                     renderList();
@@ -334,11 +353,15 @@ export function renderTaskPanel(
             toggle.setText(collapsed ? '▸' : '▾');
             toggle.onclick = (e) => {
                 e.stopPropagation();
-                if (!inboxData.collapsedIds) inboxData.collapsedIds = [];
-                if (collapsed) {
-                    inboxData.collapsedIds = inboxData.collapsedIds.filter(id => id !== item.id);
+                if (inboxRepo) {
+                    inboxRepo.toggleCollapse(item.id);
                 } else {
-                    inboxData.collapsedIds.push(item.id);
+                    if (!inboxData.collapsedIds) inboxData.collapsedIds = [];
+                    if (collapsed) {
+                        inboxData.collapsedIds = inboxData.collapsedIds.filter(id => id !== item.id);
+                    } else {
+                        inboxData.collapsedIds.push(item.id);
+                    }
                 }
                 renderList();
                 // 通知宿主视图刷新（如泳道图需根据展开/折叠后的子任务重绘）
@@ -426,10 +449,11 @@ export function renderTaskPanel(
             // 点击任务项时清除板块选中状态
             inboxData.selectedSectionId = undefined;
             inboxData.selectedSectionItemId = undefined;
-            if (inboxData.selectedId === item.id) {
-                inboxData.selectedId = undefined;
+            const nextSelected = inboxData.selectedId === item.id ? undefined : item.id;
+            if (inboxRepo) {
+                inboxRepo.setSelectedId(nextSelected);
             } else {
-                inboxData.selectedId = item.id;
+                inboxData.selectedId = nextSelected;
             }
             // 重新渲染列表高亮
             renderList();
@@ -506,10 +530,11 @@ export function renderTaskPanel(
             e.stopPropagation();
             inboxData.selectedSectionId = undefined;
             inboxData.selectedSectionItemId = undefined;
-            if (inboxData.selectedId === item.id) {
-                inboxData.selectedId = undefined;
+            const nextSelected = inboxData.selectedId === item.id ? undefined : item.id;
+            if (inboxRepo) {
+                inboxRepo.setSelectedId(nextSelected);
             } else {
-                inboxData.selectedId = item.id;
+                inboxData.selectedId = nextSelected;
             }
             renderList();
             updateToolbar();
@@ -554,7 +579,11 @@ export function renderTaskPanel(
                 const focusItem = inboxData.items.find(i => i.id === focusId && !i.removed);
                 if (!focusItem) {
                     // 聚焦任务已不存在（被删除等），自动退出聚焦
-                    inboxData.projectFocusId = undefined;
+                    if (inboxRepo) {
+                        inboxRepo.setProjectFocusId(undefined);
+                    } else {
+                        inboxData.projectFocusId = undefined;
+                    }
                 } else {
                     listDiv.createDiv({ cls: 'inbox-group-header', text: t('inbox.projectFocus') });
                     // 渲染聚焦任务本身（不递归子任务），再渲染子任务
@@ -709,26 +738,37 @@ export function renderTaskPanel(
         drop: { beforeId?: string; placeAfter?: boolean; parentId?: string; depth: number },
     ) {
         // 更新层级
-        item.parentId = drop.parentId;
+        if (inboxRepo) {
+            inboxRepo.setParent(item.id, drop.parentId);
+        } else {
+            item.parentId = drop.parentId;
+        }
 
         // 重排数组：把 item 及其后代整体移动到目标位置
         const movingIds = new Set<string>([item.id, ...collectDescendantIds(inboxData, item.id)]);
         const moving = inboxData.items.filter(i => movingIds.has(i.id));
         const rest = inboxData.items.filter(i => !movingIds.has(i.id));
 
+        let next: InboxItem[];
         if (!drop.beforeId) {
             // 放到末尾
-            inboxData.items = [...rest, ...moving];
+            next = [...rest, ...moving];
         } else {
             const refIndex = rest.findIndex(i => i.id === drop.beforeId);
             const insertAt = refIndex < 0
                 ? rest.length
                 : (drop.placeAfter ? refIndex + 1 : refIndex);
-            inboxData.items = [
+            next = [
                 ...rest.slice(0, insertAt),
                 ...moving,
                 ...rest.slice(insertAt),
             ];
+        }
+        // 原地替换数组内容，保持 items 数组引用不变（子视图持有同一引用）
+        if (inboxRepo) {
+            inboxRepo.reorderItems(next);
+        } else {
+            inboxData.items.splice(0, inboxData.items.length, ...next);
         }
 
         renderList();
@@ -745,7 +785,11 @@ export function renderTaskPanel(
     // 点击面板空白处取消选中（任务项自身已 stopPropagation）
     container.onclick = () => {
         if (!inboxData.selectedId && !inboxData.selectedSectionId) return;
-        inboxData.selectedId = undefined;
+        if (inboxRepo) {
+            inboxRepo.setSelectedId(undefined);
+        } else {
+            inboxData.selectedId = undefined;
+        }
         inboxData.selectedSectionId = undefined;
         inboxData.selectedSectionItemId = undefined;
         renderList();
@@ -793,14 +837,22 @@ export function renderTaskPanel(
             e.stopPropagation();
             // 已聚焦：再次点击退出聚焦
             if (inboxData.projectFocusId) {
-                inboxData.projectFocusId = undefined;
+                if (inboxRepo) {
+                    inboxRepo.setProjectFocusId(undefined);
+                } else {
+                    inboxData.projectFocusId = undefined;
+                }
             } else {
                 // 未聚焦：需先选中一个任务，聚焦到该任务
                 if (!inboxData.selectedId) {
                     new Notice(t('inbox.projectFocusNeedSelect'));
                     return;
                 }
-                inboxData.projectFocusId = inboxData.selectedId;
+                if (inboxRepo) {
+                    inboxRepo.setProjectFocusId(inboxData.selectedId);
+                } else {
+                    inboxData.projectFocusId = inboxData.selectedId;
+                }
             }
             projectFocusBtn.toggleClass('is-active', !!inboxData.projectFocusId);
             renderList();
@@ -832,11 +884,17 @@ export function renderTaskPanel(
             if (parent) {
                 item.parentId = parent.id;
                 // 确保父任务展开，便于看到新子任务
-                if (inboxData.collapsedIds) {
+                if (inboxRepo) {
+                    inboxRepo.expand(parent.id);
+                } else if (inboxData.collapsedIds) {
                     inboxData.collapsedIds = inboxData.collapsedIds.filter(id => id !== parent.id);
                 }
             }
-            inboxData.items.push(item);
+            if (inboxRepo) {
+                inboxRepo.addItem(item);
+            } else {
+                inboxData.items.push(item);
+            }
             void (async () => {
                 await onAdd(item);
                 // 保持原有选中状态（添加子任务后父任务仍保持选中）

@@ -3,6 +3,7 @@ import { Notice } from 'obsidian';
 
 import type { PlanCategoryData } from '../../shared/plan-category-manager';
 import type { InboxData } from '../../datatypes/domain';
+import type { InboxRepo } from '../../repos/inbox-repo';
 import { renderTaskPanel } from '../../shared/task-panel';
 import { renderYearWeekGrid } from '../../shared/year-week-grid';
 import { makeWeekKey } from '../../shared/plan-data';
@@ -23,6 +24,8 @@ export class YearView {
     private getPlannedWeeks?: () => string[];
     /** 当前渲染容器（用于自刷新） */
     private container?: HTMLElement;
+    /** 收集盒领域仓库（任务面板增删改走仓库方法，保证跨视图一致） */
+    private inboxRepo?: InboxRepo;
 
     constructor(
         app: App,
@@ -31,6 +34,7 @@ export class YearView {
         save: () => Promise<void>,
         onJumpToWeek?: (weekKey: string) => void,
         getPlannedWeeks?: () => string[],
+        inboxRepo?: InboxRepo,
     ) {
         this.app = app;
         this.inboxData = inboxData;
@@ -38,6 +42,7 @@ export class YearView {
         this.save = save;
         this.onJumpToWeek = onJumpToWeek;
         this.getPlannedWeeks = getPlannedWeeks;
+        this.inboxRepo = inboxRepo;
     }
 
     async renderInto(container: HTMLElement): Promise<void> {
@@ -62,7 +67,7 @@ export class YearView {
             async () => {
                 await this.save();
             },
-            { enableProjectFocus: true },  // 启用「按项目排布」按钮
+            { enableProjectFocus: true, inboxRepo: this.inboxRepo },  // 启用「按项目排布」按钮
         );
 
         // 右侧：周历面板

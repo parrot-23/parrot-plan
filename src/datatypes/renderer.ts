@@ -4,6 +4,7 @@ import type { App } from 'obsidian';
 import type { CardTemplate } from './form';
 import type { CardInstance } from './card';
 import type { DataProvider } from './chart';
+import type { GtdItem } from './gtd';
 
 /** 渲染器上下文：提供数据访问与保存回调 */
 export interface CardRenderContext {
@@ -19,6 +20,16 @@ export interface CardRenderContext {
      * 由上层注入，写入 GtdData.items 并持久化；未注入时该能力不可用。
      */
     addGtdItem?: (content: string) => Promise<void>;
+    /**
+     * 读取 GTD 收集箱全部条目（collect 模式使用）。
+     * 与 GTD「收集」视图共用同一数据源（GtdData.items），保证两处同步。
+     */
+    getGtdItems?: () => GtdItem[];
+    /**
+     * 删除一条 GTD 收集箱条目（collect 模式使用）。
+     * 由上层注入，从 GtdData.items 移除并持久化。
+     */
+    removeGtdItem?: (id: string) => Promise<void>;
 }
 
 /** 卡片渲染器：把一张卡片实例渲染到容器 */
