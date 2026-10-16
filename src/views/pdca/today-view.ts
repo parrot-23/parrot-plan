@@ -12,6 +12,7 @@ import { getWeekDays, t } from '../../i18n';
 import { EVENT_STATUS_EMOJI, EVENT_STATUS_LABEL_KEY, getEventStatus, type EventStatus } from '../../datatypes/domain';
 import type { PdcaRepo } from '../../repos/pdca-repo';
 import type { InboxRepo } from '../../repos/inbox-repo';
+import { renderTaskPanel } from '../../shared/task-panel';
 
 /** 把分钟数格式化为 HH:MM */
 function formatMinutes(minutes: number): string {
@@ -80,6 +81,10 @@ export class TodayView {
     private viewDate: Date = new Date();
     /** 收集盒领域仓库（任务选中状态走仓库方法，保证跨视图一致） */
     private inboxRepo?: InboxRepo;
+    /** 进行中任务变化回调（开始/完成/中断时通知宿主刷新导航栏卡片） */
+    private onRunningTaskChange?: () => void;
+    /** 右侧内容区当前选项卡：今日情况 / 当天任务 / 额外任务 */
+    private rightTab: 'today' | 'dayTasks' | 'extraTasks' = 'today';
 
     constructor(
         app: App,
@@ -94,6 +99,7 @@ export class TodayView {
         getPlanSchemeDays?: () => DailyRange[],
         initialRunningTask?: RunningTask,
         inboxRepo?: InboxRepo,
+        onRunningTaskChange?: () => void,
     ) {
         this.app = app;
         this.inboxData = inboxData;
@@ -107,6 +113,7 @@ export class TodayView {
         this.getPlanSchemeDays = getPlanSchemeDays ?? (() => []);
         this.runningTask = initialRunningTask;
         this.inboxRepo = inboxRepo;
+        this.onRunningTaskChange = onRunningTaskChange;
     }
 
     async renderInto(container: HTMLElement): Promise<void> {
@@ -125,9 +132,14 @@ export class TodayView {
             this.selectedExecId = undefined;
         }
 
-        // ===== 左侧：当天任务面板（仅显示安排在当天的任务）=====
+        // ===== 左侧：任务面板 =====
+        // 「额外任务」选项卡下显示全部任务（与任务计划视图一致）；其余情况仅显示当天安排的任务
         const taskPanel = container.createDiv({ cls: 'today-task-panel' });
-        this.renderTodayTaskPanel(taskPanel);
+        if (this.rightTab === 'extraTasks') {
+            this.renderAllTasksPanel(taskPanel);
+        } else {
+            this.renderTodayTaskPanel(taskPanel);
+        }
 
         // ===== 中间：当天时间轴（紧贴左侧任务面板）=====
         const timelinePanel = container.createDiv({ cls: 'today-timeline-panel' });
@@ -135,33 +147,76 @@ export class TodayView {
         // 恢复时间轴滚动位置
         timelinePanel.scrollTop = prevScrollTop;
 
-        // ===== 右侧：日期方框 + 任务层级方框 + 任务详情方框 + 操作按钮 =====
+        // ===== 右侧：日期方框 + 选项卡 + 选项卡内容 + 操作按钮 =====
         const centerPanel = container.createDiv({ cls: 'today-center-panel' });
         this.renderDateBox(centerPanel);
-        this.renderHierarchyBox(centerPanel);
-        // 进行中任务进度方框（位于任务层级方框下方）
+        // 选项卡行（今日情况 / 当天任务 / 额外任务）
+        this.renderRightTabs(centerPanel);
+        // 进行中任务进度方框（位于选项卡下方）
         this.renderRunningProgressBox(centerPanel);
-        // OKR 执行进度方框（位于任务层级方框与任务详情方框之间）
+        // OKR 执行进度方框
         this.renderOkrProgressBox(centerPanel);
-        // 新增非计划事件模式：在任务详情方框的位置展示「执行非计划事件方框」
-        if (this.addUnplannedMode) {
-            this.renderAddUnplannedBox(centerPanel);
-        } else if (this.hasSelection()) {
-            // 未选中任何任务/事件时，在任务详情方框的位置展示「周目标方框」
-            this.renderDetailBox(centerPanel);
-        } else {
-            // 周目标 / 日目标方框上方：今日各分类已执行时长（图形化）
-            this.renderCategoryDurationBox(centerPanel);
-            this.renderWeekGoalBox(centerPanel);
-        }
-        // 替换模式下，在任务详情下方展示「替换任务详情方框」
+        // 选项卡内容区
+        this.renderRightTabContent(centerPanel);
+        // 替换模式下，在内容下方展示「替换任务详情方框」
         if (this.replaceMode) this.renderReplaceBox(centerPanel);
         this.renderActionButtons(centerPanel);
+    }
+
+    /** 右侧内容区选项卡行：今日情况 / 当天任务 / 额外任务 */
+    private renderRightTabs(panel: HTMLElement): void {
+        const tabs: { id: 'today' | 'dayTasks' | 'extraTasks'; labelKey: Parameters<typeof t>[0] }[] = [
+            { id: 'today', labelKey: 'today.tabToday' },
+            { id: 'dayTasks', labelKey: 'today.tabDayTasks' },
+            { id: 'extraTasks', labelKey: 'today.tabExtraTasks' },
+        ];
+        const row = panel.createDiv({ cls: 'today-right-tabs' });
+        for (const tab of tabs) {
+            const btn = row.createEl('button', {
+                cls: 'today-right-tab-btn',
+                text: t(tab.labelKey),
+                attr: { 'data-tab': tab.id },
+            });
+            if (tab.id === this.rightTab) btn.addClass('is-active');
+            btn.onclick = () => {
+                this.rightTab = tab.id;
+                // 切到「额外任务」时进入新增非计划事件模式；切走时退出该模式
+                if (tab.id === 'extraTasks') {
+                    this.addUnplannedMode = true;
+                } else {
+                    this.addUnplannedMode = false;
+                }
+                void this.refresh();
+            };
+        }
+    }
+
+    /** 根据当前选项卡渲染右侧内容区 */
+    private renderRightTabContent(panel: HTMLElement): void {
+        if (this.rightTab === 'extraTasks') {
+            // 额外任务：执行非计划事件方框
+            this.renderAddUnplannedBox(panel);
+            return;
+        }
+        if (this.rightTab === 'dayTasks') {
+            // 当天任务：任务层级方框 + 任务详情方框
+            this.renderHierarchyBox(panel);
+            this.renderDetailBox(panel);
+            return;
+        }
+        // 今日情况：今日各分类已执行时长 + 周目标 / 日目标
+        this.renderCategoryDurationBox(panel);
+        this.renderWeekGoalBox(panel);
     }
 
     /** 重新渲染自身 */
     private async refresh(): Promise<void> {
         if (this.container) await this.renderInto(this.container);
+    }
+
+    /** 重置查看日期为今天（由宿主在进入日执行视图时调用） */
+    resetToToday(): void {
+        this.viewDate = new Date();
     }
 
     /**
@@ -221,10 +276,37 @@ export class TodayView {
                 } else {
                     if (this.inboxRepo) this.inboxRepo.setSelectedId(item.id);
                     else this.inboxData.selectedId = item.id;
+                    // 选中当天任务时自动切到「当天任务」选项卡
+                    this.rightTab = 'dayTasks';
                 }
                 void this.refresh();
             };
         }
+    }
+
+    /**
+     * 左侧「全部任务面板」：复用任务计划视图的任务面板组件，显示全部任务。
+     * 仅在「额外任务」选项卡下使用，便于从任意任务中挑选要执行的任务。
+     */
+    private renderAllTasksPanel(panel: HTMLElement): void {
+        panel.empty();
+        renderTaskPanel(
+            this.app,
+            panel,
+            this.inboxData,
+            this.categoryData,
+            async () => {
+                await this.save();
+            },
+            () => {
+                void this.refresh();
+            },
+            undefined,
+            async () => {
+                await this.save();
+            },
+            { enableProjectFocus: true, inboxRepo: this.inboxRepo },
+        );
     }
 
     /** 渲染当前查看日期的年月日方框 + 右侧日目标完成情况 */
@@ -234,16 +316,46 @@ export class TodayView {
 
         // 左侧：日期（点击日期区域 → 取消所有选中，恢复显示周目标 / 日目标）
         const dateSide = box.createDiv({ cls: 'today-date-side' });
-        dateSide.createDiv({ cls: 'today-date-year', text: `${now.getFullYear()}` });
-        dateSide.createDiv({ cls: 'today-date-md' })
+        // 日期导航：左箭头（前一天） + 日期信息 + 右箭头（后一天）
+        const dateNav = dateSide.createDiv({ cls: 'today-date-nav' });
+        const prevBtn = dateNav.createEl('button', {
+            cls: 'today-date-nav-btn',
+            text: '‹',
+            attr: { 'aria-label': t('today.prevDay') },
+        });
+        prevBtn.onclick = (e) => {
+            e.stopPropagation();
+            this.shiftViewDate(-1);
+        };
+
+        const dateInfo = dateNav.createDiv({ cls: 'today-date-info' });
+        dateInfo.createDiv({ cls: 'today-date-year', text: `${now.getFullYear()}` });
+        dateInfo.createDiv({ cls: 'today-date-md' })
             .setText(`${String(now.getMonth() + 1).padStart(2, '0')} / ${String(now.getDate()).padStart(2, '0')}`);
-        dateSide.createDiv({ cls: 'today-date-weekday', text: getWeekDays()[(now.getDay() + 6) % 7] });
-        // 非今天时，在日期右侧显示状态标识（如「昨天」）
-        if (!this.isViewingToday()) {
-            dateSide.createDiv({ cls: 'today-date-badge', text: t('today.yesterdayBadge') });
+        dateInfo.createDiv({ cls: 'today-date-weekday', text: getWeekDays()[(now.getDay() + 6) % 7] });
+        // 状态标识：今天 / 昨天 / X 天前
+        dateInfo.createDiv({ cls: 'today-date-badge', text: this.viewDateBadgeText() });
+
+        const nextBtn = dateNav.createEl('button', {
+            cls: 'today-date-nav-btn',
+            text: '›',
+            attr: { 'aria-label': t('today.nextDay') },
+        });
+        // 不能超过今天：查看今天时禁用「后一天」按钮
+        if (this.isViewingToday()) {
+            nextBtn.disabled = true;
+            nextBtn.addClass('is-disabled');
+        } else {
+            nextBtn.onclick = (e) => {
+                e.stopPropagation();
+                this.shiftViewDate(1);
+            };
         }
+
         dateSide.addClass('is-clickable');
         dateSide.onclick = () => {
+            // 点击日期区域：取消所有选中，并切回「今日情况」选项卡
+            this.rightTab = 'today';
             this.clearAllSelection();
         };
 
@@ -378,6 +490,23 @@ export class TodayView {
     /** 当前查看的是否为今天 */
     private isViewingToday(): boolean {
         return makeDayKey(this.viewDate) === getCurrentDayKey();
+    }
+
+    /** 查看日期与今天相差的天数（今天为 0，昨天为 1，前天为 2……） */
+    private daysBeforeToday(): number {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const view = new Date(this.viewDate);
+        view.setHours(0, 0, 0, 0);
+        return Math.round((today.getTime() - view.getTime()) / (24 * 60 * 60 * 1000));
+    }
+
+    /** 日期状态标识文案：今天 / 昨天 / X 天前 */
+    private viewDateBadgeText(): string {
+        const diff = this.daysBeforeToday();
+        if (diff <= 0) return t('today.todayBadge');
+        if (diff === 1) return t('today.yesterdayBadge');
+        return t('today.daysAgoBadge', { days: String(diff) });
     }
 
     /** 渲染单张统计卡片（标签 + 数值 + 进度条） */
@@ -1115,16 +1244,8 @@ export class TodayView {
             return;
         }
 
-        // 未选中任何任务/事件（显示周目标 / 日目标）：底部按钮用于切换查看昨天 / 回到今天
+        // 未选中任何任务/事件（显示周目标 / 日目标）：日期切换已移至日期方框的左右箭头
         if (!selectedItem) {
-            const isToday = this.isViewingToday();
-            const switchBtn = row.createEl('button', {
-                cls: 'today-action-btn',
-                text: isToday ? t('today.supplementYesterday') : t('today.backToToday'),
-            });
-            switchBtn.onclick = () => {
-                this.switchViewDate(isToday);
-            };
             return;
         }
 
@@ -1139,12 +1260,12 @@ export class TodayView {
     }
 
     /**
-     * 切换查看日期：isToday 为 true 时切到昨天，否则回到今天。
+     * 按天数偏移切换查看日期（delta 为 -1 表示前一天，+1 表示后一天）。
      * 切换后清除所有选中状态，避免详情方框残留旧数据。
      */
-    private switchViewDate(toYesterday: boolean): void {
-        const d = new Date();
-        if (toYesterday) d.setDate(d.getDate() - 1);
+    private shiftViewDate(delta: number): void {
+        const d = new Date(this.viewDate);
+        d.setDate(d.getDate() + delta);
         this.viewDate = d;
         this.selectedEventId = undefined;
         this.selectedExecId = undefined;
@@ -1220,6 +1341,7 @@ export class TodayView {
         this.selectedEventId = undefined;
         this.selectedExecId = undefined;
         void this.save();
+        this.onRunningTaskChange?.();
         void this.refresh();
     }
 
@@ -1256,6 +1378,7 @@ export class TodayView {
         this.pdcaRepo.setRunningTask(undefined);
         this.selectedRunningTask = false;
         await this.save();
+        this.onRunningTaskChange?.();
         new Notice(t('today.completeDone', { title: item?.title ?? '' }));
         await this.refresh();
     }
@@ -1282,6 +1405,7 @@ export class TodayView {
         this.pdcaRepo.setRunningTask(undefined);
         this.selectedRunningTask = false;
         await this.save();
+        this.onRunningTaskChange?.();
         new Notice(t('today.interruptDone', { title: item?.title ?? '' }));
         await this.refresh();
     }
@@ -1294,12 +1418,16 @@ export class TodayView {
         // 与其它选中状态互斥
         this.selectedEventId = undefined;
         this.selectedExecId = undefined;
+        // 点击时间轴空白新增时自动切到「额外任务」选项卡
+        this.rightTab = 'extraTasks';
         void this.refresh();
     }
 
     /** 取消「新增非计划事件」 */
     private cancelAddUnplanned(): void {
         this.addUnplannedMode = false;
+        // 取消后回到「今日情况」选项卡
+        this.rightTab = 'today';
         void this.refresh();
     }
 
@@ -1321,6 +1449,8 @@ export class TodayView {
             weekKey,
         });
         this.addUnplannedMode = false;
+        // 新增完成后回到「今日情况」选项卡
+        this.rightTab = 'today';
         await this.save();
         new Notice(t('today.completeDone', { title: item.title }));
         await this.refresh();
@@ -1696,7 +1826,8 @@ export class TodayView {
                 const end = Math.max(this.runningTask.start, totalMinutes);
                 runningBlock.setCssProps({
                     '--running-top': `${(start / 120) * 80}px`,
-                    '--running-height': `${Math.max(4, ((end - start) / 120) * 80)}px`,
+                    // 最小 26px，保证至少一行文字可见（与执行记录卡片一致）
+                    '--running-height': `${Math.max(26, ((end - start) / 120) * 80)}px`,
                 });
             }
         };
@@ -1841,7 +1972,8 @@ export class TodayView {
         block.setCssProps({
             '--running-color': cat?.color ?? '#4c8dff',
             '--running-top': `${(start / 120) * 80}px`,
-            '--running-height': `${Math.max(4, ((end - start) / 120) * 80)}px`,
+            // 最小 26px，保证至少一行文字可见（与执行记录卡片一致）
+            '--running-height': `${Math.max(26, ((end - start) / 120) * 80)}px`,
         });
         block.setText(item.title);
 
@@ -1907,6 +2039,8 @@ export class TodayView {
         this.selectedRunningTask = false;
         // 与左侧任务面板选中互斥：选中时间轴事件时取消左侧选中
         this.clearInboxSelection();
+        // 选中时间轴事件时自动切到「当天任务」选项卡
+        if (this.selectedEventId) this.rightTab = 'dayTasks';
         void this.refresh();
     }
 
@@ -1917,6 +2051,8 @@ export class TodayView {
         this.selectedRunningTask = false;
         // 与左侧任务面板选中互斥：选中时间轴事件时取消左侧选中
         this.clearInboxSelection();
+        // 选中时间轴执行记录时自动切到「当天任务」选项卡
+        if (this.selectedExecId) this.rightTab = 'dayTasks';
         void this.refresh();
     }
 

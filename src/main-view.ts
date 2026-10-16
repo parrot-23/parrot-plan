@@ -121,6 +121,10 @@ export class MainView extends ItemView {
     private secondaryRow?: HTMLElement;
     /** 缓存目录名称（用于帮助弹窗引用缓存图片） */
     private cacheDirName: string;
+    /** 一级标签行中的「进行中任务」卡片容器 */
+    private runningCardEl?: HTMLElement;
+    /** 进行中任务卡片已用时长的刷新定时器（每分钟更新） */
+    private runningCardTimer?: number;
 
     constructor(
         leaf: WorkspaceLeaf,
@@ -185,6 +189,7 @@ export class MainView extends ItemView {
             () => this.weekView.getPlanSchemeDays(),
             runningTask,
             this.inboxRepo(),
+            () => this.renderRunningTaskCard(),
         );
         this.checkView = new CheckView(
             this.app,
@@ -367,6 +372,10 @@ export class MainView extends ItemView {
             };
         }
 
+        // 进行中任务卡片（一级标签行右侧，紧邻帮助按钮左侧；无进行中任务时隐藏）
+        this.runningCardEl = primaryRow.createDiv({ cls: 'parrot-plan-running-card-wrap' });
+        this.renderRunningTaskCard();
+
         // 帮助按钮（第一行最右侧）
         const helpBtn = primaryRow.createEl('button', {
             text: '?',
@@ -415,6 +424,59 @@ export class MainView extends ItemView {
         }
     }
 
+    /**
+     * 渲染一级标签行右侧的「进行中任务」卡片。
+     * 无进行中任务时清空并隐藏；有则显示任务名与已用时长，点击跳转到日执行视图。
+     * 同时启动每分钟刷新已用时长的定时器。
+     */
+    private renderRunningTaskCard(): void {
+        const wrap = this.runningCardEl;
+        if (!wrap) return;
+        wrap.empty();
+
+        // 清理上一次的定时器，避免累积
+        if (this.runningCardTimer !== undefined) {
+            window.clearInterval(this.runningCardTimer);
+            this.runningCardTimer = undefined;
+        }
+
+        const running = this.pdcaRepo().runningTask;
+        if (!running) {
+            wrap.addClass('is-hidden');
+            return;
+        }
+        const item = this.weekView.inboxData.items.find(i => i.id === running.inboxId && !i.removed);
+        if (!item) {
+            wrap.addClass('is-hidden');
+            return;
+        }
+        wrap.removeClass('is-hidden');
+
+        const card = wrap.createDiv({ cls: 'parrot-plan-running-card' });
+        card.createSpan({ cls: 'parrot-plan-running-card-label', text: t('nav.runningLabel') });
+        card.createSpan({ cls: 'parrot-plan-running-card-name', text: item.title });
+        const timeEl = card.createSpan({ cls: 'parrot-plan-running-card-time' });
+
+        const updateTime = () => {
+            const now = new Date();
+            const nowMinutes = now.getHours() * 60 + now.getMinutes();
+            const elapsed = Math.max(0, nowMinutes - running.start);
+            timeEl.setText(t('nav.runningElapsed', { minutes: String(elapsed) }));
+        };
+        updateTime();
+        this.runningCardTimer = window.setInterval(updateTime, 60 * 1000);
+
+        card.onclick = () => {
+            // 跳转到 PDCA 一级视图的「日执行」二级视图
+            this.lastTabByPrimary[this.activePrimary] = this.activeTab;
+            this.activePrimary = 'pdca';
+            this.activeTab = 'today';
+            this.lastTabByPrimary['pdca'] = 'today';
+            this.renderSecondaryTabs();
+            void this.renderContent();
+        };
+    }
+
     /** 根据当前 tab 渲染内容区 */
     private async renderContent() {
         // 剧本模式关闭时，若当前停留在被隐藏的二级视图，回退到默认二级视图
@@ -447,6 +509,10 @@ export class MainView extends ItemView {
         // 从其他页面进入周计划视图时，若未选中任务则默认激活「周目标」
         if (this.activeTab === 'week' && this.prevTab !== 'week' && !this.weekView.inboxData.selectedId) {
             this.inboxRepo().data.weekGoalOnly = true;
+        }
+        // 从其他页面进入日执行视图时，始终回到今天
+        if (this.activeTab === 'today' && this.prevTab !== 'today') {
+            this.todayView.resetToToday();
         }
         this.prevTab = this.activeTab;
 
@@ -543,6 +609,11 @@ export class MainView extends ItemView {
 
     async onClose() {
         this.todayView.destroy();
+        // 清理进行中任务卡片的刷新定时器
+        if (this.runningCardTimer !== undefined) {
+            window.clearInterval(this.runningCardTimer);
+            this.runningCardTimer = undefined;
+        }
         this.containerEl.empty();
     }
 }

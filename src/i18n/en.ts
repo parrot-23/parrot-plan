@@ -48,6 +48,8 @@ export const en: I18nMessages = {
     'nav.gtdReview': 'Review',
     'nav.gtdEngage': 'Engage',
     'nav.placeholder': 'This is the "{name}" page',
+    'nav.runningLabel': 'Running',
+    'nav.runningElapsed': '{minutes} min elapsed',
 
     // Achievement view
     'achievement.title': 'Achievements',
@@ -242,11 +244,16 @@ export const en: I18nMessages = {
     'today.addUnplannedMinutes': 'min',
     'today.addUnplannedConfirm': 'Confirm',
     'today.addUnplannedCancel': 'Cancel',
-    'today.supplementYesterday': 'Fill in yesterday',
-    'today.backToToday': 'Back to today',
+    'today.todayBadge': 'Today',
     'today.yesterdayBadge': 'Yesterday',
+    'today.daysAgoBadge': '{days} days ago',
+    'today.prevDay': 'Previous day',
+    'today.nextDay': 'Next day',
     'today.taskListTitle': "Today's tasks",
     'today.taskListEmpty': 'No tasks scheduled for today',
+    'today.tabToday': 'Today',
+    'today.tabDayTasks': "Today's tasks",
+    'today.tabExtraTasks': 'Extra tasks',
 
     // Check view (PDCA Check)
     'check.planVsExecTitle': 'Plan vs Execution',

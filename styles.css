@@ -1728,6 +1728,62 @@
     background: var(--interactive-hover);
 }
 
+/* 进行中任务卡片容器：推到一级标签行右侧（帮助按钮左侧） */
+.parrot-plan-running-card-wrap {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+}
+
+/* 无进行中任务时隐藏 */
+.parrot-plan-running-card-wrap.is-hidden {
+    display: none;
+}
+
+/* 进行中任务卡片：高度与一级标签卡一致 */
+.parrot-plan-running-card {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 5px 12px;
+    border-radius: 6px;
+    border: 1px solid var(--interactive-accent);
+    background: var(--background-secondary);
+    color: var(--text-normal);
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 1;
+    cursor: pointer;
+    max-width: 320px;
+}
+
+.parrot-plan-running-card:hover {
+    background: var(--background-modifier-hover);
+}
+
+.parrot-plan-running-card-label {
+    flex-shrink: 0;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text-on-accent);
+    background: var(--interactive-accent);
+    border-radius: 4px;
+    padding: 2px 6px;
+}
+
+.parrot-plan-running-card-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.parrot-plan-running-card-time {
+    flex-shrink: 0;
+    font-size: 12px;
+    font-weight: 400;
+    color: var(--text-muted);
+}
+
 /* 帮助弹窗：外层容器，覆盖 Obsidian 默认宽高限制，尺寸自适应内容 */
 .parrot-help-modal-container {
     width: auto;
@@ -3354,6 +3410,39 @@
     overflow-y: auto;
 }
 
+/* 右侧内容区选项卡行（今日情况 / 当天任务 / 额外任务） */
+.today-right-tabs {
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: row;
+    gap: 6px;
+    border-bottom: 1px solid var(--background-modifier-border);
+    padding-bottom: 6px;
+}
+
+.today-right-tab-btn {
+    padding: 5px 14px;
+    border-radius: 6px 6px 0 0;
+    border: 1px solid transparent;
+    border-bottom: none;
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.today-right-tab-btn:hover {
+    background: var(--background-modifier-hover);
+    color: var(--text-normal);
+}
+
+.today-right-tab-btn.is-active {
+    background: var(--interactive-accent);
+    color: var(--text-on-accent);
+    border-color: var(--interactive-accent);
+}
+
 /* 今天的年月日方框 */
 .today-date-box {
     flex-shrink: 0;
@@ -3379,6 +3468,55 @@
 
 .today-date-side.is-clickable {
     cursor: pointer;
+}
+
+/* 日期导航：左箭头 + 日期信息 + 右箭头 */
+.today-date-nav {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 6px;
+}
+
+.today-date-info {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+}
+
+/* 日期左右切换箭头按钮 */
+.today-date-nav-btn {
+    flex-shrink: 0;
+    width: 24px;
+    height: 24px;
+    padding: 0;
+    border-radius: 50%;
+    border: 1px solid var(--background-modifier-border);
+    background: var(--interactive-normal);
+    color: var(--text-normal);
+    cursor: pointer;
+    font-size: 16px;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.today-date-nav-btn:hover {
+    background: var(--interactive-hover);
+}
+
+/* 禁用态（查看今天时「后一天」不可用） */
+.today-date-nav-btn.is-disabled,
+.today-date-nav-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.today-date-nav-btn.is-disabled:hover,
+.today-date-nav-btn:disabled:hover {
+    background: var(--interactive-normal);
 }
 
 /* 日期状态标识（如「昨天」） */
@@ -4206,7 +4344,9 @@
     left: 56px;
     right: 0;
     top: var(--running-top, 0);
-    height: var(--running-height, 4px);
+    /* 最小高度保证至少一行文字可见 */
+    height: var(--running-height, 26px);
+    min-height: 26px;
     display: flex;
     align-items: center;
     padding: 0 6px;

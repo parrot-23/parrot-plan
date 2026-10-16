@@ -46,6 +46,8 @@ export const zh = {
     'nav.gtdReview': '回顾',
     'nav.gtdEngage': '执行',
     'nav.placeholder': '当前是「{name}」页面',
+    'nav.runningLabel': '进行中',
+    'nav.runningElapsed': '已用 {minutes} 分钟',
 
     // 成就榜单视图
     'achievement.title': '成就榜单',
@@ -240,11 +242,16 @@ export const zh = {
     'today.addUnplannedMinutes': '分钟',
     'today.addUnplannedConfirm': '确认新增',
     'today.addUnplannedCancel': '取消',
-    'today.supplementYesterday': '补充昨日执行信息',
-    'today.backToToday': '回到今天',
+    'today.todayBadge': '今天',
     'today.yesterdayBadge': '昨天',
+    'today.daysAgoBadge': '{days} 天前',
+    'today.prevDay': '前一天',
+    'today.nextDay': '后一天',
     'today.taskListTitle': '当天任务',
     'today.taskListEmpty': '当天暂无安排的任务',
+    'today.tabToday': '今日情况',
+    'today.tabDayTasks': '当天任务',
+    'today.tabExtraTasks': '额外任务',
 
     // 检查视图（PDCA 的 Check）
     'check.planVsExecTitle': '计划 vs 执行',
