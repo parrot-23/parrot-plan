@@ -110,7 +110,7 @@ export class PlanSchemeModal extends Modal {
                 this.selectedCategoryId = this.selectedCategoryId === id ? undefined : id;
                 this.onOpen();
             },
-            true,
+            false,
             this.categoryRepo,
         );
 

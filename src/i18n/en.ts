@@ -468,7 +468,7 @@ export const en: I18nMessages = {
     'weekNav.thisWeek': 'This week',
 
     // Category
-    'category.legend': 'Time Block Legend',
+    'category.legend': 'Legend',
     'category.config': 'Category Config',
     'category.new': 'New category',
     'category.empty': 'No categories, click + to add',

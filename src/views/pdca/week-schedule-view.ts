@@ -1011,7 +1011,7 @@ export class WeekScheduleView extends ItemView {
             })();
         };
 
-        // 图例（日历顶部：不显示配置按钮）
+        // 图例（日历顶部：显示配置按钮）
         const legendContainer = toolbar.createDiv({ cls: 'legend-container' });
         renderPlanCategoryLegend(
             this.app,
@@ -1022,7 +1022,7 @@ export class WeekScheduleView extends ItemView {
             },
             undefined,
             undefined,
-            false,
+            true,
         );
 
 

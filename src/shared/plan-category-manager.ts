@@ -57,7 +57,16 @@ export function renderPlanCategoryLegend(
     const legend = container.createDiv({ cls: 'range-legend' });
     legend.createDiv({ text: t('category.legend'), cls: 'legend-title' });
 
-    // 齿轮按钮（可选）
+    for (const cat of categoryData.categories) {
+        const row = legend.createDiv({ cls: 'legend-item' });
+        if (cat.id === selectedId) row.addClass('is-selected');
+        const swatch = row.createDiv({ cls: `legend-color` });
+        swatch.setCssProps({ '--swatch-color': cat.color ?? '#888888' });
+        row.createSpan({ text: cat.label });
+        row.onclick = () => onSelect?.(cat.id);
+    }
+
+    // 齿轮按钮（可选，放在图例末尾）
     if (showConfigButton) {
         const gearBtn = legend.createDiv({ cls: 'category-gear-btn' });
         gearBtn.setText('⚙️');
@@ -66,15 +75,6 @@ export function renderPlanCategoryLegend(
                  onChange?.();
             }, categoryRepo).open();
         };
-    }
-
-    for (const cat of categoryData.categories) {
-        const row = legend.createDiv({ cls: 'legend-item' });
-        if (cat.id === selectedId) row.addClass('is-selected');
-        const swatch = row.createDiv({ cls: `legend-color` });
-        swatch.setCssProps({ '--swatch-color': cat.color ?? '#888888' });
-        row.createSpan({ text: cat.label });
-        row.onclick = () => onSelect?.(cat.id);
     }
 }
 

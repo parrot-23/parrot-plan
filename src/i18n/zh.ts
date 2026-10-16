@@ -466,7 +466,7 @@ export const zh = {
     'weekNav.thisWeek': '本周',
 
     // 分类
-    'category.legend': '时间区块图例',
+    'category.legend': '图例',
     'category.config': '分类配置',
     'category.new': '新分类',
     'category.empty': '暂无分类，点右上角 + 新增',
