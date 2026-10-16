@@ -3349,6 +3349,11 @@
     color: var(--text-normal);
 }
 
+/* 新增任务分组标题：与上方「当天任务」列表拉开间距 */
+.today-task-list-title.is-added {
+    margin-top: 12px;
+}
+
 /* 当天任务列表 */
 .today-task-list {
     display: flex;
@@ -3362,11 +3367,12 @@
     padding: 4px 0;
 }
 
-/* 当天任务条目 */
+/* 当天任务条目（两行：标题 + 预估/已执行时长） */
 .today-task-list-item {
+    position: relative;
     display: flex;
-    align-items: center;
-    gap: 6px;
+    flex-direction: column;
+    gap: 2px;
     padding: 4px 6px;
     border-radius: 4px;
     border-left: 4px solid var(--chip-color, #888888);
@@ -3385,17 +3391,55 @@
 }
 
 .today-task-list-name {
-    flex: 1;
     min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
 }
 
-.today-task-list-time {
-    flex-shrink: 0;
-    color: var(--text-muted);
+/* 标题右侧预留习惯时间点空间 */
+.today-task-list-name.has-habit {
+    padding-right: 44px;
+}
+
+/* 右上角：习惯时间点 */
+.today-task-list-habit {
+    position: absolute;
+    top: 4px;
+    right: 6px;
     font-size: 11px;
+    color: var(--text-accent);
+    white-space: nowrap;
+}
+
+/* 最后一行：预估时长 + 已执行时长 + 完成图标 */
+.today-task-list-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 11px;
+    color: var(--text-muted);
+    overflow: hidden;
+    white-space: nowrap;
+}
+
+.today-task-list-est,
+.today-task-list-exec {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.today-task-list-done {
+    display: inline-flex;
+    align-items: center;
+    flex-shrink: 0;
+    color: var(--text-success, var(--interactive-accent));
+}
+
+.today-task-list-done svg {
+    width: 14px;
+    height: 14px;
 }
 
 /* 中间：日期方框 + 任务详情方框 */
@@ -4159,6 +4203,89 @@
 
 .today-addunplanned-input {
     width: 72px;
+}
+
+/* ===== 时间区间编辑器（起始 / 结束 / 时长） ===== */
+.today-time-editor {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 12px;
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 10px;
+    background: var(--background-primary-alt);
+}
+
+.today-time-range {
+    display: flex;
+    align-items: flex-end;
+    gap: 10px;
+}
+
+.today-time-field {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.today-time-field-label {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    color: var(--text-muted);
+}
+
+.today-time-input {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 6px 10px;
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 8px;
+    background: var(--background-primary);
+    color: var(--text-normal);
+    font-size: 14px;
+    font-variant-numeric: tabular-nums;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.today-time-input:hover {
+    border-color: var(--interactive-accent-hover);
+}
+
+.today-time-input:focus {
+    outline: none;
+    border-color: var(--interactive-accent);
+    box-shadow: 0 0 0 2px var(--interactive-accent-hover);
+}
+
+.today-time-arrow {
+    flex-shrink: 0;
+    padding-bottom: 8px;
+    color: var(--text-faint);
+    font-size: 15px;
+    line-height: 1;
+}
+
+.today-time-duration {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.today-time-duration .today-time-field-label {
+    flex-shrink: 0;
+}
+
+.today-time-duration-input {
+    width: 72px;
+    flex-shrink: 0;
+}
+
+.today-time-unit {
+    font-size: 12px;
+    color: var(--text-muted);
 }
 
 /* 替换任务详情方框（替换模式下显示在任务详情下方） */

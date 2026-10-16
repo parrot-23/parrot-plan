@@ -28,6 +28,15 @@ function formatHours(minutes: number): string {
     return `${Number(hours.toFixed(1))}h`;
 }
 
+/** 把分钟数格式化为「Xh Ym」/「Ym」形式（与周计划卡片一致） */
+function formatDuration(minutes: number): string {
+    const h = Math.floor(minutes / 60);
+    const m = minutes % 60;
+    if (h > 0 && m > 0) return `${h}h${m}m`;
+    if (h > 0) return `${h}h`;
+    return `${m}m`;
+}
+
 /**
  * 当日执行视图：左侧任务面板 + 中间执行区 + 右侧当天时间轴。
  * 通过 renderInto 渲染到指定容器（与 WeekScheduleView / YearView 一致）。
@@ -63,6 +72,12 @@ export class TodayView {
     private addUnplannedStart = 0;
     /** 新增非计划事件的时长（分钟，默认 30，可由用户填写） */
     private addUnplannedDuration = 30;
+    /** 「当天任务」详情中待执行的起始分钟（选中任务时默认取当前时刻，可编辑） */
+    private detailStart = 0;
+    /** 「当天任务」详情中待执行的结束分钟（与起始/时长联动，可编辑） */
+    private detailEnd = 30;
+    /** 上一次渲染详情时选中的任务 id（用于切换任务时重置待执行时间区间） */
+    private lastDetailItemId?: string;
     /** 当前正在执行的事件 id（点击「进入执行」后设置，用于顶部执行卡片） */
     private executingEventId?: string;
     /**
@@ -204,9 +219,8 @@ export class TodayView {
             this.renderDetailBox(panel);
             return;
         }
-        // 今日情况：今日各分类已执行时长 + 周目标 / 日目标
+        // 今日情况：今日各分类已执行时长
         this.renderCategoryDurationBox(panel);
-        this.renderWeekGoalBox(panel);
     }
 
     /** 重新渲染自身 */
@@ -220,6 +234,39 @@ export class TodayView {
     }
 
     /**
+     * 取事件来源任务的「习惯时间点」（分钟）。
+     * 仅当来源任务存在且已启用习惯时间点时返回，否则返回 null。
+     */
+    private getEventHabitTime(ev: EventBlock): number | null {
+        if (!ev.inboxId) return null;
+        const item = this.inboxData.items.find(i => i.id === ev.inboxId && !i.removed);
+        if (!item || !item.habitTimeEnabled) return null;
+        return typeof item.habitTime === 'number' ? item.habitTime : null;
+    }
+
+    /**
+     * 按分类聚合事件：同一分类的事件连续排列，分类之间保持首次出现的顺序，
+     * 分类内部保持原有顺序。
+     */
+    private groupEventsByCategory(events: EventBlock[]): EventBlock[] {
+        const order: string[] = [];
+        const groups = new Map<string, EventBlock[]>();
+        for (const ev of events) {
+            const key = ev.categoryId ?? '';
+            if (!groups.has(key)) {
+                groups.set(key, []);
+                order.push(key);
+            }
+            groups.get(key)!.push(ev);
+        }
+        const result: EventBlock[] = [];
+        for (const key of order) {
+            for (const ev of groups.get(key)!) result.push(ev);
+        }
+        return result;
+    }
+
+    /**
      * 左侧「当天任务面板」：仅显示安排在当天的任务（来自当天的计划事件）。
      * 点击任务项可选中（写入 inboxData.selectedId），供右侧任务详情方框展示。
      */
@@ -227,22 +274,24 @@ export class TodayView {
         panel.empty();
         panel.addClass('today-task-list-panel');
 
-        // 标题
-        panel.createDiv({ cls: 'today-task-list-title', text: t('today.taskListTitle') });
-
         const { day, weekKey } = this.getViewDayInfo();
+
         // 当天计划事件（统一为全天事件）
         const dayEvents = this.getEvents()
             .filter(ev => ev.day === day && ev.weekKey === weekKey);
 
-        const list = panel.createDiv({ cls: 'today-task-list' });
+        // 按来源任务是否启用习惯时间点拆分：习惯时间点任务单独成组
+        const habitEvents = dayEvents
+            .filter(ev => this.getEventHabitTime(ev) !== null)
+            // 习惯时间点任务按时间点先后顺序排列
+            .sort((a, b) => (this.getEventHabitTime(a) ?? 0) - (this.getEventHabitTime(b) ?? 0));
+        // 当天任务按分类聚合：同分类的任务连续排列（保持分类内原有顺序）
+        const normalEvents = this.groupEventsByCategory(
+            dayEvents.filter(ev => this.getEventHabitTime(ev) === null),
+        );
 
-        if (dayEvents.length === 0) {
-            list.createDiv({ cls: 'today-task-list-empty', text: t('today.taskListEmpty') });
-            return;
-        }
-
-        for (const ev of dayEvents) {
+        // 渲染单个当天计划事件卡片
+        const renderDayEvent = (list: HTMLElement, ev: EventBlock) => {
             const item = ev.inboxId
                 ? this.inboxData.items.find(i => i.id === ev.inboxId && !i.removed)
                 : undefined;
@@ -250,38 +299,160 @@ export class TodayView {
                 ? this.categoryData.categories.find(c => c.id === ev.categoryId)
                 : undefined;
 
-            const row = list.createDiv({ cls: 'today-task-list-item' });
-            row.setCssProps({ '--chip-color': cat?.color ?? '#888888' });
+            // 预估时长取自周计划设置；已执行时长取自当前执行记录
+            const estMinutes = typeof ev.estimatedMinutes === 'number' && ev.estimatedMinutes > 0
+                ? ev.estimatedMinutes
+                : undefined;
+            const execMinutes = this.getExecutions()
+                .filter(ex => ex.eventId === ev.id && !ex.replaced)
+                .reduce((sum, ex) => sum + Math.max(0, ex.end - ex.start), 0);
 
-            // 选中态高亮（与时间轴事件选中互斥，这里以任务来源 id 判断）
-            if (item && this.inboxData.selectedId === item.id) {
-                row.addClass('is-selected');
-            }
+            this.renderTaskCard(list, {
+                title: ev.title,
+                color: cat?.color,
+                estMinutes,
+                execMinutes,
+                habitTime: this.getEventHabitTime(ev) ?? undefined,
+                selected: !!item && this.inboxData.selectedId === item.id,
+                onSelect: () => this.selectTaskItem(item),
+            });
+        };
 
-            row.createSpan({ cls: 'today-task-list-name', text: ev.title });
-
-            // 计划事件统一为全天事件
-            row.createSpan({ cls: 'today-task-list-time', text: t('allday.label') });
-
-            // 点击选中该任务（再次点击取消），并清除时间轴事件选中
-            row.onclick = (e) => {
-                e.stopPropagation();
-                if (!item) return;
-                this.selectedEventId = undefined;
-                this.selectedExecId = undefined;
-                this.selectedRunningTask = false;
-                if (this.inboxData.selectedId === item.id) {
-                    if (this.inboxRepo) this.inboxRepo.setSelectedId(undefined);
-                    else this.inboxData.selectedId = undefined;
-                } else {
-                    if (this.inboxRepo) this.inboxRepo.setSelectedId(item.id);
-                    else this.inboxData.selectedId = item.id;
-                    // 选中当天任务时自动切到「当天任务」选项卡
-                    this.rightTab = 'dayTasks';
-                }
-                void this.refresh();
-            };
+        // ===== 习惯时间点任务（当天任务中已启用习惯时间点的任务）=====
+        if (habitEvents.length > 0) {
+            panel.createDiv({ cls: 'today-task-list-title', text: t('today.habitTaskListTitle') });
+            const habitList = panel.createDiv({ cls: 'today-task-list' });
+            for (const ev of habitEvents) renderDayEvent(habitList, ev);
         }
+
+        // ===== 当天任务（来自当天的计划事件）=====
+        panel.createDiv({
+            cls: habitEvents.length > 0 ? 'today-task-list-title is-added' : 'today-task-list-title',
+            text: t('today.taskListTitle'),
+        });
+
+        const list = panel.createDiv({ cls: 'today-task-list' });
+
+        if (normalEvents.length === 0) {
+            list.createDiv({ cls: 'today-task-list-empty', text: t('today.taskListEmpty') });
+        } else {
+            for (const ev of normalEvents) renderDayEvent(list, ev);
+        }
+
+        // ===== 新增任务（当天新增的非计划执行记录）=====
+        const addedExecs = this.getExecutions()
+            .filter(ex =>
+                ex.day === day
+                && ex.weekKey === weekKey
+                && !ex.eventId
+                && !ex.replaced,
+            )
+            // 新增事项按起始时间先后顺序排列
+            .sort((a, b) => a.start - b.start);
+        if (addedExecs.length === 0) return;
+
+        panel.createDiv({ cls: 'today-task-list-title is-added', text: t('today.addedListTitle') });
+        const addedList = panel.createDiv({ cls: 'today-task-list' });
+        for (const ex of addedExecs) {
+            const item = ex.inboxId
+                ? this.inboxData.items.find(i => i.id === ex.inboxId && !i.removed)
+                : undefined;
+            const cat = item?.categoryId
+                ? this.categoryData.categories.find(c => c.id === item.categoryId)
+                : undefined;
+
+            // 新增任务无预估时长，已执行时长取该条执行记录时长
+            const execMinutes = Math.max(0, ex.end - ex.start);
+
+            this.renderTaskCard(addedList, {
+                title: item?.title ?? t('today.statusAdded'),
+                color: cat?.color,
+                estMinutes: undefined,
+                execMinutes,
+                selected: !!item && this.inboxData.selectedId === item.id,
+                onSelect: () => this.selectTaskItem(item),
+            });
+        }
+    }
+
+    /** 渲染单个任务卡片（标题 + 预估/已执行时长 + 完成图标） */
+    private renderTaskCard(
+        list: HTMLElement,
+        opts: {
+            title: string;
+            color?: string;
+            estMinutes?: number;
+            execMinutes: number;
+            /** 习惯时间点（分钟），设置后显示在卡片右上角 */
+            habitTime?: number;
+            selected: boolean;
+            onSelect: () => void;
+        },
+    ): void {
+        const row = list.createDiv({ cls: 'today-task-list-item' });
+        row.setCssProps({ '--chip-color': opts.color ?? '#888888' });
+
+        // 选中态高亮（与时间轴事件选中互斥，这里以任务来源 id 判断）
+        if (opts.selected) row.addClass('is-selected');
+
+        // 第一行：标题
+        const nameEl = row.createSpan({ cls: 'today-task-list-name', text: opts.title });
+
+        // 右上角：习惯时间点（仅设置了习惯时间点的任务显示）
+        if (opts.habitTime !== undefined) {
+            // 标题预留右侧空间，避免与习惯时间点重叠
+            nameEl.addClass('has-habit');
+            row.createSpan({
+                cls: 'today-task-list-habit',
+                text: formatMinutes(opts.habitTime),
+            });
+        }
+
+        // 最后一行：预估时长（取自周计划设置） + 已执行时长（取自当前执行记录）
+        const metaLine = row.createDiv({ cls: 'today-task-list-meta' });
+        metaLine.createSpan({
+            cls: 'today-task-list-est',
+            text: t('today.taskEst', {
+                duration: opts.estMinutes !== undefined ? formatDuration(opts.estMinutes) : '—',
+            }),
+        });
+        metaLine.createSpan({
+            cls: 'today-task-list-exec',
+            text: t('today.taskExec', { duration: formatDuration(opts.execMinutes) }),
+        });
+
+        // 完成图标：无预估时长时，只要有执行记录即视为完成；
+        // 有预估时长时，需已执行时长达到预估时长才显示。
+        const isDone = opts.estMinutes === undefined
+            ? opts.execMinutes > 0
+            : opts.execMinutes >= opts.estMinutes;
+        if (isDone) {
+            const doneIcon = metaLine.createSpan({ cls: 'today-task-list-done' });
+            setIcon(doneIcon, 'check-circle');
+        }
+
+        row.onclick = (e) => {
+            e.stopPropagation();
+            opts.onSelect();
+        };
+    }
+
+    /** 点击任务卡片：选中/取消选中该任务，并清除时间轴事件选中 */
+    private selectTaskItem(item: InboxItem | undefined): void {
+        if (!item) return;
+        this.selectedEventId = undefined;
+        this.selectedExecId = undefined;
+        this.selectedRunningTask = false;
+        if (this.inboxData.selectedId === item.id) {
+            if (this.inboxRepo) this.inboxRepo.setSelectedId(undefined);
+            else this.inboxData.selectedId = undefined;
+        } else {
+            if (this.inboxRepo) this.inboxRepo.setSelectedId(item.id);
+            else this.inboxData.selectedId = item.id;
+            // 选中当天任务时自动切到「当天任务」选项卡
+            this.rightTab = 'dayTasks';
+        }
+        void this.refresh();
     }
 
     /**
@@ -797,7 +968,8 @@ export class TodayView {
                 i => i.id === this.runningTask!.inboxId && !i.removed,
             );
             if (runningItem) {
-                this.renderItemDetail(body, runningItem);
+                // 进行中任务：不显示待执行时间编辑器（已在执行中）
+                this.renderItemDetail(body, runningItem, false);
                 return;
             }
         }
@@ -825,7 +997,7 @@ export class TodayView {
     private renderAddUnplannedBox(panel: HTMLElement) {
         const box = panel.createDiv({ cls: 'today-detail-box today-addunplanned-box' });
         const titleRow = box.createDiv({ cls: 'today-detail-title-row' });
-        titleRow.createDiv({ cls: 'today-detail-title', text: t('today.addUnplannedTitle') });
+        titleRow.createDiv({ cls: 'today-detail-title', text: t('today.detailTitle') });
 
         const body = box.createDiv({ cls: 'today-detail-body' });
 
@@ -845,34 +1017,106 @@ export class TodayView {
             picker.createDiv({ cls: 'today-addunplanned-hint', text: t('today.addUnplannedHint') });
         }
 
-        // 时间区间：起始时间（只读，由点击位置换算）+ 时长（可填写）
-        const start = this.addUnplannedStart;
-        const end = start + this.addUnplannedDuration;
+        // 时间区间：起始 / 结束 / 时长 三个输入框，改任一个联动更新其余
+        this.renderTimeRangeEditor(
+            body,
+            this.addUnplannedStart,
+            this.addUnplannedStart + this.addUnplannedDuration,
+            (start, end) => {
+                this.addUnplannedStart = start;
+                this.addUnplannedDuration = Math.max(5, end - start);
+                void this.refresh();
+            },
+        );
+    }
 
-        const rangeRow = body.createDiv({ cls: 'today-addunplanned-row' });
-        rangeRow.createSpan({ cls: 'today-detail-label', text: `${t('today.timeRange')}:` });
-        rangeRow.createSpan({
-            cls: 'today-addunplanned-range',
-            text: `${formatMinutes(start)} - ${formatMinutes(end)}`,
+    /**
+     * 渲染时间区间编辑器：起始时间 / 结束时间 / 时长 三个输入框。
+     * 修改任一项时联动更新其余两项（以起始时间为锚点，结束 = 起始 + 时长）。
+     * onChange 回调返回规范化后的 (start, end)（分钟）。
+     */
+    private renderTimeRangeEditor(
+        container: HTMLElement,
+        start: number,
+        end: number,
+        onChange: (start: number, end: number) => void,
+    ): void {
+        const clamp = (v: number) => Math.max(0, Math.min(24 * 60, Math.round(v)));
+
+        const editor = container.createDiv({ cls: 'today-time-editor' });
+
+        // 第一行：起始时间 → 结束时间
+        const rangeRow = editor.createDiv({ cls: 'today-time-range' });
+
+        const startField = rangeRow.createDiv({ cls: 'today-time-field' });
+        startField.createSpan({ cls: 'today-time-field-label', text: t('today.startTime') });
+        const startInput = startField.createEl('input', {
+            cls: 'today-time-input',
+            type: 'time',
         });
+        startInput.value = formatMinutes(start);
 
-        const durationRow = body.createDiv({ cls: 'today-addunplanned-row' });
-        durationRow.createSpan({ cls: 'today-detail-label', text: `${t('today.addUnplannedDuration')}:` });
+        rangeRow.createSpan({ cls: 'today-time-arrow', text: '→' });
+
+        const endField = rangeRow.createDiv({ cls: 'today-time-field' });
+        endField.createSpan({ cls: 'today-time-field-label', text: t('today.endTime') });
+        const endInput = endField.createEl('input', {
+            cls: 'today-time-input',
+            type: 'time',
+        });
+        endInput.value = formatMinutes(end);
+
+        // 第二行：时长
+        const durationRow = editor.createDiv({ cls: 'today-time-duration' });
+        durationRow.createSpan({ cls: 'today-time-field-label', text: t('today.addUnplannedDuration') });
         const durationInput = durationRow.createEl('input', {
-            cls: 'today-addunplanned-input',
+            cls: 'today-time-input today-time-duration-input',
             type: 'number',
+            attr: { min: '5', step: '5' },
         });
-        durationInput.value = String(this.addUnplannedDuration);
-        durationInput.min = '5';
-        durationInput.step = '5';
+        durationInput.value = String(Math.max(0, end - start));
+        durationRow.createSpan({ cls: 'today-time-unit', text: t('today.addUnplannedMinutes') });
+
+        // 把 HH:MM 解析为分钟数；非法时返回 undefined
+        const parseTime = (value: string): number | undefined => {
+            const m = /^(\d{1,2}):(\d{2})$/.exec(value.trim());
+            if (!m) return undefined;
+            const h = Number(m[1]);
+            const min = Number(m[2]);
+            if (!Number.isFinite(h) || !Number.isFinite(min)) return undefined;
+            return clamp(h * 60 + min);
+        };
+
+        // 修改起始时间：保持时长不变，结束时间随之平移
+        startInput.onchange = () => {
+            const s = parseTime(startInput.value);
+            if (s === undefined) {
+                startInput.value = formatMinutes(start);
+                return;
+            }
+            const duration = Math.max(5, end - start);
+            onChange(s, clamp(s + duration));
+        };
+
+        // 修改结束时间：起始时间不变，时长随之变化
+        endInput.onchange = () => {
+            const e = parseTime(endInput.value);
+            if (e === undefined) {
+                endInput.value = formatMinutes(end);
+                return;
+            }
+            onChange(start, Math.max(start + 5, e));
+        };
+
+        // 修改时长：起始时间不变，结束时间随之变化
         durationInput.onchange = () => {
             const v = Number(durationInput.value);
-            if (Number.isFinite(v) && v > 0) {
-                this.addUnplannedDuration = Math.round(v);
-                void this.refresh();
+            if (!Number.isFinite(v) || v <= 0) {
+                durationInput.value = String(Math.max(0, end - start));
+                return;
             }
+            onChange(start, clamp(start + Math.max(5, Math.round(v))));
         };
-        durationRow.createSpan({ cls: 'today-detail-label', text: t('today.addUnplannedMinutes') });
     }
 
     /**
@@ -929,183 +1173,6 @@ export class TodayView {
             }
             row.createDiv({ cls: 'today-cat-duration-value', text: formatHours(minutes) });
         }
-    }
-
-    /**
-     * 渲染周目标方框（未选中任何任务/事件时，占据任务详情方框的位置）。
-     * 中间用竖线分成左右两栏：左侧「周目标」清单，右侧「日目标」清单，两栏样式一致。
-     */
-    private renderWeekGoalBox(panel: HTMLElement) {
-        const box = panel.createDiv({ cls: 'today-detail-box today-weekgoal-box' });
-
-        const body = box.createDiv({ cls: 'today-detail-body today-weekgoal-body' });
-
-        // 左侧：周目标
-        const weekCol = body.createDiv({ cls: 'today-weekgoal-col' });
-        weekCol.createDiv({ cls: 'today-weekgoal-col-title', text: t('today.weekGoalTitle') });
-        const { day, weekKey } = this.getViewDayInfo();
-        this.renderGoalList(
-            weekCol,
-            this.getEvents().filter(ev => ev.weekKey === weekKey),
-            t('today.weekGoalEmpty'),
-        );
-
-        // 右侧：日目标（当前查看日期）+ 下方新增事项列表
-        const dayCol = body.createDiv({ cls: 'today-weekgoal-col' });
-        dayCol.createDiv({ cls: 'today-weekgoal-col-title', text: t('today.dayGoalTitle') });
-        this.renderGoalList(
-            dayCol,
-            this.getEvents().filter(ev => ev.weekKey === weekKey && ev.day === day),
-            t('today.dayGoalEmpty'),
-        );
-
-        // 日目标面板下半部分：新增事项列表（格式与日目标一致）
-        dayCol.createDiv({ cls: 'today-weekgoal-col-title', text: t('today.addedListTitle') });
-        this.renderAddedList(dayCol, day, weekKey);
-    }
-
-    /**
-     * 渲染「新增事项」清单：当前查看日期内、无关联计划事件的执行记录（即新增执行）。
-     * 复用日目标的清单样式，按来源任务标题聚合，展示次数、总时长与进度条。
-     */
-    private renderAddedList(container: HTMLElement, day: number, weekKey: string) {
-        const added = this.getExecutions().filter(
-            ex => ex.day === day && ex.weekKey === weekKey && !ex.eventId,
-        );
-        if (added.length === 0) {
-            container.createDiv({ cls: 'today-detail-empty', text: t('today.addedListEmpty') });
-            return;
-        }
-
-        // 按来源任务标题聚合：相同任务累计次数与总时长
-        const groups = new Map<string, { title: string; count: number; total: number }>();
-        let totalMinutes = 0;
-        for (const ex of added) {
-            const duration = Math.max(0, ex.end - ex.start);
-            totalMinutes += duration;
-
-            const item = ex.inboxId
-                ? this.inboxData.items.find(i => i.id === ex.inboxId && !i.removed)
-                : undefined;
-            const title = item?.title ?? t('today.statusAdded');
-            const group = groups.get(title) ?? { title, count: 0, total: 0 };
-            group.count += 1;
-            group.total += duration;
-            groups.set(title, group);
-        }
-
-        // 事项清单：从左到右依次为 名称、次数、总时长、进度条
-        const list = container.createDiv({ cls: 'today-weekgoal-list' });
-        for (const group of Array.from(groups.values())) {
-            const row = list.createDiv({ cls: 'today-weekgoal-item' });
-            row.createSpan({ cls: 'today-weekgoal-name', text: group.title });
-            if (group.count > 1) {
-                row.createSpan({
-                    cls: 'today-weekgoal-count',
-                    text: t('today.weekGoalCount', { count: group.count }),
-                });
-            }
-            row.createSpan({ cls: 'today-weekgoal-duration', text: formatHours(group.total) });
-
-            // 弹性占位：把进度条推到行末尾
-            row.createDiv({ cls: 'today-weekgoal-spacer' });
-
-            // 行末尾的小进度条：新增事项视为已执行，进度条填满
-            const bar = row.createDiv({ cls: 'today-stat-bar today-weekgoal-bar' });
-            const fill = bar.createDiv({ cls: 'today-stat-bar-fill is-executed' });
-            fill.setCssProps({ '--stat-fill': '100%' });
-        }
-
-        // 共计时长进度条（新增事项全部为已执行，故填满）
-        const stats = container.createDiv({ cls: 'today-weekgoal-stats' });
-        const labelRow = stats.createDiv({ cls: 'today-weekgoal-stats-label' });
-        labelRow.createSpan({ text: t('today.weekGoalDuration') });
-        labelRow.createSpan({
-            cls: 'today-weekgoal-stats-value',
-            text: `${formatHours(totalMinutes)} / ${formatHours(totalMinutes)}`,
-        });
-        const bar = stats.createDiv({ cls: 'today-stat-bar' });
-        const fill = bar.createDiv({ cls: 'today-stat-bar-fill is-executed' });
-        fill.setCssProps({ '--stat-fill': '100%' });
-    }
-
-    /**
-     * 渲染一组计划事件清单：相同标题累计显示为 x N，行末尾显示总时长与小进度条，
-     * 底部显示「共计时长 / 已执行时长」进度条。周目标与日目标共用，保证样式一致。
-     */
-    private renderGoalList(container: HTMLElement, events: EventBlock[], emptyText: string) {
-        if (events.length === 0) {
-            container.createDiv({ cls: 'today-detail-empty', text: emptyText });
-            return;
-        }
-
-        const executions = this.getExecutions();
-
-        // 按标题聚合：相同事件累计次数，并分别累计总时长与已执行时长
-        const groups = new Map<string, { title: string; count: number; total: number; executedCount: number; executed: number }>();
-        let totalMinutes = 0;
-        let executedMinutes = 0;
-        for (const ev of events) {
-            // 计划事件统一为全天事件，时长口径改用预估执行时长（未填写按 0 计）
-            const duration = Math.max(0, ev.estimatedMinutes ?? 0);
-            const isExecuted = getEventStatus(ev, executions) === 'executed';
-            totalMinutes += duration;
-            if (isExecuted) executedMinutes += duration;
-
-            const key = ev.title;
-            const group = groups.get(key) ?? { title: ev.title, count: 0, total: 0, executedCount: 0, executed: 0 };
-            group.count += 1;
-            group.total += duration;
-            if (isExecuted) {
-                group.executedCount += 1;
-                group.executed += duration;
-            }
-            groups.set(key, group);
-        }
-
-        // 事件清单：从左到右依次为 事件名称、事件次数、总时长、已完成次数、已完成时长、进度条
-        const list = container.createDiv({ cls: 'today-weekgoal-list' });
-        for (const group of Array.from(groups.values())) {
-            const row = list.createDiv({ cls: 'today-weekgoal-item' });
-            row.createSpan({ cls: 'today-weekgoal-name', text: group.title });
-            if (group.count > 1) {
-                row.createSpan({
-                    cls: 'today-weekgoal-count',
-                    text: t('today.weekGoalCount', { count: group.count }),
-                });
-            }
-            row.createSpan({ cls: 'today-weekgoal-duration', text: formatHours(group.total) });
-
-            // 弹性占位：把已完成信息与进度条推到行末尾
-            row.createDiv({ cls: 'today-weekgoal-spacer' });
-
-            // 已完成次数（如 2/3）
-            row.createSpan({
-                cls: 'today-weekgoal-done-count',
-                text: t('today.weekGoalDoneCount', { done: group.executedCount, count: group.count }),
-            });
-            // 已完成时长
-            row.createSpan({ cls: 'today-weekgoal-done-duration', text: formatHours(group.executed) });
-
-            // 行末尾的小进度条：可视化该事件已执行时长 / 总时长
-            const bar = row.createDiv({ cls: 'today-stat-bar today-weekgoal-bar' });
-            const fill = bar.createDiv({ cls: 'today-stat-bar-fill is-executed' });
-            const ratio = group.total > 0 ? group.executed / group.total : 0;
-            fill.setCssProps({ '--stat-fill': `${Math.max(0, Math.min(1, ratio)) * 100}%` });
-        }
-
-        // 共计时长 / 已执行时长 进度条
-        const stats = container.createDiv({ cls: 'today-weekgoal-stats' });
-        const labelRow = stats.createDiv({ cls: 'today-weekgoal-stats-label' });
-        labelRow.createSpan({ text: t('today.weekGoalDuration') });
-        labelRow.createSpan({
-            cls: 'today-weekgoal-stats-value',
-            text: `${formatHours(executedMinutes)} / ${formatHours(totalMinutes)}`,
-        });
-        const bar = stats.createDiv({ cls: 'today-stat-bar' });
-        const fill = bar.createDiv({ cls: 'today-stat-bar-fill is-executed' });
-        const ratio = totalMinutes > 0 ? executedMinutes / totalMinutes : 0;
-        fill.setCssProps({ '--stat-fill': `${Math.max(0, Math.min(1, ratio)) * 100}%` });
     }
 
     /** 渲染操作按钮：选中左侧任务显示「执行非计划任务」；选中时间轴事件显示「执行计划 / 替换计划」 */
@@ -1244,8 +1311,13 @@ export class TodayView {
             return;
         }
 
-        // 未选中任何任务/事件（显示周目标 / 日目标）：日期切换已移至日期方框的左右箭头
+        // 未选中任何任务/事件：不显示操作按钮
         if (!selectedItem) {
+            return;
+        }
+
+        // 「今日情况」选项卡下不显示「开始任务」按钮（该按钮属于任务执行场景）
+        if (this.rightTab === 'today') {
             return;
         }
 
@@ -1327,11 +1399,11 @@ export class TodayView {
         const item = this.getSelectedItem();
         if (!item) return;
 
-        const now = new Date();
         const { dayKey } = this.getViewDayInfo();
+        // 起始时间取详情中编辑的起始时间（默认当前时刻）
         this.runningTask = {
             inboxId: item.id,
-            start: now.getHours() * 60 + now.getMinutes(),
+            start: this.detailStart,
             dayKey,
         };
         // 写回插件数据源，随 saveAll 一起持久化
@@ -1581,11 +1653,27 @@ export class TodayView {
         await this.refresh();
     }
 
-    /** 展示收集盒任务详情 */
-    private renderItemDetail(body: HTMLElement, item: InboxItem) {
+    /** 展示收集盒任务详情（showTimeEditor 为 true 时显示可编辑的待执行时间区间） */
+    private renderItemDetail(body: HTMLElement, item: InboxItem, showTimeEditor = true) {
         body.createDiv({ cls: 'today-detail-name', text: item.title });
         body.createDiv({ cls: 'today-detail-desc' })
             .setText(item.description || t('today.noDescription'));
+
+        // 时间区间：起始 / 结束 / 时长 三个输入框，改任一个联动更新其余
+        // 切换任务时，起始时间默认取当前时刻，时长默认 30 分钟
+        if (showTimeEditor) {
+            if (this.lastDetailItemId !== item.id) {
+                this.lastDetailItemId = item.id;
+                const now = this.nowMinutes();
+                this.detailStart = now;
+                this.detailEnd = Math.min(24 * 60, now + 30);
+            }
+            this.renderTimeRangeEditor(body, this.detailStart, this.detailEnd, (start, end) => {
+                this.detailStart = start;
+                this.detailEnd = end;
+                void this.refresh();
+            });
+        }
 
         const cat = item.categoryId
             ? this.categoryData.categories.find(c => c.id === item.categoryId)
