@@ -2558,6 +2558,50 @@
     cursor: pointer;
 }
 
+/* 左侧任务行：可点击（点击后在右侧临时生成改进条目） */
+.improve-week-task-row.is-clickable {
+    cursor: pointer;
+    border-radius: 6px;
+}
+
+.improve-week-task-row.is-clickable:hover {
+    background: var(--background-modifier-hover);
+}
+
+/* 临时改进条目：任务名方框 + 输入框 + 归档按钮 + 删除按钮 */
+.improve-pending-row {
+    padding: 6px;
+    border-radius: 6px;
+    border: 1px dashed var(--interactive-accent);
+    background: var(--background-secondary);
+}
+
+.improve-pending-task {
+    flex-shrink: 0;
+    max-width: 120px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    padding: 2px 8px;
+    border-radius: 6px;
+    border: 1px solid var(--background-modifier-border);
+    background: var(--background-primary);
+    font-size: 12px;
+    color: var(--text-normal);
+}
+
+.improve-pending-archive {
+    flex-shrink: 0;
+    padding: 4px 10px;
+    border-radius: 6px;
+    border: none;
+    background: var(--interactive-accent);
+    color: var(--text-on-accent);
+    cursor: pointer;
+    font-size: 12px;
+    line-height: 1.4;
+}
+
 /* 建议列表 */
 .improve-list {
     display: flex;

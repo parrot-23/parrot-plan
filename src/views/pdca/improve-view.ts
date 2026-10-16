@@ -1,7 +1,8 @@
 import type { App } from 'obsidian';
+import { Notice } from 'obsidian';
 
 import type { PlanCategoryData } from '../../shared/plan-category-manager';
-import type { InboxData, EventBlock, ExecutionRecord, ImprovementItem } from '../../datatypes/domain';
+import type { InboxData, EventBlock, ExecutionRecord, ImprovementItem, ImprovementEntry } from '../../datatypes/domain';
 import { getEventStatus, OKR_CONDITION_META } from '../../datatypes/domain';
 import type { PdcaRepo } from '../../repos/pdca-repo';
 import {
@@ -41,6 +42,11 @@ export class ImproveView {
     private container?: HTMLElement;
     /** 当前改进的周键 */
     private currentWeekKey: string = getCurrentWeekKey();
+    /**
+     * 临时改进条目：点击左侧任务行后生成，尚未输入内容前不落库。
+     * 切换任务行时丢弃旧的、换成新任务的；输入内容并归档后才写入对应任务的改进项。
+     */
+    private pendingImprovement?: { taskId: string; taskTitle: string; text: string };
 
     constructor(
         app: App,
@@ -64,6 +70,9 @@ export class ImproveView {
         this.container = container;
         container.empty();
         container.addClass('improve-view');
+
+        // 整页重渲染（如切换周）时丢弃未填写的临时条目
+        this.pendingImprovement = undefined;
 
         // 顶部：周导航
         this.renderWeekNav(container);
@@ -193,6 +202,10 @@ export class ImproveView {
         for (const item of tasks) {
             const row = list.createDiv({ cls: 'improve-week-task-row' });
 
+            // 点击任务行：在右侧改进项列表临时生成一条待填写条目（未输入前不落库）
+            row.addClass('is-clickable');
+            row.onclick = () => this.selectTaskForImprovement(item.id, item.title);
+
             // 分类色点 + 任务名
             const cat = item.categoryId
                 ? this.categoryData.categories.find(c => c.id === item.categoryId)
@@ -240,9 +253,15 @@ export class ImproveView {
         const addBtn = titleRow.createEl('button', { cls: 'improve-add-btn', text: '+' });
         addBtn.onclick = () => void this.addImprovementItem();
 
-        const items = this.getWeekItems();
         const list = box.createDiv({ cls: 'improve-input-list' });
-        if (items.length === 0) {
+
+        // 临时条目（点击左侧任务行后生成）：显示在列表最上方
+        if (this.pendingImprovement) {
+            this.renderPendingImprovementRow(list);
+        }
+
+        const items = this.getWeekItems();
+        if (items.length === 0 && !this.pendingImprovement) {
             list.createDiv({ cls: 'improve-empty', text: t('improve.listEmpty') });
         }
         for (const item of items) {
@@ -259,6 +278,87 @@ export class ImproveView {
             };
             const delBtn = row.createEl('button', { cls: 'improve-input-del', text: '×' });
             delBtn.onclick = () => void this.removeImprovementItem(item.id);
+        }
+    }
+
+    /**
+     * 渲染临时改进条目：任务名方框 + 输入框 + 归档按钮 + 删除按钮。
+     * 未输入内容时该条目不落库；点击归档才写入对应任务的改进项。
+     */
+    private renderPendingImprovementRow(list: HTMLElement): void {
+        const pending = this.pendingImprovement;
+        if (!pending) return;
+
+        const row = list.createDiv({ cls: 'improve-input-row improve-pending-row' });
+
+        // 任务名方框
+        row.createSpan({ cls: 'improve-pending-task', text: pending.taskTitle });
+
+        // 输入框
+        const input = row.createEl('input', {
+            cls: 'improve-input',
+            type: 'text',
+            value: pending.text,
+        });
+        input.placeholder = t('improve.inputPlaceholder');
+        input.oninput = () => {
+            if (this.pendingImprovement) this.pendingImprovement.text = input.value;
+        };
+
+        // 归档按钮：把内容写入对应任务的改进项
+        const archiveBtn = row.createEl('button', {
+            cls: 'improve-pending-archive',
+            text: t('improve.archive'),
+        });
+        archiveBtn.onclick = () => void this.archivePendingImprovement();
+
+        // 删除按钮：直接丢弃临时条目
+        const delBtn = row.createEl('button', { cls: 'improve-input-del', text: '×' });
+        delBtn.onclick = () => {
+            this.pendingImprovement = undefined;
+            this.refreshImprovementList();
+        };
+    }
+
+    /** 点击左侧任务行：设置/替换临时改进条目（丢弃旧的未填写条目） */
+    private selectTaskForImprovement(taskId: string, taskTitle: string): void {
+        this.pendingImprovement = { taskId, taskTitle, text: '' };
+        this.refreshImprovementList();
+    }
+
+    /** 归档临时条目：把内容写入对应任务的改进项并保存 */
+    private async archivePendingImprovement(): Promise<void> {
+        const pending = this.pendingImprovement;
+        if (!pending) return;
+        const text = pending.text.trim();
+        if (!text) {
+            new Notice(t('improve.archiveEmpty'));
+            return;
+        }
+        const task = this.inboxData.items.find(i => i.id === pending.taskId && !i.removed);
+        if (!task) {
+            new Notice(t('improve.archiveEmpty'));
+            return;
+        }
+        const entry: ImprovementEntry = {
+            id: `improve_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+            text,
+            done: false,
+            createdAt: Date.now(),
+        };
+        task.improvements = [...(task.improvements ?? []), entry];
+        await this.save();
+        new Notice(t('improve.archiveDone', { title: pending.taskTitle }));
+        this.pendingImprovement = undefined;
+        this.refreshImprovementList();
+    }
+
+    /** 仅刷新右侧改进项列表（不整页刷新，避免丢失输入焦点） */
+    private refreshImprovementList(): void {
+        const col = this.container?.querySelector<HTMLElement>('.improve-col-right');
+        if (col) {
+            col.empty();
+            this.renderImprovementList(col);
         }
     }
 

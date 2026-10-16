@@ -300,6 +300,10 @@ export const zh = {
     'improve.listTitle': '改进项',
     'improve.listEmpty': '暂无改进项，点击右上角 + 添加',
     'improve.inputPlaceholder': '填写一条改进项…',
+    'improve.archive': '归档项目',
+    'improve.archiveDone': '已归档到「{title}」的改进项',
+    'improve.archiveEmpty': '请先输入改进内容',
+    'improve.pendingHint': '点击左侧任务行可临时添加改进项',
 
     // 年视图
     'year.weekLabel': '第{week}周',

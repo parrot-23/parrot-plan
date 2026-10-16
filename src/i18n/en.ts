@@ -300,8 +300,12 @@ export const en: I18nMessages = {
     'improve.weekTaskDuration': 'Duration {duration}',
     'improve.weekTaskOkrNew': 'New this week',
     'improve.listTitle': 'Improvements',
-    'improve.listEmpty': 'No improvements yet. Click + at the top right to add.',
+    'improve.listEmpty': 'No improvements yet, click + at top right to add',
     'improve.inputPlaceholder': 'Write an improvement…',
+    'improve.archive': 'Archive to project',
+    'improve.archiveDone': 'Archived to the improvements of "{title}"',
+    'improve.archiveEmpty': 'Please enter improvement content first',
+    'improve.pendingHint': 'Click a task row on the left to add an improvement temporarily',
 
     // Year view
     'year.weekLabel': 'Week {week}',
