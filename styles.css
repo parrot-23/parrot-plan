@@ -2568,6 +2568,12 @@
     background: var(--background-modifier-hover);
 }
 
+/* 激活态：当前临时条目对应的任务行 */
+.improve-week-task-row.is-active {
+    background: var(--background-modifier-hover);
+    box-shadow: inset 3px 0 0 var(--interactive-accent);
+}
+
 /* 临时改进条目：任务名方框 + 输入框 + 归档按钮 + 删除按钮 */
 .improve-pending-row {
     padding: 6px;
@@ -2578,16 +2584,31 @@
 
 .improve-pending-task {
     flex-shrink: 0;
-    max-width: 120px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    max-width: 140px;
     padding: 2px 8px;
     border-radius: 6px;
     border: 1px solid var(--background-modifier-border);
     background: var(--background-primary);
     font-size: 12px;
     color: var(--text-normal);
+}
+
+.improve-pending-task-dot {
+    flex-shrink: 0;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--dot-color, #888888);
+}
+
+.improve-pending-task-name {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .improve-pending-archive {

@@ -204,6 +204,8 @@ export class ImproveView {
 
             // 点击任务行：在右侧改进项列表临时生成一条待填写条目（未输入前不落库）
             row.addClass('is-clickable');
+            // 激活态：该行正是当前临时条目对应的任务
+            if (this.pendingImprovement?.taskId === item.id) row.addClass('is-active');
             row.onclick = () => this.selectTaskForImprovement(item.id, item.title);
 
             // 分类色点 + 任务名
@@ -291,8 +293,15 @@ export class ImproveView {
 
         const row = list.createDiv({ cls: 'improve-input-row improve-pending-row' });
 
-        // 任务名方框
-        row.createSpan({ cls: 'improve-pending-task', text: pending.taskTitle });
+        // 任务名方框（前缀分类色点）
+        const taskBox = row.createSpan({ cls: 'improve-pending-task' });
+        const task = this.inboxData.items.find(i => i.id === pending.taskId && !i.removed);
+        const cat = task?.categoryId
+            ? this.categoryData.categories.find(c => c.id === task.categoryId)
+            : undefined;
+        const dot = taskBox.createSpan({ cls: 'improve-pending-task-dot' });
+        dot.setCssProps({ '--dot-color': cat?.color ?? '#888888' });
+        taskBox.createSpan({ cls: 'improve-pending-task-name', text: pending.taskTitle });
 
         // 输入框
         const input = row.createEl('input', {
