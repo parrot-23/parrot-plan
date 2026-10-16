@@ -242,6 +242,11 @@ export const zh = {
     'check.unknownTask': '未知任务',
     'check.empty': '本周暂无计划事件',
     'check.noAbnormal': '本周暂无异常任务',
+    'check.dailyTitle': '每日执行情况',
+    'check.dailyPlanned': '计划',
+    'check.dailyActual': '实际',
+    'check.dailyDiff': '差异',
+    'check.dailyEmpty': '暂无',
 
     // 改进视图（PDCA 的 Act）
     'improve.suggestionsTitle': '改进建议',

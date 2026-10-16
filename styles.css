@@ -2205,6 +2205,97 @@
     text-align: right;
 }
 
+/* 每日执行情况：每天一个区块，内部左（计划）/ 中（实际）/ 右（差异） */
+.check-daily-section {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-top: 16px;
+}
+
+.check-daily-section-title {
+    font-weight: bold;
+    font-size: 14px;
+    color: var(--text-normal);
+}
+
+.check-daily-block {
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 10px;
+    padding: 12px 16px;
+    background: var(--background-secondary);
+}
+
+.check-daily-block-title {
+    font-weight: 600;
+    font-size: 13px;
+    color: var(--text-normal);
+    margin-bottom: 8px;
+}
+
+.check-daily-cols {
+    display: flex;
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 16px;
+}
+
+.check-daily-col {
+    flex: 1 1 0;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.check-daily-col-title {
+    font-size: 12px;
+    color: var(--text-muted);
+    font-weight: 600;
+}
+
+.check-daily-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.check-daily-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+}
+
+.check-daily-name {
+    flex: 1;
+    min-width: 0;
+    color: var(--text-normal);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.check-daily-value {
+    flex-shrink: 0;
+    color: var(--text-muted);
+    min-width: 48px;
+    text-align: right;
+}
+
+.check-daily-value.is-over {
+    color: var(--text-success, #2e7d32);
+}
+
+.check-daily-value.is-under {
+    color: var(--text-error, #c62828);
+}
+
+.check-daily-empty {
+    font-size: 12px;
+    color: var(--text-faint);
+}
+
 /* 异常任务列表 */
 .check-abnormal-list {
     display: flex;
@@ -3691,20 +3782,27 @@
     white-space: nowrap;
 }
 
-.today-cat-duration-track {
+/* 用方块表示时长：每满 1 小时一个填满的方块，余数用部分填充的方块 */
+.today-cat-duration-blocks {
     flex: 1;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 3px;
+}
+
+.today-cat-duration-block {
+    width: 14px;
     height: 14px;
-    border-radius: 7px;
+    border-radius: 3px;
     background: var(--background-modifier-hover);
     overflow: hidden;
 }
 
-.today-cat-duration-bar {
+.today-cat-duration-block-fill {
     height: 100%;
-    width: var(--bar-width, 0%);
-    border-radius: 7px;
-    background: var(--bar-color, #888888);
-    transition: width 0.2s ease;
+    width: var(--fill-width, 100%);
+    background: var(--block-color, #888888);
 }
 
 .today-cat-duration-value {

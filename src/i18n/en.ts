@@ -244,6 +244,11 @@ export const en: I18nMessages = {
     'check.unknownTask': 'Unknown task',
     'check.empty': 'No planned events this week',
     'check.noAbnormal': 'No abnormal tasks this week',
+    'check.dailyTitle': 'Daily Execution',
+    'check.dailyPlanned': 'Planned',
+    'check.dailyActual': 'Actual',
+    'check.dailyDiff': 'Diff',
+    'check.dailyEmpty': 'None',
 
     // Improve view (PDCA Act)
     'improve.suggestionsTitle': 'Improvement suggestions',

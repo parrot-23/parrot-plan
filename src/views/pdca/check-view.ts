@@ -77,6 +77,9 @@ export class CheckView {
 
         // 右块：差异项（第一行：本周分配 vs 执行；第二行：上周 vs 本周）
         this.renderDiffColumn(columns.createDiv({ cls: 'check-col' }));
+
+        // 下方：按七天逐日展示执行情况（每天一个区块，内部左中右）
+        this.renderDailySection(body);
     }
 
     /** 重新渲染自身 */
@@ -202,6 +205,103 @@ export class CheckView {
             dot.setCssProps({ '--dot-color': color });
             row.createSpan({ cls: 'check-category-name', text: label });
             row.createSpan({ cls: 'check-category-value', text: formatHours(minutes) });
+        }
+    }
+
+    // ===== 下方：按七天逐日展示执行情况 =====
+    /** 按天展示：每天一个区块，内部左（计划分类时长）/ 中（实际分类时长）/ 右（差异） */
+    private renderDailySection(body: HTMLElement) {
+        const section = body.createDiv({ cls: 'check-daily-section' });
+        section.createDiv({ cls: 'check-daily-section-title', text: t('check.dailyTitle') });
+
+        const weekEvents = this.getEvents().filter(ev => ev.weekKey === this.currentWeekKey);
+        const weekExecs = this.getExecutions().filter(ex => ex.weekKey === this.currentWeekKey);
+        const weekDays = getWeekDays();
+
+        for (let day = 1; day <= 7; day++) {
+            const block = section.createDiv({ cls: 'check-daily-block' });
+            block.createDiv({ cls: 'check-daily-block-title', text: weekDays[day - 1] });
+
+            const cols = block.createDiv({ cls: 'check-daily-cols' });
+
+            // 左：当天计划时长（按分类，排除全天事件）
+            const plannedEntries = weekEvents
+                .filter(ev => ev.day === day && !ev.allDay)
+                .map(ev => ({ categoryId: ev.categoryId, minutes: Math.max(0, ev.end - ev.start) }));
+            const plannedMap = this.aggregateByCategory(plannedEntries);
+
+            // 中：当天实际执行时长（按分类，分类取来源任务）
+            const actualEntries = weekExecs
+                .filter(ex => ex.day === day)
+                .map(ex => {
+                    const item = ex.inboxId
+                        ? this.inboxData.items.find(i => i.id === ex.inboxId && !i.removed)
+                        : undefined;
+                    return { categoryId: item?.categoryId, minutes: Math.max(0, ex.end - ex.start) };
+                });
+            const actualMap = this.aggregateByCategory(actualEntries);
+
+            // 右：差异（实际 - 计划），按分类
+            const diffMap = new Map<string, number>();
+            for (const [key, minutes] of Array.from(plannedMap.entries())) {
+                diffMap.set(key, (diffMap.get(key) ?? 0) - minutes);
+            }
+            for (const [key, minutes] of Array.from(actualMap.entries())) {
+                diffMap.set(key, (diffMap.get(key) ?? 0) + minutes);
+            }
+
+            this.renderDailyColumn(cols, t('check.dailyPlanned'), plannedMap);
+            this.renderDailyColumn(cols, t('check.dailyActual'), actualMap);
+            this.renderDailyColumn(cols, t('check.dailyDiff'), diffMap, true);
+        }
+    }
+
+    /** 按分类聚合时长（返回 分类键 → 分钟） */
+    private aggregateByCategory(entries: { categoryId?: string; minutes: number }[]): Map<string, number> {
+        const map = new Map<string, number>();
+        for (const e of entries) {
+            const key = e.categoryId ?? '__none__';
+            map.set(key, (map.get(key) ?? 0) + e.minutes);
+        }
+        return map;
+    }
+
+    /** 渲染逐日区块中的一列（计划 / 实际 / 差异） */
+    private renderDailyColumn(
+        cols: HTMLElement,
+        title: string,
+        map: Map<string, number>,
+        showSign = false,
+    ) {
+        const col = cols.createDiv({ cls: 'check-daily-col' });
+        col.createDiv({ cls: 'check-daily-col-title', text: title });
+
+        if (map.size === 0) {
+            col.createDiv({ cls: 'check-daily-empty', text: t('check.dailyEmpty') });
+            return;
+        }
+
+        const list = col.createDiv({ cls: 'check-daily-list' });
+        for (const [key, minutes] of Array.from(map.entries())) {
+            const cat = key === '__none__'
+                ? undefined
+                : this.categoryData.categories.find(c => c.id === key);
+            const color = cat?.color ?? '#888888';
+            const label = cat?.label ?? t('inbox.noCategory');
+
+            const row = list.createDiv({ cls: 'check-daily-row' });
+            const dot = row.createSpan({ cls: 'check-category-dot' });
+            dot.setCssProps({ '--dot-color': color });
+            row.createSpan({ cls: 'check-daily-name', text: label });
+            const valueEl = row.createSpan({ cls: 'check-daily-value' });
+            if (showSign) {
+                const sign = minutes > 0 ? '+' : minutes < 0 ? '-' : '';
+                valueEl.setText(`${sign}${formatHours(Math.abs(minutes))}`);
+                valueEl.toggleClass('is-over', minutes > 0);
+                valueEl.toggleClass('is-under', minutes < 0);
+            } else {
+                valueEl.setText(formatHours(minutes));
+            }
         }
     }
 

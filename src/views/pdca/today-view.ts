@@ -769,18 +769,25 @@ export class TodayView {
         const rows = this.categoryData.categories
             .map(cat => ({ cat, minutes: minutesByCat.get(cat.id) ?? 0 }))
             .filter(r => r.minutes > 0);
-        const maxMinutes = Math.max(...rows.map(r => r.minutes), 1);
 
         const chart = box.createDiv({ cls: 'today-cat-duration-chart' });
         for (const { cat, minutes } of rows) {
             const row = chart.createDiv({ cls: 'today-cat-duration-row' });
             row.createDiv({ cls: 'today-cat-duration-label', text: cat.label });
-            const track = row.createDiv({ cls: 'today-cat-duration-track' });
-            const bar = track.createDiv({ cls: 'today-cat-duration-bar' });
-            bar.setCssProps({
-                '--bar-color': cat.color ?? '#888888',
-                '--bar-width': `${Math.round((minutes / maxMinutes) * 100)}%`,
-            });
+            // 用方块表示时长：每满 1 小时一个填满的方块，不足 1 小时的余数用部分填充的方块
+            const blocks = row.createDiv({ cls: 'today-cat-duration-blocks' });
+            const fullHours = Math.floor(minutes / 60);
+            const remainder = minutes % 60;
+            const blockCount = fullHours + (remainder > 0 ? 1 : 0);
+            for (let i = 0; i < blockCount; i++) {
+                const block = blocks.createDiv({ cls: 'today-cat-duration-block' });
+                block.setCssProps({ '--block-color': cat.color ?? '#888888' });
+                // 最后一个方块为不足 1 小时的余数时，按比例填充
+                const isPartial = remainder > 0 && i === blockCount - 1;
+                const fillPercent = isPartial ? Math.round((remainder / 60) * 100) : 100;
+                const fill = block.createDiv({ cls: 'today-cat-duration-block-fill' });
+                fill.setCssProps({ '--fill-width': `${fillPercent}%` });
+            }
             row.createDiv({ cls: 'today-cat-duration-value', text: formatHours(minutes) });
         }
     }
