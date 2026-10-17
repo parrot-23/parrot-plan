@@ -194,6 +194,9 @@ export class WeekScheduleView extends ItemView {
         if (prevScroll) {
             this.savedScrollTop = prevScroll.scrollTop;
         }
+        // 刷新前记录左侧任务面板列表的滚动位置，渲染后恢复
+        const prevTaskListScrollTop = content
+            .querySelector<HTMLElement>('.week-task-panel .inbox-list')?.scrollTop ?? 0;
 
         content.empty();
 
@@ -224,6 +227,11 @@ export class WeekScheduleView extends ItemView {
             },
             { currentWeekKey: this.currentWeekKey, events: this.events, inboxRepo: this.inboxRepo() },  // 用于「周目标」筛选与统计
         );
+        // 恢复任务面板列表的滚动位置，实现无感刷新
+        if (prevTaskListScrollTop > 0) {
+            const listEl = taskPanel.querySelector<HTMLElement>('.inbox-list');
+            if (listEl) listEl.scrollTop = prevTaskListScrollTop;
+        }
 
         // ===== 右侧：顶部工具栏 + 日历 =====
         const main = root.createDiv({ cls: 'week-main' });

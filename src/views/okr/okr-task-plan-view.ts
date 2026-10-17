@@ -61,6 +61,9 @@ export class OkrTaskPlanView {
             document.removeEventListener('mousedown', this.addPanelCloseHandler);
             this.addPanelCloseHandler = undefined;
         }
+        // 刷新前记录任务面板列表的滚动位置，渲染后恢复，避免选中任务时滚动条跳回顶部
+        const prevListScrollTop = container
+            .querySelector<HTMLElement>('.task-plan-task-panel .inbox-list')?.scrollTop ?? 0;
         container.empty();
         container.addClass('task-plan-view');
 
@@ -117,6 +120,12 @@ export class OkrTaskPlanView {
         this.renderAddSectionButton(sectionsHeader);
         const sectionsBody = sectionsArea.createDiv({ cls: 'swimlane-section-area-body' });
         this.renderSectionCards(sectionsBody);
+
+        // 恢复任务面板列表的滚动位置，实现无感刷新
+        if (prevListScrollTop > 0) {
+            const listEl = taskPanel.querySelector<HTMLElement>('.inbox-list');
+            if (listEl) listEl.scrollTop = prevListScrollTop;
+        }
     }
 
     /** 板块方框右上角的「+」按钮：点击展开下拉面板选择板块类型 */
@@ -1077,7 +1086,7 @@ export class OkrTaskPlanView {
         const habitEnabled = item.habitTimeEnabled ?? false;
         const toggleBtn = habitLabelRow.createEl('button', {
             cls: 'task-plan-habit-toggle',
-            attr: { 'aria-label': t('taskPlan.habitTime') },
+            attr: { 'aria-label': t('taskPlan.habitTask') },
         });
         toggleBtn.toggleClass('is-on', habitEnabled);
         toggleBtn.onclick = () => {
@@ -1088,7 +1097,10 @@ export class OkrTaskPlanView {
             })();
         };
 
-        habitLabelRow.createDiv({ cls: 'task-plan-field-label', text: t('taskPlan.habitTime') });
+        habitLabelRow.createDiv({ cls: 'task-plan-field-label', text: t('taskPlan.habitTask') });
+
+        // 习惯时间点小标题（与下方「预估执行时长」标题样式一致）
+        habitRow.createDiv({ cls: 'task-plan-field-label', text: t('taskPlan.habitTimePoint') });
         const habitGroup = habitRow.createDiv({ cls: 'task-plan-habit-group' });
 
         // 未设置时默认 09:00

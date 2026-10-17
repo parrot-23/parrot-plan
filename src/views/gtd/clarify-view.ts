@@ -53,6 +53,9 @@ export class GtdClarifyView {
 
     async renderInto(container: HTMLElement): Promise<void> {
         this.container = container;
+        // 刷新前记录任务面板列表的滚动位置，渲染后恢复，避免选中任务时滚动条跳回顶部
+        const prevListScrollTop = container
+            .querySelector<HTMLElement>('.gtd-clarify-source-body .inbox-list')?.scrollTop ?? 0;
         container.empty();
         container.addClass('gtd-clarify-view');
 
@@ -61,6 +64,12 @@ export class GtdClarifyView {
         this.renderLeft(layout);
         this.renderMiddle(layout);
         this.renderRight(layout);
+
+        // 恢复任务面板列表的滚动位置，实现无感刷新
+        if (prevListScrollTop > 0) {
+            const listEl = container.querySelector<HTMLElement>('.gtd-clarify-source-body .inbox-list');
+            if (listEl) listEl.scrollTop = prevListScrollTop;
+        }
     }
 
     /** 左栏：收集视图的未处理卡片 */

@@ -137,6 +137,11 @@ export class TodayView {
         // 保存时间轴滚动位置，重建 DOM 后恢复，避免刷新时滚动条重置
         const prevScrollTop = container
             .querySelector('.today-timeline-panel')?.scrollTop ?? 0;
+        // 保存左侧任务面板的滚动位置（当天任务面板自身滚动；全部任务面板为内部列表滚动）
+        const prevTaskPanelScrollTop = container
+            .querySelector<HTMLElement>('.today-task-panel')?.scrollTop ?? 0;
+        const prevTaskListScrollTop = container
+            .querySelector<HTMLElement>('.today-task-panel .inbox-list')?.scrollTop ?? 0;
         container.empty();
         container.addClass('today-view');
 
@@ -154,6 +159,12 @@ export class TodayView {
             this.renderAllTasksPanel(taskPanel);
         } else {
             this.renderTodayTaskPanel(taskPanel);
+        }
+        // 恢复左侧任务面板的滚动位置，实现无感刷新
+        taskPanel.scrollTop = prevTaskPanelScrollTop;
+        if (prevTaskListScrollTop > 0) {
+            const listEl = taskPanel.querySelector<HTMLElement>('.inbox-list');
+            if (listEl) listEl.scrollTop = prevTaskListScrollTop;
         }
 
         // ===== 中间：当天时间轴（紧贴左侧任务面板）=====

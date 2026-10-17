@@ -47,6 +47,9 @@ export class YearView {
 
     async renderInto(container: HTMLElement): Promise<void> {
         this.container = container;
+        // 刷新前记录任务面板列表的滚动位置，渲染后恢复，避免选中任务时滚动条跳回顶部
+        const prevListScrollTop = container
+            .querySelector<HTMLElement>('.year-task-panel .inbox-list')?.scrollTop ?? 0;
         container.empty();
         container.addClass('year-view');
 
@@ -80,6 +83,12 @@ export class YearView {
                 void this.onWeekClick(week, year);
             },
         });
+
+        // 恢复任务面板列表的滚动位置，实现无感刷新
+        if (prevListScrollTop > 0) {
+            const listEl = taskPanel.querySelector<HTMLElement>('.inbox-list');
+            if (listEl) listEl.scrollTop = prevListScrollTop;
+        }
     }
 
     /** 重新渲染自身 */
