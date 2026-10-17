@@ -6754,6 +6754,39 @@
     overflow-y: auto;
 }
 
+/* 自定义列表卡片：允许内容溢出，使任务搜索下拉结果不被裁剪 */
+.wb-card-list {
+    overflow: visible;
+}
+
+.wb-card-list .wb-timelog-list {
+    overflow: visible;
+}
+
+/* 自定义列表卡片：标题输入框（外观接近标题，聚焦时显示边框） */
+.wb-card-title-input {
+    width: 100%;
+    padding: 2px 4px;
+    margin-bottom: 8px;
+    border: 1px solid transparent;
+    border-radius: 4px;
+    background: transparent;
+    color: var(--text-normal);
+    font-size: 14px;
+    font-weight: 600;
+    box-sizing: border-box;
+}
+
+.wb-card-title-input:hover {
+    border-color: var(--background-modifier-border);
+}
+
+.wb-card-title-input:focus {
+    border-color: var(--interactive-accent);
+    outline: none;
+    background: var(--background-primary);
+}
+
 .wb-timelog-row {
     display: flex;
     flex-direction: row;

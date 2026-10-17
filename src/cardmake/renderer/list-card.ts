@@ -25,7 +25,16 @@ function taskDurationMinutes(taskId: string, ctx: CardRenderContext): number {
 
 export const listCardRenderer: CardRenderer = {
     render(container, instance, template, ctx) {
-        container.createDiv({ cls: 'wb-card-title', text: instance.title ?? template.name });
+        // 标题输入框：用户可自定义标题
+        const titleInput = container.createEl('input', {
+            cls: 'wb-card-title-input',
+            attr: { type: 'text', placeholder: template.name },
+        });
+        titleInput.value = instance.title ?? '';
+        titleInput.onchange = () => {
+            instance.title = titleInput.value.trim() || undefined;
+            void ctx.save();
+        };
 
         const body = container.createDiv({ cls: 'wb-card-body' });
         const rows = instance.timelogRows ?? (instance.timelogRows = []);

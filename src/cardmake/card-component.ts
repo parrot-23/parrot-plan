@@ -82,6 +82,8 @@ export class CardComponent {
         if (!template) return;
 
         const card = grid.createDiv({ cls: 'wb-card' });
+        // 按渲染器类型加标识类，便于针对特定卡片类型定制样式（如 list 卡片需允许溢出）
+        card.addClass(`wb-card-${template.renderer}`);
         card.style.setProperty('left', `${pos.col * GRID}px`);
         card.style.setProperty('top', `${pos.row * GRID}px`);
 
@@ -117,9 +119,9 @@ export class CardComponent {
         };
         renderer.render(body, instance, template, ctx);
 
-        // 编辑态：标题可拖动整张卡片
+        // 编辑态：标题可拖动整张卡片（普通标题或标题输入框）
         if (editing) {
-            const titleEl = card.querySelector<HTMLElement>('.wb-card-title');
+            const titleEl = card.querySelector<HTMLElement>('.wb-card-title, .wb-card-title-input');
             if (titleEl) {
                 titleEl.addClass('is-draggable');
                 this.attachDrag(titleEl, card, instance);
