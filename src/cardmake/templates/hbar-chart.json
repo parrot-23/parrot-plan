@@ -1,7 +1,8 @@
 {
   "id": "hbar-chart",
   "name": "条形图",
-  "mode": "stats",
+  "mode": "chart",
+  "renderer": "stats",
   "description": "按分类统计执行记录（横向条形图）",
   "source": {
     "dataSource": "executions",

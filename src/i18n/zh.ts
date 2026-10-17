@@ -581,6 +581,12 @@ export const zh = {
     'workbench.skinShadow': '卡片阴影',
     'workbench.skinRadius': '边框圆角',
     'workbench.skinRadiusDefault': '默认',
+    'workbench.timelogManual': '手写',
+    'workbench.timelogTask': '任务时长',
+    'workbench.timelogManualPlaceholder': '输入内容…',
+    'workbench.timelogTaskPlaceholder': '搜索任务…',
+    'workbench.timelogNoTask': '无匹配任务',
+    'workbench.timelogAddRow': '添加一行',
 
     // 布局方案弹窗
     'layout.title': '布局方案',

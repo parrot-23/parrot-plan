@@ -4,10 +4,10 @@ import type { App } from 'obsidian';
 
 import type { CardTemplate } from '../../datatypes/form';
 import type { CardInstance } from '../../datatypes/card';
-import { loadAllTemplates } from '../../cardmake/data/template-loader';
-import { getCardRenderer } from '../../cardmake/cards/card-registry';
+import { loadAllTemplates } from '../../cardmake/engine/template-loader';
+import { getCardRenderer } from '../../cardmake/renderer/card-registry';
 import type { CardRenderContext } from '../../datatypes/renderer';
-import { createDataProvider } from '../../cardmake/data/provider';
+import { createDataProvider } from '../../cardmake/engine/provider';
 import type { EventBlock, ExecutionRecord, InboxItem } from '../../datatypes/domain';
 import { t } from '../../i18n';
 
@@ -88,7 +88,7 @@ export class AchievementView {
 
             const card = grid.createDiv({ cls: 'achievement-card' });
             const body = card.createDiv({ cls: 'achievement-card-content' });
-            const renderer = getCardRenderer(instance.mode);
+            const renderer = getCardRenderer(template.renderer);
             renderer.render(body, instance, template, ctx);
         }
     }

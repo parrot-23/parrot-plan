@@ -1,7 +1,7 @@
 // 表单渲染器：根据模板的字段定义，渲染一个可填写的表单。
 // 通用逻辑，与具体卡片模式无关。
 import type { CardTemplate, FormValues } from '../../datatypes/form';
-import { createFieldWidget, validateValues } from './field-widgets';
+import { createFieldWidget, validateValues } from './form-field-widgets';
 
 /**
  * 渲染一个表单到容器，返回收集/校验的句柄。

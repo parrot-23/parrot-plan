@@ -1,7 +1,9 @@
 {
   "id": "year-goal",
   "name": "年度目标",
-  "mode": "fixed",
+  "mode": "form",
+  "renderer": "form",
+  "formType": "fixed",
   "description": "填写一次后固定展示",
   "fields": [
     {

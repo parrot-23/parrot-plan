@@ -1,7 +1,8 @@
 {
   "id": "day-execution-chart",
   "name": "日执行统计",
-  "mode": "stats",
+  "mode": "system",
+  "renderer": "stats",
   "description": "按天统计执行次数（柱状图）",
   "source": {
     "dataSource": "executions",

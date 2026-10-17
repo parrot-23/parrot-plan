@@ -583,6 +583,12 @@ export const en: I18nMessages = {
     'workbench.skinShadow': 'Shadow',
     'workbench.skinRadius': 'Corner radius',
     'workbench.skinRadiusDefault': 'Default',
+    'workbench.timelogManual': 'Manual',
+    'workbench.timelogTask': 'Task duration',
+    'workbench.timelogManualPlaceholder': 'Enter content…',
+    'workbench.timelogTaskPlaceholder': 'Search task…',
+    'workbench.timelogNoTask': 'No matching task',
+    'workbench.timelogAddRow': 'Add row',
 
     // Layout scheme modal
     'layout.title': 'Layout Scheme',

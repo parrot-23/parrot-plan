@@ -1,7 +1,8 @@
 {
   "id": "task-stats",
   "name": "任务统计",
-  "mode": "stats",
+  "mode": "system",
+  "renderer": "stats",
   "description": "展示任务总数统计",
   "source": {
     "dataSource": "tasks",

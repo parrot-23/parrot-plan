@@ -20,18 +20,34 @@ export interface CardEntry {
     createdAt: number;
 }
 
+/** 自定义列表行类型：手写 / 任务时长 */
+export type TimelogRowKind = 'manual' | 'task';
+
+/** 自定义列表行（list 渲染器：每行一个下拉选项 + 内容） */
+export interface TimelogRow {
+    id: string;
+    /** 行类型：手写（自由文本）/ 任务时长（关联已有任务） */
+    kind: TimelogRowKind;
+    /** 手写内容（kind = manual 时使用） */
+    text?: string;
+    /** 关联的任务 id（kind = task 时使用） */
+    taskId?: string;
+}
+
 /** 卡片实例：工作台上的一张卡片 */
 export interface CardInstance {
     /** 实例 id（添加卡片时生成） */
     id: string;
     /** 指向 templates/*.json 的模板 id */
     templateId: string;
-    /** 卡片模式（冗余存储，便于快速判断） */
+    /** 卡片分类（冗余存储，便于快速判断；渲染器类型见模板 renderer 字段） */
     mode: CardMode;
     /** periodic：周期填写记录 */
     records?: CardRecord[];
     /** collect：收集记录（输入框卡片逐条追加） */
     entries?: CardEntry[];
+    /** list：自定义列表行（下拉选择手写/任务时长） */
+    timelogRows?: TimelogRow[];
     /** stats：数据来源定义 */
     source?: CardSource;
     /** fixed：填写后固定的值 */

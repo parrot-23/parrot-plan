@@ -2,17 +2,17 @@
 import type { App } from 'obsidian';
 import { Notice } from 'obsidian';
 
-import type { CardTemplate } from '../../datatypes/form';
+import type { CardTemplate, CardMode } from '../../datatypes/form';
 import type { CardInstance, WorkbenchData } from '../../datatypes/card';
 import { DEFAULT_LAYOUT_ID } from '../../datatypes/card';
 import type { WorkbenchRepo } from '../../repos/workbench-repo';
 import type { GtdRepo } from '../../repos/gtd-repo';
-import { loadAllTemplates } from '../../cardmake/data/template-loader';
+import { loadAllTemplates } from '../../cardmake/engine/template-loader';
 import type { EventBlock, ExecutionRecord } from '../../datatypes/domain';
 import type { InboxItem } from '../../datatypes/domain';
 import { t } from '../../i18n';
 import { LayoutModal } from './layout-modal';
-import { CardComponent } from '../../shared/card-component';
+import { CardComponent } from '../../cardmake/card-component';
 
 /** 网格单位（像素）：卡片位置与尺寸均吸附到该值的整数倍 */
 const GRID = 30;
@@ -118,7 +118,7 @@ export class WorkbenchView {
                 cls: 'wb-add-btn',
                 text: t('workbench.addSystemCard'),
             });
-            systemBtn.onclick = () => this.showAddCardMenu(systemBtn, [
+            systemBtn.onclick = () => this.showAddCardMenu(systemBtn, 'system', [
                 { key: 'workbench.group.task', match: (tpl) => ['task-stats', 'executed-task-count', 'execution-total-duration', 'day-execution-chart'].includes(tpl.id) },
                 { key: 'workbench.group.okr', match: (tpl) => tpl.id === 'event-completion' },
                 { key: 'workbench.group.pdca', match: (tpl) => ['category-distribution', 'usage-days'].includes(tpl.id) },
@@ -130,7 +130,7 @@ export class WorkbenchView {
                 cls: 'wb-add-btn',
                 text: t('workbench.addIconCard'),
             });
-            chartBtn.onclick = () => this.showAddCardMenu(chartBtn, [
+            chartBtn.onclick = () => this.showAddCardMenu(chartBtn, 'chart', [
                 { key: 'workbench.group.metric', match: (tpl) => ['metric-card', 'activity-heatmap'].includes(tpl.id) },
                 { key: 'workbench.group.compare', match: (tpl) => ['bar-chart', 'hbar-chart'].includes(tpl.id) },
                 { key: 'workbench.group.trend', match: (tpl) => ['line-chart', 'area-chart', 'scatter-chart'].includes(tpl.id) },
@@ -139,13 +139,13 @@ export class WorkbenchView {
                 { key: 'workbench.group.special', match: (tpl) => ['wordcloud-chart', 'radar-chart'].includes(tpl.id) },
             ]);
 
-            // 表单卡片：周期填写 + 固定填写
+            // 表单卡片：周期填写 + 固定填写 + 自定义列表
             const formBtn = actions.createEl('button', {
                 cls: 'wb-add-btn',
                 text: t('workbench.addFormCard'),
             });
-            formBtn.onclick = () => this.showAddCardMenu(formBtn, [
-                { match: (tpl) => tpl.mode === 'periodic' || tpl.mode === 'fixed' },
+            formBtn.onclick = () => this.showAddCardMenu(formBtn, 'form', [
+                { match: () => true },
             ]);
 
             // 装饰卡片：日历 + 时钟
@@ -153,8 +153,8 @@ export class WorkbenchView {
                 cls: 'wb-add-btn',
                 text: t('workbench.addDecoCard'),
             });
-            decoBtn.onclick = () => this.showAddCardMenu(decoBtn, [
-                { match: (tpl) => tpl.mode === 'calendar' || tpl.mode === 'clock' },
+            decoBtn.onclick = () => this.showAddCardMenu(decoBtn, 'deco', [
+                { match: () => true },
             ]);
 
             // 退出编辑按钮：退出编辑态并持久化
@@ -309,16 +309,19 @@ export class WorkbenchView {
      * 弹出添加卡片菜单：按分组列出模板供选择。
      * 每个分组可带行标题（key），分组内每个类型为一个「图标 + 文字」方块，从左到右排列。
      * @param anchor 触发按钮（菜单挂在其内部）
+     * @param mode 卡片分类（先按分类过滤，再按 groups 细分）
      * @param groups 分组定义列表；key 存在则渲染行标题，否则平铺
      */
     private showAddCardMenu(
         anchor: HTMLElement,
+        mode: CardMode,
         groups: Array<{ key?: string; match: (tpl: CardTemplate) => boolean }>,
     ) {
         const menu = anchor.createDiv({ cls: 'wb-add-menu' });
+        const candidates = this.templates.filter((tpl) => tpl.mode === mode);
 
         for (const group of groups) {
-            const items = this.templates.filter((tpl) => group.match(tpl));
+            const items = candidates.filter((tpl) => group.match(tpl));
 
             if (group.key) {
                 // 带标题的分组：即使无匹配项也保留标题行（底下留空位）
@@ -387,6 +390,7 @@ export class WorkbenchView {
             'scatter-chart': '✨',
             'funnel-chart': '🔻',
             'wordcloud-chart': '☁️',
+            'custom-list': '📝',
         };
         return byId[tpl.id] ?? '🧩';
     }
@@ -399,7 +403,7 @@ export class WorkbenchView {
             mode: template.mode,
             title: template.name,
         };
-        if (template.mode === 'stats' && template.source) {
+        if (template.renderer === 'stats' && template.source) {
             instance.source = template.source;
         }
         this.workbenchRepo.addInstance(instance);

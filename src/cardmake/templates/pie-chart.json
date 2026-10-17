@@ -1,7 +1,8 @@
 {
   "id": "pie-chart",
   "name": "饼图",
-  "mode": "stats",
+  "mode": "chart",
+  "renderer": "stats",
   "description": "按分类统计执行记录占比（饼图）",
   "source": {
     "dataSource": "executions",

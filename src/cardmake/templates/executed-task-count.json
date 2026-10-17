@@ -1,7 +1,8 @@
 {
   "id": "executed-task-count",
   "name": "执行任务总数",
-  "mode": "stats",
+  "mode": "system",
+  "renderer": "stats",
   "description": "展示用户执行的任务总数",
   "source": {
     "dataSource": "executions",

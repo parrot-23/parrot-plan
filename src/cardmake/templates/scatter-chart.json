@@ -1,7 +1,8 @@
 {
   "id": "scatter-chart",
   "name": "散点图",
-  "mode": "stats",
+  "mode": "chart",
+  "renderer": "stats",
   "description": "执行时间与时长分布（散点图）",
   "source": {
     "dataSource": "executions",

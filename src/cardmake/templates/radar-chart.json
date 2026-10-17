@@ -1,7 +1,8 @@
 {
   "id": "radar-chart",
   "name": "雷达图",
-  "mode": "stats",
+  "mode": "chart",
+  "renderer": "stats",
   "description": "多维度综合指标（雷达图）",
   "source": {
     "dataSource": "executions",

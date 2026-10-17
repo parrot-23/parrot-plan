@@ -1,7 +1,8 @@
 {
   "id": "category-distribution",
   "name": "分类占比",
-  "mode": "stats",
+  "mode": "system",
+  "renderer": "stats",
   "description": "按分类统计执行记录占比（环形图）",
   "source": {
     "dataSource": "executions",

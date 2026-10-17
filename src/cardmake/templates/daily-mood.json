@@ -1,7 +1,9 @@
 {
   "id": "daily-mood",
   "name": "每日心情",
-  "mode": "periodic",
+  "mode": "form",
+  "renderer": "form",
+  "formType": "periodic",
   "period": "day",
   "description": "每天记录一次心情",
   "fields": [

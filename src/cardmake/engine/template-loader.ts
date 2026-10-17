@@ -27,6 +27,7 @@ import radarChart from '../templates/radar-chart.json';
 import scatterChart from '../templates/scatter-chart.json';
 import funnelChart from '../templates/funnel-chart.json';
 import wordcloudChart from '../templates/wordcloud-chart.json';
+import customList from '../templates/custom-list.json';
 
 /** 内置模板列表（构建时内联，随 main.js 一起分发） */
 const BUILTIN_TEMPLATES: CardTemplate[] = [
@@ -55,6 +56,7 @@ const BUILTIN_TEMPLATES: CardTemplate[] = [
     scatterChart as CardTemplate,
     funnelChart as CardTemplate,
     wordcloudChart as CardTemplate,
+    customList as CardTemplate,
 ];
 
 /** 模板缓存：id → 模板 */
@@ -66,11 +68,11 @@ const cache = new Map<string, CardTemplate>();
  */
 export async function loadAllTemplates(): Promise<CardTemplate[]> {
     for (const tpl of BUILTIN_TEMPLATES) {
-        if (tpl && tpl.id && tpl.mode) {
+        if (tpl && tpl.id && tpl.mode && tpl.renderer) {
             cache.set(tpl.id, tpl);
         }
     }
-    return BUILTIN_TEMPLATES.filter((tpl) => tpl && tpl.id && tpl.mode);
+    return BUILTIN_TEMPLATES.filter((tpl) => tpl && tpl.id && tpl.mode && tpl.renderer);
 }
 
 /** 按 id 获取模板（优先缓存） */

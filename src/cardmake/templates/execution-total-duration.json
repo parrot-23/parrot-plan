@@ -1,7 +1,8 @@
 {
   "id": "execution-total-duration",
   "name": "执行总时长",
-  "mode": "stats",
+  "mode": "system",
+  "renderer": "stats",
   "description": "展示用户执行的总时长（分钟）",
   "source": {
     "dataSource": "executions",

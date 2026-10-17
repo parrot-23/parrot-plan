@@ -1,6 +1,7 @@
 {
   "id": "collect-inbox",
   "name": "收集记录",
-  "mode": "collect",
+  "mode": "system",
+  "renderer": "collect",
   "description": "输入框快速记录信息，逐条收集"
 }

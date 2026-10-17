@@ -1,10 +1,16 @@
 // 表单引擎类型定义：描述表单模板（Schema）与字段类型。
 // 模板是声明式的、静态的，与具体卡片无关。
 
-/** 卡片模式：周期填写 / 来源统计 / 填写后固定 / 日历 / 时钟 / 收集记录 */
-export type CardMode = 'periodic' | 'stats' | 'fixed' | 'calendar' | 'clock' | 'collect';
+/** 卡片分类（与前端「添加卡片」菜单分组一致）：系统 / 图表 / 表单 / 装饰 */
+export type CardMode = 'system' | 'chart' | 'form' | 'deco';
 
-/** 周期类型（仅 periodic 模式使用） */
+/** 渲染器类型：决定卡片「怎么渲染」，与分类（CardMode）解耦 */
+export type CardRendererType = 'stats' | 'form' | 'collect' | 'calendar' | 'clock' | 'list';
+
+/** 表单渲染器的二级配置：周期填写 / 填写后固定 */
+export type FormType = 'periodic' | 'fixed';
+
+/** 周期类型（仅 periodic 表单使用） */
 export type CardPeriod = 'day' | 'week' | 'month';
 
 /** 字段类型 */
@@ -70,13 +76,17 @@ export interface CardTemplate {
     id: string;
     /** 模板显示名 */
     name: string;
-    /** 卡片模式 */
+    /** 卡片分类（前端菜单分组） */
     mode: CardMode;
-    /** 周期（仅 periodic） */
+    /** 渲染器类型（决定怎么渲染） */
+    renderer: CardRendererType;
+    /** 表单二级配置（renderer = form 时使用） */
+    formType?: FormType;
+    /** 周期（formType = periodic 时使用） */
     period?: CardPeriod;
-    /** 字段定义（periodic / fixed 使用） */
+    /** 字段定义（renderer = form 使用） */
     fields?: FieldSchema[];
-    /** 数据来源（stats 使用） */
+    /** 数据来源（renderer = stats 使用） */
     source?: CardSource;
     /** 模板描述 */
     description?: string;

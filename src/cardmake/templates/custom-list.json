@@ -1,0 +1,7 @@
+{
+  "id": "custom-list",
+  "name": "自定义列表",
+  "mode": "form",
+  "renderer": "list",
+  "description": "自定义标题 + 列表，每行可选择手写或关联任务时长"
+}

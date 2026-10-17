@@ -1,7 +1,8 @@
 {
   "id": "funnel-chart",
   "name": "漏斗图",
-  "mode": "stats",
+  "mode": "chart",
+  "renderer": "stats",
   "description": "任务状态流转（漏斗图）",
   "source": {
     "dataSource": "tasks",

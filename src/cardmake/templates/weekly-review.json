@@ -1,7 +1,9 @@
 {
   "id": "weekly-review",
   "name": "每周复盘",
-  "mode": "periodic",
+  "mode": "form",
+  "renderer": "form",
+  "formType": "periodic",
   "period": "week",
   "description": "每周记录一次复盘",
   "fields": [

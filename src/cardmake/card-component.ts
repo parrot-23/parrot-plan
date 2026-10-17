@@ -9,7 +9,7 @@ import type { CardTemplate, DataSourceType } from '../datatypes/form';
 import type { CardInstance } from '../datatypes/card';
 import type { WorkbenchRepo } from '../repos/workbench-repo';
 import type { GtdRepo } from '../repos/gtd-repo';
-import { getCardRenderer } from '../cardmake/cards/card-registry';
+import { getCardRenderer } from './renderer/card-registry';
 import { DATA_SOURCE_CATALOG, getDataSourceMeta } from '../datatypes/source-catalog';
 import {
     SKIN_BACKGROUND_PRESETS,
@@ -19,7 +19,7 @@ import {
 } from '../datatypes/skin';
 import type { CardSkin } from '../datatypes/skin';
 import type { CardRenderContext } from '../datatypes/renderer';
-import { createDataProvider } from '../cardmake/data/provider';
+import { createDataProvider } from './engine/provider';
 import type { EventBlock, ExecutionRecord } from '../datatypes/domain';
 import type { InboxItem } from '../datatypes/domain';
 import { t } from '../i18n';
@@ -102,7 +102,7 @@ export class CardComponent {
 
         // 渲染内容
         const body = card.createDiv({ cls: 'wb-card-content' });
-        const renderer = getCardRenderer(instance.mode);
+        const renderer = getCardRenderer(template.renderer);
         const ctx: CardRenderContext = {
             app: this.deps.app,
             save: this.deps.save,
@@ -157,7 +157,7 @@ export class CardComponent {
         card.querySelectorAll('.wb-card-settings-panel').forEach((el) => el.remove());
         const panel = card.createDiv({ cls: 'wb-card-settings-panel' });
 
-        if (instance.mode !== 'stats') {
+        if (template.renderer !== 'stats') {
             panel.createDiv({ cls: 'wb-card-settings-empty', text: t('workbench.settingsNoConfig') });
         } else {
             const currentSource = instance.source ?? template.source;

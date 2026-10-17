@@ -1,7 +1,8 @@
 {
   "id": "line-chart",
   "name": "折线图",
-  "mode": "stats",
+  "mode": "chart",
+  "renderer": "stats",
   "description": "按天统计执行次数（折线图）",
   "source": {
     "dataSource": "executions",

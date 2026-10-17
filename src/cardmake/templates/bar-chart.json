@@ -1,7 +1,8 @@
 {
   "id": "bar-chart",
   "name": "柱状图",
-  "mode": "stats",
+  "mode": "chart",
+  "renderer": "stats",
   "description": "按天统计执行次数（柱状图）",
   "source": {
     "dataSource": "executions",
