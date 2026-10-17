@@ -9,6 +9,7 @@ import type { WorkbenchRepo } from '../../repos/workbench-repo';
 import type { GtdRepo } from '../../repos/gtd-repo';
 import { loadAllTemplates } from '../../cardmake/data/template-loader';
 import { getCardRenderer } from '../../cardmake/cards/card-registry';
+import { SOURCE_CATALOG } from '../../datatypes/source-catalog';
 import type { CardRenderContext } from '../../datatypes/renderer';
 import { createDataProvider } from '../../cardmake/data/provider';
 import type { EventBlock, ExecutionRecord } from '../../datatypes/domain';
@@ -229,7 +230,7 @@ export class WorkbenchView {
             card.style.setProperty('width', `${w}px`);
             card.style.setProperty('height', `${h}px`);
 
-            // 卡片头部操作（删除）：仅编辑布局时显示删除按钮
+            // 卡片头部操作（删除 + 设置）：仅编辑布局时显示
             if (this.editingLayout) {
                 card.addClass('is-editing');
                 const header = card.createDiv({ cls: 'wb-card-header' });
@@ -238,6 +239,12 @@ export class WorkbenchView {
                     text: '×',
                 });
                 delBtn.onclick = () => this.removeCard(instance);
+
+                const settingsBtn = header.createEl('button', {
+                    cls: 'wb-card-settings',
+                    text: '⚙',
+                });
+                settingsBtn.onclick = () => this.showCardSettings(settingsBtn, card, instance, template);
 
                 // 编辑态：边框 + 四角圆点（八方向调整尺寸）
                 this.renderResizeHandles(card, instance);
@@ -453,6 +460,61 @@ export class WorkbenchView {
         void this.save().then(() => {
             if (this.container) void this.renderInto(this.container);
         });
+    }
+
+    /**
+     * 弹出卡片设置面板：悬浮在卡片周围。
+     * 仅 stats 卡片可配置数据源（source.type）；其他卡片显示「无可配置项」。
+     */
+    private showCardSettings(
+        anchor: HTMLElement,
+        card: HTMLElement,
+        instance: CardInstance,
+        template: CardTemplate,
+    ) {
+        // 关闭已打开的面板
+        card.querySelectorAll('.wb-card-settings-panel').forEach((el) => el.remove());
+
+        const panel = card.createDiv({ cls: 'wb-card-settings-panel' });
+
+        if (instance.mode !== 'stats') {
+            panel.createDiv({ cls: 'wb-card-settings-empty', text: t('workbench.settingsNoConfig') });
+        } else {
+            const currentSource = instance.source ?? template.source;
+            const currentType = currentSource?.type ?? '';
+
+            const label = panel.createDiv({ cls: 'wb-card-settings-label', text: t('workbench.settingsDataSource') });
+            const select = panel.createEl('select', { cls: 'wb-card-settings-select' });
+            for (const meta of SOURCE_CATALOG) {
+                const opt = select.createEl('option', { text: meta.label, value: meta.type });
+                if (meta.type === currentType) opt.selected = true;
+            }
+            select.onchange = () => {
+                const meta = SOURCE_CATALOG.find((s) => s.type === select.value);
+                if (!meta) return;
+                // 切换数据源：保留图表类型（模板默认），更新 source.type 与默认参数
+                const chart = instance.source?.chart ?? template.source?.chart;
+                const params: Record<string, unknown> = {};
+                for (const p of meta.params) {
+                    if (p.default !== undefined) params[p.key] = p.default;
+                }
+                this.workbenchRepo.updateInstance(instance.id, {
+                    source: { type: meta.type, chart, params },
+                });
+                void this.save().then(() => {
+                    if (this.container) void this.renderInto(this.container);
+                });
+            };
+        }
+
+        // 点击面板外部关闭
+        const close = (e: MouseEvent) => {
+            if (!panel.contains(e.target as Node) && e.target !== anchor) {
+                panel.remove();
+                document.removeEventListener('click', close);
+            }
+        };
+        window.setTimeout(() => document.addEventListener('click', close), 0);
     }
 
     /**

@@ -575,6 +575,9 @@ export const en: I18nMessages = {
     'workbench.category.other': 'Other',
     'workbench.collectPlaceholder': 'Capture something…',
     'workbench.collectEmpty': 'No collected items yet',
+    'workbench.cardSettings': 'Settings',
+    'workbench.settingsDataSource': 'Data source',
+    'workbench.settingsNoConfig': 'No configurable options for this card',
 
     // Layout scheme modal
     'layout.title': 'Layout Scheme',

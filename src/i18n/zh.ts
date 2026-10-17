@@ -573,6 +573,9 @@ export const zh = {
     'workbench.category.other': '其他',
     'workbench.collectPlaceholder': '记录一条信息…',
     'workbench.collectEmpty': '暂无收集记录',
+    'workbench.cardSettings': '设置',
+    'workbench.settingsDataSource': '数据源',
+    'workbench.settingsNoConfig': '该卡片无可配置项',
 
     // 布局方案弹窗
     'layout.title': '布局方案',
