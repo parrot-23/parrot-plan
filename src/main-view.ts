@@ -12,10 +12,10 @@ import { TodayView } from './views/pdca/today-view';
 import { CheckView } from './views/pdca/check-view';
 import { ImproveView } from './views/pdca/improve-view';
 import { WorkbenchView } from './views/workbench/workbench-view';
-import { OkrTaskPlanView } from './views/okr/okr-task-plan-view';
-import { AchievementView } from './views/okr/achievement-view';
-import { ScriptManageView } from './views/okr/script-manage-view';
-import { SceneView } from './views/okr/scene-view';
+import { OkrTaskPlanView } from './views/task/okr-task-plan-view';
+import { AchievementView } from './views/task/achievement-view';
+import { ScriptManageView } from './views/task/script-manage-view';
+import { SceneView } from './views/task/scene-view';
 import { GtdCollectView } from './views/gtd/collect-view';
 import { GtdConfigView } from './views/gtd/organize-view';
 import { GtdClarifyView } from './views/gtd/clarify-view';
@@ -36,28 +36,28 @@ import { HelpModal } from './helper/help-modal';
 export const VIEW_TYPE_MAIN = 'parrot-plan-main-view';
 
 /** 一级视图标识 */
-type PrimaryView = 'pdca' | 'okr' | 'workbench' | 'gtd';
+type PrimaryView = 'pdca' | 'task' | 'workbench' | 'gtd';
 
 /** 二级视图（tab）标识 */
 type NavTab = 'year' | 'taskPlan' | 'week' | 'today' | 'check' | 'improve' | 'swimlane' | 'workbench' | 'achievement' | 'gtd' | 'okrHome' | 'okrTaskPlan' | 'scene' | 'scriptManage' | 'gtdCollect' | 'gtdConfig' | 'gtdClarify' | 'gtdReview' | 'gtdEngage';
 
 /** 一级视图定义（顶部第一行） */
-const PRIMARY_VIEWS: { id: PrimaryView; labelKey: 'nav.pdca' | 'nav.okr' | 'nav.workbench' | 'nav.gtd' }[] = [
+const PRIMARY_VIEWS: { id: PrimaryView; labelKey: 'nav.pdca' | 'nav.task' | 'nav.workbench' | 'nav.gtd' }[] = [
     { id: 'workbench', labelKey: 'nav.workbench' },
-    { id: 'okr', labelKey: 'nav.okr' },
+    { id: 'task', labelKey: 'nav.task' },
     { id: 'pdca', labelKey: 'nav.pdca' },
     { id: 'gtd', labelKey: 'nav.gtd' },
 ];
 
 /** 二级视图定义（顶部第二行，按一级视图分组；label 存 i18n key，渲染时再求值） */
-const SECONDARY_TABS: Record<PrimaryView, { id: NavTab; labelKey: 'nav.year' | 'nav.taskPlan' | 'nav.week' | 'nav.today' | 'nav.check' | 'nav.improve' | 'nav.projectPicture' | 'nav.workbench' | 'nav.achievement' | 'nav.gtd' | 'nav.okr' | 'nav.scene' | 'nav.scriptManage' | 'nav.gtdCollect' | 'nav.gtdConfig' | 'nav.gtdClarify' | 'nav.gtdReview' | 'nav.gtdEngage' }[]> = {
+const SECONDARY_TABS: Record<PrimaryView, { id: NavTab; labelKey: 'nav.year' | 'nav.taskPlan' | 'nav.week' | 'nav.today' | 'nav.check' | 'nav.improve' | 'nav.projectPicture' | 'nav.workbench' | 'nav.achievement' | 'nav.gtd' | 'nav.task' | 'nav.scene' | 'nav.scriptManage' | 'nav.gtdCollect' | 'nav.gtdConfig' | 'nav.gtdClarify' | 'nav.gtdReview' | 'nav.gtdEngage' }[]> = {
     pdca: [
         { id: 'week', labelKey: 'nav.week' },
         { id: 'today', labelKey: 'nav.today' },
         { id: 'check', labelKey: 'nav.check' },
         { id: 'improve', labelKey: 'nav.improve' },
     ],
-    okr: [
+    task: [
         { id: 'okrTaskPlan', labelKey: 'nav.taskPlan' },
         { id: 'achievement', labelKey: 'nav.achievement' },
         { id: 'scene', labelKey: 'nav.scene' },
@@ -77,7 +77,7 @@ const SECONDARY_TABS: Record<PrimaryView, { id: NavTab; labelKey: 'nav.year' | '
 /** 各一级视图的默认二级视图（切换一级视图时激活） */
 const DEFAULT_TAB: Record<PrimaryView, NavTab> = {
     pdca: 'today',
-    okr: 'okrTaskPlan',
+    task: 'okrTaskPlan',
     workbench: 'workbench',
     gtd: 'gtdCollect',
 };
@@ -333,7 +333,7 @@ export class MainView extends ItemView {
         // 顶部导航栏：第一行一级视图，第二行二级视图
         const nav = root.createDiv({ cls: 'parrot-plan-nav' });
 
-        // 第一行：一级视图（工作台 / 任务OKR / PDCA / GTD）
+        // 第一行：一级视图（工作台 / 任务 / PDCA / GTD）
         const primaryRow = nav.createDiv({ cls: 'parrot-plan-nav-primary-row' });
         for (const pv of PRIMARY_VIEWS) {
             const btn = primaryRow.createEl('button', {

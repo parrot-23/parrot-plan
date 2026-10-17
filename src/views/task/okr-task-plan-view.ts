@@ -9,7 +9,7 @@ import { renderTaskPanel, FilePathSuggest } from '../../shared/task-panel';
 import { t } from '../../i18n';
 
 /**
- * 任务OKR 下的「任务计划」视图：左侧任务面板 + 右侧内容区（项目信息表单 + 已计划周数 + 板块信息）。
+ * 任务 下的「任务计划」视图：左侧任务面板 + 右侧内容区（项目信息表单 + 已计划周数 + 板块信息）。
  * 与 PDCA 下的任务计划视图一致，但去除了泳道图。
  */
 export class OkrTaskPlanView {

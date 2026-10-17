@@ -24,8 +24,8 @@ export const zh = {
 
     // 主导航（tab 按钮组）
     'nav.pdca': 'PDCA',
-    'nav.okr': '任务OKR',
-    'nav.okrPlaceholder': '任务OKR 功能开发中',
+    'nav.task': '任务',
+    'nav.taskPlaceholder': '任务 功能开发中',
     'nav.year': '年计划',
     'nav.taskPlan': '任务计划',
     'nav.week': '周计划',
