@@ -34,6 +34,8 @@ export interface RunningTask {
     start: number;
     /** 所属日期键（如 2026-10-16） */
     dayKey: string;
+    /** 用户填写的结束时间（当天分钟数，可选，旧数据无此字段） */
+    end?: number;
 }
 
 /** 执行记录（日执行视图写入） */

@@ -4415,6 +4415,32 @@
     position: relative;
 }
 
+/* 日执行时间轴刻度：每小时一格（高度由 --hour-height 控制，最小 30px），共 25 个刻度（00 ~ 24） */
+.today-time-column .time-cell.hour {
+    height: var(--hour-height, 30px);
+    box-sizing: border-box;
+    padding: 0 6px;
+    padding-top: 2px;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    line-height: 1;
+    font-size: 11px;
+    font-variant-numeric: tabular-nums;
+    color: var(--text-muted);
+    border-right: 1px solid var(--background-modifier-border);
+    border-bottom: 1px solid var(--background-modifier-border);
+}
+
+/* 日执行时间轴网格：每小时一个背景格子（高度由 --hour-height 控制，最小 30px） */
+.today-day-column .hour-cell.hour {
+    height: var(--hour-height, 30px);
+    box-sizing: border-box;
+    border-right: 1px solid var(--background-modifier-border);
+    border-bottom: 1px solid var(--background-modifier-border);
+    pointer-events: none;
+}
+
 /* 方案时间区间分类色条：贴在时间刻度列内部最右侧（窄色条，实心分类色） */
 .today-scheme-bar {
     position: absolute;
@@ -4433,11 +4459,16 @@
     position: relative;
 }
 
-/* 日执行时间轴：为左侧状态气泡预留空间 */
+/* 日执行时间轴：执行记录卡片按小时格子横向切分（left/width 由 JS 按分钟计算） */
 .today-day-column .today-event-card {
-    left: 56px;
-    /* 气泡位于卡片内部左侧，为文字留出空间 */
-    padding-left: 46px;
+    left: var(--card-left, 0);
+    width: var(--card-width, 100%);
+    right: auto;
+    /* 卡片内只显示任务名，超出宽度省略 */
+    padding: 2px 4px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 /* 习惯时间点标记：已分配到当天且启用习惯时间点的任务，在对应时间点透明化显示 */
@@ -4466,15 +4497,14 @@
     z-index: 0;
 }
 
-/* 进行中任务色块：从开始时刻到当前时刻，随时间增长 */
+/* 进行中任务色块：按小时格子横向切分，纵向固定一行格子高度 */
 .today-running-block {
     position: absolute;
-    left: 56px;
-    right: 0;
+    left: var(--running-left, 0);
+    width: var(--running-width, 100%);
+    right: auto;
     top: var(--running-top, 0);
-    /* 最小高度保证至少一行文字可见 */
-    height: var(--running-height, 26px);
-    min-height: 26px;
+    height: var(--running-height, 30px);
     display: flex;
     align-items: center;
     padding: 0 6px;

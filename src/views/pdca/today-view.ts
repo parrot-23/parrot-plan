@@ -14,6 +14,9 @@ import type { PdcaRepo } from '../../repos/pdca-repo';
 import type { InboxRepo } from '../../repos/inbox-repo';
 import { renderTaskPanel } from '../../shared/task-panel';
 
+/** 时间轴每小时格子的最小高度（px）：面板较矮时保持该高度并出现滚动条 */
+const MIN_HOUR_HEIGHT = 30;
+
 /** 把分钟数格式化为 HH:MM */
 function formatMinutes(minutes: number): string {
     const h = Math.floor(minutes / 60);
@@ -1387,11 +1390,12 @@ export class TodayView {
         if (!item) return;
 
         const { dayKey } = this.getViewDayInfo();
-        // 起始时间取详情中编辑的起始时间（默认当前时刻）
+        // 起始时间取详情中编辑的起始时间（默认当前时刻）；结束时间取详情中编辑的结束时间
         this.runningTask = {
             inboxId: item.id,
             start: this.detailStart,
             dayKey,
+            end: this.detailEnd,
         };
         // 写回插件数据源，随 saveAll 一起持久化
         this.pdcaRepo.setRunningTask(this.runningTask);
@@ -1424,12 +1428,17 @@ export class TodayView {
         const nowMinutes = now.getHours() * 60 + now.getMinutes();
         const { day, weekKey } = this.getViewDayInfo();
 
+        // 完成时：若实际经过时间小于用户填写的时长，则按填写的结束时间；否则按实际完成时刻
+        const actualEnd = Math.max(running.start, nowMinutes);
+        const plannedEnd = typeof running.end === 'number' ? running.end : actualEnd;
+        const end = actualEnd < plannedEnd ? plannedEnd : actualEnd;
+
         this.pdcaRepo.addExecution({
             id: `exec_${Date.now()}`,
             inboxId: running.inboxId,
             day,
             start: running.start,
-            end: Math.max(running.start, nowMinutes),
+            end,
             weekKey,
         });
         const item = this.inboxData.items.find(i => i.id === running.inboxId && !i.removed);
@@ -1841,55 +1850,66 @@ export class TodayView {
     private renderTimeline(panel: HTMLElement) {
         const timeline = panel.createDiv({ cls: 'today-timeline' });
 
-        // 时间刻度（每 2 小时一格）
+        // 每小时格子的高度（px）：随面板高度自适应，最小 30px
+        const hourHeight = this.computeHourHeight(panel);
+        // 通过 CSS 变量控制格子高度，刻度列与当天列保持一致
+        timeline.setCssProps({ '--hour-height': `${hourHeight}px` });
+
+        // 时间刻度（每小时一格，共 25 个刻度：00 ~ 24）
         const timeCol = timeline.createDiv({ cls: 'today-time-column' });
-        for (let h = 0; h < 24; h += 2) {
-            timeCol.createDiv({ cls: 'time-cell two-hour' })
-                .setText(`${h.toString().padStart(2, '0')}:00`);
+        for (let h = 0; h <= 24; h++) {
+            timeCol.createDiv({ cls: 'time-cell hour' })
+                .setText(h.toString().padStart(2, '0'));
         }
 
         // 方案时间区间分类色条：贴在时间刻度列内部最右侧（窄色条，不显示文字）
-        this.renderSchemeBars(timeCol);
+        this.renderSchemeBars(timeCol, hourHeight);
 
         // 点击左侧时间刻度列 → 新增非计划事件（起始时间按点击位置换算，吸附到 5 分钟）
         timeCol.onclick = (e) => {
             const rect = timeCol.getBoundingClientRect();
             const offsetY = e.clientY - rect.top;
-            // 每 80px = 2 小时（120 分钟），即 1px = 1.5 分钟
-            const rawMinutes = (offsetY / 80) * 120;
+            // 每 hourHeight 像素 = 1 小时（60 分钟）
+            const rawMinutes = (offsetY / hourHeight) * 60;
             const snapped = Math.max(0, Math.min(24 * 60 - 5, Math.round(rawMinutes / 5) * 5));
             this.startAddUnplanned(snapped);
         };
 
-        // 当天列
+        // 当天列（每小时一个背景格子，共 24 格）
         const col = timeline.createDiv({ cls: 'today-day-column' });
-        for (let h = 0; h < 24; h += 2) {
-            col.createDiv({ cls: 'hour-cell two-hour' });
+        for (let h = 0; h < 24; h++) {
+            col.createDiv({ cls: 'hour-cell hour' });
         }
 
         // 今天的计划事件（按当前周键 + 今天星期几筛选）
-        this.renderTodayEvents(col);
+        this.renderTodayEvents(col, hourHeight);
 
         // 已分配到当天、且设置了习惯时间点的任务：在对应时间点透明化显示
-        this.renderHabitMarkers(col);
+        this.renderHabitMarkers(col, hourHeight);
 
-        // 进行中任务：从开始时刻到当前时刻的透明色块
-        const runningBlock = this.renderRunningTaskBlock(col);
+        // 进行中任务：从开始时刻到当前时刻的透明色块（按小时拆段）
+        const runningBlocks = this.renderRunningTaskBlock(col, hourHeight);
 
         // 当前时刻红线
         const line = col.createDiv({ cls: 'current-time-line' });
         const updateLine = () => {
             const now = new Date();
             const totalMinutes = now.getHours() * 60 + now.getMinutes();
-            line.setCssProps({ '--line-top': `${(totalMinutes / 120) * 80}px` });
-            // 进行中色块随时间增长
-            if (runningBlock && this.runningTask) {
+            line.setCssProps({ '--line-top': `${(totalMinutes / 60) * hourHeight}px` });
+            // 进行中色块随时间增长：重新计算各段的位置与宽度
+            if (runningBlocks.length > 0 && this.runningTask) {
                 const start = Math.min(this.runningTask.start, totalMinutes);
                 const end = Math.max(this.runningTask.start, totalMinutes);
-                runningBlock.setCssProps({
-                    '--running-top': `${(start / 120) * 80}px`,
-                    // 最小 26px，保证至少一行文字可见（与执行记录卡片一致）
-                    '--running-height': `${Math.max(26, ((end - start) / 120) * 80)}px`,
+                const segments = this.splitByHour(start, end);
+                runningBlocks.forEach((block, i) => {
+                    const seg = segments[i];
+                    if (!seg) return;
+                    block.setCssProps({
+                        '--running-top': `${seg.hour * hourHeight}px`,
+                        '--running-height': `${hourHeight}px`,
+                        '--running-left': `${(seg.startMinute / 60) * 100}%`,
+                        '--running-width': `${((seg.endMinute - seg.startMinute) / 60) * 100}%`,
+                    });
                 });
             }
         };
@@ -1899,10 +1919,20 @@ export class TodayView {
     }
 
     /**
+     * 计算每小时格子的高度：让 24 小时正好铺满时间轴面板的可视高度，
+     * 但最小不低于 30px（面板较矮时出现滚动条）。
+     */
+    private computeHourHeight(panel: HTMLElement): number {
+        const available = panel.clientHeight;
+        if (!available || available <= 0) return MIN_HOUR_HEIGHT;
+        return Math.max(MIN_HOUR_HEIGHT, Math.floor(available / 24));
+    }
+
+    /**
      * 渲染方案时间区间分类色条：贴在时间刻度列内部最右侧。
      * 窄色条（约 6-8px），实心分类色，不显示文字，不拦截点击。
      */
-    private renderSchemeBars(timeCol: HTMLElement) {
+    private renderSchemeBars(timeCol: HTMLElement, hourHeight: number) {
         const { day } = this.getViewDayInfo();
         const dayData = this.getPlanSchemeDays().find(d => d.day === day);
         const ranges = dayData?.ranges ?? [];
@@ -1911,8 +1941,8 @@ export class TodayView {
             const cat = this.categoryData.categories.find(c => c.id === range.sort);
             const color = cat?.color ?? '#888888';
 
-            const top = (range.start / 120) * 80;
-            const height = ((range.end - range.start) / 120) * 80;
+            const top = (range.start / 60) * hourHeight;
+            const height = ((range.end - range.start) / 60) * hourHeight;
             bar.setCssProps({
                 '--bar-color': color,
                 '--bar-top': `${top}px`,
@@ -1922,71 +1952,85 @@ export class TodayView {
     }
 
     /**
-     * 在当天列上渲染当前查看日期的执行记录卡片（与周计划视图的定位比例一致：80px / 2 小时）。
-     * 时间轴仅显示执行记录卡片（已执行 / 替换 / 新增），不再绘制计划事件卡片。
+     * 在当天列上渲染当前查看日期的执行记录卡片。
+     * 卡片按「小时格子」横向切分：每格横向等分为 60 份，卡片从起始分钟对应的位置开始，
+     * 宽度 = 持续分钟数；跨小时的记录拆成多段，每格一段。
+     * 纵向高度固定为一行格子高度（hourHeight）。
      */
-    private renderTodayEvents(col: HTMLElement) {
+    private renderTodayEvents(col: HTMLElement, hourHeight: number) {
         const { day, weekKey, dayKey } = this.getViewDayInfo();
         // 校验：周键 + 星期几 计算出的日期键应与查看日期一致
         if (makeDayKeyFromWeek(weekKey, day) !== dayKey) return;
-
-        // 收集所有卡片项（执行记录），用于后续气泡聚类
-        const bubbleItems: { card: HTMLElement; top: number; status: EventStatus; onSelect: () => void }[] = [];
 
         // 当天全部执行记录：已执行 / 新增，统一作为执行记录卡片渲染
         const execs = this.getExecutions().filter(ex =>
             ex.day === day && ex.weekKey === weekKey,
         );
-        // 当天计划事件（习惯任务 / 当天任务），用于判定执行记录状态
-        const dayEvents = this.getEvents().filter(ev =>
-            ev.day === day && ev.weekKey === weekKey,
-        );
         for (const ex of execs) {
-            const card = col.createDiv({ cls: 'event-card event-card-exec today-event-card' });
-            const top = (ex.start / 120) * 80;
-            // 高度按实际执行时长绘制（80px = 2 小时）；最小 26px 保证至少一行文字可见
-            const height = Math.max(26, ((ex.end - ex.start) / 120) * 80);
-            card.setCssProps({
-                '--card-top': `${top}px`,
-                '--card-height': `${height}px`,
-            });
             const item = ex.inboxId
                 ? this.inboxData.items.find(i => i.id === ex.inboxId && !i.removed)
                 : undefined;
             const cat = item?.categoryId
                 ? this.categoryData.categories.find(c => c.id === item.categoryId)
                 : undefined;
-            card.setCssProps({
-                '--card-color': cat?.color ?? '#888888',
-                '--card-bg': '#eeeeee88',
-            });
-            card.setText(item?.title ?? t('today.statusAdded'));
 
-            // 点击执行记录卡片 → 在中心方框展示详情（再次点击取消选中）
-            if (this.selectedExecId === ex.id) card.addClass('is-selected');
-            card.onclick = (e) => {
-                e.stopPropagation();
-                this.toggleExecSelection(ex.id);
-            };
+            // 按小时拆段：每段落在对应的小时格子内
+            for (const seg of this.splitByHour(ex.start, ex.end)) {
+                const card = col.createDiv({ cls: 'event-card event-card-exec today-event-card' });
+                card.setCssProps({
+                    '--card-top': `${seg.hour * hourHeight}px`,
+                    '--card-height': `${hourHeight}px`,
+                    '--card-left': `${(seg.startMinute / 60) * 100}%`,
+                    '--card-width': `${((seg.endMinute - seg.startMinute) / 60) * 100}%`,
+                    '--card-color': cat?.color ?? '#888888',
+                    '--card-bg': '#eeeeee88',
+                });
+                card.setText(item?.title ?? t('today.statusAdded'));
 
-            bubbleItems.push({
-                card,
-                top,
-                // 计划内任务（习惯任务 / 当天任务）→ 「已执行」；计划外任务 → 「新增」
-                status: this.getExecStatus(ex, dayEvents),
-                onSelect: () => this.toggleExecSelection(ex.id),
-            });
+                // 点击执行记录卡片 → 在中心方框展示详情（再次点击取消选中）
+                if (this.selectedExecId === ex.id) card.addClass('is-selected');
+                card.onclick = (e) => {
+                    e.stopPropagation();
+                    this.toggleExecSelection(ex.id);
+                };
+            }
+        }
+    }
+
+    /**
+     * 把时间区间按整点拆分为多段（每段落在同一个小时格子内）。
+     * 返回每段的：小时序号（0-23）、段内起始分钟、段内结束分钟。
+     */
+    private splitByHour(start: number, end: number): { hour: number; startMinute: number; endMinute: number }[] {
+        const segments: { hour: number; startMinute: number; endMinute: number }[] = [];
+        const from = Math.max(0, Math.min(start, end));
+        const to = Math.min(24 * 60, Math.max(start, end));
+        // 起止相同（如「开始任务」后立即「完成」）时，给一个最小 1 分钟的段，保证卡片可见
+        if (to <= from) {
+            const hour = Math.floor(from / 60);
+            segments.push({ hour, startMinute: from - hour * 60, endMinute: from - hour * 60 + 1 });
+            return segments;
         }
 
-        // 渲染状态气泡：时间接近的卡片合并气泡并排显示（隐藏文字）
-        this.renderStatusBubbles(col, bubbleItems);
+        let cursor = from;
+        while (cursor < to) {
+            const hour = Math.floor(cursor / 60);
+            const hourEnd = Math.min((hour + 1) * 60, to);
+            segments.push({
+                hour,
+                startMinute: cursor - hour * 60,
+                endMinute: hourEnd - hour * 60,
+            });
+            cursor = hourEnd;
+        }
+        return segments;
     }
 
     /**
      * 渲染「习惯时间点」标记：已分配到当天、且启用了习惯时间点的任务，
      * 在时间轴对应时间点以透明化色块显示（不拦截点击）。
      */
-    private renderHabitMarkers(col: HTMLElement) {
+    private renderHabitMarkers(col: HTMLElement, hourHeight: number) {
         const { dayKey } = this.getViewDayInfo();
 
         // 已分配到当天、且启用习惯时间点的任务
@@ -2006,7 +2050,7 @@ export class TodayView {
                 : undefined;
             marker.setCssProps({
                 '--habit-color': cat?.color ?? '#888888',
-                '--habit-top': `${(minutes / 120) * 80}px`,
+                '--habit-top': `${(minutes / 60) * hourHeight}px`,
             });
             marker.setText(item.title);
         }
@@ -2014,41 +2058,48 @@ export class TodayView {
 
     /**
      * 渲染「进行中任务」色块：从开始时刻到当前时刻（随时间增长）。
+     * 与执行记录卡片一致，按小时格子横向切分，纵向高度固定为一行格子高度。
      * 点击色块可选中该进行中任务，供操作区显示「完成」按钮。
      */
-    private renderRunningTaskBlock(col: HTMLElement): HTMLElement | null {
+    private renderRunningTaskBlock(col: HTMLElement, hourHeight: number): HTMLElement[] {
         const running = this.runningTask;
-        if (!running) return null;
+        if (!running) return [];
         // 仅当进行中任务属于当前查看日期时显示
         const { dayKey } = this.getViewDayInfo();
-        if (running.dayKey !== dayKey) return null;
+        if (running.dayKey !== dayKey) return [];
 
         const item = this.inboxData.items.find(i => i.id === running.inboxId && !i.removed);
-        if (!item) return null;
+        if (!item) return [];
 
         const now = new Date();
         const nowMinutes = now.getHours() * 60 + now.getMinutes();
         const start = Math.min(running.start, nowMinutes);
         const end = Math.max(running.start, nowMinutes);
 
-        const block = col.createDiv({ cls: 'today-running-block' });
         const cat = item.categoryId
             ? this.categoryData.categories.find(c => c.id === item.categoryId)
             : undefined;
-        block.setCssProps({
-            '--running-color': cat?.color ?? '#4c8dff',
-            '--running-top': `${(start / 120) * 80}px`,
-            // 最小 26px，保证至少一行文字可见（与执行记录卡片一致）
-            '--running-height': `${Math.max(26, ((end - start) / 120) * 80)}px`,
-        });
-        block.setText(item.title);
 
-        if (this.selectedRunningTask) block.addClass('is-selected');
-        block.onclick = (e) => {
-            e.stopPropagation();
-            this.toggleRunningTaskSelection();
-        };
-        return block;
+        const blocks: HTMLElement[] = [];
+        for (const seg of this.splitByHour(start, end)) {
+            const block = col.createDiv({ cls: 'today-running-block' });
+            block.setCssProps({
+                '--running-color': cat?.color ?? '#4c8dff',
+                '--running-top': `${seg.hour * hourHeight}px`,
+                '--running-height': `${hourHeight}px`,
+                '--running-left': `${(seg.startMinute / 60) * 100}%`,
+                '--running-width': `${((seg.endMinute - seg.startMinute) / 60) * 100}%`,
+            });
+            block.setText(item.title);
+
+            if (this.selectedRunningTask) block.addClass('is-selected');
+            block.onclick = (e) => {
+                e.stopPropagation();
+                this.toggleRunningTaskSelection();
+            };
+            blocks.push(block);
+        }
+        return blocks;
     }
 
     /**
