@@ -307,8 +307,8 @@ export class TodayView {
                 ? this.categoryData.categories.find(c => c.id === ev.categoryId)
                 : undefined;
 
-            // 预估时长取自周计划设置；已执行时长取自当前执行记录
-            const estMinutes = typeof ev.estimatedMinutes === 'number' && ev.estimatedMinutes > 0
+            // 预估时长取自周计划设置；已执行时长取自当前执行记录（0 为有效值）
+            const estMinutes = typeof ev.estimatedMinutes === 'number' && ev.estimatedMinutes >= 0
                 ? ev.estimatedMinutes
                 : undefined;
             // 已执行时长：按 eventId 或 inboxId 匹配（「开始任务→完成」路径写入的记录只有 inboxId）
@@ -399,13 +399,14 @@ export class TodayView {
             const item = this.inboxData.items.find(i => i.id === ev.inboxId && !i.removed);
             if (!item) continue;
 
-            const estMinutes = typeof ev.estimatedMinutes === 'number' && ev.estimatedMinutes > 0
+            const estMinutes = typeof ev.estimatedMinutes === 'number' && ev.estimatedMinutes >= 0
                 ? ev.estimatedMinutes
                 : undefined;
             const execMinutes = executions
                 .filter(ex => !ex.replaced && (ex.eventId === ev.id || ex.inboxId === ev.inboxId))
                 .reduce((sum, ex) => sum + Math.max(0, ex.end - ex.start), 0);
-            const isDone = estMinutes === undefined
+            // 预估时长为 0 时不能直接判定完成（否则任何执行记录都会标记完成），按「有执行记录」判定
+            const isDone = estMinutes === undefined || estMinutes === 0
                 ? execMinutes > 0
                 : execMinutes >= estMinutes;
 
@@ -468,9 +469,9 @@ export class TodayView {
             text: t('today.taskExec', { duration: formatDuration(opts.execMinutes) }),
         });
 
-        // 完成图标：无预估时长时，只要有执行记录即视为完成；
+        // 完成图标：无预估时长（或预估为 0）时，只要有执行记录即视为完成；
         // 有预估时长时，需已执行时长达到预估时长才显示。
-        const isDone = opts.estMinutes === undefined
+        const isDone = opts.estMinutes === undefined || opts.estMinutes === 0
             ? opts.execMinutes > 0
             : opts.execMinutes >= opts.estMinutes;
         if (isDone) {

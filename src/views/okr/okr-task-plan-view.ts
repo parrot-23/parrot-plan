@@ -1152,16 +1152,17 @@ export class OkrTaskPlanView {
                     placeholder: t('weekPanel.estimatedPlaceholder'),
                 },
             });
-            if (typeof item.estimatedMinutes === 'number' && item.estimatedMinutes > 0) {
+            if (typeof item.estimatedMinutes === 'number' && item.estimatedMinutes >= 0) {
                 estInput.value = String(item.estimatedMinutes);
             }
             estInput.onchange = () => {
                 void (async () => {
                     const raw = estInput.value.trim();
                     const minutes = raw === '' ? undefined : Math.max(0, Math.floor(Number(raw)));
-                    if (minutes === undefined || !Number.isFinite(minutes) || minutes <= 0) {
+                    if (minutes === undefined || !Number.isFinite(minutes)) {
                         delete item.estimatedMinutes;
                     } else {
+                        // 允许设置为 0（0 表示预估时长为零，与「未填写」区分）
                         item.estimatedMinutes = minutes;
                     }
                     await this.save();

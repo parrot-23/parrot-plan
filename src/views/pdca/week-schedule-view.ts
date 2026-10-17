@@ -439,7 +439,7 @@ export class WeekScheduleView extends ItemView {
 
             // 第二行：预估执行时长（未填写时显示占位提示）
             const estLine = chip.createDiv({ cls: 'week-panel-task-est' });
-            if (typeof ev.estimatedMinutes === 'number' && ev.estimatedMinutes > 0) {
+            if (typeof ev.estimatedMinutes === 'number' && ev.estimatedMinutes >= 0) {
                 estLine.setText(t('weekPanel.estimated', { duration: this.formatDuration(ev.estimatedMinutes) }));
             } else {
                 estLine.addClass('is-empty');
@@ -494,7 +494,7 @@ export class WeekScheduleView extends ItemView {
         input.min = '0';
         input.step = '5';
         input.placeholder = t('weekPanel.estimatedPlaceholder');
-        if (typeof ev.estimatedMinutes === 'number' && ev.estimatedMinutes > 0) {
+        if (typeof ev.estimatedMinutes === 'number' && ev.estimatedMinutes >= 0) {
             input.value = String(ev.estimatedMinutes);
         }
 
@@ -510,7 +510,8 @@ export class WeekScheduleView extends ItemView {
                 return;
             }
             // 原地修改，保持数组引用不变（插件持有同一引用）
-            if (minutes === undefined || minutes === 0) {
+            // 允许设置为 0（0 表示预估时长为零，与「未填写」区分）
+            if (minutes === undefined) {
                 this.pdcaRepo().updateEvent(ev.id, { estimatedMinutes: undefined });
             } else {
                 this.pdcaRepo().updateEvent(ev.id, { estimatedMinutes: minutes });
@@ -616,8 +617,8 @@ export class WeekScheduleView extends ItemView {
             allDay: true,
             completed: false,
             weekKey: this.currentWeekKey,
-            // 继承任务的预估时长（未填写时不设置）
-            ...(typeof selectedInboxItem.estimatedMinutes === 'number' && selectedInboxItem.estimatedMinutes > 0
+            // 继承任务的预估时长（未填写时不设置；0 为有效值）
+            ...(typeof selectedInboxItem.estimatedMinutes === 'number' && selectedInboxItem.estimatedMinutes >= 0
                 ? { estimatedMinutes: selectedInboxItem.estimatedMinutes }
                 : {}),
         });
@@ -748,8 +749,8 @@ export class WeekScheduleView extends ItemView {
             allDay: true,
             completed: false,
             weekKey: this.currentWeekKey,
-            // 继承任务的预估时长（未填写时不设置）
-            ...(typeof selectedInboxItem.estimatedMinutes === 'number' && selectedInboxItem.estimatedMinutes > 0
+            // 继承任务的预估时长（未填写时不设置；0 为有效值）
+            ...(typeof selectedInboxItem.estimatedMinutes === 'number' && selectedInboxItem.estimatedMinutes >= 0
                 ? { estimatedMinutes: selectedInboxItem.estimatedMinutes }
                 : {}),
         });
