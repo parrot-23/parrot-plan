@@ -1,0 +1,10 @@
+{
+  "id": "funnel-chart",
+  "name": "漏斗图",
+  "mode": "stats",
+  "description": "任务状态流转（漏斗图）",
+  "source": {
+    "type": "funnel-status",
+    "chart": "funnel"
+  }
+}

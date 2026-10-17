@@ -1,0 +1,10 @@
+{
+  "id": "scatter-chart",
+  "name": "散点图",
+  "mode": "stats",
+  "description": "执行时间与时长分布（散点图）",
+  "source": {
+    "type": "scatter-duration",
+    "chart": "scatter"
+  }
+}

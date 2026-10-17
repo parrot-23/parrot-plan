@@ -1,0 +1,10 @@
+{
+  "id": "radar-chart",
+  "name": "雷达图",
+  "mode": "stats",
+  "description": "多维度综合指标（雷达图）",
+  "source": {
+    "type": "radar-overview",
+    "chart": "radar"
+  }
+}

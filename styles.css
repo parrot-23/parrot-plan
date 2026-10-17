@@ -6863,6 +6863,56 @@
     font-size: 12px;
 }
 
+/* ===== 面积图 ===== */
+.wb-chart-area {
+    fill: var(--interactive-accent);
+    opacity: 0.2;
+}
+
+/* ===== 雷达图 ===== */
+.wb-chart-radar-grid {
+    fill: none;
+    stroke: var(--background-modifier-border);
+    stroke-width: 1;
+}
+
+.wb-chart-radar-axis {
+    stroke: var(--background-modifier-border);
+    stroke-width: 1;
+}
+
+.wb-chart-radar-data {
+    fill: var(--interactive-accent);
+    opacity: 0.35;
+    stroke: var(--interactive-accent);
+    stroke-width: 1.5;
+}
+
+/* ===== 漏斗图 ===== */
+.wb-chart-funnel-label {
+    font-size: 11px;
+    fill: var(--text-on-accent);
+    font-weight: 600;
+}
+
+/* ===== 词云 ===== */
+.wb-wordcloud {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 8px;
+    width: 100%;
+}
+
+.wb-wordcloud-word {
+    color: var(--interactive-accent);
+    line-height: 1.2;
+    cursor: default;
+}
+
 /* ===== 热力活跃图（GitHub 贡献图风格）===== */
 .wb-heatmap {
     display: flex;

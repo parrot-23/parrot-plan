@@ -3,7 +3,17 @@
 // 供 stats 卡片渲染器分别绘制数字卡与图表。
 
 import type { CardSource } from '../../datatypes/form';
-import type { DataProvider, StatItem, ChartSeries, ChartDatum, HeatmapSeries } from '../../datatypes/chart';
+import type {
+    DataProvider,
+    StatItem,
+    ChartSeries,
+    ChartDatum,
+    HeatmapSeries,
+    RadarSeries,
+    ScatterSeries,
+    FunnelSeries,
+    WordCloudSeries,
+} from '../../datatypes/chart';
 import { getEventStatus } from '../../datatypes/domain';
 import { makeDayKeyFromWeek } from '../../shared/plan-data';
 
@@ -15,6 +25,14 @@ export interface AggregationResult {
     series?: ChartSeries;
     /** 热力图序列（GitHub 贡献图风格），无热力图需求时为空 */
     heatmap?: HeatmapSeries;
+    /** 雷达图序列（多维指标），无雷达图需求时为空 */
+    radar?: RadarSeries;
+    /** 散点图序列（(x,y) 数据点），无散点图需求时为空 */
+    scatter?: ScatterSeries;
+    /** 漏斗图序列（阶段递减数值），无漏斗图需求时为空 */
+    funnel?: FunnelSeries;
+    /** 词云序列（词频），无词云需求时为空 */
+    wordcloud?: WordCloudSeries;
 }
 
 /** 按 source.type 聚合数据 */
@@ -40,6 +58,14 @@ export function aggregate(source: CardSource, provider: DataProvider): Aggregati
             return aggregateExecutedTaskCount(provider);
         case 'execution-total-duration':
             return aggregateExecutionTotalDuration(provider);
+        case 'radar-overview':
+            return aggregateRadarOverview(provider);
+        case 'scatter-duration':
+            return aggregateScatterDuration(provider);
+        case 'funnel-status':
+            return aggregateFunnelStatus(provider);
+        case 'wordcloud-titles':
+            return aggregateWordCloudTitles(provider);
         default:
             return { stats: [] };
     }
@@ -275,4 +301,126 @@ function aggregateExecutionTotalDuration(provider: DataProvider): AggregationRes
         total += Math.max(0, (ex.end ?? ex.start) - ex.start);
     }
     return { stats: [{ label: '执行总时长', value: total }] };
+}
+
+/**
+ * 雷达图总览：从多个维度聚合出综合指标，供雷达图绘制。
+ * 维度：任务数、执行数、完成率、使用天数、执行时长、分类数。
+ */
+function aggregateRadarOverview(provider: DataProvider): AggregationResult {
+    const tasks = provider.getTasks().filter((t) => !t.removed);
+    const executions = provider.getExecutions();
+    const events = provider.getEvents();
+
+    const taskCount = tasks.length;
+    const execCount = executions.length;
+    const done = events.filter((e) => getEventStatus(e, executions) === 'executed').length;
+    const completionRate = events.length > 0 ? Math.round((done / events.length) * 100) : 0;
+
+    const days = new Set<string>();
+    let totalDuration = 0;
+    for (const ex of executions) {
+        if (ex.weekKey && ex.day) days.add(makeDayKeyFromWeek(ex.weekKey, ex.day));
+        totalDuration += Math.max(0, (ex.end ?? ex.start) - ex.start);
+    }
+
+    const categories = new Set<string>();
+    for (const t of tasks) if (t.categoryId) categories.add(t.categoryId);
+
+    const data = [
+        { label: '任务数', value: taskCount },
+        { label: '执行数', value: execCount },
+        { label: '完成率', value: completionRate },
+        { label: '使用天数', value: days.size },
+        { label: '执行时长', value: totalDuration },
+        { label: '分类数', value: categories.size },
+    ];
+
+    return {
+        stats: [{ label: '综合维度', value: data.length }],
+        radar: { data, metricLabel: '综合指标' },
+    };
+}
+
+/**
+ * 散点图：每个执行记录作为一个数据点，x 为开始时间（分钟），y 为时长（分钟）。
+ * 用于观察执行时间分布与时长关系。
+ */
+function aggregateScatterDuration(provider: DataProvider): AggregationResult {
+    const executions = provider.getExecutions();
+    const data = executions
+        .filter((ex) => ex.start !== undefined)
+        .map((ex) => ({
+            x: ex.start,
+            y: Math.max(0, (ex.end ?? ex.start) - ex.start),
+            label: ex.note ?? '',
+        }));
+
+    return {
+        stats: [{ label: '执行记录', value: data.length }],
+        scatter: { data, xLabel: '开始时间(分钟)', yLabel: '时长(分钟)' },
+    };
+}
+
+/**
+ * 漏斗图：按任务状态（未开始 / 进行中 / 已完成）统计数量，展示任务流转漏斗。
+ */
+function aggregateFunnelStatus(provider: DataProvider): AggregationResult {
+    const tasks = provider.getTasks().filter((t) => !t.removed);
+    const notStarted = tasks.filter((t) => !t.status || t.status === 'notStarted').length;
+    const inProgress = tasks.filter((t) => t.status === 'inProgress').length;
+    const done = tasks.filter((t) => t.status === 'done').length;
+
+    const data = [
+        { label: '未开始', value: notStarted },
+        { label: '进行中', value: inProgress },
+        { label: '已完成', value: done },
+    ];
+
+    return {
+        stats: [{ label: '任务总数', value: tasks.length }],
+        funnel: { data, metricLabel: '任务状态' },
+    };
+}
+
+/**
+ * 词云：从任务标题中提取词频。
+ * 中文按单字切分（简单分词），英文/数字按空格与标点切分。
+ */
+function aggregateWordCloudTitles(provider: DataProvider): AggregationResult {
+    const tasks = provider.getTasks().filter((t) => !t.removed);
+    const freq = new Map<string, number>();
+
+    const addWord = (word: string) => {
+        const w = word.trim();
+        if (!w) return;
+        freq.set(w, (freq.get(w) ?? 0) + 1);
+    };
+
+    for (const t of tasks) {
+        const title = t.title ?? '';
+        // 按空格/标点切分英文与数字，中文按单字切分
+        const tokens = title.split(/[\s,，。.!！?？;；:：、/\\()（）\[\]【】"“”'‘’]+/);
+        for (const token of tokens) {
+            if (!token) continue;
+            // 若 token 含中文，按单字切分
+            if (/[\u4e00-\u9fa5]/.test(token)) {
+                for (const ch of token) {
+                    if (/[\u4e00-\u9fa5]/.test(ch)) addWord(ch);
+                }
+            } else {
+                addWord(token);
+            }
+        }
+    }
+
+    const data = Array.from(freq.entries())
+        .map(([text, value]) => ({ text, value }))
+        .sort((a, b) => b.value - a.value)
+        .slice(0, 50);
+
+    return {
+        stats: [{ label: '词条数', value: data.length }],
+        wordcloud: { data, metricLabel: '任务关键词' },
+    };
 }

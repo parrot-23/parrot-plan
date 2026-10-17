@@ -1,0 +1,10 @@
+{
+  "id": "metric-card",
+  "name": "指标卡",
+  "mode": "stats",
+  "description": "展示单个核心指标数字",
+  "source": {
+    "type": "execution-count",
+    "chart": "metric"
+  }
+}

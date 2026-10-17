@@ -16,6 +16,17 @@ import executionTotalDuration from '../templates/execution-total-duration.json';
 import calendar from '../templates/calendar.json';
 import clock from '../templates/clock.json';
 import collectInbox from '../templates/collect-inbox.json';
+import metricCard from '../templates/metric-card.json';
+import barChart from '../templates/bar-chart.json';
+import lineChart from '../templates/line-chart.json';
+import hbarChart from '../templates/hbar-chart.json';
+import areaChart from '../templates/area-chart.json';
+import pieChart from '../templates/pie-chart.json';
+import donutChart from '../templates/donut-chart.json';
+import radarChart from '../templates/radar-chart.json';
+import scatterChart from '../templates/scatter-chart.json';
+import funnelChart from '../templates/funnel-chart.json';
+import wordcloudChart from '../templates/wordcloud-chart.json';
 
 /** 内置模板列表（构建时内联，随 main.js 一起分发） */
 const BUILTIN_TEMPLATES: CardTemplate[] = [
@@ -33,6 +44,17 @@ const BUILTIN_TEMPLATES: CardTemplate[] = [
     calendar as CardTemplate,
     clock as CardTemplate,
     collectInbox as CardTemplate,
+    metricCard as CardTemplate,
+    barChart as CardTemplate,
+    lineChart as CardTemplate,
+    hbarChart as CardTemplate,
+    areaChart as CardTemplate,
+    pieChart as CardTemplate,
+    donutChart as CardTemplate,
+    radarChart as CardTemplate,
+    scatterChart as CardTemplate,
+    funnelChart as CardTemplate,
+    wordcloudChart as CardTemplate,
 ];
 
 /** 模板缓存：id → 模板 */

@@ -61,3 +61,71 @@ export interface HeatmapSeries {
     /** 指标名（用于图例/标题） */
     metricLabel: string;
 }
+
+/** 雷达图数据点：一个维度名 + 一个数值 */
+export interface RadarDatum {
+    /** 维度名（如「任务数」「执行数」） */
+    label: string;
+    /** 数值 */
+    value: number;
+}
+
+/** 雷达图数据集：多个维度指标，供雷达图渲染器绘制 */
+export interface RadarSeries {
+    /** 维度数据点列表 */
+    data: RadarDatum[];
+    /** 指标名（用于图例/标题） */
+    metricLabel: string;
+}
+
+/** 散点图数据点：一个 x 值 + 一个 y 值 */
+export interface ScatterDatum {
+    /** x 轴数值 */
+    x: number;
+    /** y 轴数值 */
+    y: number;
+    /** 数据点标签（可选，用于 tooltip） */
+    label?: string;
+}
+
+/** 散点图数据集：一组 (x, y) 数据点，供散点图渲染器绘制 */
+export interface ScatterSeries {
+    /** 数据点列表 */
+    data: ScatterDatum[];
+    /** x 轴名称 */
+    xLabel: string;
+    /** y 轴名称 */
+    yLabel: string;
+}
+
+/** 漏斗图数据点：一个阶段名 + 一个数值 */
+export interface FunnelDatum {
+    /** 阶段名 */
+    label: string;
+    /** 数值 */
+    value: number;
+}
+
+/** 漏斗图数据集：按阶段递减的数值，供漏斗图渲染器绘制 */
+export interface FunnelSeries {
+    /** 阶段数据点列表 */
+    data: FunnelDatum[];
+    /** 指标名（用于图例/标题） */
+    metricLabel: string;
+}
+
+/** 词云数据点：一个词 + 词频 */
+export interface WordDatum {
+    /** 词 */
+    text: string;
+    /** 词频（用于字号/颜色深浅） */
+    value: number;
+}
+
+/** 词云数据集：一组词频，供词云渲染器绘制 */
+export interface WordCloudSeries {
+    /** 词频数据点列表 */
+    data: WordDatum[];
+    /** 指标名（用于图例/标题） */
+    metricLabel: string;
+}

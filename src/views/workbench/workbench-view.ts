@@ -127,13 +127,28 @@ export class WorkbenchView {
                 { key: 'workbench.group.gtd', match: (tpl) => tpl.id === 'collect-inbox' },
             ]);
 
-            // 图表卡片：仅保留热力活跃图
+            // 图表卡片：热力活跃图 + 各类图表卡片（指标卡/柱状图/折线图/条形图/面积图/饼图/环形图/雷达图/散点图/漏斗图/词云）
             const chartBtn = actions.createEl('button', {
                 cls: 'wb-add-btn',
                 text: t('workbench.addIconCard'),
             });
             chartBtn.onclick = () => this.showAddCardMenu(chartBtn, [
-                { match: (tpl) => tpl.id === 'activity-heatmap' },
+                {
+                    match: (tpl) => [
+                        'activity-heatmap',
+                        'metric-card',
+                        'bar-chart',
+                        'line-chart',
+                        'hbar-chart',
+                        'area-chart',
+                        'pie-chart',
+                        'donut-chart',
+                        'radar-chart',
+                        'scatter-chart',
+                        'funnel-chart',
+                        'wordcloud-chart',
+                    ].includes(tpl.id),
+                },
             ]);
 
             // 表单卡片：周期填写 + 固定填写
@@ -407,6 +422,17 @@ export class WorkbenchView {
             'calendar': '📆',
             'clock': '🕐',
             'collect-inbox': '📥',
+            'metric-card': '🔢',
+            'bar-chart': '📊',
+            'line-chart': '📈',
+            'hbar-chart': '📊',
+            'area-chart': '📉',
+            'pie-chart': '🥧',
+            'donut-chart': '🍩',
+            'radar-chart': '🕸️',
+            'scatter-chart': '✨',
+            'funnel-chart': '🔻',
+            'wordcloud-chart': '☁️',
         };
         return byId[tpl.id] ?? '🧩';
     }

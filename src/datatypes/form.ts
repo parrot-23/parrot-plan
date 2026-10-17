@@ -35,7 +35,19 @@ export interface FieldSchema {
 }
 
 /** 图表类型 */
-export type ChartType = 'bar' | 'line' | 'pie' | 'donut' | 'heatmap';
+export type ChartType =
+    | 'bar'
+    | 'line'
+    | 'pie'
+    | 'donut'
+    | 'heatmap'
+    | 'area'
+    | 'hbar'
+    | 'radar'
+    | 'scatter'
+    | 'funnel'
+    | 'wordcloud'
+    | 'metric';
 
 /** stats 模式的数据来源定义 */
 export interface CardSource {

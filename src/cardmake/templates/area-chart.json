@@ -1,0 +1,14 @@
+{
+  "id": "area-chart",
+  "name": "面积图",
+  "mode": "stats",
+  "description": "按天统计执行时长（面积图）",
+  "source": {
+    "type": "execution-summary",
+    "chart": "area",
+    "params": {
+      "dimension": "day",
+      "metric": "duration"
+    }
+  }
+}

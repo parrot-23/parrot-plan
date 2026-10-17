@@ -1,7 +1,7 @@
 // stats 模式渲染器：定义数据来源，展示统计信息（数字卡 + 可选图表）。
 import type { CardRenderer, CardRenderContext } from '../../datatypes/renderer';
 import { aggregate } from '../data/aggregators';
-import { renderChart, renderHeatmap } from '../engine/chart-renderer';
+import { renderChart, renderHeatmap, renderRadar, renderScatter, renderFunnel, renderWordCloud } from '../engine/chart-renderer';
 
 export const statsCardRenderer: CardRenderer = {
     render(container, instance, template, ctx) {
@@ -28,6 +28,34 @@ export const statsCardRenderer: CardRenderer = {
         if (source.chart === 'heatmap' && result.heatmap) {
             const chartWrap = body.createDiv({ cls: 'wb-chart-wrap' });
             renderHeatmap(chartWrap, result.heatmap);
+            return;
+        }
+
+        // 雷达图
+        if (source.chart === 'radar' && result.radar) {
+            const chartWrap = body.createDiv({ cls: 'wb-chart-wrap' });
+            renderRadar(chartWrap, result.radar);
+            return;
+        }
+
+        // 散点图
+        if (source.chart === 'scatter' && result.scatter) {
+            const chartWrap = body.createDiv({ cls: 'wb-chart-wrap' });
+            renderScatter(chartWrap, result.scatter);
+            return;
+        }
+
+        // 漏斗图
+        if (source.chart === 'funnel' && result.funnel) {
+            const chartWrap = body.createDiv({ cls: 'wb-chart-wrap' });
+            renderFunnel(chartWrap, result.funnel);
+            return;
+        }
+
+        // 词云
+        if (source.chart === 'wordcloud' && result.wordcloud) {
+            const chartWrap = body.createDiv({ cls: 'wb-chart-wrap' });
+            renderWordCloud(chartWrap, result.wordcloud);
             return;
         }
 

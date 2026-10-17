@@ -1,7 +1,14 @@
-// 图表渲染器：纯 SVG 自绘柱状图 / 折线图 / 饼图 / 环形图。
+// 图表渲染器：纯 SVG 自绘柱状图 / 折线图 / 饼图 / 环形图 / 面积图 / 条形图 / 雷达图 / 散点图 / 漏斗图 / 词云。
 // 不引入第三方图表库，体积小、可控、无兼容风险。
 import type { ChartType } from '../../datatypes/form';
-import type { ChartSeries, HeatmapSeries } from '../../datatypes/chart';
+import type {
+    ChartSeries,
+    HeatmapSeries,
+    RadarSeries,
+    ScatterSeries,
+    FunnelSeries,
+    WordCloudSeries,
+} from '../../datatypes/chart';
 
 /** 图表渲染配置 */
 export interface ChartRenderOptions {
@@ -35,9 +42,55 @@ export function renderChart(
         case 'donut':
             renderPieChart(container, data, true, options);
             break;
+        case 'area':
+            renderAreaChart(container, data, options);
+            break;
+        case 'hbar':
+            renderHBarChart(container, data, options);
+            break;
         default:
             renderBarChart(container, data, options);
     }
+}
+
+/** 渲染雷达图 */
+export function renderRadar(container: HTMLElement, series: RadarSeries, options: ChartRenderOptions = {}): void {
+    const data = series.data;
+    if (data.length === 0) {
+        container.createDiv({ cls: 'wb-chart-empty', text: '暂无数据' });
+        return;
+    }
+    renderRadarChart(container, data, options);
+}
+
+/** 渲染散点图 */
+export function renderScatter(container: HTMLElement, series: ScatterSeries, options: ChartRenderOptions = {}): void {
+    const data = series.data;
+    if (data.length === 0) {
+        container.createDiv({ cls: 'wb-chart-empty', text: '暂无数据' });
+        return;
+    }
+    renderScatterChart(container, data, series.xLabel, series.yLabel, options);
+}
+
+/** 渲染漏斗图 */
+export function renderFunnel(container: HTMLElement, series: FunnelSeries, options: ChartRenderOptions = {}): void {
+    const data = series.data;
+    if (data.length === 0) {
+        container.createDiv({ cls: 'wb-chart-empty', text: '暂无数据' });
+        return;
+    }
+    renderFunnelChart(container, data, options);
+}
+
+/** 渲染词云 */
+export function renderWordCloud(container: HTMLElement, series: WordCloudSeries): void {
+    const data = series.data;
+    if (data.length === 0) {
+        container.createDiv({ cls: 'wb-chart-empty', text: '暂无数据' });
+        return;
+    }
+    renderWordCloudView(container, data);
 }
 
 /** 柱状图 */
@@ -122,6 +175,274 @@ function renderLineChart(container: HTMLElement, data: ChartSeries['data'], opti
         label.setAttribute('class', 'wb-chart-label');
         label.textContent = truncate(data[i].label, 6);
         svg.appendChild(label);
+    }
+}
+
+/** 面积图：折线下方填充渐变区域 */
+function renderAreaChart(container: HTMLElement, data: ChartSeries['data'], options: ChartRenderOptions) {
+    const width = options.width ?? 260;
+    const height = options.height ?? 140;
+    const padLeft = 8;
+    const padBottom = 20;
+    const padTop = 8;
+    const chartH = height - padTop - padBottom;
+    const max = Math.max(...data.map((d) => d.value), 1);
+    const n = data.length;
+    const stepX = n > 1 ? (width - padLeft * 2) / (n - 1) : 0;
+
+    const svg = createChartSvg(container, width, height);
+    const points: string[] = [];
+    for (let i = 0; i < n; i++) {
+        const x = padLeft + i * stepX;
+        const y = padTop + chartH - (data[i].value / max) * chartH;
+        points.push(`${x},${y}`);
+    }
+
+    // 面积填充路径（折线 + 底部闭合）
+    const baseline = padTop + chartH;
+    const areaPath = `M ${padLeft} ${baseline} L ${points.join(' L ')} L ${padLeft + (n - 1) * stepX} ${baseline} Z`;
+    const area = svgEl('path', { d: areaPath });
+    area.setAttribute('class', 'wb-chart-area');
+    svg.appendChild(area);
+
+    // 折线
+    const polyline = svgEl('polyline', { points: points.join(' ') });
+    polyline.setAttribute('class', 'wb-chart-line');
+    svg.appendChild(polyline);
+
+    // 数据点与标签
+    for (let i = 0; i < n; i++) {
+        const [x, y] = points[i].split(',').map(Number);
+        const circle = svgEl('circle', { cx: String(x), cy: String(y), r: '3' });
+        circle.setAttribute('class', 'wb-chart-dot');
+        circle.setAttribute('data-value', String(data[i].value));
+        svg.appendChild(circle);
+
+        const label = svgEl('text', {
+            x: String(x),
+            y: String(height - 6),
+            'text-anchor': 'middle',
+        });
+        label.setAttribute('class', 'wb-chart-label');
+        label.textContent = truncate(data[i].label, 6);
+        svg.appendChild(label);
+    }
+}
+
+/** 条形图（横向柱状图） */
+function renderHBarChart(container: HTMLElement, data: ChartSeries['data'], options: ChartRenderOptions) {
+    const width = options.width ?? 260;
+    const rowH = 22;
+    const padLeft = 60;
+    const padRight = 8;
+    const height = data.length * rowH + 8;
+    const max = Math.max(...data.map((d) => d.value), 1);
+    const barMaxW = width - padLeft - padRight;
+
+    const svg = createChartSvg(container, width, height);
+    for (let i = 0; i < data.length; i++) {
+        const d = data[i];
+        const y = i * rowH + 4;
+        const barW = Math.max(2, (d.value / max) * barMaxW);
+
+        // 标签（左侧）
+        const label = svgEl('text', {
+            x: String(padLeft - 6),
+            y: String(y + rowH / 2 + 3),
+            'text-anchor': 'end',
+        });
+        label.setAttribute('class', 'wb-chart-label');
+        label.textContent = truncate(d.label, 6);
+        svg.appendChild(label);
+
+        // 条形
+        const rect = svgEl('rect', {
+            x: String(padLeft),
+            y: String(y),
+            width: String(barW),
+            height: String(rowH - 6),
+            rx: '2',
+        });
+        rect.setAttribute('class', 'wb-chart-bar');
+        rect.setAttribute('data-value', String(d.value));
+        svg.appendChild(rect);
+    }
+}
+
+/** 雷达图：多维度指标的多边形 */
+function renderRadarChart(
+    container: HTMLElement,
+    data: RadarSeries['data'],
+    options: ChartRenderOptions,
+) {
+    const size = options.width ?? 200;
+    const cx = size / 2;
+    const cy = size / 2;
+    const radius = size / 2 - 24;
+    const n = data.length;
+    const max = Math.max(...data.map((d) => d.value), 1);
+
+    const svg = createChartSvg(container, size, size);
+
+    // 网格（同心多边形）
+    for (let level = 1; level <= 4; level++) {
+        const r = (radius * level) / 4;
+        const pts: string[] = [];
+        for (let i = 0; i < n; i++) {
+            const angle = (Math.PI * 2 * i) / n - Math.PI / 2;
+            pts.push(`${cx + r * Math.cos(angle)},${cy + r * Math.sin(angle)}`);
+        }
+        const poly = svgEl('polygon', { points: pts.join(' ') });
+        poly.setAttribute('class', 'wb-chart-radar-grid');
+        svg.appendChild(poly);
+    }
+
+    // 轴线
+    for (let i = 0; i < n; i++) {
+        const angle = (Math.PI * 2 * i) / n - Math.PI / 2;
+        const x = cx + radius * Math.cos(angle);
+        const y = cy + radius * Math.sin(angle);
+        const line = svgEl('line', {
+            x1: String(cx),
+            y1: String(cy),
+            x2: String(x),
+            y2: String(y),
+        });
+        line.setAttribute('class', 'wb-chart-radar-axis');
+        svg.appendChild(line);
+
+        // 维度标签
+        const lx = cx + (radius + 14) * Math.cos(angle);
+        const ly = cy + (radius + 14) * Math.sin(angle);
+        const label = svgEl('text', {
+            x: String(lx),
+            y: String(ly),
+            'text-anchor': 'middle',
+        });
+        label.setAttribute('class', 'wb-chart-label');
+        label.textContent = truncate(data[i].label, 4);
+        svg.appendChild(label);
+    }
+
+    // 数据多边形
+    const pts: string[] = [];
+    for (let i = 0; i < n; i++) {
+        const angle = (Math.PI * 2 * i) / n - Math.PI / 2;
+        const r = (data[i].value / max) * radius;
+        pts.push(`${cx + r * Math.cos(angle)},${cy + r * Math.sin(angle)}`);
+    }
+    const poly = svgEl('polygon', { points: pts.join(' ') });
+    poly.setAttribute('class', 'wb-chart-radar-data');
+    svg.appendChild(poly);
+}
+
+/** 散点图：x-y 数据点 */
+function renderScatterChart(
+    container: HTMLElement,
+    data: ScatterSeries['data'],
+    xLabel: string,
+    yLabel: string,
+    options: ChartRenderOptions,
+) {
+    const width = options.width ?? 260;
+    const height = options.height ?? 160;
+    const padLeft = 28;
+    const padRight = 8;
+    const padTop = 8;
+    const padBottom = 24;
+    const chartW = width - padLeft - padRight;
+    const chartH = height - padTop - padBottom;
+
+    const maxX = Math.max(...data.map((d) => d.x), 1);
+    const maxY = Math.max(...data.map((d) => d.y), 1);
+
+    const svg = createChartSvg(container, width, height);
+
+    // 数据点
+    for (const d of data) {
+        const x = padLeft + (d.x / maxX) * chartW;
+        const y = padTop + chartH - (d.y / maxY) * chartH;
+        const circle = svgEl('circle', { cx: String(x), cy: String(y), r: '3' });
+        circle.setAttribute('class', 'wb-chart-dot');
+        circle.setAttribute('data-value', `${d.x},${d.y}`);
+        if (d.label) circle.setAttribute('title', d.label);
+        svg.appendChild(circle);
+    }
+
+    // 轴标签
+    const xl = svgEl('text', {
+        x: String(padLeft + chartW / 2),
+        y: String(height - 4),
+        'text-anchor': 'middle',
+    });
+    xl.setAttribute('class', 'wb-chart-label');
+    xl.textContent = xLabel;
+    svg.appendChild(xl);
+
+    const yl = svgEl('text', {
+        x: String(10),
+        y: String(padTop + chartH / 2),
+        'text-anchor': 'middle',
+        transform: `rotate(-90 10 ${padTop + chartH / 2})`,
+    });
+    yl.setAttribute('class', 'wb-chart-label');
+    yl.textContent = yLabel;
+    svg.appendChild(yl);
+}
+
+/** 漏斗图：按阶段递减的梯形 */
+function renderFunnelChart(
+    container: HTMLElement,
+    data: FunnelSeries['data'],
+    options: ChartRenderOptions,
+) {
+    const width = options.width ?? 220;
+    const rowH = 34;
+    const height = data.length * rowH + 8;
+    const max = Math.max(...data.map((d) => d.value), 1);
+    const maxW = width - 40;
+
+    const svg = createChartSvg(container, width, height);
+    for (let i = 0; i < data.length; i++) {
+        const d = data[i];
+        const frac = d.value / max;
+        const w = Math.max(8, frac * maxW);
+        const x = (width - w) / 2;
+        const y = i * rowH + 4;
+
+        const rect = svgEl('rect', {
+            x: String(x),
+            y: String(y),
+            width: String(w),
+            height: String(rowH - 6),
+            rx: '2',
+        });
+        rect.setAttribute('class', 'wb-chart-bar');
+        rect.setAttribute('data-value', String(d.value));
+        svg.appendChild(rect);
+
+        // 阶段标签 + 数值
+        const label = svgEl('text', {
+            x: String(width / 2),
+            y: String(y + rowH / 2 + 3),
+            'text-anchor': 'middle',
+        });
+        label.setAttribute('class', 'wb-chart-funnel-label');
+        label.textContent = `${truncate(d.label, 6)} ${d.value}`;
+        svg.appendChild(label);
+    }
+}
+
+/** 词云：按词频渲染不同字号的词 */
+function renderWordCloudView(container: HTMLElement, data: WordCloudSeries['data']) {
+    const max = Math.max(...data.map((d) => d.value), 1);
+    const wrap = container.createDiv({ cls: 'wb-wordcloud' });
+    for (const d of data) {
+        const ratio = d.value / max;
+        const size = 12 + Math.round(ratio * 20); // 12px ~ 32px
+        const span = wrap.createSpan({ cls: 'wb-wordcloud-word', text: d.text });
+        span.style.setProperty('font-size', `${size}px`);
+        span.setAttribute('data-value', String(d.value));
     }
 }
 
