@@ -40,6 +40,12 @@ export default class ParrotPlanPlugin extends Plugin {
     /** 时间计划方案领域仓库 */
     planSchemeRepo: PlanSchemeRepo;
 
+    /** 状态栏「进行中任务」元素（插件加载即创建，不依赖主视图是否打开） */
+    statusBarEl?: HTMLElement;
+
+    /** 状态栏已用时长刷新定时器（每分钟更新） */
+    private statusBarTimer?: number;
+
     /**
      * 插件持有的唯一数据源（委托给 BaseRepo）。
      * 视图重建（registerView 工厂再次调用）时从这里读取最新数据，
@@ -153,6 +159,10 @@ export default class ParrotPlanPlugin extends Plugin {
         // 设置页
         this.addSettingTab(new ParrotPlanSettingTab(this.app, this));
 
+        // 状态栏：进行中任务（任务名称：时长）
+        // 在插件加载时创建，保证主视图未打开时也能显示
+        this.initStatusBar();
+
         // 文件/文件夹在 vault 内被移动或重命名时，同步更新任务中引用的路径
         this.registerEvent(
             this.app.vault.on('rename', (file, oldPath) => {
@@ -212,6 +222,66 @@ export default class ParrotPlanPlugin extends Plugin {
     }
 
     /**
+     * 初始化状态栏「进行中任务」显示。
+     * 状态栏元素由插件创建（随插件卸载自动清理），不依赖主视图是否打开。
+     */
+    private initStatusBar(): void {
+        this.statusBarEl = this.addStatusBarItem();
+        this.statusBarEl.addClass('parrot-plan-status-running');
+        this.renderStatusBarRunningTask();
+        // 每分钟刷新已用时长
+        this.statusBarTimer = window.setInterval(() => this.renderStatusBarRunningTask(), 60 * 1000);
+    }
+
+    /**
+     * 渲染状态栏中的「进行中任务」：显示「任务名称：时长」。
+     * 无进行中任务（或任务已被移除）时隐藏；点击打开主视图并跳转到日执行视图。
+     */
+    renderStatusBarRunningTask(): void {
+        const el = this.statusBarEl;
+        if (!el) return;
+        el.empty();
+
+        const running = this.pdcaRepo.runningTask;
+        const item = running
+            ? this.data?.inboxData.items.find(i => i.id === running.inboxId && !i.removed)
+            : undefined;
+        if (!running || !item) {
+            el.addClass('is-hidden');
+            return;
+        }
+        el.removeClass('is-hidden');
+
+        const now = new Date();
+        const nowMinutes = now.getHours() * 60 + now.getMinutes();
+        const elapsed = Math.max(0, nowMinutes - running.start);
+        el.setText(t('nav.runningStatusBar', {
+            name: item.title,
+            duration: t('nav.runningStatusBarDuration', { minutes: String(elapsed) }),
+        }));
+        el.setAttribute('aria-label', t('nav.runningLabel'));
+        el.onclick = () => {
+            void this.openTodayTab();
+        };
+    }
+
+    /** 打开主视图并切换到「日执行」二级视图（状态栏点击用） */
+    private async openTodayTab(): Promise<void> {
+        const { workspace } = this.app;
+        let leaf = workspace.getLeavesOfType(VIEW_TYPE_MAIN)[0];
+        if (!leaf) {
+            leaf = workspace.getLeaf('tab');
+            await leaf.setViewState({ type: VIEW_TYPE_MAIN });
+        }
+        await workspace.revealLeaf(leaf);
+
+        const view = leaf.view;
+        if (view instanceof MainView) {
+            await view.openTodayTab();
+        }
+    }
+
+    /**
      * 打开主视图（Ribbon 图标 / 命令面板共用入口）。
      * 帮助弹窗在此处触发：仅在用户主动打开插件时弹出，而非 Obsidian 启动时。
      */
@@ -235,6 +305,13 @@ export default class ParrotPlanPlugin extends Plugin {
 
     onunload() {
         log('插件 onunload（卸载/重载）');
+        // 清理状态栏定时器与元素
+        if (this.statusBarTimer !== undefined) {
+            window.clearInterval(this.statusBarTimer);
+            this.statusBarTimer = undefined;
+        }
+        this.statusBarEl?.remove();
+        this.statusBarEl = undefined;
         // 只保存数据，不 detach leaf（否则会打乱用户布局）
         const leaves = this.app.workspace.getLeavesOfType(VIEW_TYPE_MAIN);
         for (const leaf of leaves) {

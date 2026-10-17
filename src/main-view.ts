@@ -119,8 +119,6 @@ export class MainView extends ItemView {
     private runningCardEl?: HTMLElement;
     /** 进行中任务卡片已用时长的刷新定时器（每分钟更新） */
     private runningCardTimer?: number;
-    /** 状态栏中的「进行中任务」元素（任务名称：时长） */
-    private statusBarEl?: HTMLElement;
 
     constructor(
         leaf: WorkspaceLeaf,
@@ -382,12 +380,6 @@ export class MainView extends ItemView {
         // 内容区
         this.contentRoot = root.createDiv({ cls: 'parrot-plan-content' });
         await this.renderContent();
-
-        // 状态栏：显示进行中任务（任务名称：时长）
-        // 状态栏元素由插件注册（随插件卸载自动清理），视图只负责更新内容
-        this.statusBarEl = (this.plugin as Plugin & { addStatusBarItem: () => HTMLElement }).addStatusBarItem();
-        this.statusBarEl.addClass('parrot-plan-status-running');
-        this.renderStatusBarRunningTask();
     }
 
     /** 重建二级视图 tab 行（切换一级视图时调用） */
@@ -473,40 +465,21 @@ export class MainView extends ItemView {
 
     /**
      * 渲染状态栏中的「进行中任务」：显示「任务名称：时长」。
-     * 无进行中任务（或任务已被移除）时隐藏；点击跳转到日执行视图。
+     * 状态栏元素由插件创建（插件加载即存在，不依赖本视图是否打开），这里只触发插件刷新。
      */
     private renderStatusBarRunningTask(): void {
-        const el = this.statusBarEl;
-        if (!el) return;
-        el.empty();
+        (this.plugin as Plugin & { renderStatusBarRunningTask?: () => void })
+            .renderStatusBarRunningTask?.();
+    }
 
-        const running = this.pdcaRepo().runningTask;
-        const item = running
-            ? this.weekView.inboxData.items.find(i => i.id === running.inboxId && !i.removed)
-            : undefined;
-        if (!running || !item) {
-            el.addClass('is-hidden');
-            return;
-        }
-        el.removeClass('is-hidden');
-
-        const now = new Date();
-        const nowMinutes = now.getHours() * 60 + now.getMinutes();
-        const elapsed = Math.max(0, nowMinutes - running.start);
-        el.setText(t('nav.runningStatusBar', {
-            name: item.title,
-            duration: t('nav.runningStatusBarDuration', { minutes: String(elapsed) }),
-        }));
-        el.setAttribute('aria-label', t('nav.runningLabel'));
-        el.onclick = () => {
-            // 跳转到 PDCA 一级视图的「日执行」二级视图
-            this.lastTabByPrimary[this.activePrimary] = this.activeTab;
-            this.activePrimary = 'pdca';
-            this.activeTab = 'today';
-            this.lastTabByPrimary['pdca'] = 'today';
-            this.renderSecondaryTabs();
-            void this.renderContent();
-        };
+    /** 打开主视图并切换到「日执行」二级视图（状态栏点击用） */
+    async openTodayTab(): Promise<void> {
+        this.lastTabByPrimary[this.activePrimary] = this.activeTab;
+        this.activePrimary = 'pdca';
+        this.activeTab = 'today';
+        this.lastTabByPrimary['pdca'] = 'today';
+        this.renderSecondaryTabs();
+        await this.renderContent();
     }
 
     /** 根据当前 tab 渲染内容区 */
@@ -627,9 +600,7 @@ export class MainView extends ItemView {
             window.clearInterval(this.runningCardTimer);
             this.runningCardTimer = undefined;
         }
-        // 移除状态栏中的进行中任务元素
-        this.statusBarEl?.remove();
-        this.statusBarEl = undefined;
+        // 状态栏元素由插件持有（关闭视图不销毁），无需在此处理
         this.containerEl.empty();
     }
 }
