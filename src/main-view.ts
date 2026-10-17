@@ -11,9 +11,7 @@ import { YearView } from './views/pdca/year-view';
 import { TodayView } from './views/pdca/today-view';
 import { CheckView } from './views/pdca/check-view';
 import { ImproveView } from './views/pdca/improve-view';
-import { SwimlaneView } from './views/pdca/projectpicture-view';
 import { WorkbenchView } from './views/workbench/workbench-view';
-import { OkrView } from './views/okr/okr-view';
 import { OkrTaskPlanView } from './views/okr/okr-task-plan-view';
 import { AchievementView } from './views/okr/achievement-view';
 import { ScriptManageView } from './views/okr/script-manage-view';
@@ -95,9 +93,7 @@ export class MainView extends ItemView {
     private todayView: TodayView;
     private checkView: CheckView;
     private improveView: ImproveView;
-    private swimlaneView: SwimlaneView;
     private workbenchView: WorkbenchView;
-    private okrView: OkrView;
     private okrTaskPlanView: OkrTaskPlanView;
     private achievementView: AchievementView;
     private scriptManageView: ScriptManageView;
@@ -200,15 +196,6 @@ export class MainView extends ItemView {
             () => this.weekView.save(),
             this.inboxRepo(),
         );
-        this.swimlaneView = new SwimlaneView(
-            this.app,
-            this.weekView.inboxData,
-            this.weekView.planCategoryData,
-            () => this.weekView.save(),
-            () => this.weekView.executions,
-            () => this.weekView.events,
-            this.inboxRepo(),
-        );
         this.workbenchView = new WorkbenchView(
             this.app,
             workbenchData,
@@ -223,7 +210,6 @@ export class MainView extends ItemView {
             },
             this.gtdRepo(),
         );
-        this.okrView = new OkrView(this.app);
         this.okrTaskPlanView = new OkrTaskPlanView(
             this.app,
             this.weekView.inboxData,
@@ -538,18 +524,8 @@ export class MainView extends ItemView {
             return;
         }
 
-        if (this.activeTab === 'swimlane') {
-            await this.swimlaneView.renderInto(this.contentRoot);
-            return;
-        }
-
         if (this.activeTab === 'workbench') {
             await this.workbenchView.renderInto(this.contentRoot);
-            return;
-        }
-
-        if (this.activeTab === 'okrHome') {
-            await this.okrView.renderInto(this.contentRoot);
             return;
         }
 
