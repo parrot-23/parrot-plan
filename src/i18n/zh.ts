@@ -192,6 +192,7 @@ export const zh = {
     'today.noDescription': '暂无描述',
     'today.category': '分类',
     'today.timeRange': '时间',
+    'today.extendToNow': '延长到现在',
     'today.startTime': '起始时间',
     'today.endTime': '结束时间',
     'today.allDay': '全天',

@@ -194,6 +194,7 @@ export const en: I18nMessages = {
     'today.noDescription': 'No description',
     'today.category': 'Category',
     'today.timeRange': 'Time',
+    'today.extendToNow': 'Extend to now',
     'today.startTime': 'Start time',
     'today.endTime': 'End time',
     'today.allDay': 'All day',

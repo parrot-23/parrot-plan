@@ -1743,6 +1743,27 @@ export class TodayView {
         row.createSpan({ cls: 'today-detail-label', text: `${t('today.timeRange')}:` });
         row.createSpan({ text: `${formatMinutes(ex.start)} - ${formatMinutes(ex.end)}` });
 
+        // 延长到现在：仅当该记录是当天最近一条执行记录时显示，
+        // 点击后把终点时间更新为当前时间（不早于起始时间）
+        if (this.isLatestExecOfDay(ex)) {
+            const extendBtn = row.createEl('button', {
+                cls: 'today-detail-extend-btn',
+                text: t('today.extendToNow'),
+            });
+            extendBtn.onclick = (e) => {
+                e.stopPropagation();
+                void (async () => {
+                    const now = new Date();
+                    const nowMinutes = now.getHours() * 60 + now.getMinutes();
+                    this.pdcaRepo.updateExecution(ex.id, {
+                        end: Math.max(ex.start, Math.min(1440, nowMinutes)),
+                    });
+                    await this.save();
+                    await this.refresh();
+                })();
+            };
+        }
+
         // 时长（可编辑）：修改后按 start + 时长 重算 end，并保存刷新
         const durationRow = body.createDiv({ cls: 'today-detail-row' });
         durationRow.createSpan({ cls: 'today-detail-label', text: `${t('today.addUnplannedDuration')}:` });
@@ -1785,6 +1806,25 @@ export class TodayView {
             // 来源任务拥有的板块卡片
             this.renderDetailSections(body, item);
         }
+    }
+
+    /**
+     * 该执行记录是否为当前查看日期的「最近一条」执行记录。
+     * 仅查看今天时才有意义（延长到现在只对当天有效）。
+     */
+    private isLatestExecOfDay(ex: ExecutionRecord): boolean {
+        if (!this.isViewingToday()) return false;
+        const { day, weekKey } = this.getViewDayInfo();
+        const dayExecs = this.getExecutions().filter(e => e.day === day && e.weekKey === weekKey);
+        if (dayExecs.length === 0) return false;
+        // 以起始时间最晚者为准（相同则取结束时间更晚者）
+        let latest = dayExecs[0];
+        for (const e of dayExecs) {
+            if (e.start > latest.start || (e.start === latest.start && e.end > latest.end)) {
+                latest = e;
+            }
+        }
+        return latest.id === ex.id;
     }
 
     /** 在任务详情方框中渲染板块卡片（清单可勾选，其余只读，复用任务计划视图的卡片样式） */

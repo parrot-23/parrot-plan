@@ -4057,6 +4057,14 @@
     width: 72px;
 }
 
+/* 执行记录详情中的「延长到现在」按钮 */
+.today-detail-extend-btn {
+    flex-shrink: 0;
+    font-size: 12px;
+    padding: 2px 8px;
+    cursor: pointer;
+}
+
 .today-detail-empty {
     margin: auto;
     text-align: center;
