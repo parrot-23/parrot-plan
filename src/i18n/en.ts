@@ -20,7 +20,6 @@ export const en: I18nMessages = {
     'week.friday': 'Fri',
     'week.saturday': 'Sat',
     'week.sunday': 'Sun',
-    'week.markPlanned': 'Week planned',
 
     // View
     'view.title': 'Week Schedule',
@@ -407,11 +406,14 @@ export const en: I18nMessages = {
     'weekPanel.empty': 'No tasks',
     'weekPanel.statsTitle': 'Category durations',
     'weekPanel.allocated': 'Allocated {duration}',
+    'weekPanel.statsTooltip': '{label}: allocated {allocated} / planned {planned} ({percent}%)',
     'weekPanel.estimated': 'Est. {duration}',
     'weekPanel.estimatedEmpty': 'Click to set estimate',
     'weekPanel.estimatedLabel': 'Estimated duration (minutes)',
     'weekPanel.estimatedPlaceholder': 'e.g. 60',
     'weekPanel.habitTime': 'Habit {time}',
+    'weekPanel.collapseHabits': 'Collapse habits',
+    'weekPanel.habitSummary': 'Habits {count} · Total {duration}',
 
     // Event layer
     'event.scheduled': 'Scheduled "{title}"',
@@ -427,12 +429,6 @@ export const en: I18nMessages = {
     'eventTooltip.execTitle': 'Execution',
 
     // Event copy / paste
-    'eventCopy.copy': 'Copy Day Events',
-    'eventCopy.paste': 'Paste Day Events',
-    'eventCopy.copyTitle': 'Copy all events from which day',
-    'eventCopy.pasteTitle': 'Paste to which days',
-    'eventCopy.sourceHint': 'Currently copied from: {year} W{week} {day}',
-    'eventCopy.selectDay': 'Please select a day to copy',
     'eventCopy.nothingToCopy': 'No events to copy on that day',
     'eventCopy.copied': 'Copied {count} event(s)',
     'eventCopy.emptyClipboard': 'Clipboard is empty, copy a day first',

@@ -18,7 +18,6 @@ export const zh = {
     'week.friday': '周五',
     'week.saturday': '周六',
     'week.sunday': '周日',
-    'week.markPlanned': '已制定周计划',
 
     // 视图
     'view.title': '周日程',
@@ -405,11 +404,14 @@ export const zh = {
     'weekPanel.empty': '暂无任务',
     'weekPanel.statsTitle': '分类时长',
     'weekPanel.allocated': '已分配 {duration}',
+    'weekPanel.statsTooltip': '{label}：已分配 {allocated} / 计划 {planned}（{percent}%）',
     'weekPanel.estimated': '预估 {duration}',
     'weekPanel.estimatedEmpty': '点击设置预估时长',
     'weekPanel.estimatedLabel': '预估执行时长（分钟）',
     'weekPanel.estimatedPlaceholder': '如 60',
     'weekPanel.habitTime': '习惯 {time}',
+    'weekPanel.collapseHabits': '折叠习惯',
+    'weekPanel.habitSummary': '习惯数量 {count} · 总时长 {duration}',
 
     // 事件层
     'event.scheduled': '已排入"{title}"',
@@ -425,12 +427,6 @@ export const zh = {
     'eventTooltip.execTitle': '执行记录',
 
     // 事件复制 / 粘贴
-    'eventCopy.copy': '复制一天事件',
-    'eventCopy.paste': '粘贴一天事件',
-    'eventCopy.copyTitle': '复制哪一天的全部事件',
-    'eventCopy.pasteTitle': '粘贴到哪几天',
-    'eventCopy.sourceHint': '当前复制的是：{year} 年 第 {week} 周 {day}',
-    'eventCopy.selectDay': '请选择要复制的一天',
     'eventCopy.nothingToCopy': '该天没有可复制的事件',
     'eventCopy.copied': '已复制 {count} 个事件',
     'eventCopy.emptyClipboard': '剪贴板为空，请先复制某天事件',

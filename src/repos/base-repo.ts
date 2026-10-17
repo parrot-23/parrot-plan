@@ -39,6 +39,8 @@ export interface PluginData {
     executingEventId?: string;
     /** 当前进行中的任务（日执行视图点击「开始任务」后写入，随主数据一起持久化） */
     runningTask?: RunningTask;
+    /** 周计划视图是否折叠习惯任务（随主数据一起持久化） */
+    habitsCollapsed?: boolean;
 }
 
 /**
@@ -89,6 +91,7 @@ export class BaseRepo {
             improvementData: d.improvementData,
             executingEventId: d.executingEventId,
             runningTask: d.runningTask,
+            habitsCollapsed: d.habitsCollapsed,
             cacheDirName: this.cacheDirName,
             cacheEnabled: this.cacheEnabled,
             helpDismissed: this.helpDismissed,
@@ -206,6 +209,8 @@ export class BaseRepo {
             : undefined;
         // 当前进行中的任务（兼容旧数据：默认无）
         const initialRunningTask = parseRunningTask(savedData.runningTask);
+        // 周计划视图是否折叠习惯任务（兼容旧数据：默认不折叠）
+        const initialHabitsCollapsed = savedData.habitsCollapsed === true;
 
         // 存入仓库实例，作为唯一数据源（视图重建时从这里读取最新数据）
         this.data = {
@@ -221,6 +226,7 @@ export class BaseRepo {
             improvementData: initialImprovementData,
             executingEventId: initialExecutingEventId,
             runningTask: initialRunningTask,
+            habitsCollapsed: initialHabitsCollapsed,
         };
     }
 

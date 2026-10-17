@@ -21,6 +21,7 @@ import type { InboxRepo } from '../../repos/inbox-repo';
 import type { CategoryRepo } from '../../repos/category-repo';
 import type { TemplateRepo } from '../../repos/template-repo';
 import type { PlanSchemeRepo } from '../../repos/plan-scheme-repo';
+import type { BaseRepo } from '../../repos/base-repo';
 
 export const VIEW_TYPE_WEEK = 'week-schedule-view';
 
@@ -45,16 +46,16 @@ export class WeekScheduleView extends ItemView {
     private savedScrollTop: number | null = null;
     /** 被主视图复用时的宿主容器（用于刷新） */
     private hostContainer?: HTMLElement;
-    /** 事件剪贴板：暂存「复制某天全部事件」的事件模板（不含 id/day/weekKey） */
-    private clipboardEvents: Omit<EventBlock, 'id' | 'day' | 'weekKey'>[] | null = null;
-    /** 剪贴板来源：周键 + 星期几（1=周一 ... 7=周日），用于粘贴弹窗提示 */
-    private clipboardSource: { weekKey: WeekKey; day: number } | null = null;
     /** 全周事件剪贴板：暂存「复制全周事件」的事件模板（保留 day，不含 id/weekKey） */
     private clipboardWeekEvents: Omit<EventBlock, 'id' | 'weekKey'>[] | null = null;
     /** 全周剪贴板来源周键，用于粘贴弹窗提示 */
     private clipboardWeekSource: WeekKey | null = null;
     /** 「更多工具」下拉面板是否展开 */
     private moreToolsOpen = false;
+    /** 是否折叠习惯任务（折叠时列内隐藏习惯任务，改为显示一行统计；状态持久化在仓库数据中） */
+    private get habitsCollapsed(): boolean {
+        return this.baseRepo().data?.habitsCollapsed === true;
+    }
     /** 已标记为「已制定周计划」的周键列表（与年视图联动） */
     plannedWeeks: string[] = [];
     /** 当前打开的「预估执行时长」悬浮面板 */
@@ -127,6 +128,11 @@ export class WeekScheduleView extends ItemView {
     /** 从插件实例获取时间计划方案领域仓库 */
     private planSchemeRepo(): PlanSchemeRepo {
         return (this.plugin as Plugin & { planSchemeRepo: PlanSchemeRepo }).planSchemeRepo;
+    }
+
+    /** 从插件实例获取基础数据仓库（读取/写入随主数据持久化的视图状态） */
+    private baseRepo(): BaseRepo {
+        return (this.plugin as Plugin & { repo: BaseRepo }).repo;
     }
 
     /** 重置为默认数据（清空全部数据后调用） */
@@ -255,9 +261,42 @@ export class WeekScheduleView extends ItemView {
             this.renderDayStats(statsCells[d - 1], d);
         }
 
+        // 折叠习惯：在统计行下方插入一整行习惯统计（与统计行同结构，左右撑满）
+        if (this.habitsCollapsed) {
+            this.renderHabitSummaryRow(statsCells[0].parentElement as HTMLElement);
+        }
+
         // 渲染每天列内的任务清单
         for (let d = 1; d <= 7; d++) {
             this.renderDayColumn(dayColumns[d - 1], d);
+        }
+    }
+
+    /**
+     * 渲染折叠习惯后的统计行：7 个单元格，每列显示「习惯数 · 总时长」。
+     * 结构与上方饼图统计行一致（整行撑满、单元格之间用分隔线连接）。
+     */
+    private renderHabitSummaryRow(statsRow: HTMLElement) {
+        const row = document.createElement('div');
+        row.className = 'week-panel-habit-summary';
+        statsRow.insertAdjacentElement('afterend', row);
+
+        for (let d = 1; d <= 7; d++) {
+            const habits = this.events.filter(
+                ev => ev.day === d
+                    && ev.weekKey === this.currentWeekKey
+                    && this.getEventHabitTime(ev) !== null,
+            );
+            const totalMinutes = habits.reduce(
+                (sum, ev) => sum + (ev.estimatedMinutes ?? 0), 0,
+            );
+            row.createDiv({
+                cls: 'week-panel-habit-summary-cell',
+                text: t('weekPanel.habitSummary', {
+                    count: habits.length,
+                    duration: this.formatDuration(totalMinutes),
+                }),
+            });
         }
     }
 
@@ -270,9 +309,8 @@ export class WeekScheduleView extends ItemView {
     // ===== 周面板：单日列 =====
     /**
      * 渲染某天列顶部的分类时长统计。
-     * 每个分类显示两行：
-     *   1) 时间计划方案中该分类的可用时长（计划时长）
-     *   2) 本列计划事件按预估时长汇总的已分配时长
+     * 每个分类一个饼图（从左到右排列），饼图用分类颜色表示
+     * 「已分配预估时长 / 方案计划时长」的占比，悬停显示具体时长。
      */
     private renderDayStats(cell: HTMLElement, day: number) {
         // 方案中该天各分类的可用时长（分钟）
@@ -312,23 +350,25 @@ export class WeekScheduleView extends ItemView {
         }
 
         for (const cat of ordered) {
+            const plannedMinutes = planned.get(cat.id) ?? 0;
+            const allocatedMinutes = allocated.get(cat.id) ?? 0;
+            // 占比：已分配 / 计划（计划为 0 时按 0 处理，避免除零）
+            const ratio = plannedMinutes > 0
+                ? Math.min(1, allocatedMinutes / plannedMinutes)
+                : 0;
+
             const item = cell.createDiv({ cls: 'week-panel-stats-item' });
             item.setCssProps({ '--stats-color': cat.color });
-
-            // 第一行：分类名 + 方案可用时长
-            const head = item.createDiv({ cls: 'week-panel-stats-head' });
-            head.createSpan({ cls: 'week-panel-stats-dot' });
-            head.createSpan({ cls: 'week-panel-stats-label', text: cat.label });
-            head.createSpan({
-                cls: 'week-panel-stats-value',
-                text: this.formatDuration(planned.get(cat.id) ?? 0),
-            });
-
-            // 第二行：已分配时长
-            const alloc = item.createDiv({ cls: 'week-panel-stats-alloc' });
-            alloc.setText(t('weekPanel.allocated', {
-                duration: this.formatDuration(allocated.get(cat.id) ?? 0),
+            item.setAttribute('aria-label', t('weekPanel.statsTooltip', {
+                label: cat.label,
+                allocated: this.formatDuration(allocatedMinutes),
+                planned: this.formatDuration(plannedMinutes),
+                percent: String(Math.round(ratio * 100)),
             }));
+
+            // 饼图：用分类颜色填充已分配占比，剩余部分为底色
+            const pie = item.createDiv({ cls: 'week-panel-stats-pie' });
+            pie.setCssProps({ '--stats-ratio': String(ratio) });
         }
     }
 
@@ -365,11 +405,6 @@ export class WeekScheduleView extends ItemView {
             ev => ev.day === day && ev.weekKey === this.currentWeekKey,
         );
 
-        if (dayEvents.length === 0) {
-            col.createDiv({ cls: 'week-panel-empty', text: t('weekPanel.empty') });
-            return;
-        }
-
         // 设置了习惯时间点的任务排在最前面（其余保持原有顺序）
         const ordered = dayEvents
             .map((ev, idx) => ({ ev, idx, habit: this.getEventHabitTime(ev) }))
@@ -380,7 +415,19 @@ export class WeekScheduleView extends ItemView {
                 return a.idx - b.idx;
             });
 
-        for (const { ev, habit } of ordered) {
+        // 折叠习惯：隐藏习惯任务，改为在列首显示一行统计（习惯数 + 总时长）
+        let visible = ordered;
+        if (this.habitsCollapsed) {
+            visible = ordered.filter(o => o.habit === null);
+        }
+
+        if (visible.length === 0) {
+            col.createDiv({ cls: 'week-panel-empty', text: t('weekPanel.empty') });
+            col.createDiv({ cls: 'week-panel-column-spacer' });
+            return;
+        }
+
+        for (const { ev, habit } of visible) {
             const chip = col.createDiv({ cls: 'week-panel-task' });
             const cat = ev.categoryId
                 ? this.planCategoryData.categories.find(c => c.id === ev.categoryId)
@@ -424,6 +471,9 @@ export class WeekScheduleView extends ItemView {
                 };
             }
         }
+
+        // 列底部留白（约一张卡片高度），保证卡片较多时仍有可点击的空白区域
+        col.createDiv({ cls: 'week-panel-column-spacer' });
     }
 
     /**
@@ -1001,15 +1051,17 @@ export class WeekScheduleView extends ItemView {
         // 年 / 周切换
         this.renderWeekNav(toolbar);
 
-        // 已制定周计划按钮（标记当前周，与年视图联动）
-        const plannedBtn = toolbar.createEl('button', {
-            text: t('week.markPlanned'),
-            cls: 'week-planned-toggle-btn',
+        // 折叠习惯按钮：折叠后列内隐藏习惯任务，改为显示一行统计
+        const habitToggleBtn = toolbar.createEl('button', {
+            text: t('weekPanel.collapseHabits'),
+            cls: 'week-habit-toggle-btn',
         });
-        if (this.plannedWeeks.includes(this.currentWeekKey)) plannedBtn.addClass('is-active');
-        plannedBtn.onclick = () => {
+        habitToggleBtn.toggleClass('is-active', this.habitsCollapsed);
+        habitToggleBtn.onclick = () => {
+            const data = this.baseRepo().data;
+            if (!data) return;
+            data.habitsCollapsed = !this.habitsCollapsed;
             void (async () => {
-                this.pdcaRepo().togglePlannedWeek(this.currentWeekKey);
                 await this.save();
                 await this.onOpen();
             })();
@@ -1090,30 +1142,6 @@ export class WeekScheduleView extends ItemView {
                 ).open();
             };
 
-            // 复制一天事件
-            const copyBtn = panel.createEl('button', {
-                text: t('eventCopy.copy'),
-                cls: 'more-tools-item',
-            });
-            copyBtn.onclick = () => {
-                new CopyDayEventsModal(this.app, (day) => this.copyDayEvents(day)).open();
-            };
-
-            // 粘贴一天事件
-            const pasteBtn = panel.createEl('button', {
-                text: t('eventCopy.paste'),
-                cls: 'more-tools-item',
-            });
-            pasteBtn.onclick = () => {
-                if (!this.clipboardEvents || this.clipboardEvents.length === 0) {
-                    new Notice(t('eventCopy.emptyClipboard'));
-                    return;
-                }
-                new PasteDayEventsModal(this.app, this.clipboardSource, (days) => {
-                    void this.pasteEventsToDays(days);
-                }).open();
-            };
-
             // 复制本周事件
             const copyWeekBtn = panel.createEl('button', {
                 text: t('eventCopy.copyWeek'),
@@ -1176,42 +1204,6 @@ export class WeekScheduleView extends ItemView {
         }
         await this.save();
         await this.onOpen();
-    }
-
-    /** 复制某天（当前周）的全部事件到剪贴板 */
-    private copyDayEvents(day: number) {
-        const dayEvents = this.events.filter(ev => ev.day === day && ev.weekKey === this.currentWeekKey);
-        if (dayEvents.length === 0) {
-            new Notice(t('eventCopy.nothingToCopy'));
-            return;
-        }
-        // 暂存事件模板（去掉 id / day / weekKey，粘贴时重新生成）
-        this.clipboardEvents = dayEvents.map(({ id, day: _d, weekKey: _w, ...rest }) => rest);
-        this.clipboardSource = { weekKey: this.currentWeekKey, day };
-        new Notice(t('eventCopy.copied', { count: dayEvents.length }));
-    }
-
-    /** 将剪贴板事件粘贴到当前周的指定星期几（保留源事件，可多次粘贴） */
-    private async pasteEventsToDays(days: number[]) {
-        if (!this.clipboardEvents || this.clipboardEvents.length === 0) {
-            new Notice(t('eventCopy.emptyClipboard'));
-            return;
-        }
-        let added = 0;
-        for (const day of days) {
-            for (const tpl of this.clipboardEvents) {
-                this.pdcaRepo().addEvent({
-                    ...tpl,
-                    id: `ev_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
-                    day,
-                    weekKey: this.currentWeekKey,
-                });
-                added++;
-            }
-        }
-        await this.save();
-        await this.onOpen();
-        new Notice(t('eventCopy.pasted', { count: added }));
     }
 
     /** 复制当前周的全部事件到全周剪贴板（保留 day，粘贴时按原星期几还原） */
@@ -1416,148 +1408,6 @@ export class RangeEditModal extends Modal {
         this.contentEl.empty();
     }
 
-}
-
-/** 复制某天事件弹窗：单选一天 */
-class CopyDayEventsModal extends Modal {
-    constructor(
-        app: App,
-        private onConfirm: (day: number) => void,
-    ) {
-        super(app);
-    }
-
-    onOpen() {
-        const { contentEl } = this;
-        contentEl.empty();
-        contentEl.createEl('h3', { text: t('eventCopy.copyTitle') });
-
-        let selectedDay: number | null = null;
-        const days = getWeekDays();
-        const dayRow = contentEl.createDiv({ cls: 'apply-day-row' });
-        const dayBtns: HTMLElement[] = [];
-
-        for (let i = 1; i <= 7; i++) {
-            const btn = dayRow.createEl('button', {
-                text: days[i - 1],
-                cls: 'apply-day-btn',
-            });
-            dayBtns.push(btn);
-            btn.onclick = () => {
-                selectedDay = i;
-                dayBtns.forEach((b, idx) => b.toggleClass('is-selected', idx === i - 1));
-            };
-        }
-
-        new Setting(contentEl)
-            .addButton(btn => btn
-                .setButtonText(t('common.confirm'))
-                .setCta()
-                .onClick(() => {
-                    if (selectedDay === null) {
-                        new Notice(t('eventCopy.selectDay'));
-                        return;
-                    }
-                    this.onConfirm(selectedDay);
-                    this.close();
-                })
-            )
-            .addButton(btn => btn
-                .setButtonText(t('common.cancel'))
-                .onClick(() => this.close())
-            );
-    }
-
-    onClose() { this.contentEl.empty(); }
-}
-
-/** 粘贴事件弹窗：多选星期几 */
-class PasteDayEventsModal extends Modal {
-    constructor(
-        app: App,
-        /** 被复制的来源（周键 + 星期几），用于提示 */
-        private source: { weekKey: WeekKey; day: number } | null,
-        private onConfirm: (days: number[]) => void,
-    ) {
-        super(app);
-    }
-
-    onOpen() {
-        const { contentEl } = this;
-        contentEl.empty();
-        contentEl.createEl('h3', { text: t('eventCopy.pasteTitle') });
-
-        // 显示当前被复制的是哪一年、哪一周、哪一天
-        if (this.source) {
-            const { year, week } = parseWeekKey(this.source.weekKey);
-            const dayName = getWeekDays()[this.source.day - 1] ?? '';
-            contentEl.createDiv({
-                cls: 'event-copy-source-hint',
-                text: t('eventCopy.sourceHint', { year, week, day: dayName }),
-            });
-        }
-
-        const selectedDays = new Set<number>();
-        const days = getWeekDays();
-        const dayRow = contentEl.createDiv({ cls: 'apply-day-row' });
-        const dayBtns: HTMLElement[] = [];
-
-        for (let i = 1; i <= 7; i++) {
-            const btn = dayRow.createEl('button', {
-                text: days[i - 1],
-                cls: 'apply-day-btn',
-            });
-            dayBtns.push(btn);
-            btn.onclick = () => {
-                if (selectedDays.has(i)) {
-                    selectedDays.delete(i);
-                    btn.removeClass('is-selected');
-                } else {
-                    selectedDays.add(i);
-                    btn.addClass('is-selected');
-                }
-            };
-        }
-
-        // 快捷按钮行
-        const quickRow = contentEl.createDiv({ cls: 'apply-quick-row' });
-        const selectAllBtn = quickRow.createEl('button', {
-            text: t('template.selectAll'),
-            cls: 'template-action-btn',
-        });
-        selectAllBtn.onclick = () => {
-            for (let i = 1; i <= 7; i++) selectedDays.add(i);
-            dayBtns.forEach(btn => btn.addClass('is-selected'));
-        };
-        const clearBtn = quickRow.createEl('button', {
-            text: t('template.clearAll'),
-            cls: 'template-action-btn',
-        });
-        clearBtn.onclick = () => {
-            selectedDays.clear();
-            dayBtns.forEach(btn => btn.removeClass('is-selected'));
-        };
-
-        new Setting(contentEl)
-            .addButton(btn => btn
-                .setButtonText(t('common.confirm'))
-                .setCta()
-                .onClick(() => {
-                    if (selectedDays.size === 0) {
-                        new Notice(t('template.selectAtLeastOne'));
-                        return;
-                    }
-                    this.onConfirm(Array.from(selectedDays));
-                    this.close();
-                })
-            )
-            .addButton(btn => btn
-                .setButtonText(t('common.cancel'))
-                .onClick(() => this.close())
-            );
-    }
-
-    onClose() { this.contentEl.empty(); }
 }
 
 /** 粘贴全周事件弹窗：显示「来源周 → 复制到 → 当前周」，确认后生效 */
