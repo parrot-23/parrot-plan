@@ -231,7 +231,7 @@ export class WeekScheduleView extends ItemView {
             async (item) => {              // onUpdate 回调
                 await this.save();
             },
-            { currentWeekKey: this.currentWeekKey, events: this.events, inboxRepo: this.inboxRepo() },  // 用于「周目标」筛选与统计
+            { inboxRepo: this.inboxRepo() },
         );
         // 恢复任务面板列表的滚动位置，实现无感刷新
         if (prevTaskListScrollTop > 0) {

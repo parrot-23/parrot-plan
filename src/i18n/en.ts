@@ -252,6 +252,9 @@ export const en: I18nMessages = {
     'today.tabToday': 'Today',
     'today.tabDayTasks': "Today's tasks",
     'today.tabExtraTasks': 'Extra tasks',
+    'today.tabWeek': 'This week',
+    'today.weekCategoryDurationTitle': 'Executed duration by category this week',
+    'today.weekCategoryDurationEmpty': 'No executions this week',
 
     // Check view (PDCA Check)
     'check.planVsExecTitle': 'Plan vs Execution',

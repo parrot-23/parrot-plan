@@ -250,6 +250,9 @@ export const zh = {
     'today.tabToday': '今日情况',
     'today.tabDayTasks': '当天任务',
     'today.tabExtraTasks': '额外任务',
+    'today.tabWeek': '本周情况',
+    'today.weekCategoryDurationTitle': '本周各分类已执行时长',
+    'today.weekCategoryDurationEmpty': '本周暂无执行记录',
 
     // 检查视图（PDCA 的 Check）
     'check.planVsExecTitle': '计划 vs 执行',

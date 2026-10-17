@@ -3951,6 +3951,32 @@
     color: var(--text-muted);
 }
 
+/* 本周情况：周目标卡片方框（复用 week-goal-card 卡片样式） */
+.today-week-goal-box {
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 10px 14px;
+    margin-bottom: 8px;
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 10px;
+    background: var(--background-secondary);
+    max-height: 320px;
+    overflow-y: auto;
+}
+
+.today-week-goal-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-normal);
+}
+
+.today-week-goal-empty {
+    font-size: 12px;
+    color: var(--text-muted);
+}
+
 .today-cat-duration-chart {
     display: flex;
     flex-direction: column;
@@ -4399,12 +4425,16 @@
     height: 100%;
     box-sizing: border-box;
     overflow-y: auto;
+    /* 横向不滚动：内部宽度严格限制在面板内 */
+    overflow-x: hidden;
     border-right: 1px solid var(--background-modifier-border);
 }
 
 .today-timeline {
     display: flex;
     flex-direction: row;
+    width: 100%;
+    box-sizing: border-box;
 }
 
 .today-time-column {
@@ -4432,6 +4462,15 @@
     border-bottom: 1px solid var(--background-modifier-border);
 }
 
+/* 最后一个刻度（24 点）：不占高度，仅作为当天列底部的对齐标记 */
+.today-time-column .time-cell.hour:last-child {
+    height: 0;
+    padding: 0;
+    border-bottom: none;
+    overflow: visible;
+    align-items: flex-end;
+}
+
 /* 日执行时间轴网格：每小时一个背景格子（高度由 --hour-height 控制，最小 30px） */
 .today-day-column .hour-cell.hour {
     height: var(--hour-height, 30px);
@@ -4456,7 +4495,10 @@
 
 .today-day-column {
     flex: 1;
+    /* 允许 flex 子项收缩到内容宽度以下，避免卡片撑出横向滚动条 */
+    min-width: 0;
     position: relative;
+    overflow: hidden;
 }
 
 /* 日执行时间轴：执行记录卡片按小时格子横向切分（left/width 由 JS 按分钟计算） */
@@ -4469,6 +4511,8 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+    /* 边框算在宽度内，避免百分比宽度 + 边框撑出容器 */
+    box-sizing: border-box;
 }
 
 /* 习惯时间点标记：已分配到当天且启用习惯时间点的任务，在对应时间点透明化显示 */
