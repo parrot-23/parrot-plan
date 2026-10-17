@@ -113,8 +113,47 @@ export class WorkbenchView {
         toolbar.createDiv({ cls: 'wb-toolbar-title', text: this.getActiveLayoutName() });
         const actions = toolbar.createDiv({ cls: 'wb-toolbar-actions' });
 
-        // 添加卡片按钮：仅编辑态显示
+        // 编辑态：依次显示「添加系统卡片 / 添加图表卡片 / 添加表单卡片 / 添加装饰卡片 / 退出编辑」
         if (this.editingLayout) {
+            // 系统卡片：按「任务 / OKR / PDCA / GTD」分组展示（含原收集卡片 + 从图表卡片移入的统计卡片）
+            const systemBtn = actions.createEl('button', {
+                cls: 'wb-add-btn',
+                text: t('workbench.addSystemCard'),
+            });
+            systemBtn.onclick = () => this.showAddCardMenu(systemBtn, [
+                { key: 'workbench.group.task', match: (tpl) => ['task-stats', 'executed-task-count', 'execution-total-duration', 'day-execution-chart'].includes(tpl.id) },
+                { key: 'workbench.group.okr', match: (tpl) => tpl.id === 'event-completion' },
+                { key: 'workbench.group.pdca', match: (tpl) => ['category-distribution', 'usage-days'].includes(tpl.id) },
+                { key: 'workbench.group.gtd', match: (tpl) => tpl.id === 'collect-inbox' },
+            ]);
+
+            // 图表卡片：仅保留热力活跃图
+            const chartBtn = actions.createEl('button', {
+                cls: 'wb-add-btn',
+                text: t('workbench.addIconCard'),
+            });
+            chartBtn.onclick = () => this.showAddCardMenu(chartBtn, [
+                { match: (tpl) => tpl.id === 'activity-heatmap' },
+            ]);
+
+            // 表单卡片：周期填写 + 固定填写
+            const formBtn = actions.createEl('button', {
+                cls: 'wb-add-btn',
+                text: t('workbench.addFormCard'),
+            });
+            formBtn.onclick = () => this.showAddCardMenu(formBtn, [
+                { match: (tpl) => tpl.mode === 'periodic' || tpl.mode === 'fixed' },
+            ]);
+
+            // 装饰卡片：日历 + 时钟
+            const decoBtn = actions.createEl('button', {
+                cls: 'wb-add-btn',
+                text: t('workbench.addDecoCard'),
+            });
+            decoBtn.onclick = () => this.showAddCardMenu(decoBtn, [
+                { match: (tpl) => tpl.mode === 'calendar' || tpl.mode === 'clock' },
+            ]);
+
             // 退出编辑按钮：退出编辑态并持久化
             const exitBtn = actions.createEl('button', {
                 cls: 'wb-exit-edit-btn',
@@ -127,12 +166,6 @@ export class WorkbenchView {
                     if (this.container) void this.renderInto(this.container);
                 });
             };
-
-            const addBtn = actions.createEl('button', {
-                cls: 'wb-add-btn',
-                text: t('workbench.addCard'),
-            });
-            addBtn.onclick = () => this.showAddCardMenu(addBtn);
         }
 
         // 编辑布局按钮：切换编辑态（编辑态下隐藏，避免重复触发）
@@ -306,51 +339,33 @@ export class WorkbenchView {
     }
 
     /**
-     * 弹出添加卡片菜单：按分类区块列出模板供选择。
-     * 分类顺序为「图标、视图、其他」，每个分类一个区块（带标题），
-     * 区块内每个类型为一个「图标 + 文字」方块，从左到右排列。
+     * 弹出添加卡片菜单：按分组列出模板供选择。
+     * 每个分组可带行标题（key），分组内每个类型为一个「图标 + 文字」方块，从左到右排列。
+     * @param anchor 触发按钮（菜单挂在其内部）
+     * @param groups 分组定义列表；key 存在则渲染行标题，否则平铺
      */
-    private showAddCardMenu(anchor: HTMLElement) {
+    private showAddCardMenu(
+        anchor: HTMLElement,
+        groups: Array<{ key?: string; match: (tpl: CardTemplate) => boolean }>,
+    ) {
         const menu = anchor.createDiv({ cls: 'wb-add-menu' });
 
-        // 分类定义：key 用于 i18n 文案，match 判断模板归属
-        const categories: Array<{
-            key: string;
-            match: (tpl: CardTemplate) => boolean;
-        }> = [
-            { key: 'workbench.category.gtd', match: (tpl) => tpl.mode === 'collect' },
-            { key: 'workbench.category.chart', match: (tpl) => tpl.mode === 'stats' },
-            { key: 'workbench.category.view', match: (tpl) => tpl.mode === 'periodic' },
-            {
-                key: 'workbench.category.other',
-                match: (tpl) => tpl.mode === 'fixed' || tpl.mode === 'calendar' || tpl.mode === 'clock',
-            },
-        ];
-
-        // 已归类的模板 id，用于兜底「其他」区块
-        const assigned = new Set<string>();
-
-        for (const cat of categories) {
-            const items = this.templates.filter((tpl) => !assigned.has(tpl.id) && cat.match(tpl));
+        for (const group of groups) {
+            const items = this.templates.filter((tpl) => group.match(tpl));
             if (items.length === 0) continue;
-            for (const tpl of items) assigned.add(tpl.id);
 
-            const section = menu.createDiv({ cls: 'wb-add-section' });
-            section.createDiv({ cls: 'wb-add-section-title', text: t(cat.key as never) });
-            const grid = section.createDiv({ cls: 'wb-add-section-grid' });
-            for (const tpl of items) {
-                this.renderAddCardItem(grid, tpl, menu);
-            }
-        }
-
-        // 兜底：未被任何分类匹配的模板放入「其他」区块
-        const rest = this.templates.filter((tpl) => !assigned.has(tpl.id));
-        if (rest.length > 0) {
-            const section = menu.createDiv({ cls: 'wb-add-section' });
-            section.createDiv({ cls: 'wb-add-section-title', text: t('workbench.category.other') });
-            const grid = section.createDiv({ cls: 'wb-add-section-grid' });
-            for (const tpl of rest) {
-                this.renderAddCardItem(grid, tpl, menu);
+            if (group.key) {
+                const section = menu.createDiv({ cls: 'wb-add-section' });
+                section.createDiv({ cls: 'wb-add-section-title', text: t(group.key as never) });
+                const grid = section.createDiv({ cls: 'wb-add-section-grid' });
+                for (const tpl of items) {
+                    this.renderAddCardItem(grid, tpl, menu);
+                }
+            } else {
+                const grid = menu.createDiv({ cls: 'wb-add-section-grid' });
+                for (const tpl of items) {
+                    this.renderAddCardItem(grid, tpl, menu);
+                }
             }
         }
 
