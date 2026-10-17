@@ -127,28 +127,18 @@ export class WorkbenchView {
                 { key: 'workbench.group.gtd', match: (tpl) => tpl.id === 'collect-inbox' },
             ]);
 
-            // 图表卡片：热力活跃图 + 各类图表卡片（指标卡/柱状图/折线图/条形图/面积图/饼图/环形图/雷达图/散点图/漏斗图/词云）
+            // 图表卡片：按「指标展示 / 比较排名 / 趋势分布 / 占比构成 / 流程关系 / 特殊展示」分组
             const chartBtn = actions.createEl('button', {
                 cls: 'wb-add-btn',
                 text: t('workbench.addIconCard'),
             });
             chartBtn.onclick = () => this.showAddCardMenu(chartBtn, [
-                {
-                    match: (tpl) => [
-                        'activity-heatmap',
-                        'metric-card',
-                        'bar-chart',
-                        'line-chart',
-                        'hbar-chart',
-                        'area-chart',
-                        'pie-chart',
-                        'donut-chart',
-                        'radar-chart',
-                        'scatter-chart',
-                        'funnel-chart',
-                        'wordcloud-chart',
-                    ].includes(tpl.id),
-                },
+                { key: 'workbench.group.metric', match: (tpl) => ['metric-card', 'activity-heatmap'].includes(tpl.id) },
+                { key: 'workbench.group.compare', match: (tpl) => ['bar-chart', 'hbar-chart'].includes(tpl.id) },
+                { key: 'workbench.group.trend', match: (tpl) => ['line-chart', 'area-chart', 'scatter-chart'].includes(tpl.id) },
+                { key: 'workbench.group.proportion', match: (tpl) => ['pie-chart', 'donut-chart'].includes(tpl.id) },
+                { key: 'workbench.group.flow', match: (tpl) => tpl.id === 'funnel-chart' },
+                { key: 'workbench.group.special', match: (tpl) => ['wordcloud-chart', 'radar-chart'].includes(tpl.id) },
             ]);
 
             // 表单卡片：周期填写 + 固定填写
@@ -367,9 +357,9 @@ export class WorkbenchView {
 
         for (const group of groups) {
             const items = this.templates.filter((tpl) => group.match(tpl));
-            if (items.length === 0) continue;
 
             if (group.key) {
+                // 带标题的分组：即使无匹配项也保留标题行（底下留空位）
                 const section = menu.createDiv({ cls: 'wb-add-section' });
                 section.createDiv({ cls: 'wb-add-section-title', text: t(group.key as never) });
                 const grid = section.createDiv({ cls: 'wb-add-section-grid' });
@@ -377,6 +367,8 @@ export class WorkbenchView {
                     this.renderAddCardItem(grid, tpl, menu);
                 }
             } else {
+                // 无标题分组：无匹配项则跳过
+                if (items.length === 0) continue;
                 const grid = menu.createDiv({ cls: 'wb-add-section-grid' });
                 for (const tpl of items) {
                     this.renderAddCardItem(grid, tpl, menu);
