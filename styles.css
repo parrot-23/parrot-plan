@@ -3462,6 +3462,9 @@
 }
 
 .today-task-list-done {
+    position: absolute;
+    right: 6px;
+    bottom: 4px;
     display: inline-flex;
     align-items: center;
     flex-shrink: 0;
