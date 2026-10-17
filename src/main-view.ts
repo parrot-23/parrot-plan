@@ -328,6 +328,11 @@ export class MainView extends ItemView {
         await this.weekView.save();
     }
 
+    /** 外部数据变更后重新渲染当前视图（如 vault 文件移动导致路径更新） */
+    async refresh() {
+        await this.renderContent();
+    }
+
     /** 清空数据后重置视图 */
     async resetData() {
         this.weekView.resetData();

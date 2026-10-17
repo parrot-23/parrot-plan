@@ -132,6 +132,7 @@ export const zh = {
     'taskPlan.statsTitle': '统计信息',
     'taskPlan.statsExecCount': '已执行次数',
     'taskPlan.statsTotalDuration': '总执行时长',
+    'taskPlan.statsTreeDuration': '任务树总时长',
     'taskPlan.durationHourMinute': '{hours} 小时 {minutes} 分钟',
     'taskPlan.durationMinute': '{minutes} 分钟',
 

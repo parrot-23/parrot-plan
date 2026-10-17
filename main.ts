@@ -1,6 +1,7 @@
 import { App, Modal, Notice, Plugin, PluginSettingTab, type SettingDefinitionItem } from 'obsidian';
 
 import { VIEW_TYPE_MAIN, MainView } from './src/main-view';
+import type { FileData } from './src/datatypes/domain';
 import { BaseRepo, DEFAULT_CACHE_DIR_NAME, type PluginData } from './src/repos/base-repo';
 import { GtdRepo } from './src/repos/gtd-repo';
 import { PdcaRepo } from './src/repos/pdca-repo';
@@ -152,8 +153,62 @@ export default class ParrotPlanPlugin extends Plugin {
         // 设置页
         this.addSettingTab(new ParrotPlanSettingTab(this.app, this));
 
+        // 文件/文件夹在 vault 内被移动或重命名时，同步更新任务中引用的路径
+        this.registerEvent(
+            this.app.vault.on('rename', (file, oldPath) => {
+                void this.handleVaultRename(oldPath, file.path);
+            }),
+        );
+
         // 缓存启用时，把说明图片下载到缓存目录
         void downloadImageToCache(this.app, this.cacheDirName, this.cacheEnabled);
+    }
+
+    /**
+     * vault 内文件/文件夹被移动或重命名后，更新任务中引用的路径：
+     * 文件板块的 path、收集篮子的 path（文件夹移动时同步更新其下所有文件路径）。
+     * 有变更时保存数据并刷新已打开的主视图。
+     */
+    private async handleVaultRename(oldPath: string, newPath: string): Promise<void> {
+        const d = this.data;
+        if (!d || oldPath === newPath) return;
+
+        // 文件本身被重命名，或所在文件夹被移动/重命名
+        const remap = (path: string | undefined): string | undefined => {
+            if (!path) return path;
+            if (path === oldPath) return newPath;
+            if (path.startsWith(`${oldPath}/`)) return `${newPath}${path.slice(oldPath.length)}`;
+            return path;
+        };
+
+        let changed = false;
+        for (const item of d.inboxData.items) {
+            for (const section of item.sections ?? []) {
+                if (section.type !== 'file') continue;
+                for (const fileItem of (section.data as FileData).items) {
+                    const next = remap(fileItem.path);
+                    if (next !== fileItem.path) {
+                        fileItem.path = next;
+                        changed = true;
+                    }
+                }
+            }
+            for (const entry of item.basket ?? []) {
+                const next = remap(entry.path);
+                if (next !== entry.path) {
+                    entry.path = next;
+                    changed = true;
+                }
+            }
+        }
+        if (!changed) return;
+
+        await this.saveAll();
+        for (const leaf of this.app.workspace.getLeavesOfType(VIEW_TYPE_MAIN)) {
+            if (leaf.view instanceof MainView) {
+                await leaf.view.refresh();
+            }
+        }
     }
 
     /**

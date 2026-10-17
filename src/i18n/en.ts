@@ -134,6 +134,7 @@ export const en: I18nMessages = {
     'taskPlan.statsTitle': 'Statistics',
     'taskPlan.statsExecCount': 'Executions',
     'taskPlan.statsTotalDuration': 'Total duration',
+    'taskPlan.statsTreeDuration': 'Task tree total',
     'taskPlan.durationHourMinute': '{hours} h {minutes} min',
     'taskPlan.durationMinute': '{minutes} min',
 

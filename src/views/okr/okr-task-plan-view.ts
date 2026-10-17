@@ -428,7 +428,11 @@ export class OkrTaskPlanView {
                 const pathInput = line.createEl('input', { type: 'text', cls: 'swimlane-section-card-edit-text' });
                 pathInput.value = it.path;
                 pathInput.placeholder = t('section.filePlaceholder');
-                pathInput.onchange = () => { it.path = pathInput.value; };
+                pathInput.onchange = () => {
+                    it.path = pathInput.value;
+                    // 未自定义显示名时，用文件路径作为显示名
+                    if (!it.text) it.text = pathInput.value;
+                };
                 // 点击/输入时弹出 vault 文件下拉列表，按输入内容筛选
                 new FilePathSuggest(this.app, pathInput, (path) => {
                     it.path = path;
@@ -568,19 +572,13 @@ export class OkrTaskPlanView {
     /** 统计方块：方块内为时长，方块下方为任务名 */
     private renderStatsBlock(row: HTMLElement, minutes: number, label: string): void {
         const block = row.createDiv({ cls: 'task-plan-stats-block' });
-        block.createDiv({ cls: 'task-plan-stats-box', text: this.formatDuration(minutes) });
-        block.createDiv({ cls: 'task-plan-stats-name', text: label });
-    }
-
-    /** 将分钟数格式化为「X 小时 Y 分钟」/「Y 分钟」 */
-    private formatDuration(minutes: number): string {
+        const box = block.createDiv({ cls: 'task-plan-stats-box' });
         const total = Math.max(0, Math.round(minutes));
-        const hours = Math.floor(total / 60);
-        const mins = total % 60;
-        if (hours > 0) {
-            return t('taskPlan.durationHourMinute', { hours: String(hours), minutes: String(mins) });
-        }
-        return t('taskPlan.durationMinute', { minutes: String(mins) });
+        box.createSpan({ cls: 'task-plan-stats-value', text: String(Math.floor(total / 60)) });
+        box.createSpan({ cls: 'task-plan-stats-unit', text: 'h' });
+        box.createSpan({ cls: 'task-plan-stats-value', text: String(total % 60) });
+        box.createSpan({ cls: 'task-plan-stats-unit', text: 'm' });
+        block.createDiv({ cls: 'task-plan-stats-name', text: label });
     }
 
     /**
