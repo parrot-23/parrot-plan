@@ -514,7 +514,9 @@ export class OkrTaskPlanView {
     }
 
     /**
-     * 统计信息方框：当前选中任务的执行统计（已执行次数、总执行时长）。
+     * 统计信息方框：一行从左到右依次为
+     * 任务树总时长（含所有子孙）→ 当前任务自身时长 → 各直接子任务总时长（含其所有子孙）。
+     * 每项为「方块 + 方块下方任务名」，方块内显示时长。
      * 数据来源为执行记录（按 inboxId 聚合），无选中任务时不渲染。
      */
     private renderStatsBox(wrap: HTMLElement): void {
@@ -526,29 +528,48 @@ export class OkrTaskPlanView {
             : undefined;
         if (!item) return;
 
-        // 按任务聚合执行记录：次数 = 记录条数，时长 = 各条 end-start 之和（分钟）
-        const execs = this.getExecutions().filter(ex => ex.inboxId === item.id);
-        const count = execs.length;
-        const totalMinutes = execs.reduce(
-            (sum, ex) => sum + Math.max(0, (ex.end ?? ex.start) - ex.start),
-            0,
-        );
+        // 按任务聚合执行时长（分钟）
+        const minutesByTask = new Map<string, number>();
+        for (const ex of this.getExecutions()) {
+            if (!ex.inboxId) continue;
+            const minutes = Math.max(0, (ex.end ?? ex.start) - ex.start);
+            minutesByTask.set(ex.inboxId, (minutesByTask.get(ex.inboxId) ?? 0) + minutes);
+        }
 
-        const area = wrap.createDiv({ cls: 'swimlane-section-area okr-stats-area' });
+        // 任务自身 + 所有子孙的执行时长
+        const subtreeMinutes = (taskId: string): number => {
+            let total = minutesByTask.get(taskId) ?? 0;
+            for (const child of this.inboxData.items) {
+                if (child.removed || child.parentId !== taskId) continue;
+                total += subtreeMinutes(child.id);
+            }
+            return total;
+        };
+
+        const area = wrap.createDiv({ cls: 'swimlane-section-area task-plan-stats-area' });
         const header = area.createDiv({ cls: 'swimlane-section-area-header' });
         header.createDiv({ cls: 'swimlane-section-area-title', text: t('taskPlan.statsTitle') });
 
-        const body = area.createDiv({ cls: 'okr-stats-body' });
+        const body = area.createDiv({ cls: 'task-plan-stats-body' });
 
-        // 已执行次数
-        const countRow = body.createDiv({ cls: 'okr-stats-row' });
-        countRow.createSpan({ cls: 'okr-stats-label', text: t('taskPlan.statsExecCount') });
-        countRow.createSpan({ cls: 'okr-stats-value', text: `${count} ${t('okr.unitTimes')}` });
+        // 1. 当前任务树总时长（含所有子孙）
+        this.renderStatsBlock(body, subtreeMinutes(item.id), t('taskPlan.statsTreeDuration'));
 
-        // 总执行时长
-        const durationRow = body.createDiv({ cls: 'okr-stats-row' });
-        durationRow.createSpan({ cls: 'okr-stats-label', text: t('taskPlan.statsTotalDuration') });
-        durationRow.createSpan({ cls: 'okr-stats-value', text: this.formatDuration(totalMinutes) });
+        // 2. 当前任务节点自身时长
+        this.renderStatsBlock(body, minutesByTask.get(item.id) ?? 0, item.title);
+
+        // 3. 每个直接子任务的总时长（含其所有子孙）
+        const children = this.inboxData.items.filter(i => !i.removed && i.parentId === item.id);
+        for (const child of children) {
+            this.renderStatsBlock(body, subtreeMinutes(child.id), child.title);
+        }
+    }
+
+    /** 统计方块：方块内为时长，方块下方为任务名 */
+    private renderStatsBlock(row: HTMLElement, minutes: number, label: string): void {
+        const block = row.createDiv({ cls: 'task-plan-stats-block' });
+        block.createDiv({ cls: 'task-plan-stats-box', text: this.formatDuration(minutes) });
+        block.createDiv({ cls: 'task-plan-stats-name', text: label });
     }
 
     /** 将分钟数格式化为「X 小时 Y 分钟」/「Y 分钟」 */

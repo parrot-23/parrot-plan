@@ -8,7 +8,6 @@ import type { InboxData } from './datatypes/domain';
 import { WeekScheduleView } from './views/pdca/week-schedule-view';
 import type { EventBlock, ExecutionRecord, RunningTask } from './datatypes/domain';
 import { YearView } from './views/pdca/year-view';
-import { TaskPlanView } from './views/pdca/task-plan-view';
 import { TodayView } from './views/pdca/today-view';
 import { CheckView } from './views/pdca/check-view';
 import { ImproveView } from './views/pdca/improve-view';
@@ -93,7 +92,6 @@ export class MainView extends ItemView {
     plugin: Plugin;
     private weekView: WeekScheduleView;
     private yearView: YearView;
-    private taskPlanView: TaskPlanView;
     private todayView: TodayView;
     private checkView: CheckView;
     private improveView: ImproveView;
@@ -167,13 +165,6 @@ export class MainView extends ItemView {
             () => this.weekView.save(),
             undefined,
             () => this.weekView.plannedWeeks,
-            this.inboxRepo(),
-        );
-        this.taskPlanView = new TaskPlanView(
-            this.app,
-            this.weekView.inboxData,
-            this.weekView.planCategoryData,
-            () => this.weekView.save(),
             this.inboxRepo(),
         );
         this.todayView = new TodayView(
@@ -519,11 +510,6 @@ export class MainView extends ItemView {
 
         if (this.activeTab === 'year') {
             await this.yearView.renderInto(this.contentRoot);
-            return;
-        }
-
-        if (this.activeTab === 'taskPlan') {
-            await this.taskPlanView.renderInto(this.contentRoot);
             return;
         }
 
