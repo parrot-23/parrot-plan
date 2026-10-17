@@ -127,7 +127,9 @@ export class CardComponent {
     /** 渲染卡片标题：编辑布局时为输入框，非编辑态为普通文本 */
     private renderTitle(container: HTMLElement, instance: CardInstance, template: CardTemplate, editing: boolean) {
         if (!editing) {
-            container.createDiv({ cls: 'wb-card-title', text: instance.title ?? template.name });
+            // 标题允许为空：为空时不渲染标题行
+            const title = instance.title ?? template.name;
+            if (title) container.createDiv({ cls: 'wb-card-title', text: title });
             return;
         }
 
@@ -137,7 +139,8 @@ export class CardComponent {
         });
         input.value = instance.title ?? '';
         input.onchange = () => {
-            instance.title = input.value.trim() || undefined;
+            // 标题允许为空：清空后保存为空字符串，不再回退到模板名
+            instance.title = input.value.trim();
             void this.deps.save();
         };
     }

@@ -6771,8 +6771,9 @@
     overflow: visible;
 }
 
-/* 自定义列表卡片：标题输入框（外观接近标题，聚焦时显示边框） */
-.wb-card-title-input {
+/* 卡片标题输入框（外观接近标题，聚焦时显示边框）
+   提高选择器优先级，覆盖主题对 input[type='text'] 的白色背景 */
+.wb-card .wb-card-title-input {
     width: 100%;
     padding: 2px 4px;
     margin-bottom: 8px;
@@ -6785,13 +6786,13 @@
     box-sizing: border-box;
 }
 
-.wb-card-title-input:hover {
+.wb-card .wb-card-title-input:hover {
     border-color: var(--background-modifier-border);
 }
 
-.wb-card-title-input:focus {
+.wb-card .wb-card-title-input:focus {
     border-color: var(--interactive-accent);
-    outline: none;
+    /* outline: none; */
     background: transparent;
 }
 
