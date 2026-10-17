@@ -4,6 +4,7 @@
   "mode": "stats",
   "description": "展示任务总数统计",
   "source": {
-    "type": "task-count"
+    "dataSource": "tasks",
+    "aggregation": "count"
   }
 }

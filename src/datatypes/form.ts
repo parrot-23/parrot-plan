@@ -49,13 +49,18 @@ export type ChartType =
     | 'wordcloud'
     | 'metric';
 
+/** 数据源：底层领域数据（来自 repos 目录各领域仓库） */
+export type DataSourceType = 'events' | 'executions' | 'tasks';
+
 /** stats 模式的数据来源定义 */
 export interface CardSource {
-    /** 来源类型（内置数据源标识） */
-    type: string;
-    /** 来源参数（如统计范围、聚合方式） */
+    /** 数据源：底层领域数据（计划事件 / 执行记录 / 收集盒任务） */
+    dataSource: DataSourceType;
+    /** 聚合方式：对数据源做怎样的统计（如按天/按周/按分类/计数等） */
+    aggregation: string;
+    /** 聚合参数（如指标口径 count/duration） */
     params?: Record<string, unknown>;
-    /** 图表类型（缺省时仅展示数字卡，不绘制图表） */
+    /** 图表类型（固定，不随数据源/聚合方式变化） */
     chart?: ChartType;
 }
 

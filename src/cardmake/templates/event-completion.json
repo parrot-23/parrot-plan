@@ -4,6 +4,7 @@
   "mode": "stats",
   "description": "展示计划事件完成情况",
   "source": {
-    "type": "event-completion"
+    "dataSource": "events",
+    "aggregation": "completion"
   }
 }

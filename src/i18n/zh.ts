@@ -575,6 +575,7 @@ export const zh = {
     'workbench.collectEmpty': '暂无收集记录',
     'workbench.cardSettings': '设置',
     'workbench.settingsDataSource': '数据源',
+    'workbench.settingsAggregation': '聚合方式',
     'workbench.settingsNoConfig': '该卡片无可配置项',
 
     // 布局方案弹窗

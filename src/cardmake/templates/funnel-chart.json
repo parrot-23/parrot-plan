@@ -4,7 +4,8 @@
   "mode": "stats",
   "description": "任务状态流转（漏斗图）",
   "source": {
-    "type": "funnel-status",
+    "dataSource": "tasks",
+    "aggregation": "by-status",
     "chart": "funnel"
   }
 }

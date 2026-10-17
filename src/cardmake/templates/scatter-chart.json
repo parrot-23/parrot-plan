@@ -4,7 +4,8 @@
   "mode": "stats",
   "description": "执行时间与时长分布（散点图）",
   "source": {
-    "type": "scatter-duration",
+    "dataSource": "executions",
+    "aggregation": "scatter",
     "chart": "scatter"
   }
 }

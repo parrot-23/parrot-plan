@@ -2,14 +2,14 @@
 import type { App } from 'obsidian';
 import { Notice } from 'obsidian';
 
-import type { CardTemplate } from '../../datatypes/form';
+import type { CardTemplate, DataSourceType } from '../../datatypes/form';
 import type { CardInstance, WorkbenchData } from '../../datatypes/card';
 import { DEFAULT_LAYOUT_ID } from '../../datatypes/card';
 import type { WorkbenchRepo } from '../../repos/workbench-repo';
 import type { GtdRepo } from '../../repos/gtd-repo';
 import { loadAllTemplates } from '../../cardmake/data/template-loader';
 import { getCardRenderer } from '../../cardmake/cards/card-registry';
-import { SOURCE_CATALOG } from '../../datatypes/source-catalog';
+import { DATA_SOURCE_CATALOG, getDataSourceMeta } from '../../datatypes/source-catalog';
 import type { CardRenderContext } from '../../datatypes/renderer';
 import { createDataProvider } from '../../cardmake/data/provider';
 import type { EventBlock, ExecutionRecord } from '../../datatypes/domain';
@@ -464,7 +464,8 @@ export class WorkbenchView {
 
     /**
      * 弹出卡片设置面板：悬浮在卡片周围。
-     * 仅 stats 卡片可配置数据源（source.type）；其他卡片显示「无可配置项」。
+     * 仅 stats 卡片可配置数据源（source.dataSource）与聚合方式（source.aggregation）；
+     * 图表类型（chart）固定不变。其他卡片显示「无可配置项」。
      */
     private showCardSettings(
         anchor: HTMLElement,
@@ -481,30 +482,58 @@ export class WorkbenchView {
             panel.createDiv({ cls: 'wb-card-settings-empty', text: t('workbench.settingsNoConfig') });
         } else {
             const currentSource = instance.source ?? template.source;
-            const currentType = currentSource?.type ?? '';
+            const currentDataSource = currentSource?.dataSource ?? 'executions';
+            const currentAggregation = currentSource?.aggregation ?? 'count';
+            // 图表类型固定：优先实例，其次模板
+            const chart = instance.source?.chart ?? template.source?.chart;
 
-            const label = panel.createDiv({ cls: 'wb-card-settings-label', text: t('workbench.settingsDataSource') });
-            const select = panel.createEl('select', { cls: 'wb-card-settings-select' });
-            for (const meta of SOURCE_CATALOG) {
-                const opt = select.createEl('option', { text: meta.label, value: meta.type });
-                if (meta.type === currentType) opt.selected = true;
+            // 数据源下拉
+            const dsLabel = panel.createDiv({ cls: 'wb-card-settings-label', text: t('workbench.settingsDataSource') });
+            const dsSelect = panel.createEl('select', { cls: 'wb-card-settings-select' });
+            for (const meta of DATA_SOURCE_CATALOG) {
+                const opt = dsSelect.createEl('option', { text: meta.label, value: meta.key });
+                if (meta.key === currentDataSource) opt.selected = true;
             }
-            select.onchange = () => {
-                const meta = SOURCE_CATALOG.find((s) => s.type === select.value);
+
+            // 聚合方式下拉
+            const aggLabel = panel.createDiv({ cls: 'wb-card-settings-label', text: t('workbench.settingsAggregation') });
+            const aggSelect = panel.createEl('select', { cls: 'wb-card-settings-select' });
+
+            const renderAggregations = (dataSource: string) => {
+                aggSelect.empty();
+                const meta = getDataSourceMeta(dataSource as DataSourceType);
                 if (!meta) return;
-                // 切换数据源：保留图表类型（模板默认），更新 source.type 与默认参数
-                const chart = instance.source?.chart ?? template.source?.chart;
+                for (const agg of meta.aggregations) {
+                    const opt = aggSelect.createEl('option', { text: agg.label, value: agg.key });
+                    if (agg.key === currentAggregation) opt.selected = true;
+                }
+            };
+            renderAggregations(currentDataSource);
+
+            // 应用配置：写入 source（保留图表类型）
+            const apply = () => {
+                const dataSource = dsSelect.value;
+                const aggregation = aggSelect.value;
+                const meta = getDataSourceMeta(dataSource as DataSourceType);
+                const aggDef = meta?.aggregations.find((a) => a.key === aggregation);
                 const params: Record<string, unknown> = {};
-                for (const p of meta.params) {
+                for (const p of aggDef?.params ?? []) {
                     if (p.default !== undefined) params[p.key] = p.default;
                 }
                 this.workbenchRepo.updateInstance(instance.id, {
-                    source: { type: meta.type, chart, params },
+                    source: { dataSource: dataSource as DataSourceType, aggregation, chart, params },
                 });
                 void this.save().then(() => {
                     if (this.container) void this.renderInto(this.container);
                 });
             };
+
+            // 切换数据源：刷新聚合方式下拉，并应用
+            dsSelect.onchange = () => {
+                renderAggregations(dsSelect.value);
+                apply();
+            };
+            aggSelect.onchange = () => apply();
         }
 
         // 点击面板外部关闭

@@ -4,7 +4,8 @@
   "mode": "stats",
   "description": "任务标题关键词词频（词云）",
   "source": {
-    "type": "wordcloud-titles",
+    "dataSource": "tasks",
+    "aggregation": "wordcloud",
     "chart": "wordcloud"
   }
 }

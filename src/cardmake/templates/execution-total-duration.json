@@ -4,6 +4,7 @@
   "mode": "stats",
   "description": "展示用户执行的总时长（分钟）",
   "source": {
-    "type": "execution-total-duration"
+    "dataSource": "executions",
+    "aggregation": "total-duration"
   }
 }

@@ -8,7 +8,7 @@ export const statsCardRenderer: CardRenderer = {
         container.createDiv({ cls: 'wb-card-title', text: instance.title ?? template.name });
 
         const body = container.createDiv({ cls: 'wb-card-body' });
-        const source = template.source ?? instance.source;
+        const source = instance.source ?? template.source;
         if (!source) {
             body.createDiv({ cls: 'wb-stat-row' })
                 .createDiv({ cls: 'wb-stat-value', text: '—' });

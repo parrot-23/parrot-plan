@@ -577,6 +577,7 @@ export const en: I18nMessages = {
     'workbench.collectEmpty': 'No collected items yet',
     'workbench.cardSettings': 'Settings',
     'workbench.settingsDataSource': 'Data source',
+    'workbench.settingsAggregation': 'Aggregation',
     'workbench.settingsNoConfig': 'No configurable options for this card',
 
     // Layout scheme modal

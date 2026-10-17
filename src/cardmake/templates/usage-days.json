@@ -4,6 +4,7 @@
   "mode": "stats",
   "description": "展示用户累计使用的天数",
   "source": {
-    "type": "usage-days"
+    "dataSource": "executions",
+    "aggregation": "usage-days"
   }
 }

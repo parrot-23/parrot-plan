@@ -4,10 +4,10 @@
   "mode": "stats",
   "description": "按分类统计执行记录占比（环形图）",
   "source": {
-    "type": "category-distribution",
+    "dataSource": "executions",
+    "aggregation": "by-category",
     "chart": "donut",
     "params": {
-      "target": "execution",
       "metric": "count"
     }
   }

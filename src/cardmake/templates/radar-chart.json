@@ -4,7 +4,8 @@
   "mode": "stats",
   "description": "多维度综合指标（雷达图）",
   "source": {
-    "type": "radar-overview",
+    "dataSource": "executions",
+    "aggregation": "radar",
     "chart": "radar"
   }
 }

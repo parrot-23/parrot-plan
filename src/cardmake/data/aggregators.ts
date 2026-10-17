@@ -1,4 +1,5 @@
-// 统计聚合：按 source.type 分发，从 DataProvider 读取规范数据并聚合出指标。
+// 统计聚合：按 source.dataSource（数据源）+ source.aggregation（聚合方式）分发，
+// 从 DataProvider 读取规范数据并聚合出指标。
 // 输出两类结果：数字指标（StatItem[]）与图表序列（ChartSeries），
 // 供 stats 卡片渲染器分别绘制数字卡与图表。
 
@@ -35,40 +36,72 @@ export interface AggregationResult {
     wordcloud?: WordCloudSeries;
 }
 
-/** 按 source.type 聚合数据 */
+/** 按数据源 + 聚合方式聚合数据 */
 export function aggregate(source: CardSource, provider: DataProvider): AggregationResult {
-    switch (source.type) {
-        case 'task-count':
-            return aggregateTaskCount(provider);
-        case 'event-completion':
-            return aggregateEventCompletion(provider);
-        case 'execution-count':
-            return aggregateExecutionCount(provider);
-        case 'execution-summary':
-            return aggregateExecutionSummary(source, provider);
-        case 'category-distribution':
-            return aggregateCategoryDistribution(source, provider);
-        case 'activity-heatmap':
-            return aggregateActivityHeatmap(source, provider);
-        case 'plan-heatmap':
-            return aggregatePlanHeatmap(source, provider);
-        case 'usage-days':
-            return aggregateUsageDays(provider);
-        case 'executed-task-count':
-            return aggregateExecutedTaskCount(provider);
-        case 'execution-total-duration':
-            return aggregateExecutionTotalDuration(provider);
-        case 'radar-overview':
-            return aggregateRadarOverview(provider);
-        case 'scatter-duration':
-            return aggregateScatterDuration(provider);
-        case 'funnel-status':
-            return aggregateFunnelStatus(provider);
-        case 'wordcloud-titles':
-            return aggregateWordCloudTitles(provider);
-        default:
-            return { stats: [] };
+    const ds = source.dataSource;
+    const agg = source.aggregation;
+
+    // 计划事件
+    if (ds === 'events') {
+        switch (agg) {
+            case 'count':
+                return aggregateEventCount(provider);
+            case 'completion':
+                return aggregateEventCompletion(provider);
+            case 'by-day':
+                return aggregateEventsByDimension(provider, 'day', source);
+            case 'by-week':
+                return aggregateEventsByDimension(provider, 'week', source);
+            case 'by-category':
+                return aggregateEventsByCategory(provider, source);
+            default:
+                return { stats: [] };
+        }
     }
+
+    // 执行记录
+    if (ds === 'executions') {
+        switch (agg) {
+            case 'count':
+                return aggregateExecutionCount(provider);
+            case 'by-day':
+                return aggregateExecutionsByDimension(provider, 'day', source);
+            case 'by-week':
+                return aggregateExecutionsByDimension(provider, 'week', source);
+            case 'by-category':
+                return aggregateExecutionsByCategory(provider, source);
+            case 'usage-days':
+                return aggregateUsageDays(provider);
+            case 'executed-task-count':
+                return aggregateExecutedTaskCount(provider);
+            case 'total-duration':
+                return aggregateExecutionTotalDuration(provider);
+            case 'scatter':
+                return aggregateScatterDuration(provider);
+            case 'heatmap':
+                return aggregateActivityHeatmap(source, provider);
+            case 'radar':
+                return aggregateRadarOverview(provider);
+            default:
+                return { stats: [] };
+        }
+    }
+
+    // 收集盒任务
+    if (ds === 'tasks') {
+        switch (agg) {
+            case 'count':
+                return aggregateTaskCount(provider);
+            case 'by-status':
+                return aggregateFunnelStatus(provider);
+            case 'wordcloud':
+                return aggregateWordCloudTitles(provider);
+            default:
+                return { stats: [] };
+        }
+    }
+
+    return { stats: [] };
 }
 
 /** 任务总数（收集盒未移除任务） */
@@ -98,13 +131,17 @@ function aggregateExecutionCount(provider: DataProvider): AggregationResult {
     return { stats: [{ label: '执行记录', value: count }] };
 }
 
+/** 计划事件总数 */
+function aggregateEventCount(provider: DataProvider): AggregationResult {
+    const count = provider.getEvents().length;
+    return { stats: [{ label: '计划事件', value: count }] };
+}
+
 /**
- * 日执行统计：按维度聚合执行记录。
- * dimension: day（按天）/ week（按周）/ category（按分类）
+ * 执行记录按维度聚合（day / week）。
  * metric: count（次数）/ duration（时长，分钟）
  */
-function aggregateExecutionSummary(source: CardSource, provider: DataProvider): AggregationResult {
-    const dimension = (source.params?.dimension as string) ?? 'day';
+function aggregateExecutionsByDimension(provider: DataProvider, dimension: 'day' | 'week', source: CardSource): AggregationResult {
     const metric = (source.params?.metric as string) ?? 'count';
     const executions = provider.getExecutions();
 
@@ -127,25 +164,63 @@ function aggregateExecutionSummary(source: CardSource, provider: DataProvider): 
     };
 }
 
-/** 分类分布：按分类聚合执行记录（或计划事件）的占比 */
-function aggregateCategoryDistribution(source: CardSource, provider: DataProvider): AggregationResult {
-    const target = (source.params?.target as string) ?? 'execution';
+/**
+ * 计划事件按维度聚合（day / week）。
+ * metric: count（次数）/ duration（预估时长，分钟）
+ */
+function aggregateEventsByDimension(provider: DataProvider, dimension: 'day' | 'week', source: CardSource): AggregationResult {
+    const metric = (source.params?.metric as string) ?? 'count';
+    const events = provider.getEvents();
+
+    const buckets = new Map<string, number>();
+    for (const ev of events) {
+        const key = dimensionKey(ev, dimension);
+        // 计划事件统一为全天事件，时长口径改用预估执行时长（未填写按 0 计）
+        const val = metric === 'duration' ? Math.max(0, ev.estimatedMinutes ?? 0) : 1;
+        buckets.set(key, (buckets.get(key) ?? 0) + val);
+    }
+
+    const data: ChartDatum[] = Array.from(buckets.entries())
+        .map(([label, value]) => ({ label, value }))
+        .sort((a, b) => a.label.localeCompare(b.label));
+
+    return {
+        stats: [{ label: '计划总量', value: data.reduce((s, d) => s + d.value, 0) }],
+        series: { data, metricLabel: metric === 'duration' ? '时长(分钟)' : '次数' },
+    };
+}
+
+/** 执行记录按分类聚合 */
+function aggregateExecutionsByCategory(provider: DataProvider, source: CardSource): AggregationResult {
     const metric = (source.params?.metric as string) ?? 'count';
 
     const buckets = new Map<string, number>();
-    if (target === 'event') {
-        for (const ev of provider.getEvents()) {
-            const cat = ev.categoryId ?? 'uncategorized';
-            // 计划事件统一为全天事件，时长口径改用预估执行时长（未填写按 0 计）
-            const val = metric === 'duration' ? Math.max(0, ev.estimatedMinutes ?? 0) : 1;
-            buckets.set(cat, (buckets.get(cat) ?? 0) + val);
-        }
-    } else {
-        for (const ex of provider.getExecutions()) {
-            const cat = resolveExecutionCategory(ex, provider);
-            const val = metric === 'duration' ? Math.max(0, ex.end - ex.start) : 1;
-            buckets.set(cat, (buckets.get(cat) ?? 0) + val);
-        }
+    for (const ex of provider.getExecutions()) {
+        const cat = resolveExecutionCategory(ex, provider);
+        const val = metric === 'duration' ? Math.max(0, (ex.end ?? ex.start) - ex.start) : 1;
+        buckets.set(cat, (buckets.get(cat) ?? 0) + val);
+    }
+
+    const data: ChartDatum[] = Array.from(buckets.entries())
+        .map(([label, value]) => ({ label, value }))
+        .sort((a, b) => b.value - a.value);
+
+    return {
+        stats: [{ label: '分类总数', value: data.length }],
+        series: { data, metricLabel: metric === 'duration' ? '时长(分钟)' : '次数' },
+    };
+}
+
+/** 计划事件按分类聚合 */
+function aggregateEventsByCategory(provider: DataProvider, source: CardSource): AggregationResult {
+    const metric = (source.params?.metric as string) ?? 'count';
+
+    const buckets = new Map<string, number>();
+    for (const ev of provider.getEvents()) {
+        const cat = ev.categoryId ?? 'uncategorized';
+        // 计划事件统一为全天事件，时长口径改用预估执行时长（未填写按 0 计）
+        const val = metric === 'duration' ? Math.max(0, ev.estimatedMinutes ?? 0) : 1;
+        buckets.set(cat, (buckets.get(cat) ?? 0) + val);
     }
 
     const data: ChartDatum[] = Array.from(buckets.entries())
@@ -224,52 +299,6 @@ function aggregateActivityHeatmap(source: CardSource, provider: DataProvider): A
     const total = data.reduce((s, d) => s + d.value, 0);
     return {
         stats: [{ label: '活跃总量', value: total }],
-        heatmap: { data, metricLabel: metric === 'duration' ? '时长(分钟)' : '次数' },
-    };
-}
-
-/**
- * 计划事件热力活跃图：按天聚合计划事件时长（分钟），输出 GitHub 贡献图风格的热力图序列。
- * 时间范围：最近一年（365 天）。
- * 范围过滤：source.params.projectId 指定聚焦项目时，仅统计该项目及其子任务的计划事件。
- */
-function aggregatePlanHeatmap(source: CardSource, provider: DataProvider): AggregationResult {
-    const metric = (source.params?.metric as string) ?? 'duration';
-    const projectId = source.params?.projectId as string | undefined;
-
-    // 计算聚焦项目及其所有子任务的 id 集合（未指定时统计全部）
-    let visibleIds: Set<string> | undefined;
-    if (projectId) {
-        visibleIds = new Set<string>([projectId]);
-        const walk = (parentId: string) => {
-            for (const t of provider.getTasks()) {
-                if (t.removed || t.parentId !== parentId) continue;
-                visibleIds!.add(t.id);
-                walk(t.id);
-            }
-        };
-        walk(projectId);
-    }
-
-    // 按天聚合计划事件时长（分钟）
-    const buckets = new Map<string, number>();
-    for (const ev of provider.getEvents()) {
-        if (!ev.weekKey || !ev.day) continue;
-        if (visibleIds && ev.inboxId && !visibleIds.has(ev.inboxId)) continue;
-        const dateKey = makeDayKeyFromWeek(ev.weekKey, ev.day);
-        // 计划事件统一为全天事件，时长口径改用预估执行时长（未填写按 0 计）
-        const val = metric === 'duration'
-            ? Math.max(0, ev.estimatedMinutes ?? 0)
-            : 1;
-        buckets.set(dateKey, (buckets.get(dateKey) ?? 0) + val);
-    }
-
-    const data = Array.from(buckets.entries())
-        .map(([date, value]) => ({ date, value }));
-
-    const total = data.reduce((s, d) => s + d.value, 0);
-    return {
-        stats: [{ label: '计划总量', value: total }],
         heatmap: { data, metricLabel: metric === 'duration' ? '时长(分钟)' : '次数' },
     };
 }

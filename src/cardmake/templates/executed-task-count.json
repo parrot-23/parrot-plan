@@ -4,6 +4,7 @@
   "mode": "stats",
   "description": "展示用户执行的任务总数",
   "source": {
-    "type": "executed-task-count"
+    "dataSource": "executions",
+    "aggregation": "executed-task-count"
   }
 }
