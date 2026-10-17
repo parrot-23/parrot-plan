@@ -244,7 +244,8 @@ export class WorkbenchView {
             if (bottom > maxBottom) maxBottom = bottom;
             if (right > maxRight) maxRight = right;
         }
-        grid.style.setProperty('min-height', `${Math.max(300, maxBottom + GRID)}px`);
+        // 底部始终预留 50px 空白（距最低卡片）
+        grid.style.setProperty('min-height', `${Math.max(300, maxBottom + 50)}px`);
         grid.style.setProperty('min-width', `${maxRight + GRID}px`);
     }
 

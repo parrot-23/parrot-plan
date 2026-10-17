@@ -6045,6 +6045,17 @@
     overflow: auto;
 }
 
+/* 顶部工具栏（标题 + 编辑布局 / 布局管理 / 编辑态按钮）：固定在顶部，不随页面滚动 */
+.workbench-view > .wb-toolbar {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    flex-shrink: 0;
+    padding: 4px 0 8px;
+    margin-bottom: 4px;
+    background: var(--background-primary);
+}
+
 .wb-toolbar {
     position: relative;
     z-index: 10;
