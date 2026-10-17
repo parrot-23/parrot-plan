@@ -62,10 +62,6 @@ export class TodayView {
     private selectedExecId?: string;
     /** 上一次渲染时任务面板选中的任务 id（用于检测选中变化） */
     private lastSelectedItemId?: string;
-    /** 是否处于「替换计划」模式 */
-    private replaceMode = false;
-    /** 替换模式下锁定的目标事件 id */
-    private replaceTargetEventId?: string;
     /** 是否处于「新增非计划事件」模式（点击时间轴触发） */
     private addUnplannedMode = false;
     /** 新增非计划事件的起始分钟（由点击时间轴的位置换算） */
@@ -184,8 +180,6 @@ export class TodayView {
         this.renderOkrProgressBox(centerPanel);
         // 选项卡内容区
         this.renderRightTabContent(centerPanel);
-        // 替换模式下，在内容下方展示「替换任务详情方框」
-        if (this.replaceMode) this.renderReplaceBox(centerPanel);
         this.renderActionButtons(centerPanel);
     }
 
@@ -350,13 +344,13 @@ export class TodayView {
             for (const ev of normalEvents) renderDayEvent(list, ev);
         }
 
-        // ===== 新增任务（当天新增的非计划执行记录）=====
+        // ===== 新增任务（计划外任务的执行记录）=====
+        // 习惯任务 / 当天任务被执行属于「已执行」，不归入新增
         const addedExecs = this.getExecutions()
             .filter(ex =>
                 ex.day === day
                 && ex.weekKey === weekKey
-                && !ex.eventId
-                && !ex.replaced,
+                && this.getExecStatus(ex, dayEvents) === 'added',
             )
             // 新增事项按起始时间先后顺序排列
             .sort((a, b) => a.start - b.start);
@@ -566,14 +560,13 @@ export class TodayView {
         // 右侧：上下两张小卡片
         const smallCol = statsSide.createDiv({ cls: 'today-stat-small-col' });
 
-        // 右上：计划中 / 已执行 / 替换
-        const breakdownTotal = stats.planned + stats.executed + stats.changed;
+        // 右上：待执行 / 已执行
+        const breakdownTotal = stats.planned + stats.executed;
         this.renderStatCard(smallCol, {
             label: t('today.statBreakdownLabel'),
             values: [
                 { text: String(stats.planned), cls: 'is-planned' },
                 { text: String(stats.executed), cls: 'is-executed' },
-                { text: String(stats.changed), cls: 'is-changed' },
             ],
             ratio: breakdownTotal > 0 ? stats.executed / breakdownTotal : 0,
             barCls: 'is-executed',
@@ -717,12 +710,22 @@ export class TodayView {
         fill.setCssProps({ '--stat-fill': `${pct}%` });
     }
 
+    /**
+     * 判定一条执行记录的状态（仅两种）：
+     * - 已执行：关联了计划事件，或来源任务当天有习惯任务 / 当天任务（即计划内的任务）
+     * - 新增：计划外的任务被执行
+     */
+    private getExecStatus(ex: ExecutionRecord, dayEvents: EventBlock[]): 'executed' | 'added' {
+        if (ex.eventId) return 'executed';
+        if (ex.inboxId && dayEvents.some(ev => ev.inboxId === ex.inboxId)) return 'executed';
+        return 'added';
+    }
+
     /** 统计当前查看日期的日目标完成情况（含全天事件） */
     private computeDayStats(): {
         total: number;
         planned: number;
         executed: number;
-        changed: number;
         added: number;
     } {
         const { day, weekKey } = this.getViewDayInfo();
@@ -735,28 +738,20 @@ export class TodayView {
 
         let planned = 0;
         let executed = 0;
-        let changed = 0;
         for (const ev of events) {
-            // 被替换的计划事件：存在 replaced=true 的执行记录关联它
-            const isReplaced = executions.some(ex => ex.eventId === ev.id && ex.replaced);
-            if (isReplaced) {
-                changed++;
-                continue;
-            }
             const status = getEventStatus(ev, executions);
             if (status === 'executed') executed++;
             else planned++;
         }
 
-        // 非计划执行记录（新增）：排除关联计划事件的记录（含替换记录）
-        const plannedEventIds = new Set(events.map(ev => ev.id));
+        // 新增：计划外任务的执行记录
         const added = executions.filter(ex =>
             ex.day === day
             && ex.weekKey === weekKey
-            && !(ex.eventId && plannedEventIds.has(ex.eventId)),
+            && this.getExecStatus(ex, events) === 'added',
         ).length;
 
-        return { total: events.length, planned, executed, changed, added };
+        return { total: events.length, planned, executed, added };
     }
 
     /** 渲染任务层级方框（展示当前任务的所有父级任务树） */
@@ -1246,29 +1241,7 @@ export class TodayView {
             return;
         }
 
-        // 替换模式：确认替换 / 取消替换
-        if (this.replaceMode) {
-            const confirmBtn = row.createEl('button', {
-                cls: 'today-action-btn mod-cta',
-                text: t('today.replaceConfirm'),
-            });
-            // 必须先在左侧选中任务，才能确认替换
-            confirmBtn.disabled = !selectedItem;
-            confirmBtn.onclick = () => {
-                void this.confirmReplace();
-            };
-
-            const cancelBtn = row.createEl('button', {
-                cls: 'today-action-btn',
-                text: t('today.replaceCancel'),
-            });
-            cancelBtn.onclick = () => {
-                this.cancelReplace();
-            };
-            return;
-        }
-
-        // 选中时间轴事件：仅「计划」状态显示「执行计划 / 替换计划」按钮
+        // 选中时间轴事件：仅「计划」状态显示「执行计划」按钮
         if (selectedEvent) {
             const isExecuting = this.executingEventId === selectedEvent.id;
 
@@ -1300,14 +1273,6 @@ export class TodayView {
                 });
                 execBtn.onclick = () => {
                     void this.executePlannedEvent();
-                };
-
-                const replaceBtn = row.createEl('button', {
-                    cls: 'today-action-btn',
-                    text: t('today.replacePlanned'),
-                });
-                replaceBtn.onclick = () => {
-                    this.startReplace();
                 };
             }
 
@@ -1354,38 +1319,6 @@ export class TodayView {
         this.selectedExecId = undefined;
         this.clearInboxSelection();
         void this.refresh();
-    }
-
-    /** 渲染「替换任务详情方框」：左侧原计划事件，中间转换符号，右侧替换成的任务 */
-    private renderReplaceBox(panel: HTMLElement) {
-        const box = panel.createDiv({ cls: 'today-replace-box' });
-        box.createDiv({ cls: 'today-replace-title', text: t('today.replaceBoxTitle') });
-
-        const body = box.createDiv({ cls: 'today-replace-body' });
-
-        // 左侧：原计划事件
-        const sourceEl = body.createDiv({ cls: 'today-replace-side' });
-        sourceEl.createDiv({ cls: 'today-replace-label', text: t('today.replaceBoxSource') });
-        const sourceEvent = this.replaceTargetEventId
-            ? this.getEvents().find(e => e.id === this.replaceTargetEventId)
-            : undefined;
-        sourceEl.createDiv({
-            cls: 'today-replace-name',
-            text: sourceEvent?.title ?? t('today.replaceBoxSourceEmpty'),
-        });
-
-        // 中间：转换符号
-        body.createDiv({ cls: 'today-replace-arrow', text: '→' });
-
-        // 右侧：替换成的任务
-        const targetEl = body.createDiv({ cls: 'today-replace-side' });
-        targetEl.createDiv({ cls: 'today-replace-label', text: t('today.replaceBoxTarget') });
-        const item = this.getSelectedItem();
-        if (item) {
-            targetEl.createDiv({ cls: 'today-replace-name', text: item.title });
-        } else {
-            targetEl.createDiv({ cls: 'today-replace-empty', text: t('today.replaceBoxHint') });
-        }
     }
 
     /** 当前时间轴上选中的事件 */
@@ -1608,59 +1541,6 @@ export class TodayView {
         this.pdcaRepo.removeExecution(this.selectedExecId);
         this.selectedExecId = undefined;
         await this.save();
-        await this.refresh();
-    }
-
-    /** 进入替换模式：锁定当前选中的时间轴事件，等待用户在左侧选择任务 */
-    private startReplace(): void {
-        const ev = this.getSelectedEvent();
-        if (!ev) {
-            new Notice(t('today.replaceNeedEvent'));
-            return;
-        }
-        this.replaceTargetEventId = ev.id;
-        this.replaceMode = true;
-        void this.refresh();
-    }
-
-    /** 取消替换：退出替换模式 */
-    private cancelReplace(): void {
-        this.replaceMode = false;
-        this.replaceTargetEventId = undefined;
-        void this.refresh();
-    }
-
-    /** 确认替换：原计划事件保持不变，新增一条执行记录关联该计划事件（实际执行的是左侧选中的任务） */
-    private async confirmReplace(): Promise<void> {
-        const item = this.getSelectedItem();
-        if (!item) return;
-
-        const ev = this.replaceTargetEventId
-            ? this.getEvents().find(e => e.id === this.replaceTargetEventId)
-            : undefined;
-        if (!ev) {
-            this.cancelReplace();
-            return;
-        }
-
-        const { day, weekKey } = this.getViewDayInfo();
-
-        // 原计划事件不做任何修改；新增替换执行记录：eventId 关联原计划事件，inboxId 为实际执行的任务
-        this.pdcaRepo.addExecution({
-            id: `exec_${Date.now()}`,
-            eventId: ev.id,
-            inboxId: item.id,
-            day,
-            start: ev.start,
-            end: ev.end,
-            weekKey,
-            replaced: true,
-        });
-
-        this.replaceMode = false;
-        this.replaceTargetEventId = undefined;
-        await this.save();
-        new Notice(t('today.replaceDone', { title: item.title }));
         await this.refresh();
     }
 
@@ -2010,9 +1890,13 @@ export class TodayView {
         // 收集所有卡片项（执行记录），用于后续气泡聚类
         const bubbleItems: { card: HTMLElement; top: number; status: EventStatus; onSelect: () => void }[] = [];
 
-        // 当天全部执行记录：已执行（关联计划事件）/ 替换 / 新增，统一作为执行记录卡片渲染
+        // 当天全部执行记录：已执行 / 新增，统一作为执行记录卡片渲染
         const execs = this.getExecutions().filter(ex =>
             ex.day === day && ex.weekKey === weekKey,
+        );
+        // 当天计划事件（习惯任务 / 当天任务），用于判定执行记录状态
+        const dayEvents = this.getEvents().filter(ev =>
+            ev.day === day && ev.weekKey === weekKey,
         );
         for (const ex of execs) {
             const card = col.createDiv({ cls: 'event-card event-card-exec today-event-card' });
@@ -2045,8 +1929,8 @@ export class TodayView {
             bubbleItems.push({
                 card,
                 top,
-                // 替换执行记录 → 「替换」图标；关联计划事件的普通执行 → 「已执行」；否则 → 「新增」
-                status: ex.replaced ? 'changed' : (ex.eventId ? 'executed' : 'added'),
+                // 计划内任务（习惯任务 / 当天任务）→ 「已执行」；计划外任务 → 「新增」
+                status: this.getExecStatus(ex, dayEvents),
                 onSelect: () => this.toggleExecSelection(ex.id),
             });
         }

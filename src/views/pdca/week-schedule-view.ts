@@ -845,12 +845,30 @@ export class WeekScheduleView extends ItemView {
         col.addEventListener('mouseleave', hide);
     }
 
+    /**
+     * 判定执行记录状态（仅两种）：
+     * - 已执行：关联了计划事件，或来源任务当天有计划事件（习惯任务 / 当天任务）
+     * - 新增：计划外任务被执行
+     */
+    private getExecStatus(ex: ExecutionRecord): EventStatus {
+        if (ex.eventId) return 'executed';
+        if (ex.inboxId) {
+            const planned = this.events.some(ev =>
+                ev.inboxId === ex.inboxId
+                && ev.day === ex.day
+                && ev.weekKey === ex.weekKey,
+            );
+            if (planned) return 'executed';
+        }
+        return 'added';
+    }
+
     /** 渲染区间悬浮中的「执行记录」详细卡片 */
     private renderRangeHoverExecCard(parent: HTMLElement, ex: ExecutionRecord) {
         const card = parent.createDiv({ cls: 'range-hover-card' });
 
-        // 状态：替换执行 → 替换；关联计划事件 → 已执行；无关联 → 新增
-        const status: EventStatus = ex.replaced ? 'changed' : (ex.eventId ? 'executed' : 'added');
+        // 状态：计划内任务（习惯任务 / 当天任务）→ 已执行；计划外任务 → 新增
+        const status: EventStatus = this.getExecStatus(ex);
 
         // 标题：优先取来源任务标题，否则用关联计划事件标题；名称前加对应类型图标
         const item = ex.inboxId
@@ -887,7 +905,7 @@ export class WeekScheduleView extends ItemView {
         statusRow.createSpan({ cls: 'event-tooltip-label', text: t('eventTooltip.status') });
         statusRow.createSpan({
             cls: 'event-tooltip-value',
-            text: `${EVENT_STATUS_EMOJI[status]} ${t(EVENT_STATUS_LABEL_KEY[status])}`,
+            text: `${EVENT_STATUS_EMOJI[status]} ${t(EVENT_STATUS_LABEL_KEY[status] as Parameters<typeof t>[0])}`,
         });
     }
 
