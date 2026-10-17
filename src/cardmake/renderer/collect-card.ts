@@ -16,8 +16,6 @@ function formatTime(ts: number): string {
 
 export const collectCardRenderer: CardRenderer = {
     render(container, instance, template, ctx) {
-        container.createDiv({ cls: 'wb-card-title', text: instance.title ?? template.name });
-
         const body = container.createDiv({ cls: 'wb-card-body' });
 
         // 顶部输入区：输入框 + 添加按钮

@@ -30,8 +30,6 @@ function renderPeriodic(
     const records = instance.records ?? [];
     const current = records.find((r) => r.periodKey === periodKey);
 
-    container.createDiv({ cls: 'wb-card-title', text: instance.title ?? template.name });
-
     if (current) {
         const body = container.createDiv({ cls: 'wb-card-body' });
         renderFormReadonly(body, template, current.values);
@@ -66,8 +64,6 @@ function renderFixed(
     template: CardTemplate,
     ctx: CardRenderContext,
 ) {
-    container.createDiv({ cls: 'wb-card-title', text: instance.title ?? template.name });
-
     if (instance.locked && instance.value) {
         const body = container.createDiv({ cls: 'wb-card-body' });
         renderFormReadonly(body, template, instance.value);

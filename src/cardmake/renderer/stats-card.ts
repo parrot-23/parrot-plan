@@ -5,8 +5,6 @@ import { renderChart, renderHeatmap, renderRadar, renderScatter, renderFunnel, r
 
 export const statsCardRenderer: CardRenderer = {
     render(container, instance, template, ctx) {
-        container.createDiv({ cls: 'wb-card-title', text: instance.title ?? template.name });
-
         const body = container.createDiv({ cls: 'wb-card-body' });
         const source = instance.source ?? template.source;
         if (!source) {

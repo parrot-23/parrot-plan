@@ -4,8 +4,6 @@ import type { CardRenderer } from '../../datatypes/renderer';
 
 export const clockCardRenderer: CardRenderer = {
     render(container, instance, template) {
-        container.createDiv({ cls: 'wb-card-title', text: instance.title ?? template.name });
-
         const body = container.createDiv({ cls: 'wb-card-body' });
         const clock = body.createDiv({ cls: 'wb-clock' });
         const timeEl = clock.createDiv({ cls: 'wb-clock-time' });

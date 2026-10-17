@@ -6306,19 +6306,27 @@
     box-shadow: 0 6px 18px rgba(0, 0, 0, 0.25);
 }
 
-/* 标题：编辑态下可按住拖动整张卡片 */
-.wb-card-title.is-draggable {
+/* 顶部中间的拖拽手柄：编辑态下按住拖动整张卡片 */
+.wb-card-drag-handle {
+    position: absolute;
+    top: 0px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 84px;
+    height: 12px;
+    border-radius: 3px;
+    background: var(--background-modifier-border);
     cursor: grab;
-    border-radius: 4px;
+    z-index: 6;
 }
 
-.wb-card-title.is-draggable:hover {
-    background: var(--background-modifier-hover);
+.wb-card-drag-handle:hover {
+    background: var(--interactive-accent);
 }
 
-.wb-card-title.is-draggable:active {
+.wb-card-drag-handle:active {
     cursor: grabbing;
-    background: var(--background-modifier-hover);
+    background: var(--interactive-accent);
 }
 
 /* 四角圆点：默认隐藏，悬停卡片时显示 */
@@ -6784,7 +6792,7 @@
 .wb-card-title-input:focus {
     border-color: var(--interactive-accent);
     outline: none;
-    background: var(--background-primary);
+    background: transparent;
 }
 
 .wb-timelog-row {

@@ -104,6 +104,10 @@ export class CardComponent {
 
         // 渲染内容
         const body = card.createDiv({ cls: 'wb-card-content' });
+
+        // 标题：编辑布局时显示为输入框，非编辑态显示为普通文本
+        this.renderTitle(body, instance, template, editing);
+
         const renderer = getCardRenderer(template.renderer);
         const ctx: CardRenderContext = {
             app: this.deps.app,
@@ -118,19 +122,32 @@ export class CardComponent {
             },
         };
         renderer.render(body, instance, template, ctx);
+    }
 
-        // 编辑态：标题可拖动整张卡片（普通标题或标题输入框）
-        if (editing) {
-            const titleEl = card.querySelector<HTMLElement>('.wb-card-title, .wb-card-title-input');
-            if (titleEl) {
-                titleEl.addClass('is-draggable');
-                this.attachDrag(titleEl, card, instance);
-            }
+    /** 渲染卡片标题：编辑布局时为输入框，非编辑态为普通文本 */
+    private renderTitle(container: HTMLElement, instance: CardInstance, template: CardTemplate, editing: boolean) {
+        if (!editing) {
+            container.createDiv({ cls: 'wb-card-title', text: instance.title ?? template.name });
+            return;
         }
+
+        const input = container.createEl('input', {
+            cls: 'wb-card-title-input',
+            attr: { type: 'text', placeholder: template.name },
+        });
+        input.value = instance.title ?? '';
+        input.onchange = () => {
+            instance.title = input.value.trim() || undefined;
+            void this.deps.save();
+        };
     }
 
     /** 渲染编辑态头部按钮（删除 / 设置 / 皮肤） */
     private renderHeader(card: HTMLElement, instance: CardInstance, template: CardTemplate) {
+        // 顶部中间的拖拽手柄：按住拖动整张卡片
+        const dragHandle = card.createDiv({ cls: 'wb-card-drag-handle' });
+        this.attachDrag(dragHandle, card, instance);
+
         const header = card.createDiv({ cls: 'wb-card-header' });
 
         const delBtn = header.createEl('button', { cls: 'wb-card-delete', text: '×' });
@@ -328,8 +345,8 @@ export class CardComponent {
     }
 
     /** 绑定卡片位置拖动 */
-    private attachDrag(titleEl: HTMLElement, card: HTMLElement, instance: CardInstance) {
-        titleEl.onmousedown = (e: MouseEvent) => {
+    private attachDrag(handleEl: HTMLElement, card: HTMLElement, instance: CardInstance) {
+        handleEl.onmousedown = (e: MouseEvent) => {
             e.preventDefault();
             e.stopPropagation();
 

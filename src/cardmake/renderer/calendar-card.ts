@@ -8,8 +8,6 @@ const WEEKDAY_LABELS = ['一', '二', '三', '四', '五', '六', '日'];
 
 export const calendarCardRenderer: CardRenderer = {
     render(container, instance, template, ctx) {
-        container.createDiv({ cls: 'wb-card-title', text: instance.title ?? template.name });
-
         const body = container.createDiv({ cls: 'wb-card-body' });
 
         // 当前展示的月份（默认本月）
