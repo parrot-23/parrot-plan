@@ -579,6 +579,10 @@ export const en: I18nMessages = {
     'workbench.settingsDataSource': 'Data source',
     'workbench.settingsAggregation': 'Aggregation',
     'workbench.settingsNoConfig': 'No configurable options for this card',
+    'workbench.skinBackground': 'Background',
+    'workbench.skinShadow': 'Shadow',
+    'workbench.skinRadius': 'Corner radius',
+    'workbench.skinRadiusDefault': 'Default',
 
     // Layout scheme modal
     'layout.title': 'Layout Scheme',

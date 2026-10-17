@@ -2,20 +2,17 @@
 import type { App } from 'obsidian';
 import { Notice } from 'obsidian';
 
-import type { CardTemplate, DataSourceType } from '../../datatypes/form';
+import type { CardTemplate } from '../../datatypes/form';
 import type { CardInstance, WorkbenchData } from '../../datatypes/card';
 import { DEFAULT_LAYOUT_ID } from '../../datatypes/card';
 import type { WorkbenchRepo } from '../../repos/workbench-repo';
 import type { GtdRepo } from '../../repos/gtd-repo';
 import { loadAllTemplates } from '../../cardmake/data/template-loader';
-import { getCardRenderer } from '../../cardmake/cards/card-registry';
-import { DATA_SOURCE_CATALOG, getDataSourceMeta } from '../../datatypes/source-catalog';
-import type { CardRenderContext } from '../../datatypes/renderer';
-import { createDataProvider } from '../../cardmake/data/provider';
 import type { EventBlock, ExecutionRecord } from '../../datatypes/domain';
 import type { InboxItem } from '../../datatypes/domain';
 import { t } from '../../i18n';
 import { LayoutModal } from './layout-modal';
+import { CardComponent } from '../../shared/card-component';
 
 /** 网格单位（像素）：卡片位置与尺寸均吸附到该值的整数倍 */
 const GRID = 30;
@@ -213,67 +210,25 @@ export class WorkbenchView {
             }
         }
 
+        // 卡片组件：封装单张卡片的外壳渲染与编辑态交互
+        const cardComponent = new CardComponent({
+            app: this.app,
+            workbenchRepo: this.workbenchRepo,
+            save: this.save,
+            refresh: () => void this.renderInto(container),
+            resolveCollisions: () => this.resolveCollisions(),
+            getEvents: this.getEvents,
+            getExecutions: this.getExecutions,
+            getInboxItems: this.getInboxItems,
+            addGtdItem: this.addGtdItem,
+            gtdRepo: this.gtdRepo,
+            templates: this.templates,
+        });
+
         for (const instance of this.workbenchData.instances) {
-            const template = this.templates.find((t) => t.id === instance.templateId);
-            if (!template) continue;
-
-            const card = grid.createDiv({ cls: 'wb-card' });
-            // 网格坐标定位（单位 30px）
             const pos = positions.get(instance.id);
-            if (pos) {
-                card.style.setProperty('left', `${pos.col * GRID}px`);
-                card.style.setProperty('top', `${pos.row * GRID}px`);
-            }
-            // 应用尺寸（吸附到 30px 网格）
-            const w = snap(instance.width ?? DEFAULT_W);
-            const h = snap(instance.height ?? DEFAULT_H);
-            card.style.setProperty('width', `${w}px`);
-            card.style.setProperty('height', `${h}px`);
-
-            // 卡片头部操作（删除 + 设置）：仅编辑布局时显示
-            if (this.editingLayout) {
-                card.addClass('is-editing');
-                const header = card.createDiv({ cls: 'wb-card-header' });
-                const delBtn = header.createEl('button', {
-                    cls: 'wb-card-delete',
-                    text: '×',
-                });
-                delBtn.onclick = () => this.removeCard(instance);
-
-                const settingsBtn = header.createEl('button', {
-                    cls: 'wb-card-settings',
-                    text: '⚙',
-                });
-                settingsBtn.onclick = () => this.showCardSettings(settingsBtn, card, instance, template);
-
-                // 编辑态：边框 + 四角圆点（八方向调整尺寸）
-                this.renderResizeHandles(card, instance);
-            }
-
-            const body = card.createDiv({ cls: 'wb-card-content' });
-            const renderer = getCardRenderer(instance.mode);
-            const ctx: CardRenderContext = {
-                app: this.app,
-                save: this.save,
-                refresh: () => void this.renderInto(container),
-                provider: createDataProvider(this.getEvents, this.getExecutions, this.getInboxItems),
-                addGtdItem: this.addGtdItem,
-                getGtdItems: () => this.gtdRepo.data.items,
-                removeGtdItem: async (id: string) => {
-                    this.gtdRepo.removeItem(id);
-                    await this.save();
-                },
-            };
-            renderer.render(body, instance, template, ctx);
-
-            // 编辑态：标题可按住拖动整张卡片位置
-            if (this.editingLayout) {
-                const titleEl = card.querySelector<HTMLElement>('.wb-card-title');
-                if (titleEl) {
-                    titleEl.addClass('is-draggable');
-                    this.attachCardDrag(titleEl, card, instance);
-                }
-            }
+            if (!pos) continue;
+            cardComponent.render(grid, instance, pos, this.editingLayout);
         }
 
         // 根据卡片最大底部/右侧位置设置画布尺寸，避免绝对定位卡片溢出被裁剪
@@ -452,234 +407,6 @@ export class WorkbenchView {
             new Notice(t('workbench.cardAdded', { name: template.name }));
             if (this.container) void this.renderInto(this.container);
         });
-    }
-
-    /** 删除一张卡片实例 */
-    private removeCard(instance: CardInstance) {
-        this.workbenchRepo.removeInstance(instance.id);
-        void this.save().then(() => {
-            if (this.container) void this.renderInto(this.container);
-        });
-    }
-
-    /**
-     * 弹出卡片设置面板：悬浮在卡片周围。
-     * 仅 stats 卡片可配置数据源（source.dataSource）与聚合方式（source.aggregation）；
-     * 图表类型（chart）固定不变。其他卡片显示「无可配置项」。
-     */
-    private showCardSettings(
-        anchor: HTMLElement,
-        card: HTMLElement,
-        instance: CardInstance,
-        template: CardTemplate,
-    ) {
-        // 关闭已打开的面板
-        card.querySelectorAll('.wb-card-settings-panel').forEach((el) => el.remove());
-
-        const panel = card.createDiv({ cls: 'wb-card-settings-panel' });
-
-        if (instance.mode !== 'stats') {
-            panel.createDiv({ cls: 'wb-card-settings-empty', text: t('workbench.settingsNoConfig') });
-        } else {
-            const currentSource = instance.source ?? template.source;
-            const currentDataSource = currentSource?.dataSource ?? 'executions';
-            const currentAggregation = currentSource?.aggregation ?? 'count';
-            // 图表类型固定：优先实例，其次模板
-            const chart = instance.source?.chart ?? template.source?.chart;
-
-            // 数据源下拉
-            const dsLabel = panel.createDiv({ cls: 'wb-card-settings-label', text: t('workbench.settingsDataSource') });
-            const dsSelect = panel.createEl('select', { cls: 'wb-card-settings-select' });
-            for (const meta of DATA_SOURCE_CATALOG) {
-                const opt = dsSelect.createEl('option', { text: meta.label, value: meta.key });
-                if (meta.key === currentDataSource) opt.selected = true;
-            }
-
-            // 聚合方式下拉
-            const aggLabel = panel.createDiv({ cls: 'wb-card-settings-label', text: t('workbench.settingsAggregation') });
-            const aggSelect = panel.createEl('select', { cls: 'wb-card-settings-select' });
-
-            const renderAggregations = (dataSource: string) => {
-                aggSelect.empty();
-                const meta = getDataSourceMeta(dataSource as DataSourceType);
-                if (!meta) return;
-                for (const agg of meta.aggregations) {
-                    const opt = aggSelect.createEl('option', { text: agg.label, value: agg.key });
-                    if (agg.key === currentAggregation) opt.selected = true;
-                }
-            };
-            renderAggregations(currentDataSource);
-
-            // 应用配置：写入 source（保留图表类型）
-            const apply = () => {
-                const dataSource = dsSelect.value;
-                const aggregation = aggSelect.value;
-                const meta = getDataSourceMeta(dataSource as DataSourceType);
-                const aggDef = meta?.aggregations.find((a) => a.key === aggregation);
-                const params: Record<string, unknown> = {};
-                for (const p of aggDef?.params ?? []) {
-                    if (p.default !== undefined) params[p.key] = p.default;
-                }
-                this.workbenchRepo.updateInstance(instance.id, {
-                    source: { dataSource: dataSource as DataSourceType, aggregation, chart, params },
-                });
-                void this.save().then(() => {
-                    if (this.container) void this.renderInto(this.container);
-                });
-            };
-
-            // 切换数据源：刷新聚合方式下拉，并应用
-            dsSelect.onchange = () => {
-                renderAggregations(dsSelect.value);
-                apply();
-            };
-            aggSelect.onchange = () => apply();
-        }
-
-        // 点击面板外部关闭
-        const close = (e: MouseEvent) => {
-            if (!panel.contains(e.target as Node) && e.target !== anchor) {
-                panel.remove();
-                document.removeEventListener('click', close);
-            }
-        };
-        window.setTimeout(() => document.addEventListener('click', close), 0);
-    }
-
-    /**
-     * 渲染编辑态下的尺寸调整手柄：卡片边框 + 四角圆点。
-     * 边框与圆点均支持八方向拖动调整卡片宽高，松开后持久化。
-     */
-    private renderResizeHandles(card: HTMLElement, instance: CardInstance) {
-        // 四角圆点：nw / ne / sw / se
-        const corners: Array<'nw' | 'ne' | 'sw' | 'se'> = ['nw', 'ne', 'sw', 'se'];
-        for (const corner of corners) {
-            const dot = card.createDiv({ cls: `wb-card-handle wb-card-handle-${corner}` });
-            this.attachResize(dot, card, instance, corner);
-        }
-        // 四条边：n / s / w / e
-        const edges: Array<'n' | 's' | 'w' | 'e'> = ['n', 's', 'w', 'e'];
-        for (const edge of edges) {
-            const bar = card.createDiv({ cls: `wb-card-edge wb-card-edge-${edge}` });
-            this.attachResize(bar, card, instance, edge);
-        }
-    }
-
-    /**
-     * 绑定尺寸调整：按住手柄/边框拖动，按方向调整卡片宽高（吸附 30px 网格）。
-     * dir 为八方向之一（n/s/w/e/nw/ne/sw/se）。
-     */
-    private attachResize(
-        handle: HTMLElement,
-        card: HTMLElement,
-        instance: CardInstance,
-        dir: 'n' | 's' | 'w' | 'e' | 'nw' | 'ne' | 'sw' | 'se',
-    ) {
-        handle.onmousedown = (e: MouseEvent) => {
-            e.preventDefault();
-            e.stopPropagation();
-
-            const startX = e.clientX;
-            const startY = e.clientY;
-            const startW = card.offsetWidth;
-            const startH = card.offsetHeight;
-
-            const onMove = (ev: MouseEvent) => {
-                const dx = ev.clientX - startX;
-                const dy = ev.clientY - startY;
-                let w = startW;
-                let h = startH;
-                if (dir.includes('e')) w = Math.max(MIN_W, startW + dx);
-                if (dir.includes('w')) w = Math.max(MIN_W, startW - dx);
-                if (dir.includes('s')) h = Math.max(MIN_H, startH + dy);
-                if (dir.includes('n')) h = Math.max(MIN_H, startH - dy);
-                // 拖动过程中连续变化，不吸附网格
-                card.style.setProperty('width', `${w}px`);
-                card.style.setProperty('height', `${h}px`);
-            };
-
-            const onUp = (ev: MouseEvent) => {
-                document.removeEventListener('mousemove', onMove);
-                document.removeEventListener('mouseup', onUp);
-                const dx = ev.clientX - startX;
-                const dy = ev.clientY - startY;
-                let w = startW;
-                let h = startH;
-                if (dir.includes('e')) w = Math.max(MIN_W, startW + dx);
-                if (dir.includes('w')) w = Math.max(MIN_W, startW - dx);
-                if (dir.includes('s')) h = Math.max(MIN_H, startH + dy);
-                if (dir.includes('n')) h = Math.max(MIN_H, startH - dy);
-                // 松开时向上取整到 30 的倍数
-                this.workbenchRepo.updateInstance(instance.id, { width: snapUp(w), height: snapUp(h) });
-                // 调整尺寸后做碰撞避让
-                this.resolveCollisions();
-                void this.save().then(() => {
-                    if (this.container) void this.renderInto(this.container);
-                });
-            };
-
-            document.addEventListener('mousemove', onMove);
-            document.addEventListener('mouseup', onUp);
-        };
-    }
-
-    /**
-     * 绑定卡片位置拖动：按住标题拖动整张卡片，落点吸附 30px 网格并做碰撞避让。
-     */
-    private attachCardDrag(
-        titleEl: HTMLElement,
-        card: HTMLElement,
-        instance: CardInstance,
-    ) {
-        titleEl.onmousedown = (e: MouseEvent) => {
-            e.preventDefault();
-            e.stopPropagation();
-
-            card.addClass('is-dragging');
-            const startX = e.clientX;
-            const startY = e.clientY;
-            const startLeft = card.offsetLeft;
-            const startTop = card.offsetTop;
-            // 画布宽度（卡片父容器），用于限制左右边界
-            const gridWidth = card.parentElement?.clientWidth ?? 0;
-            const cardW = card.offsetWidth;
-
-            // 将 left 限制在 [0, gridWidth - cardW] 范围内
-            const clampLeft = (raw: number) => {
-                const maxLeft = Math.max(0, gridWidth - cardW);
-                return Math.max(0, Math.min(raw, maxLeft));
-            };
-
-            const onMove = (ev: MouseEvent) => {
-                // 跟随鼠标位移，吸附到 30px 网格；限制不超出画布顶部/左右边界
-                const left = clampLeft(snap(startLeft + (ev.clientX - startX)));
-                const top = Math.max(0, snap(startTop + (ev.clientY - startY)));
-                card.style.setProperty('left', `${left}px`);
-                card.style.setProperty('top', `${top}px`);
-            };
-
-            const onUp = (ev: MouseEvent) => {
-                document.removeEventListener('mousemove', onMove);
-                document.removeEventListener('mouseup', onUp);
-                card.removeClass('is-dragging');
-
-                // 落点吸附网格，写回实例坐标；超出左右边界时贴边
-                const left = clampLeft(snap(startLeft + (ev.clientX - startX)));
-                const top = Math.max(0, snap(startTop + (ev.clientY - startY)));
-                this.workbenchRepo.updateInstance(instance.id, {
-                    col: Math.round(left / GRID),
-                    row: Math.round(top / GRID),
-                });
-                // 拖动后做碰撞避让
-                this.resolveCollisions();
-                void this.save().then(() => {
-                    if (this.container) void this.renderInto(this.container);
-                });
-            };
-
-            document.addEventListener('mousemove', onMove);
-            document.addEventListener('mouseup', onUp);
-        };
     }
 
     /**

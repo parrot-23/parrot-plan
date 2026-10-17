@@ -1,5 +1,6 @@
 // 卡片数据模型：卡片实例（用户填写的结果）与模板分离存储。
 import type { CardMode, CardSource, FormValues } from './form';
+import type { CardSkin } from './skin';
 
 /** 周期填写记录（periodic 模式） */
 export interface CardRecord {
@@ -39,6 +40,8 @@ export interface CardInstance {
     locked?: boolean;
     /** 卡片标题（用户可自定义，缺省用模板名） */
     title?: string;
+    /** 卡片皮肤（自定义样式：背景色、阴影、圆角等） */
+    skin?: CardSkin;
     /** 卡片自定义宽度（像素，编辑布局时拖拽调整；吸附到 30px 网格） */
     width?: number;
     /** 卡片自定义高度（像素，编辑布局时拖拽调整；吸附到 30px 网格） */

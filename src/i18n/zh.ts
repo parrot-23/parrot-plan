@@ -577,6 +577,10 @@ export const zh = {
     'workbench.settingsDataSource': '数据源',
     'workbench.settingsAggregation': '聚合方式',
     'workbench.settingsNoConfig': '该卡片无可配置项',
+    'workbench.skinBackground': '背景颜色',
+    'workbench.skinShadow': '卡片阴影',
+    'workbench.skinRadius': '边框圆角',
+    'workbench.skinRadiusDefault': '默认',
 
     // 布局方案弹窗
     'layout.title': '布局方案',

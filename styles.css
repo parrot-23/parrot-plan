@@ -6451,6 +6451,24 @@
     color: var(--text-normal);
 }
 
+.wb-card-skin {
+    width: 22px;
+    height: 22px;
+    padding: 0;
+    border: none;
+    border-radius: 4px;
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-size: 14px;
+    line-height: 1;
+}
+
+.wb-card-skin:hover {
+    background: var(--background-modifier-hover);
+    color: var(--text-normal);
+}
+
 /* 卡片设置面板：悬浮在卡片右上角 */
 .wb-card-settings-panel {
     position: absolute;
@@ -6487,6 +6505,23 @@
     font-size: 12px;
     color: var(--text-muted);
     padding: 4px 0;
+}
+
+/* 卡片皮肤配置面板：悬浮在卡片右上角 */
+.wb-card-skin-panel {
+    position: absolute;
+    top: 36px;
+    right: 8px;
+    z-index: 20;
+    min-width: 180px;
+    padding: 10px;
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 6px;
+    background: var(--background-primary);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
 }
 
 .wb-card-title {
