@@ -1793,6 +1793,24 @@
     color: var(--text-muted);
 }
 
+/* 状态栏：进行中任务（任务名称：时长） */
+.parrot-plan-status-running {
+    cursor: pointer;
+    max-width: 320px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* 无进行中任务时隐藏 */
+.parrot-plan-status-running.is-hidden {
+    display: none;
+}
+
+.parrot-plan-status-running:hover {
+    color: var(--text-normal);
+}
+
 /* 帮助弹窗：外层容器，覆盖 Obsidian 默认宽高限制，尺寸自适应内容 */
 .parrot-help-modal-container {
     width: auto;

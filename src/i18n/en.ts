@@ -49,6 +49,8 @@ export const en: I18nMessages = {
     'nav.placeholder': 'This is the "{name}" page',
     'nav.runningLabel': 'Running',
     'nav.runningElapsed': '{minutes} min elapsed',
+    'nav.runningStatusBar': '{name}: {duration}',
+    'nav.runningStatusBarDuration': '{minutes} min',
 
     // Achievement view
     'achievement.title': 'Achievements',

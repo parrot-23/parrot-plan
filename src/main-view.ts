@@ -119,6 +119,8 @@ export class MainView extends ItemView {
     private runningCardEl?: HTMLElement;
     /** 进行中任务卡片已用时长的刷新定时器（每分钟更新） */
     private runningCardTimer?: number;
+    /** 状态栏中的「进行中任务」元素（任务名称：时长） */
+    private statusBarEl?: HTMLElement;
 
     constructor(
         leaf: WorkspaceLeaf,
@@ -380,6 +382,12 @@ export class MainView extends ItemView {
         // 内容区
         this.contentRoot = root.createDiv({ cls: 'parrot-plan-content' });
         await this.renderContent();
+
+        // 状态栏：显示进行中任务（任务名称：时长）
+        // 状态栏元素由插件注册（随插件卸载自动清理），视图只负责更新内容
+        this.statusBarEl = (this.plugin as Plugin & { addStatusBarItem: () => HTMLElement }).addStatusBarItem();
+        this.statusBarEl.addClass('parrot-plan-status-running');
+        this.renderStatusBarRunningTask();
     }
 
     /** 重建二级视图 tab 行（切换一级视图时调用） */
@@ -425,11 +433,13 @@ export class MainView extends ItemView {
         const running = this.pdcaRepo().runningTask;
         if (!running) {
             wrap.addClass('is-hidden');
+            this.renderStatusBarRunningTask();
             return;
         }
         const item = this.weekView.inboxData.items.find(i => i.id === running.inboxId && !i.removed);
         if (!item) {
             wrap.addClass('is-hidden');
+            this.renderStatusBarRunningTask();
             return;
         }
         wrap.removeClass('is-hidden');
@@ -444,11 +454,51 @@ export class MainView extends ItemView {
             const nowMinutes = now.getHours() * 60 + now.getMinutes();
             const elapsed = Math.max(0, nowMinutes - running.start);
             timeEl.setText(t('nav.runningElapsed', { minutes: String(elapsed) }));
+            // 状态栏与卡片同步刷新已用时长
+            this.renderStatusBarRunningTask();
         };
         updateTime();
         this.runningCardTimer = window.setInterval(updateTime, 60 * 1000);
 
         card.onclick = () => {
+            // 跳转到 PDCA 一级视图的「日执行」二级视图
+            this.lastTabByPrimary[this.activePrimary] = this.activeTab;
+            this.activePrimary = 'pdca';
+            this.activeTab = 'today';
+            this.lastTabByPrimary['pdca'] = 'today';
+            this.renderSecondaryTabs();
+            void this.renderContent();
+        };
+    }
+
+    /**
+     * 渲染状态栏中的「进行中任务」：显示「任务名称：时长」。
+     * 无进行中任务（或任务已被移除）时隐藏；点击跳转到日执行视图。
+     */
+    private renderStatusBarRunningTask(): void {
+        const el = this.statusBarEl;
+        if (!el) return;
+        el.empty();
+
+        const running = this.pdcaRepo().runningTask;
+        const item = running
+            ? this.weekView.inboxData.items.find(i => i.id === running.inboxId && !i.removed)
+            : undefined;
+        if (!running || !item) {
+            el.addClass('is-hidden');
+            return;
+        }
+        el.removeClass('is-hidden');
+
+        const now = new Date();
+        const nowMinutes = now.getHours() * 60 + now.getMinutes();
+        const elapsed = Math.max(0, nowMinutes - running.start);
+        el.setText(t('nav.runningStatusBar', {
+            name: item.title,
+            duration: t('nav.runningStatusBarDuration', { minutes: String(elapsed) }),
+        }));
+        el.setAttribute('aria-label', t('nav.runningLabel'));
+        el.onclick = () => {
             // 跳转到 PDCA 一级视图的「日执行」二级视图
             this.lastTabByPrimary[this.activePrimary] = this.activeTab;
             this.activePrimary = 'pdca';
@@ -577,6 +627,9 @@ export class MainView extends ItemView {
             window.clearInterval(this.runningCardTimer);
             this.runningCardTimer = undefined;
         }
+        // 移除状态栏中的进行中任务元素
+        this.statusBarEl?.remove();
+        this.statusBarEl = undefined;
         this.containerEl.empty();
     }
 }
