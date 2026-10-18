@@ -729,7 +729,7 @@ export class OkrTaskPlanView {
         const catValue = catRow.createDiv({ cls: 'task-plan-field-value' });
         if (category) {
             const dot = catValue.createSpan({ cls: 'task-plan-category-dot' });
-            if (category.color) dot.style.backgroundColor = category.color;
+            if (category.color) dot.setCssStyles({ backgroundColor: category.color });
             catValue.createSpan({ text: category.label });
         } else {
             catValue.setText(t('taskPlan.emptyValue'));
