@@ -19,20 +19,12 @@ const GRID = 30;
 /** 卡片默认宽高（像素，均为 GRID 的整数倍） */
 const DEFAULT_W = 300;
 const DEFAULT_H = 240;
-/** 卡片最小宽高（像素，均为 GRID 的整数倍） */
-const MIN_W = 180;
-const MIN_H = 120;
 /** 自动排布时每行放置的卡片数 */
 const CARDS_PER_ROW = 3;
 
 /** 吸附到网格：四舍五入到 GRID 的整数倍 */
 function snap(v: number): number {
     return Math.round(v / GRID) * GRID;
-}
-
-/** 向上取整到 GRID 的整数倍（用于调整尺寸结束时的最终尺寸） */
-function snapUp(v: number): number {
-    return Math.ceil(v / GRID) * GRID;
 }
 
 /**

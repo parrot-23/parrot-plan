@@ -1,4 +1,4 @@
-import { App, Modal, Setting, Notice } from 'obsidian';
+import { App, Modal, Setting } from 'obsidian';
 import type { PlanCategoryId } from './plan-data';
 import type { CategoryRepo } from '../repos/category-repo';
 import { t } from '../i18n';

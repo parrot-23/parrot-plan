@@ -7,14 +7,14 @@ import { hexToTransparent, getCurrentWeekKey, makeWeekKey, parseWeekKey, shiftWe
 import type { PlanCategoryData } from '../../shared/plan-category-manager';
 import type { DayTemplateData } from '../../shared/template-manager';
 import { renderPlanCategoryLegend } from '../../shared/plan-category-manager';
-import { renderDayTemplateRow, renderTemplatePanel } from '../../shared/template-manager';
+import { renderTemplatePanel } from '../../shared/template-manager';
 import { renderTaskPanel } from '../../shared/task-panel';
 import { DEFAULT_INBOX_DATA, type InboxData, type InboxItem } from '../../datatypes/domain';
 import { renderWeekPanel } from '../../shared/week-panel';
 import { renderWeekGrid } from '../../shared/week-grid';
-import { t, getWeekDays } from '../../i18n';
+import { t } from '../../i18n';
 import { log } from '../../shared/logger';
-import { EVENT_STATUS_EMOJI, EVENT_STATUS_LABEL_KEY, getEventStatus } from '../../datatypes/domain';
+import { EVENT_STATUS_EMOJI, EVENT_STATUS_LABEL_KEY } from '../../datatypes/domain';
 import type { EventBlock, ExecutionRecord, EventStatus } from '../../datatypes/domain';
 import type { PdcaRepo } from '../../repos/pdca-repo';
 import type { InboxRepo } from '../../repos/inbox-repo';

@@ -3409,6 +3409,7 @@
     height: 10px;
     border-radius: 50%;
     flex-shrink: 0;
+    background-color: var(--dot-color, transparent);
 }
 
 /* 泳道图与下方区域之间的分隔线 */

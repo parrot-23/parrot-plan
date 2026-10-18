@@ -1,5 +1,5 @@
 // stats 模式渲染器：定义数据来源，展示统计信息（数字卡 + 可选图表）。
-import type { CardRenderer, CardRenderContext } from '../../datatypes/renderer';
+import type { CardRenderer } from '../../datatypes/renderer';
 import { aggregate } from '../engine/aggregators';
 import { renderChart, renderHeatmap, renderRadar, renderScatter, renderFunnel, renderWordCloud } from '../drawer/chart-render-draw';
 

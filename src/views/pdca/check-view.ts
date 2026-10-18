@@ -2,7 +2,6 @@ import type { App } from 'obsidian';
 
 import type { PlanCategoryData } from '../../shared/plan-category-manager';
 import type { InboxData, EventBlock, ExecutionRecord } from '../../datatypes/domain';
-import { getEventStatus } from '../../datatypes/domain';
 import type { DailyRange } from '../../shared/plan-data';
 import {
     getCurrentWeekKey,

@@ -3,7 +3,7 @@
 // - 手写：行内文本输入框，自由填写内容。
 // - 任务时长：行内搜索已有任务，选中后末尾显示该任务的实际执行时长（xh）。
 import type { CardRenderer, CardRenderContext } from '../../datatypes/renderer';
-import type { CardInstance, TimelogRow, TimelogRowKind } from '../../datatypes/card';
+import type { TimelogRow, TimelogRowKind } from '../../datatypes/card';
 import { t } from '../../i18n';
 
 /** 把分钟数格式化为小时（如 90 → 1.5h，60 → 1h） */
