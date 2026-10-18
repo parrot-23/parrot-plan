@@ -116,33 +116,134 @@ export interface BasketItem {
 
 /** 任务 OKR 信息（计划值，手填） */
 export interface OkrInfo {
-    /** OKR 条件列表（每行：条件类型 + 目标值） */
+    /** OKR 条目列表（每条：类型 + 对应字段） */
     conditions: OkrCondition[];
 }
 
-/** OKR 条件类型：时长 / 成果 */
-export type OkrConditionType = 'duration' | 'outcome';
+/**
+ * OKR 条目类型：
+ * - 拆解型：任务整体一次性达成
+ *   - milestone 里程碑（任务的具体状态进度）
+ *   - outcome   成果（任务的实际交付物成果）
+ *   - cumulative 累积（某种累积的数值）
+ * - 周期型：每个周期内用某种判定，需要打卡记录
+ *   - frequency 频次（执行次数等）
+ *   - range     区间（保持合理睡眠时长等）
+ */
+export type OkrConditionType = 'milestone' | 'outcome' | 'cumulative' | 'frequency' | 'range';
 
-/** OKR 条件项（一行：条件类型 + 目标值 / 成果文本） */
+/** OKR 条目所属大类 */
+export type OkrConditionGroup = 'breakdown' | 'periodic';
+
+/** 周期型条目的周期粒度 */
+export type OkrPeriod = 'day' | 'week' | 'month';
+
+/** 周期型条目的打卡记录（每个周期一条） */
+export interface OkrRecord {
+    /** 周期键：day → 2026-10-18，week → 2026-W42，month → 2026-10 */
+    periodKey: string;
+    /** 记录值：频次为次数，区间为数值 */
+    value: number;
+}
+
+/** OKR 条目（一条：类型 + 对应字段） */
 export interface OkrCondition {
     id: string;
     type: OkrConditionType;
-    /** 目标值（时长类型使用，单位分钟） */
+    /** 条目名称（如「里程碑1」「每周运动」），旧数据无此字段 */
+    title?: string;
+    /** 目标值（里程碑 / 累积 / 频次使用） */
     target: number;
     /** 成果文本（成果类型使用，纯文字描述） */
     text?: string;
-    /** 成果是否已完成（成果类型使用，可选，旧数据无此字段默认未完成） */
+    /** 是否已完成（里程碑 / 成果使用，旧数据无此字段默认未完成） */
     done?: boolean;
+    /** 单位（累积 / 区间使用，如「分钟」「小时」） */
+    unit?: string;
+    /** 周期粒度（周期型使用） */
+    period?: OkrPeriod;
+    /** 区间下限（区间类型使用） */
+    min?: number;
+    /** 区间上限（区间类型使用） */
+    max?: number;
+    /** 打卡记录（周期型使用） */
+    records?: OkrRecord[];
+    /** 期望时间点（维度信息，格式 YYYY-MM-DD） */
+    dueDate?: string;
+    /** 绑定的子任务 id（维度信息） */
+    subtaskId?: string;
 }
 
 /**
- * OKR 条件类型原型数据：统一维护各类型的名称 i18n key 与单位 i18n key。
+ * OKR 条目类型原型数据：统一维护各类型的名称 i18n key、所属大类与单位 i18n key。
  * 各视图统一从此处读取，避免各处重复判断。
  */
-export const OKR_CONDITION_META: Record<OkrConditionType, { labelKey: string; unitKey: string }> = {
-    duration: { labelKey: 'okr.typeDuration', unitKey: 'okr.unitMinute' },
-    outcome: { labelKey: 'okr.typeOutcome', unitKey: 'okr.unitCount' },
+export const OKR_CONDITION_META: Record<OkrConditionType, { labelKey: string; group: OkrConditionGroup; unitKey: string }> = {
+    milestone: { labelKey: 'okr.typeMilestone', group: 'breakdown', unitKey: 'okr.unitCount' },
+    outcome: { labelKey: 'okr.typeOutcome', group: 'breakdown', unitKey: 'okr.unitCount' },
+    cumulative: { labelKey: 'okr.typeCumulative', group: 'breakdown', unitKey: 'okr.unitMinute' },
+    frequency: { labelKey: 'okr.typeFrequency', group: 'periodic', unitKey: 'okr.unitTimes' },
+    range: { labelKey: 'okr.typeRange', group: 'periodic', unitKey: 'okr.unitCount' },
 };
+
+/** OKR 大类原型数据：名称 i18n key + 该大类下的条目类型（按展示顺序） */
+export const OKR_GROUP_META: Record<OkrConditionGroup, { labelKey: string; types: OkrConditionType[] }> = {
+    breakdown: { labelKey: 'okr.groupBreakdown', types: ['milestone', 'outcome', 'cumulative'] },
+    periodic: { labelKey: 'okr.groupPeriodic', types: ['frequency', 'range'] },
+};
+
+/** 周期粒度原型数据：名称 i18n key */
+export const OKR_PERIOD_META: Record<OkrPeriod, { labelKey: string }> = {
+    day: { labelKey: 'okr.periodDay' },
+    week: { labelKey: 'okr.periodWeek' },
+    month: { labelKey: 'okr.periodMonth' },
+};
+
+/**
+ * 兼容旧数据：把旧的 OKR 条件（duration / outcome）迁移为新类型。
+ * - duration → cumulative（累积，单位分钟）
+ * - outcome  → outcome（成果）
+ * 已是新类型的条目原样返回；非法条目丢弃。
+ */
+export function migrateOkrConditions(raw: unknown): OkrCondition[] {
+    if (!Array.isArray(raw)) return [];
+    const result: OkrCondition[] = [];
+    for (const entry of raw) {
+        if (!entry || typeof entry !== 'object') continue;
+        const c = entry as Record<string, unknown>;
+        if (typeof c.id !== 'string') continue;
+
+        // 旧类型映射
+        let type = c.type as OkrConditionType;
+        if (type === ('duration' as unknown as OkrConditionType)) type = 'cumulative';
+        if (!(type in OKR_CONDITION_META)) continue;
+
+        const cond: OkrCondition = {
+            id: c.id,
+            type,
+            target: typeof c.target === 'number' ? c.target : 0,
+        };
+        if (typeof c.title === 'string') cond.title = c.title;
+        if (typeof c.text === 'string') cond.text = c.text;
+        if (typeof c.done === 'boolean') cond.done = c.done;
+        if (typeof c.unit === 'string') cond.unit = c.unit;
+        if (type === 'cumulative' && !cond.unit) cond.unit = 'min';
+        if (c.period === 'day' || c.period === 'week' || c.period === 'month') cond.period = c.period;
+        if (typeof c.min === 'number') cond.min = c.min;
+        if (typeof c.max === 'number') cond.max = c.max;
+        if (Array.isArray(c.records)) {
+            cond.records = c.records.filter(
+                (r): r is OkrRecord => !!r && typeof r === 'object'
+                    && typeof (r as OkrRecord).periodKey === 'string'
+                    && typeof (r as OkrRecord).value === 'number',
+            );
+        }
+        if (typeof c.dueDate === 'string') cond.dueDate = c.dueDate;
+        if (typeof c.subtaskId === 'string') cond.subtaskId = c.subtaskId;
+        result.push(cond);
+    }
+    return result;
+}
 
 /** 板块类型：清单 / 步骤 / 打卡 / 文件 */
 export type SectionType = 'checklist' | 'steps' | 'habit' | 'file';

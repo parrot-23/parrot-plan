@@ -4953,6 +4953,154 @@
     background: var(--background-modifier-hover);
 }
 
+/* ===== OKR 视图：条目卡片 ===== */
+/* 「+」下拉面板：按大类分组 */
+.okr-add-panel {
+    min-width: 140px;
+}
+
+.okr-add-group-title {
+    padding: 6px 10px 2px;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text-muted);
+    white-space: nowrap;
+}
+
+/* 条目卡片列表 */
+.okr-entry-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+/* 单条 OKR 条目卡片 */
+.okr-entry-card {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 10px 12px;
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 8px;
+    background: var(--background-primary);
+    box-sizing: border-box;
+}
+
+/* 卡片头部：类型标签 + 名称 + 删除 */
+.okr-entry-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.okr-entry-type {
+    flex-shrink: 0;
+    padding: 1px 8px;
+    border-radius: 10px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-on-accent);
+    background: var(--interactive-accent);
+}
+
+.okr-entry-title {
+    flex: 1;
+    min-width: 0;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.okr-entry-del {
+    flex-shrink: 0;
+    padding: 0 6px;
+    font-size: 12px;
+    cursor: pointer;
+}
+
+/* 卡片主体 */
+.okr-entry-body {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.okr-entry-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.okr-entry-label {
+    flex-shrink: 0;
+    font-size: 12px;
+    color: var(--text-muted);
+}
+
+.okr-entry-number {
+    width: 80px;
+    font-size: 12px;
+}
+
+.okr-entry-unit-input {
+    width: 60px;
+    font-size: 12px;
+}
+
+.okr-entry-unit {
+    font-size: 12px;
+    color: var(--text-muted);
+}
+
+.okr-entry-text {
+    flex: 1;
+    min-width: 0;
+    font-size: 12px;
+}
+
+.okr-entry-select {
+    font-size: 12px;
+}
+
+/* 维度信息行 */
+.okr-entry-dimensions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    padding-top: 6px;
+    border-top: 1px dashed var(--background-modifier-border);
+}
+
+.okr-entry-dim-label {
+    font-size: 12px;
+    color: var(--text-muted);
+}
+
+.okr-entry-date {
+    font-size: 12px;
+}
+
+/* 打卡状态 */
+.okr-record-state {
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.okr-record-state.is-hit {
+    color: var(--text-success);
+}
+
+.okr-record-state.is-miss {
+    color: var(--text-muted);
+}
+
+.okr-record-btn {
+    padding: 2px 10px;
+    font-size: 12px;
+    cursor: pointer;
+}
+
 /* 方框内容区：卡片横向排列 */
 .swimlane-section-area-body {
     display: flex;

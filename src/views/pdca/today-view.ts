@@ -4,7 +4,7 @@ import { Notice, setIcon } from 'obsidian';
 import type { PlanCategoryData } from '../../shared/plan-category-manager';
 import { UNCATEGORIZED_CATEGORY_ID } from '../../shared/plan-category-manager';
 import type { InboxData, InboxItem, ChecklistData, StepsData, HabitData, FileData } from '../../datatypes/domain';
-import { SECTION_TYPE_META, OKR_CONDITION_META } from '../../datatypes/domain';
+import { SECTION_TYPE_META } from '../../datatypes/domain';
 import { getCurrentDayKey, getISOWeek, makeDayKey, makeDayKeyFromWeek, makeWeekKey } from '../../shared/plan-data';
 import type { DailyRange } from '../../shared/plan-data';
 import type { EventBlock, ExecutionRecord, RunningTask } from '../../datatypes/domain';
@@ -179,8 +179,6 @@ export class TodayView {
         this.renderRightTabs(centerPanel);
         // 进行中任务进度方框（位于选项卡下方）
         this.renderRunningProgressBox(centerPanel);
-        // OKR 执行进度方框
-        this.renderOkrProgressBox(centerPanel);
         // 选项卡内容区
         this.renderRightTabContent(centerPanel);
         this.renderActionButtons(centerPanel);
@@ -886,88 +884,6 @@ export class TodayView {
         const track = bar.createDiv({ cls: 'today-running-progress-track' });
         track.createDiv({ cls: 'today-running-progress-fill' });
         bar.createSpan({ cls: 'today-running-progress-end', text: formatMinutes(this.nowMinutes()) });
-    }
-
-    /**
-     * OKR 执行进度方框：展示当前任务的 OKR 条件完成进度（当前值 / 目标值）。
-     * 当前值从该任务的执行记录推算：
-     * - duration：已执行总时长（分钟）
-     * - times：执行次数
-     * - count / outcome：执行记录条数
-     * 无选中任务或无 OKR 条件时给出相应提示（方框始终显示）。
-     */
-    private renderOkrProgressBox(panel: HTMLElement) {
-        const box = panel.createDiv({ cls: 'today-okr-progress-box' });
-        box.createDiv({ cls: 'today-okr-progress-title', text: t('okr.progressTitle') });
-
-        // 当前任务：优先时间轴选中事件的来源任务，其次任务面板选中任务
-        const selectedEvent = this.selectedEventId
-            ? this.getEvents().find(ev => ev.id === this.selectedEventId)
-            : undefined;
-        const currentItem = selectedEvent?.inboxId
-            ? this.inboxData.items.find(i => i.id === selectedEvent.inboxId && !i.removed)
-            : this.getSelectedItem();
-
-        const body = box.createDiv({ cls: 'today-okr-progress-body' });
-
-        if (!currentItem) {
-            body.createDiv({ cls: 'today-okr-progress-empty', text: t('today.noSelection') });
-            return;
-        }
-
-        const conditions = currentItem.okr?.conditions ?? [];
-        if (conditions.length === 0) {
-            body.createDiv({ cls: 'today-okr-progress-empty', text: t('okr.progressEmpty') });
-            return;
-        }
-
-        // 该任务的执行记录（按 inboxId 聚合）
-        const execs = this.getExecutions().filter(ex => ex.inboxId === currentItem.id);
-        const totalMinutes = execs.reduce((s, ex) => s + Math.max(0, ex.end - ex.start), 0);
-
-        for (const cond of conditions) {
-            const row = body.createDiv({ cls: 'okr-progress-row' });
-
-            // 条件类型标签
-            row.createSpan({
-                cls: 'okr-progress-label',
-                text: t(OKR_CONDITION_META[cond.type].labelKey as Parameters<typeof t>[0]),
-            });
-
-            if (cond.type === 'outcome') {
-                // 成果：勾选框形式展示（勾选状态持久化到 cond.done）
-                const cb = row.createEl('input', { type: 'checkbox', cls: 'okr-progress-checkbox' });
-                cb.checked = cond.done ?? false;
-                cb.onchange = () => {
-                    cond.done = cb.checked;
-                    void this.save();
-                };
-                row.createSpan({ cls: 'okr-progress-outcome-text', text: cond.text ?? '' });
-                continue;
-            }
-
-            // 当前值：时长类型从执行记录推算（分钟）
-            const current = totalMinutes;
-
-            // 进度条（宽度为页面的一半）
-            const bar = row.createDiv({ cls: 'okr-progress-bar is-half' });
-            const fill = bar.createDiv({ cls: 'okr-progress-fill' });
-            const percent = cond.target > 0 ? Math.min(100, Math.round((current / cond.target) * 100)) : 0;
-            fill.style.width = `${percent}%`;
-
-            // 数值：当前 / 目标
-            const unit = t(OKR_CONDITION_META[cond.type].unitKey as Parameters<typeof t>[0]);
-            row.createSpan({
-                cls: 'okr-progress-value',
-                text: `${current} / ${cond.target} ${unit}`,
-            });
-
-            // 百分比
-            row.createSpan({
-                cls: 'okr-progress-percent',
-                text: t('okr.progressPercent', { percent: String(percent) }),
-            });
-        }
     }
 
     /** 是否存在选中项（时间轴事件 / 新增执行记录 / 进行中任务 / 任务面板任务） */

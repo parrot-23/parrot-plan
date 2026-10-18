@@ -9,7 +9,7 @@ import type { PlanCategoryData } from '../shared/plan-category-manager';
 import { ensureUncategorizedCategory } from '../shared/plan-category-manager';
 import type { DayTemplateData } from '../shared/template-manager';
 import type { EventBlock, ExecutionRecord, InboxData, ImprovementData, RunningTask } from '../datatypes/domain';
-import { DEFAULT_INBOX_DATA, DEFAULT_IMPROVEMENT_DATA } from '../datatypes/domain';
+import { DEFAULT_INBOX_DATA, DEFAULT_IMPROVEMENT_DATA, migrateOkrConditions } from '../datatypes/domain';
 import type { WorkbenchData } from '../datatypes/card';
 import { defaultWorkbenchData } from '../datatypes/card';
 import type { GtdData } from '../datatypes/gtd';
@@ -178,6 +178,12 @@ export class BaseRepo {
         // 兼容旧数据：确保「未分类」始终存在且位于首位
         ensureUncategorizedCategory(initialCategoryData);
         const initialInboxData = (savedData.inboxData ?? DEFAULT_INBOX_DATA) as InboxData;
+        // 兼容旧数据：把旧的 OKR 条件（duration / outcome）迁移为新类型
+        for (const item of initialInboxData.items ?? []) {
+            if (item.okr) {
+                item.okr.conditions = migrateOkrConditions(item.okr.conditions);
+            }
+        }
         const initialPlanSchemeData = (savedData.schemeData ?? { schemes: [] }) as PlanSchemeData;
         // 兼容旧数据：确保默认方案始终存在且位于首位
         ensureDefaultScheme(initialPlanSchemeData, t('planScheme.defaultName'));

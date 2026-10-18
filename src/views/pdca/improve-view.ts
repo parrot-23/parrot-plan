@@ -241,8 +241,8 @@ export class ImproveView {
                 okrRow.createSpan({ cls: 'improve-week-task-okr-label', text: t('improve.weekTaskOkrNew') });
                 for (const cond of conditions) {
                     const unit = t(OKR_CONDITION_META[cond.type].unitKey as Parameters<typeof t>[0]);
-                    // 时长类型：本周执行总时长；成果类型：本周执行次数
-                    const added = cond.type === 'duration' ? totalMinutes : execs.length;
+                    // 累积类型：本周执行总时长；其余类型：本周执行次数
+                    const added = cond.type === 'cumulative' ? totalMinutes : execs.length;
                     okrRow.createSpan({
                         cls: 'improve-week-task-okr-chip',
                         text: `+${added} ${unit}`,
