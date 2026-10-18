@@ -328,6 +328,12 @@ export const en: I18nMessages = {
     'check.weekRow1Title': 'This Week Planned vs Actual',
     'check.weekRow2Title': 'Last Week Actual vs This Week Actual',
     'check.prevWeekActual': 'Last Week Actual',
+    'check.detailBtn': 'Detail',
+    'check.statsBtn': 'Stats',
+    'check.detailTitle': 'Execution Details',
+    'check.detailEmpty': 'No execution records this week',
+    'check.detailDayEmpty': 'No execution records',
+    'check.detailDuration': 'Duration {duration}',
 
     // Improve view (PDCA Act)
     'improve.suggestionsTitle': 'Improvement suggestions',

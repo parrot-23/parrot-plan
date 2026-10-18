@@ -46,6 +46,8 @@ export class CheckView {
     private container?: HTMLElement;
     /** 当前检查的周键 */
     private currentWeekKey: string = getCurrentWeekKey();
+    /** 视图模式：详细 / 统计（两者互斥，默认详细） */
+    private viewMode: 'detail' | 'stats' = 'detail';
 
     constructor(
         app: App,
@@ -73,6 +75,13 @@ export class CheckView {
 
         const body = container.createDiv({ cls: 'check-body' });
 
+        // 详细模式：文字形式的执行详细情况
+        if (this.viewMode === 'detail') {
+            this.renderDetailSection(body);
+            return;
+        }
+
+        // 统计模式：今日执行情况 + 每日执行情况 + 周统计
         // 最顶部：今日执行情况（计划 / 实际 / 差异，含事件数量与时长）
         this.renderTodaySection(body);
 
@@ -86,6 +95,76 @@ export class CheckView {
     /** 重新渲染自身 */
     private async refresh(): Promise<void> {
         if (this.container) await this.renderInto(this.container);
+    }
+
+    // ===== 详细模式：文字形式的执行详细情况 =====
+    /**
+     * 按天列出本周所有执行记录的文字详情：
+     * 每天一个区块，逐条显示「时间 · 任务名 · 分类 · 时长」。
+     */
+    private renderDetailSection(body: HTMLElement) {
+        const section = body.createDiv({ cls: 'check-daily-section' });
+        section.createDiv({ cls: 'check-daily-section-title', text: t('check.detailTitle') });
+
+        const weekExecs = this.getExecutions().filter(ex => ex.weekKey === this.currentWeekKey);
+        if (weekExecs.length === 0) {
+            section.createDiv({ cls: 'check-daily-empty', text: t('check.detailEmpty') });
+            return;
+        }
+
+        const weekDays = getWeekDays();
+        for (let day = 1; day <= 7; day++) {
+            const dayExecs = weekExecs
+                .filter(ex => ex.day === day)
+                .sort((a, b) => a.start - b.start);
+
+            const block = section.createDiv({ cls: 'check-daily-block' });
+            block.createDiv({ cls: 'check-daily-block-title', text: weekDays[day - 1] });
+
+            if (dayExecs.length === 0) {
+                block.createDiv({ cls: 'check-daily-empty', text: t('check.detailDayEmpty') });
+                continue;
+            }
+
+            const list = block.createDiv({ cls: 'check-detail-list' });
+            for (const ex of dayExecs) {
+                const item = ex.inboxId
+                    ? this.inboxData.items.find(i => i.id === ex.inboxId && !i.removed)
+                    : undefined;
+                const planned = ex.eventId ? this.getEvents().find(e => e.id === ex.eventId) : undefined;
+                const title = item?.title ?? planned?.title ?? t('check.unknownTask');
+                const cat = item?.categoryId
+                    ? this.categoryData.categories.find(c => c.id === item.categoryId)
+                    : undefined;
+
+                const row = list.createDiv({ cls: 'check-detail-row' });
+
+                // 时间
+                row.createSpan({
+                    cls: 'check-detail-time',
+                    text: `${formatMinutes(ex.start)} - ${formatMinutes(ex.end)}`,
+                });
+
+                // 分类色点
+                const dot = row.createSpan({ cls: 'check-category-dot' });
+                dot.setCssProps({ '--dot-color': cat?.color ?? '#888888' });
+
+                // 任务名
+                row.createSpan({ cls: 'check-detail-name', text: title });
+
+                // 分类名
+                row.createSpan({
+                    cls: 'check-detail-category',
+                    text: cat?.label ?? t('inbox.noCategory'),
+                });
+
+                // 时长
+                row.createSpan({
+                    cls: 'check-detail-duration',
+                    text: t('check.detailDuration', { duration: formatHours(Math.max(0, ex.end - ex.start)) }),
+                });
+            }
+        }
     }
 
     // ===== 周导航 =====
@@ -137,6 +216,29 @@ export class CheckView {
         thisWeekBtn.toggleClass('is-active', this.currentWeekKey === getCurrentWeekKey());
         thisWeekBtn.onclick = () => {
             this.currentWeekKey = getCurrentWeekKey();
+            void this.refresh();
+        };
+
+        // 详细 / 统计按钮（互斥：同一时刻只有一个处于激活态）
+        const detailBtn = nav.createEl('button', {
+            text: t('check.detailBtn'),
+            cls: 'check-week-nav-mode-btn',
+        });
+        detailBtn.toggleClass('is-active', this.viewMode === 'detail');
+        detailBtn.onclick = () => {
+            if (this.viewMode === 'detail') return;
+            this.viewMode = 'detail';
+            void this.refresh();
+        };
+
+        const statsBtn = nav.createEl('button', {
+            text: t('check.statsBtn'),
+            cls: 'check-week-nav-mode-btn',
+        });
+        statsBtn.toggleClass('is-active', this.viewMode === 'stats');
+        statsBtn.onclick = () => {
+            if (this.viewMode === 'stats') return;
+            this.viewMode = 'stats';
             void this.refresh();
         };
     }

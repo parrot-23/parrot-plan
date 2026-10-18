@@ -406,6 +406,22 @@ export class WeekScheduleView extends ItemView {
         schemes.forEach((scheme, index) => {
             const row = list.createDiv({ cls: 'tbcat-row' });
 
+            // 切换（设为当前方案，位于每行最前面）
+            const switchBtn = row.createEl('button', {
+                text: t('planScheme.switchTo'),
+                cls: 'tbcat-action-btn',
+            });
+            if (scheme.id === this.planSchemeRepo().activeSchemeId) {
+                switchBtn.addClass('is-active');
+            }
+            switchBtn.onclick = () => {
+                this.planSchemeRepo().setActiveSchemeId(scheme.id);
+                void (async () => {
+                    await this.save();
+                    await this.onOpen();
+                })();
+            };
+
             // 名称
             const name = row.createEl('input', {
                 type: 'text',
@@ -434,22 +450,6 @@ export class WeekScheduleView extends ItemView {
                     })();
                 };
             }
-
-            // 切换（设为当前方案）
-            const switchBtn = row.createEl('button', {
-                text: t('planScheme.switchTo'),
-                cls: 'tbcat-action-btn',
-            });
-            if (scheme.id === this.planSchemeRepo().activeSchemeId) {
-                switchBtn.addClass('is-active');
-            }
-            switchBtn.onclick = () => {
-                this.planSchemeRepo().setActiveSchemeId(scheme.id);
-                void (async () => {
-                    await this.save();
-                    await this.onOpen();
-                })();
-            };
         });
     }
 

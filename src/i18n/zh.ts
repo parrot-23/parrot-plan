@@ -326,6 +326,12 @@ export const zh = {
     'check.weekRow1Title': '本周计划 vs 本周执行',
     'check.weekRow2Title': '上周执行 vs 本周执行',
     'check.prevWeekActual': '上周执行',
+    'check.detailBtn': '详细',
+    'check.statsBtn': '统计',
+    'check.detailTitle': '执行详细情况',
+    'check.detailEmpty': '本周暂无执行记录',
+    'check.detailDayEmpty': '暂无执行记录',
+    'check.detailDuration': '时长 {duration}',
 
     // 改进视图（PDCA 的 Act）
     'improve.suggestionsTitle': '改进建议',
