@@ -215,7 +215,7 @@ export const en: I18nMessages = {
     'basket.organizeFileMissing': 'Target file not found',
 
     // Improvement box
-    'improveBox.title': 'Improvements',
+    'improveBox.title': 'Improvement Basket',
     'improveBox.empty': 'No improvements yet',
     'improveBox.addPlaceholder': 'Enter improvement content',
     'improveBox.add': 'Add',

@@ -219,7 +219,6 @@ export class MainView extends ItemView {
             this.weekView.planCategoryData,
             () => this.weekView.save(),
             this.inboxRepo(),
-            () => this.weekView.executions,
         );
         this.okrView = new OkrView(
             this.app,
@@ -227,6 +226,7 @@ export class MainView extends ItemView {
             this.weekView.planCategoryData,
             () => this.weekView.save(),
             this.inboxRepo(),
+            () => this.weekView.executions,
         );
         this.achievementView = new AchievementView(
             this.app,

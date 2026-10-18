@@ -213,7 +213,7 @@ export const zh = {
     'basket.organizeFileMissing': '目标文件不存在',
 
     // 改进项方框
-    'improveBox.title': '改进项',
+    'improveBox.title': '改进篮子',
     'improveBox.empty': '暂无改进项',
     'improveBox.addPlaceholder': '输入要改进的内容',
     'improveBox.add': '添加',
