@@ -593,8 +593,7 @@ export class WeekScheduleView extends ItemView {
      * 结构与上方饼图统计行一致（整行撑满、单元格之间用分隔线连接）。
      */
     private renderHabitSummaryRow(statsRow: HTMLElement) {
-        const row = document.createElement('div');
-        row.className = 'week-panel-habit-summary';
+        const row = statsRow.createDiv({ cls: 'week-panel-habit-summary' });
         statsRow.insertAdjacentElement('afterend', row);
 
         for (let d = 1; d <= 7; d++) {
@@ -905,7 +904,7 @@ export class WeekScheduleView extends ItemView {
         // 先复位，避免基于上一次的偏移重复计算
         pop.setCssProps({ left: '0', right: 'auto' });
 
-        const boundary = pop.closest('.week-calendar') as HTMLElement | null;
+        const boundary = pop.closest('.week-calendar');
         const popRect = pop.getBoundingClientRect();
         const boundaryRect = boundary
             ? boundary.getBoundingClientRect()
@@ -914,7 +913,7 @@ export class WeekScheduleView extends ItemView {
         const overflowRight = popRect.right - boundaryRect.right;
         if (overflowRight > 0) {
             // 与卡片右缘对齐：面板右缘贴齐卡片右缘
-            const anchor = pop.parentElement as HTMLElement | null;
+            const anchor = pop.parentElement;
             if (anchor) {
                 const anchorRect = anchor.getBoundingClientRect();
                 const shift = popRect.right - anchorRect.right;

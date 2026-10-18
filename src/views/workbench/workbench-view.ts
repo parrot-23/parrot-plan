@@ -319,6 +319,7 @@ export class WorkbenchView {
         groups: Array<{ key?: string; match: (tpl: CardTemplate) => boolean }>,
     ) {
         const menu = anchor.createDiv({ cls: 'wb-add-menu' });
+        anchor.addClass('is-menu-open');
         const candidates = this.templates.filter((tpl) => tpl.mode === mode);
 
         for (const group of groups) {
@@ -346,6 +347,7 @@ export class WorkbenchView {
         const close = (e: MouseEvent) => {
             if (!menu.contains(e.target as Node)) {
                 menu.remove();
+                anchor.removeClass('is-menu-open');
                 document.removeEventListener('click', close);
             }
         };
@@ -360,6 +362,7 @@ export class WorkbenchView {
         item.onclick = () => {
             this.addCard(tpl);
             menu.remove();
+            menu.parentElement?.removeClass('is-menu-open');
         };
     }
 

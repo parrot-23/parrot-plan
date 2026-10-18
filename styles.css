@@ -4254,6 +4254,100 @@
     color: var(--text-muted);
 }
 
+/* 今日情况：今日任务占比方框（左饼图 + 右任务时长列表） */
+.today-task-share-box {
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 10px 14px;
+    margin-bottom: 8px;
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 10px;
+    background: var(--background-secondary);
+}
+
+.today-task-share-content {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.today-task-share-pie {
+    position: relative;
+    flex-shrink: 0;
+    width: 160px;
+    height: 160px;
+    border-radius: 50%;
+    /* 白色底：扇区之间的角度间隙露出白色，形成清晰隔离边界 */
+    background: #ffffff;
+}
+
+.today-task-share-svg {
+    display: block;
+    width: 100%;
+    height: 100%;
+}
+
+/* 扇形上的任务名标签：按扇区中心角度旋转定位到半径中部 */
+.today-task-share-slice-label {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    max-width: 64px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 10px;
+    line-height: 1.2;
+    color: #ffffff;
+    text-shadow: 0 0 2px rgba(0, 0, 0, 0.6);
+    pointer-events: none;
+    transform:
+        rotate(var(--slice-angle, 0deg))
+        translateY(-58px)
+        rotate(calc(-1 * var(--slice-angle, 0deg)))
+        translateX(-50%);
+}
+
+.today-task-share-list {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.today-task-share-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+}
+
+.today-task-share-dot {
+    flex-shrink: 0;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--dot-color, #888888);
+}
+
+.today-task-share-name {
+    flex-shrink: 0;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--text-normal);
+}
+
+.today-task-share-value {
+    flex-shrink: 0;
+    color: var(--text-muted);
+    font-variant-numeric: tabular-nums;
+}
+
 /* 本周情况：周目标卡片方框（复用 week-goal-card 卡片样式） */
 .today-week-goal-box {
     flex-shrink: 0;
@@ -4327,8 +4421,6 @@
 
 .today-cat-duration-value {
     flex-shrink: 0;
-    width: 44px;
-    text-align: right;
     font-size: 12px;
     color: var(--text-normal);
 }
@@ -5914,7 +6006,7 @@
 }
 
 /* 卡片右上角编辑按钮（只读态） */
-.swimlane-section-card-edit {
+button.swimlane-section-card-edit {
     flex-shrink: 0;
     display: flex;
     align-items: center;
@@ -5922,9 +6014,9 @@
     padding: 0 4px;
     line-height: 1;
     cursor: pointer;
-    background: transparent !important;
-    border: none !important;
-    box-shadow: none !important;
+    background: transparent;
+    border: none;
+    box-shadow: none;
 }
 
 .swimlane-section-card-edit svg {
@@ -5933,8 +6025,8 @@
 }
 
 /* 编辑态卡片：右上角删除 / 退出按钮 */
-.swimlane-section-card-del,
-.swimlane-section-card-exit {
+button.swimlane-section-card-del,
+button.swimlane-section-card-exit {
     flex-shrink: 0;
     display: flex;
     align-items: center;
@@ -5943,9 +6035,9 @@
     line-height: 1;
     font-size: 12px;
     cursor: pointer;
-    background: transparent !important;
-    border: none !important;
-    box-shadow: none !important;
+    background: transparent;
+    border: none;
+    box-shadow: none;
 }
 
 .swimlane-section-card-del svg,
@@ -6881,8 +6973,8 @@
     cursor: default;
 }
 
-/* 悬浮菜单时不要触发按钮的 hover 滤镜 */
-.wb-add-btn:hover:has(.wb-add-menu) {
+/* 菜单展开时不要触发按钮的 hover 滤镜 */
+.wb-add-btn.is-menu-open {
     filter: none;
 }
 

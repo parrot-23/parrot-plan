@@ -232,8 +232,9 @@ export class TodayView {
             this.renderWeekGoalBox(panel);
             return;
         }
-        // 今日情况：今日各分类已执行时长
+        // 今日情况：今日各分类已执行时长 + 今日任务占比
         this.renderCategoryDurationBox(panel);
+        this.renderTaskShareBox(panel);
     }
 
     /** 重新渲染自身 */
@@ -1112,6 +1113,139 @@ export class TodayView {
                 fill.setCssProps({ '--fill-width': `${fillPercent}%` });
             }
             row.createDiv({ cls: 'today-cat-duration-value', text: formatHours(minutes) });
+        }
+    }
+
+    /**
+     * 生成 SVG 饼图扇区路径（从 12 点方向顺时针计算角度）。
+     * 角度跨度为 360° 时返回整圆路径。
+     */
+    private describePieSlice(cx: number, cy: number, r: number, startDeg: number, endDeg: number): string {
+        const span = endDeg - startDeg;
+        if (span >= 359.999) {
+            return `M ${cx} ${cy - r} A ${r} ${r} 0 1 1 ${cx - 0.01} ${cy - r} Z`;
+        }
+        const toPoint = (deg: number) => {
+            const rad = ((deg - 90) * Math.PI) / 180;
+            return { x: cx + r * Math.cos(rad), y: cy + r * Math.sin(rad) };
+        };
+        const p0 = toPoint(startDeg);
+        const p1 = toPoint(endDeg);
+        const largeArc = span > 180 ? 1 : 0;
+        return `M ${cx} ${cy} L ${p0.x} ${p0.y} A ${r} ${r} 0 ${largeArc} 1 ${p1.x} ${p1.y} Z`;
+    }
+
+    /**
+     * 渲染「今日任务占比」方框：左侧为当天所有执行记录拼成的饼图，
+     * 右侧为各任务的执行时长列表。饼图扇区按任务聚合，颜色取任务所属分类色。
+     */
+    private renderTaskShareBox(panel: HTMLElement) {
+        const { day, weekKey } = this.getViewDayInfo();
+        const executions = this.getExecutions().filter(
+            ex => ex.day === day && ex.weekKey === weekKey,
+        );
+
+        const box = panel.createDiv({ cls: 'today-task-share-box' });
+        box.createDiv({ cls: 'today-cat-duration-title', text: t('today.taskShareTitle') });
+
+        if (executions.length === 0) {
+            box.createDiv({ cls: 'today-cat-duration-empty', text: t('today.taskShareEmpty') });
+            return;
+        }
+
+        // 按任务聚合执行时长（分钟），保持首次出现顺序
+        const minutesByTask = new Map<string, number>();
+        for (const ex of executions) {
+            const key = ex.inboxId ?? ex.eventId ?? ex.id;
+            const minutes = Math.max(0, ex.end - ex.start);
+            minutesByTask.set(key, (minutesByTask.get(key) ?? 0) + minutes);
+        }
+
+        const totalMinutes = Array.from(minutesByTask.values()).reduce((a, b) => a + b, 0);
+        if (totalMinutes <= 0) {
+            box.createDiv({ cls: 'today-cat-duration-empty', text: t('today.taskShareEmpty') });
+            return;
+        }
+
+        const content = box.createDiv({ cls: 'today-task-share-content' });
+
+        // 左侧饼图：用 SVG 绘制扇区，扇区只填充不描边；
+        // 相邻扇区的分界处另画白色半径线段，形成等宽隔离带（圆周不留白边）
+        const pie = content.createDiv({ cls: 'today-task-share-pie' });
+        const svgNs = 'http://www.w3.org/2000/svg';
+        const svg = document.createElementNS(svgNs, 'svg');
+        svg.setAttribute('viewBox', '0 0 100 100');
+        svg.setAttribute('class', 'today-task-share-svg');
+        pie.appendChild(svg);
+
+        const cx = 50;
+        const cy = 50;
+        const r = 50;
+        const dividerWidth = 2;
+        const slices: { label: string; midDeg: number; ratio: number }[] = [];
+        let acc = 0;
+        for (const [taskId, minutes] of Array.from(minutesByTask.entries())) {
+            const item = this.inboxData.items.find(i => i.id === taskId && !i.removed);
+            const cat = item?.categoryId
+                ? this.categoryData.categories.find(c => c.id === item.categoryId)
+                : undefined;
+            const color = cat?.color ?? '#888888';
+            const startDeg = (acc / totalMinutes) * 360;
+            acc += minutes;
+            const endDeg = (acc / totalMinutes) * 360;
+
+            const path = document.createElementNS(svgNs, 'path');
+            path.setAttribute('d', this.describePieSlice(cx, cy, r, startDeg, endDeg));
+            path.setAttribute('fill', color);
+            svg.appendChild(path);
+
+            slices.push({
+                label: item?.title ?? t('inbox.noCategory'),
+                midDeg: (startDeg + endDeg) / 2,
+                ratio: minutes / totalMinutes,
+            });
+        }
+
+        // 分界白线：沿每条分界半径从圆心画到圆周（单扇区无需分界）
+        if (minutesByTask.size > 1) {
+            let boundaryDeg = 0;
+            for (const minutes of Array.from(minutesByTask.values())) {
+                const rad = ((boundaryDeg - 90) * Math.PI) / 180;
+                const line = document.createElementNS(svgNs, 'line');
+                line.setAttribute('x1', String(cx));
+                line.setAttribute('y1', String(cy));
+                line.setAttribute('x2', String(cx + r * Math.cos(rad)));
+                line.setAttribute('y2', String(cy + r * Math.sin(rad)));
+                line.setAttribute('stroke', '#ffffff');
+                line.setAttribute('stroke-width', String(dividerWidth));
+                svg.appendChild(line);
+                boundaryDeg += (minutes / totalMinutes) * 360;
+            }
+        }
+
+        // 扇形上的任务名标签：按扇区中心角度定位，占比过小的扇区不显示文字
+        for (const slice of slices) {
+            if (slice.ratio < 0.06) continue;
+            const label = pie.createDiv({ cls: 'today-task-share-slice-label', text: slice.label });
+            label.setCssProps({ '--slice-angle': `${slice.midDeg}deg` });
+        }
+
+        // 右侧：各任务时长列表（按时长从多到少排序）
+        const list = content.createDiv({ cls: 'today-task-share-list' });
+        const sortedEntries = Array.from(minutesByTask.entries()).sort((a, b) => b[1] - a[1]);
+        for (const [taskId, minutes] of sortedEntries) {
+            const item = this.inboxData.items.find(i => i.id === taskId && !i.removed);
+            const cat = item?.categoryId
+                ? this.categoryData.categories.find(c => c.id === item.categoryId)
+                : undefined;
+            const color = cat?.color ?? '#888888';
+            const label = item?.title ?? t('inbox.noCategory');
+
+            const row = list.createDiv({ cls: 'today-task-share-row' });
+            const dot = row.createSpan({ cls: 'today-task-share-dot' });
+            dot.setCssProps({ '--dot-color': color });
+            row.createSpan({ cls: 'today-task-share-name', text: label });
+            row.createSpan({ cls: 'today-task-share-value', text: formatHours(minutes) });
         }
     }
 

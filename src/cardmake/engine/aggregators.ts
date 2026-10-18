@@ -429,7 +429,7 @@ function aggregateWordCloudTitles(provider: DataProvider): AggregationResult {
     for (const t of tasks) {
         const title = t.title ?? '';
         // 按空格/标点切分英文与数字，中文按单字切分
-        const tokens = title.split(/[\s,，。.!！?？;；:：、/\\()（）\[\]【】"“”'‘’]+/);
+        const tokens = title.split(/[\s,，。.!！?？;；:：、/\\()（）[\]【】"“”'‘’]+/);
         for (const token of tokens) {
             if (!token) continue;
             // 若 token 含中文，按单字切分

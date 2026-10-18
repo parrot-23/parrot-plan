@@ -270,6 +270,8 @@ export const en: I18nMessages = {
     'today.dayGoalEmpty': 'No planned events today',
     'today.categoryDurationTitle': 'Executed duration by category today',
     'today.categoryDurationEmpty': 'No executions today',
+    'today.taskShareTitle': 'Task share today',
+    'today.taskShareEmpty': 'No executions today',
     'today.addedListTitle': 'Added Items',
     'today.addedListEmpty': 'No added items today',
     'today.addUnplannedTitle': 'Execute Unplanned Event',
