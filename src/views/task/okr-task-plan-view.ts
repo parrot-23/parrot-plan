@@ -2,7 +2,7 @@ import type { App } from 'obsidian';
 import { Modal, Notice, Setting, setIcon } from 'obsidian';
 
 import type { PlanCategoryData } from '../../shared/plan-category-manager';
-import type { InboxData, InboxItem, Section, ChecklistData, StepsData, HabitData, FileData, BasketItem, ImprovementEntry, ExecutionRecord, OkrConditionItem } from '../../datatypes/domain';
+import type { InboxData, InboxItem, Section, ChecklistData, FileData, BasketItem, ImprovementEntry, ExecutionRecord, OkrConditionItem } from '../../datatypes/domain';
 import type { InboxRepo } from '../../repos/inbox-repo';
 import { SECTION_TYPE_META, OKR_CONDITION_META } from '../../datatypes/domain';
 import { renderTaskPanel, FilePathSuggest } from '../../shared/task-panel';
@@ -120,10 +120,8 @@ export class OkrTaskPlanView {
         // 下拉面板（默认隐藏）
         const panel = wrap.createDiv({ cls: 'swimlane-section-add-panel' });
 
-        const types: { type: Section['type']; labelKey: 'section.typeChecklist' | 'section.typeSteps' | 'section.typeHabit' | 'section.typeFile' }[] = [
+        const types: { type: Section['type']; labelKey: 'section.typeChecklist' | 'section.typeFile' }[] = [
             { type: 'checklist', labelKey: 'section.typeChecklist' },
-            { type: 'steps', labelKey: 'section.typeSteps' },
-            { type: 'habit', labelKey: 'section.typeHabit' },
             { type: 'file', labelKey: 'section.typeFile' },
         ];
         for (const item of types) {
@@ -197,7 +195,7 @@ export class OkrTaskPlanView {
     /** 向任务添加一个板块并保存、刷新 */
     private async addSection(item: InboxItem, type: Section['type'], name: string): Promise<void> {
         const id = `sec_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
-        const data: ChecklistData | StepsData | HabitData | FileData = { items: [] };
+        const data: ChecklistData | FileData = { items: [] };
         const section: Section = { id, type, title: name || undefined, data };
         item.sections = [...(item.sections ?? []), section];
         await this.save();
@@ -270,17 +268,6 @@ export class OkrTaskPlanView {
         if (section.type === 'checklist') {
             for (const it of (section.data as ChecklistData).items) {
                 this.renderSectionCardItem(itemsEl, it.done ? '☑' : '☐', it.text);
-            }
-        } else if (section.type === 'steps') {
-            for (const it of (section.data as StepsData).items) {
-                const mark = it.status === 'done' ? '✅' : it.status === 'doing' ? '🔄' : '⬜';
-                this.renderSectionCardItem(itemsEl, mark, it.text);
-            }
-        } else if (section.type === 'habit') {
-            const data: HabitData = section.data;
-            for (const it of data.items) {
-                const count = it.checkedDays?.length ?? 0;
-                this.renderSectionCardItem(itemsEl, '🔁', it.text, String(count));
             }
         } else if (section.type === 'file') {
             for (const it of (section.data as FileData).items) {
@@ -381,40 +368,6 @@ export class OkrTaskPlanView {
                     this.renderSectionCards(row);
                 });
             }
-        } else if (section.type === 'steps') {
-            for (const it of (section.data as StepsData).items) {
-                const line = itemsEl.createDiv({ cls: 'swimlane-section-card-edit-row' });
-                const sel = line.createEl('select', { cls: 'swimlane-section-card-edit-status' });
-                const statuses: Array<{ v: 'todo' | 'doing' | 'done'; label: string }> = [
-                    { v: 'todo', label: t('section.stepTodo') },
-                    { v: 'doing', label: t('section.stepDoing') },
-                    { v: 'done', label: t('section.stepDone') },
-                ];
-                for (const s of statuses) {
-                    const opt = sel.createEl('option', { text: s.label, value: s.v });
-                    if (it.status === s.v) opt.selected = true;
-                }
-                sel.onchange = () => { it.status = sel.value as 'todo' | 'doing' | 'done'; };
-                const text = line.createEl('input', { type: 'text', cls: 'swimlane-section-card-edit-text' });
-                text.value = it.text;
-                text.onchange = () => { it.text = text.value; };
-                this.renderEditRowDelete(line, () => {
-                    (section.data as StepsData).items = (section.data as StepsData).items.filter(x => x.id !== it.id);
-                    this.renderSectionCards(row);
-                });
-            }
-        } else if (section.type === 'habit') {
-            const data: HabitData = section.data;
-            for (const it of data.items) {
-                const line = itemsEl.createDiv({ cls: 'swimlane-section-card-edit-row' });
-                const text = line.createEl('input', { type: 'text', cls: 'swimlane-section-card-edit-text' });
-                text.value = it.text;
-                text.onchange = () => { it.text = text.value; };
-                this.renderEditRowDelete(line, () => {
-                    data.items = data.items.filter(x => x.id !== it.id);
-                    this.renderSectionCards(row);
-                });
-            }
         } else if (section.type === 'file') {
             for (const it of (section.data as FileData).items) {
                 const line = itemsEl.createDiv({ cls: 'swimlane-section-card-edit-row' });
@@ -471,11 +424,6 @@ export class OkrTaskPlanView {
         const id = `sec_item_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
         if (section.type === 'checklist') {
             (section.data as ChecklistData).items.push({ id, text: '', done: false });
-        } else if (section.type === 'steps') {
-            (section.data as StepsData).items.push({ id, text: '', status: 'todo' });
-        } else if (section.type === 'habit') {
-            const data: HabitData = section.data;
-            data.items.push({ id, text: '' });
         } else if (section.type === 'file') {
             (section.data as FileData).items.push({ id, text: '', path: '' });
         }
