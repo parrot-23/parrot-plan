@@ -448,6 +448,8 @@ export const en: I18nMessages = {
 
     // Week panel
     'weekPanel.empty': 'No tasks',
+    'weekPanel.emptyHabit': 'No habit tasks',
+    'weekPanel.emptyTask': 'No tasks for the day',
     'weekPanel.statsTitle': 'Category durations',
     'weekPanel.allocated': 'Allocated {duration}',
     'weekPanel.statsTooltip': '{label}: allocated {allocated} / planned {planned} ({percent}%)',
@@ -458,6 +460,8 @@ export const en: I18nMessages = {
     'weekPanel.habitTime': 'Habit {time}',
     'weekPanel.collapseHabits': 'Collapse habits',
     'weekPanel.habitSummary': 'Habits {count} · Total {duration}',
+    'weekPanel.habitSummaryCount': 'Habits {count}',
+    'weekPanel.habitSummaryDuration': 'Total {duration}',
 
     // Event layer
     'event.scheduled': 'Scheduled "{title}"',

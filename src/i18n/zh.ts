@@ -446,6 +446,8 @@ export const zh = {
 
     // 周面板
     'weekPanel.empty': '暂无任务',
+    'weekPanel.emptyHabit': '无习惯任务',
+    'weekPanel.emptyTask': '无当天任务',
     'weekPanel.statsTitle': '分类时长',
     'weekPanel.allocated': '已分配 {duration}',
     'weekPanel.statsTooltip': '{label}：已分配 {allocated} / 计划 {planned}（{percent}%）',
@@ -456,6 +458,8 @@ export const zh = {
     'weekPanel.habitTime': '习惯 {time}',
     'weekPanel.collapseHabits': '折叠习惯',
     'weekPanel.habitSummary': '习惯数量 {count} · 总时长 {duration}',
+    'weekPanel.habitSummaryCount': '习惯数量 {count}',
+    'weekPanel.habitSummaryDuration': '总时长 {duration}',
 
     // 事件层
     'event.scheduled': '已排入"{title}"',

@@ -303,9 +303,6 @@ export class TodayView {
             dayEvents.filter(ev => this.getEventHabitTime(ev) === null),
         );
 
-        // 根据当天执行记录同步来源任务的完成状态（已执行时长达到预估时长即标记为已完成）
-        this.syncTaskStatusFromExecutions(dayEvents);
-
         // 渲染单个当天计划事件卡片
         const renderDayEvent = (list: HTMLElement, ev: EventBlock) => {
             const item = ev.inboxId
@@ -390,43 +387,6 @@ export class TodayView {
                 onSelect: () => this.selectTaskItem(item),
             });
         }
-    }
-
-    /**
-     * 根据当天执行记录同步来源任务的完成状态：
-     * 已执行时长达到预估时长（无预估时长时只要有执行记录）即标记为已完成，
-     * 与「新增任务」卡片使用同一套完成图标。
-     * 状态有变化时写回收集盒并保存，保证任务面板（含全部任务面板）同步显示。
-     */
-    private syncTaskStatusFromExecutions(dayEvents: EventBlock[]): void {
-        const executions = this.getExecutions();
-        let changed = false;
-
-        for (const ev of dayEvents) {
-            if (!ev.inboxId) continue;
-            const item = this.inboxData.items.find(i => i.id === ev.inboxId && !i.removed);
-            if (!item) continue;
-
-            const estMinutes = typeof ev.estimatedMinutes === 'number' && ev.estimatedMinutes >= 0
-                ? ev.estimatedMinutes
-                : undefined;
-            const execMinutes = executions
-                .filter(ex => !ex.replaced && (ex.eventId === ev.id || ex.inboxId === ev.inboxId))
-                .reduce((sum, ex) => sum + Math.max(0, ex.end - ex.start), 0);
-            // 预估时长为 0 时不能直接判定完成（否则任何执行记录都会标记完成），按「有执行记录」判定
-            const isDone = estMinutes === undefined || estMinutes === 0
-                ? execMinutes > 0
-                : execMinutes >= estMinutes;
-
-            // 仅同步「已完成」：执行时长不足时保持任务原有状态，避免覆盖手动设置
-            if (isDone && item.status !== 'done') {
-                if (this.inboxRepo) this.inboxRepo.updateItem(item.id, { status: 'done' });
-                else item.status = 'done';
-                changed = true;
-            }
-        }
-
-        if (changed) void this.save();
     }
 
     /** 渲染单个任务卡片（标题 + 预估/已执行时长 + 完成图标） */

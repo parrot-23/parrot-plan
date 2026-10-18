@@ -161,6 +161,13 @@
     text-overflow: ellipsis;
 }
 
+/* 单元格内两行：习惯数量 / 总时长 */
+.week-panel-habit-summary-line {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
 .week-panel-habit-summary-cell:last-child {
     border-right: none;
 }
@@ -199,6 +206,22 @@
     font-size: 12px;
     text-align: center;
     padding: 4px 0;
+}
+
+/* 列内分区：上方习惯任务 / 下方当天任务 */
+.week-panel-section {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+}
+
+/* 分区之间的分割线 */
+.week-panel-section-divider {
+    flex-shrink: 0;
+    height: 0;
+    margin: 2px 0;
+    border-top: 1px dashed var(--background-modifier-border);
 }
 
 /* 列内任务条目（两行：标题 + 预估时长） */
