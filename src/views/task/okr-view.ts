@@ -443,7 +443,7 @@ export class OkrView {
         // 进度条（当前值暂为 0，后续可由执行记录推算）
         const barRow = body.createDiv({ cls: 'okr-entry-row' });
         const bar = barRow.createDiv({ cls: 'okr-progress-bar' });
-        bar.createDiv({ cls: 'okr-progress-fill' }).style.width = '0%';
+        bar.createDiv({ cls: 'okr-progress-fill' }).setCssProps({ width: '0%' });
         barRow.createSpan({
             cls: 'okr-progress-value',
             text: `0 / ${cond.target || 0} ${cond.unit ?? ''}`.trim(),

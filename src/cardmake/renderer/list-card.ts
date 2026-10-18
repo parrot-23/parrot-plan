@@ -78,8 +78,7 @@ export const listCardRenderer: CardRenderer = {
                     durationEl.setText(formatHours(taskDurationMinutes(selected.id, ctx)));
                 }
 
-                const resultList = searchWrap.createDiv({ cls: 'wb-timelog-results' });
-                resultList.style.display = 'none';
+                const resultList = searchWrap.createDiv({ cls: 'wb-timelog-results is-hidden' });
 
                 const showResults = () => {
                     const keyword = searchInput.value.trim().toLowerCase();
@@ -100,14 +99,14 @@ export const listCardRenderer: CardRenderer = {
                             };
                         }
                     }
-                    resultList.style.display = 'block';
+                    resultList.removeClass('is-hidden');
                 };
 
                 searchInput.onfocus = showResults;
                 searchInput.oninput = showResults;
                 searchInput.onblur = () => {
                     window.setTimeout(() => {
-                        resultList.style.display = 'none';
+                        resultList.addClass('is-hidden');
                     }, 150);
                 };
             }

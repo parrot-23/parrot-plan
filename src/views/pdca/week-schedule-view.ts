@@ -749,7 +749,7 @@ export class WeekScheduleView extends ItemView {
                 for (const row of habitRows) {
                     const slot = habitSection.createDiv({ cls: 'week-panel-habit-slot' });
                     // 固定行高：保证各列同一行高度一致，避免卡片内容换行导致后续行错位
-                    slot.style.height = `${rowHeight}px`;
+                    slot.setCssProps({ height: `${rowHeight}px` });
                     const evs = habitEvents.filter(ev => this.getHabitRowKey(ev) === row.key);
                     if (evs.length === 0) {
                         slot.addClass('is-empty');
@@ -903,8 +903,7 @@ export class WeekScheduleView extends ItemView {
      */
     private adjustPopoverWithinCalendar(pop: HTMLElement) {
         // 先复位，避免基于上一次的偏移重复计算
-        pop.style.left = '0';
-        pop.style.right = 'auto';
+        pop.setCssProps({ left: '0', right: 'auto' });
 
         const boundary = pop.closest('.week-calendar') as HTMLElement | null;
         const popRect = pop.getBoundingClientRect();
@@ -919,9 +918,9 @@ export class WeekScheduleView extends ItemView {
             if (anchor) {
                 const anchorRect = anchor.getBoundingClientRect();
                 const shift = popRect.right - anchorRect.right;
-                pop.style.left = `calc(0px - ${shift}px)`;
+                pop.setCssProps({ left: `calc(0px - ${shift}px)` });
             } else {
-                pop.style.left = `calc(0px - ${overflowRight + 4}px)`;
+                pop.setCssProps({ left: `calc(0px - ${overflowRight + 4}px)` });
             }
         }
     }

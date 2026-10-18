@@ -7562,6 +7562,10 @@
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }
 
+.wb-timelog-results.is-hidden {
+    display: none;
+}
+
 .wb-timelog-result-item {
     padding: 5px 8px;
     font-size: 13px;
