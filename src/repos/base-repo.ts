@@ -43,6 +43,8 @@ export interface PluginData {
     habitsCollapsed?: boolean;
     /** 周计划视图是否激活「时间计划」模式（随主数据一起持久化） */
     timePlanActive?: boolean;
+    /** 时间计划模式下是否在日历上显示习惯任务（随主数据一起持久化，默认显示） */
+    timePlanShowHabits?: boolean;
 }
 
 /**
@@ -95,6 +97,7 @@ export class BaseRepo {
             runningTask: d.runningTask,
             habitsCollapsed: d.habitsCollapsed,
             timePlanActive: d.timePlanActive,
+            timePlanShowHabits: d.timePlanShowHabits,
             cacheDirName: this.cacheDirName,
             cacheEnabled: this.cacheEnabled,
             helpDismissed: this.helpDismissed,
@@ -222,6 +225,8 @@ export class BaseRepo {
         const initialHabitsCollapsed = savedData.habitsCollapsed === true;
         // 周计划视图是否激活「时间计划」模式（兼容旧数据：默认未激活）
         const initialTimePlanActive = savedData.timePlanActive === true;
+        // 时间计划模式下是否显示习惯任务（兼容旧数据：默认显示）
+        const initialTimePlanShowHabits = savedData.timePlanShowHabits !== false;
 
         // 存入仓库实例，作为唯一数据源（视图重建时从这里读取最新数据）
         this.data = {
@@ -239,6 +244,7 @@ export class BaseRepo {
             runningTask: initialRunningTask,
             habitsCollapsed: initialHabitsCollapsed,
             timePlanActive: initialTimePlanActive,
+            timePlanShowHabits: initialTimePlanShowHabits,
         };
     }
 

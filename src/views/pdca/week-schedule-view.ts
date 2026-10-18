@@ -60,6 +60,10 @@ export class WeekScheduleView extends ItemView {
     private get timePlanActive(): boolean {
         return this.baseRepo().data?.timePlanActive === true;
     }
+    /** 时间计划模式下是否在日历上显示习惯任务（状态持久化在仓库数据中，默认显示） */
+    private get timePlanShowHabits(): boolean {
+        return this.baseRepo().data?.timePlanShowHabits !== false;
+    }
     /** 时间计划模式下图例选中的分类（新建区间时的默认分类） */
     private timePlanSelectedCategoryId?: string;
     /** 已标记为「已制定周计划」的周键列表（与年视图联动） */
@@ -318,6 +322,11 @@ export class WeekScheduleView extends ItemView {
         const calendarPanel = body.createDiv({ cls: 'plan-scheme-calendar' });
         const refs = renderWeekGrid(calendarPanel);
         this.renderTimePlanRangeLayer(refs.bodyRowInner);
+
+        // 显示习惯任务时：在时间轴对应时间点渲染习惯任务标记
+        if (this.timePlanShowHabits) {
+            this.renderTimePlanHabitMarkers(refs.bodyRowInner);
+        }
     }
 
     /**
@@ -334,12 +343,11 @@ export class WeekScheduleView extends ItemView {
         // 第一行：开关 + 显示习惯任务
         const row = panel.createDiv({ cls: 'time-plan-config-row' });
         const toggle = row.createEl('input', { type: 'checkbox', cls: 'time-plan-config-toggle' });
-        // 开关状态与「折叠习惯」相反：显示习惯任务 = 未折叠
-        toggle.checked = !this.habitsCollapsed;
+        toggle.checked = this.timePlanShowHabits;
         toggle.onchange = () => {
             const data = this.baseRepo().data;
             if (!data) return;
-            data.habitsCollapsed = !toggle.checked;
+            data.timePlanShowHabits = toggle.checked;
             void (async () => {
                 await this.save();
                 await this.onOpen();
@@ -507,6 +515,39 @@ export class WeekScheduleView extends ItemView {
                     await this.save();
                     await this.onOpen();
                 };
+            }
+        }
+    }
+
+    /**
+     * 渲染「习惯任务」标记：本周已分配到各天、且启用了习惯时间点的任务，
+     * 在时间轴对应时间点以透明化色块显示（不拦截点击）。
+     * 与日执行视图时间轴上的习惯任务标记一致。
+     */
+    private renderTimePlanHabitMarkers(bodyRowInner: HTMLElement) {
+        const cols = bodyRowInner.querySelectorAll('.day-column');
+
+        for (let d = 1; d <= 7; d++) {
+            const col = cols[d - 1] as HTMLElement;
+
+            // 本周该天、且设置了习惯时间点的事件
+            const habitEvents = this.events.filter(
+                ev => ev.day === d
+                    && ev.weekKey === this.currentWeekKey
+                    && this.getEventHabitTime(ev) !== null,
+            );
+
+            for (const ev of habitEvents) {
+                const minutes = this.getEventHabitTime(ev)!;
+                const marker = col.createDiv({ cls: 'time-plan-habit-marker' });
+                const cat = ev.categoryId
+                    ? this.planCategoryData.categories.find(c => c.id === ev.categoryId)
+                    : undefined;
+                marker.setCssProps({
+                    '--habit-color': cat?.color ?? '#888888',
+                    '--habit-top': `${(minutes / 120) * 80}px`,
+                });
+                marker.setText(ev.title);
             }
         }
     }
