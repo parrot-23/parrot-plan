@@ -3,15 +3,15 @@
 import { ItemView, WorkspaceLeaf, Modal, Setting, Notice, App } from 'obsidian';
 import type { Plugin } from 'obsidian';
 import type { CategorizedRange, PlanCategoryId, PlanSchemeData, DailyRange, WeekKey } from '../../shared/plan-data';
-import { hexToTransparent, getCurrentWeekKey, makeWeekKey, parseWeekKey, shiftWeekKey, makeDayKeyFromWeek } from '../../shared/plan-data';
+import { hexToTransparent, getCurrentWeekKey, makeWeekKey, parseWeekKey, shiftWeekKey, makeDayKeyFromWeek, DEFAULT_SCHEME_ID } from '../../shared/plan-data';
 import type { PlanCategoryData } from '../../shared/plan-category-manager';
 import type { DayTemplateData } from '../../shared/template-manager';
 import { renderPlanCategoryLegend } from '../../shared/plan-category-manager';
-import { renderDayTemplateRow } from '../../shared/template-manager';
+import { renderDayTemplateRow, renderTemplatePanel } from '../../shared/template-manager';
 import { renderTaskPanel } from '../../shared/task-panel';
 import { DEFAULT_INBOX_DATA, type InboxData, type InboxItem } from '../../datatypes/domain';
 import { renderWeekPanel } from '../../shared/week-panel';
-import { PlanSchemeModal } from '../../shared/plan-scheme-modal';
+import { renderWeekGrid } from '../../shared/week-grid';
 import { t, getWeekDays } from '../../i18n';
 import { log } from '../../shared/logger';
 import { EVENT_STATUS_EMOJI, EVENT_STATUS_LABEL_KEY, getEventStatus } from '../../datatypes/domain';
@@ -56,6 +56,10 @@ export class WeekScheduleView extends ItemView {
     private get habitsCollapsed(): boolean {
         return this.baseRepo().data?.habitsCollapsed === true;
     }
+    /** 是否激活「时间计划」模式（激活时隐藏下方日历，改为显示时间计划方案弹窗里的日历功能点） */
+    private timePlanActive = false;
+    /** 时间计划模式下图例选中的分类（新建区间时的默认分类） */
+    private timePlanSelectedCategoryId?: string;
     /** 已标记为「已制定周计划」的周键列表（与年视图联动） */
     plannedWeeks: string[] = [];
     /** 当前打开的「预估执行时长」悬浮面板 */
@@ -248,6 +252,12 @@ export class WeekScheduleView extends ItemView {
         // 日历区域
         const calendar = main.createDiv({ cls: 'week-calendar' });
 
+        // 激活「时间计划」模式时：隐藏下方周面板日历，改为显示时间计划方案弹窗里的日历功能点
+        if (this.timePlanActive) {
+            this.renderTimePlanCalendar(calendar);
+            return;
+        }
+
         // ===== 周面板（公共组件）：一周七天，每天一列 =====
         const { dayColumns, statsCells } = renderWeekPanel(calendar, {
             onColumnClick: (d) => {
@@ -271,6 +281,200 @@ export class WeekScheduleView extends ItemView {
         const habitRows = this.collectHabitRows();
         for (let d = 1; d <= 7; d++) {
             this.renderDayColumn(dayColumns[d - 1], d, habitRows);
+        }
+    }
+
+    /**
+     * 渲染「时间计划」模式下的日历：左侧方案管理 + 日模板，右侧时间轴日历。
+     * 选中分类的功能集成到日历顶部的图例（工具栏），选中后点击日历分配时间区间，
+     * 点击已有色块可编辑，× 可删除；数据写入当前激活方案。
+     */
+    private renderTimePlanCalendar(calendar: HTMLElement) {
+        const body = calendar.createDiv({ cls: 'plan-scheme-body' });
+
+        // 左侧：方案管理（黑色边框面板）+ 日模板
+        const legendPanel = body.createDiv({ cls: 'plan-scheme-legend' });
+
+        // 方案管理（黑色边框面板）
+        this.renderTimePlanSchemePanel(legendPanel);
+
+        // 日模板（方案管理下方）
+        const templateContainer = legendPanel.createDiv({ cls: 'template-container' });
+        renderTemplatePanel(this.app, templateContainer, this, async (templateId, targetDays) => {
+            await this.applyTemplate(templateId, targetDays);
+            // 应用后刷新日历
+            void this.onOpen();
+        }, () => {
+            // 新增模板后刷新
+            void this.onOpen();
+        });
+
+        // 右侧：时间轴日历
+        const calendarPanel = body.createDiv({ cls: 'plan-scheme-calendar' });
+        const refs = renderWeekGrid(calendarPanel);
+        this.renderTimePlanRangeLayer(refs.bodyRowInner);
+    }
+
+    /**
+     * 渲染「方案管理」面板（黑色边框），内容与时间计划方案弹窗里的方案管理弹窗一致：
+     * 标题 + 新增按钮 + 方案列表（设为默认 / 名称 / 删除 / 切换）。
+     * 与弹窗不同，这里直接操作仓库并即时保存，无需草稿 + 确认/取消。
+     */
+    private renderTimePlanSchemePanel(container: HTMLElement) {
+        const panel = container.createDiv({ cls: 'time-plan-scheme-panel' });
+
+        // 标题 + 右上角 +
+        const header = panel.createDiv({ cls: 'tbcat-modal-header' });
+        header.createEl('h3', { text: t('planScheme.manageTitle') });
+        const addBtn = header.createEl('button', { text: '+', cls: 'tbcat-add-btn' });
+        addBtn.onclick = () => {
+            this.planSchemeRepo().schemes.push({
+                id: 'scheme_' + Date.now().toString(36),
+                name: t('planScheme.new'),
+                days: [],
+            });
+            void (async () => {
+                await this.save();
+                await this.onOpen();
+            })();
+        };
+
+        // 方案列表
+        const list = panel.createDiv({ cls: 'tbcat-list' });
+        const schemes = this.planSchemeRepo().schemes;
+        if (schemes.length === 0) {
+            list.createDiv({ text: t('planScheme.empty'), cls: 'tbcat-empty' });
+            return;
+        }
+
+        schemes.forEach((scheme, index) => {
+            const row = list.createDiv({ cls: 'tbcat-row' });
+
+            // 设为默认
+            const defaultBtn = row.createEl('button', {
+                text: t('planScheme.isDefault'),
+                cls: 'tbcat-action-btn',
+            });
+            if (scheme.id === this.planSchemeRepo().defaultSchemeId) {
+                defaultBtn.addClass('is-active');
+            }
+            defaultBtn.onclick = () => {
+                this.planSchemeRepo().setDefaultSchemeId(scheme.id);
+                void (async () => {
+                    await this.save();
+                    await this.onOpen();
+                })();
+            };
+
+            // 名称
+            const name = row.createEl('input', {
+                type: 'text',
+                placeholder: t('planScheme.namePlaceholder'),
+                cls: 'tbcat-name',
+            });
+            name.value = scheme.name;
+            name.addEventListener('input', () => {
+                scheme.name = name.value;
+            });
+            name.addEventListener('change', () => {
+                void this.save();
+            });
+
+            // 删除（默认方案不可删除）
+            if (scheme.id === DEFAULT_SCHEME_ID) {
+                const lock = row.createSpan({ text: '🔒', cls: 'tbcat-lock' });
+                lock.setAttribute('aria-label', t('planScheme.defaultLocked'));
+            } else {
+                const del = row.createEl('button', { text: '✕', cls: 'tbcat-del-btn' });
+                del.onclick = () => {
+                    this.planSchemeRepo().schemes.splice(index, 1);
+                    void (async () => {
+                        await this.save();
+                        await this.onOpen();
+                    })();
+                };
+            }
+
+            // 切换（设为当前方案）
+            const switchBtn = row.createEl('button', {
+                text: t('planScheme.switchTo'),
+                cls: 'tbcat-action-btn',
+            });
+            if (scheme.id === this.planSchemeRepo().activeSchemeId) {
+                switchBtn.addClass('is-active');
+            }
+            switchBtn.onclick = () => {
+                this.planSchemeRepo().setActiveSchemeId(scheme.id);
+                void (async () => {
+                    await this.save();
+                    await this.onOpen();
+                })();
+            };
+        });
+    }
+
+    /** 在时间计划日历网格上渲染当前激活方案的时间区间，并绑定添加/编辑/删除交互 */
+    private renderTimePlanRangeLayer(bodyRowInner: HTMLElement) {
+        const scheme = this.getActivePlanScheme();
+        const cols = bodyRowInner.querySelectorAll('.day-column');
+
+        for (let d = 1; d <= 7; d++) {
+            const col = cols[d - 1] as HTMLElement;
+
+            // 点击空白 → 新建时间区间（写入当前激活方案）
+            col.onclick = (e) => {
+                if (!scheme) return;
+                const target = e.target as HTMLElement;
+                if (!target.classList.contains('day-column') && !target.classList.contains('hour-cell')) return;
+                const rect = col.getBoundingClientRect();
+                const y = e.clientY - rect.top;
+                const startMinutes = Math.floor((y / 80) * 120 / 30) * 30;
+                new RangeEditModal(this.app, startMinutes, (start, end, sort) => {
+                    this.planSchemeRepo().addRange(scheme.id, d, { id: `r_${Date.now()}`, start, end, sort });
+                    void (async () => {
+                        await this.save();
+                        await this.onOpen();
+                    })();
+                }, this.planCategoryData, undefined, this.timePlanSelectedCategoryId).open();
+            };
+
+            // 已有色块
+            const dayData = scheme?.days?.find(day => day.day === d);
+            const dayRanges = dayData?.ranges ?? [];
+            for (const range of dayRanges) {
+                const block = col.createDiv({ cls: 'range-block range-block-fill' });
+                const cat = this.planCategoryData.categories.find(c => c.id === range.sort);
+                const rawColor = cat?.color ?? '#888888';
+
+                const top = (range.start / 120) * 80;
+                const height = ((range.end - range.start) / 120) * 80;
+                block.setCssProps({
+                    '--range-color': rawColor,
+                    '--range-bg': hexToTransparent(rawColor, 0.1),
+                    '--range-top': `${top}px`,
+                    '--range-height': `${height}px`,
+                });
+
+                block.onclick = (e) => {
+                    e.stopPropagation();
+                    new RangeEditModal(this.app, 0, (start, end, sort) => {
+                        this.planSchemeRepo().updateRange(scheme!.id, d, range.id, { start, end, sort });
+                        void (async () => {
+                            await this.save();
+                            await this.onOpen();
+                        })();
+                    }, this.planCategoryData, range).open();
+                };
+
+                const delBtn = block.createDiv({ cls: 'range-delete-btn' });
+                delBtn.setText('×');
+                delBtn.onclick = async (e) => {
+                    e.stopPropagation();
+                    this.planSchemeRepo().removeRange(scheme!.id, d, range.id);
+                    await this.save();
+                    await this.onOpen();
+                };
+            }
         }
     }
 
@@ -1140,26 +1344,15 @@ export class WeekScheduleView extends ItemView {
             })();
         };
 
-        // 时间计划方案按钮（位于折叠习惯按钮右侧）：打开时间计划方案弹窗
-        const schemeBtn = toolbar.createEl('button', {
-            text: t('planScheme.open'),
-            cls: 'week-scheme-btn',
+        // 时间计划按钮（位于折叠习惯按钮右侧）：激活后隐藏下方日历，改为显示时间计划方案弹窗里的日历功能点
+        const timePlanBtn = toolbar.createEl('button', {
+            text: t('weekPanel.timePlan'),
+            cls: 'week-time-plan-btn',
         });
-        schemeBtn.onclick = () => {
-            new PlanSchemeModal(
-                this.app,
-                this.planCategoryData,
-                this.planSchemeData,
-                this,
-                (templateId, targetDays) => this.applyTemplate(templateId, targetDays),
-                () => this.save(),
-                () => {
-                    void this.save();
-                    void this.onOpen();
-                },
-                this.categoryRepo(),
-                this.planSchemeRepo(),
-            ).open();
+        timePlanBtn.toggleClass('is-active', this.timePlanActive);
+        timePlanBtn.onclick = () => {
+            this.timePlanActive = !this.timePlanActive;
+            void this.onOpen();
         };
 
         // 时间计划方案按钮 + 当前方案下拉框
@@ -1184,7 +1377,7 @@ export class WeekScheduleView extends ItemView {
             })();
         };
 
-        // 图例（日历顶部：显示配置按钮）
+        // 图例（日历顶部：显示配置按钮；时间计划模式下支持选中分类）
         const legendContainer = toolbar.createDiv({ cls: 'legend-container' });
         renderPlanCategoryLegend(
             this.app,
@@ -1193,8 +1386,14 @@ export class WeekScheduleView extends ItemView {
             () => {
                 void this.onOpen();
             },
-            undefined,
-            undefined,
+            this.timePlanActive ? this.timePlanSelectedCategoryId : undefined,
+            this.timePlanActive
+                ? (id) => {
+                    // 时间计划模式下：点击图例选中/取消选中分类
+                    this.timePlanSelectedCategoryId = this.timePlanSelectedCategoryId === id ? undefined : id;
+                    void this.onOpen();
+                }
+                : undefined,
             true,
         );
 

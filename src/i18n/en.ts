@@ -459,6 +459,7 @@ export const en: I18nMessages = {
     'weekPanel.estimatedPlaceholder': 'e.g. 60',
     'weekPanel.habitTime': 'Habit {time}',
     'weekPanel.collapseHabits': 'Collapse habits',
+    'weekPanel.timePlan': 'Time plan',
     'weekPanel.habitSummary': 'Habits {count} · Total {duration}',
     'weekPanel.habitSummaryCount': 'Habits {count}',
     'weekPanel.habitSummaryDuration': 'Total {duration}',

@@ -457,6 +457,7 @@ export const zh = {
     'weekPanel.estimatedPlaceholder': '如 60',
     'weekPanel.habitTime': '习惯 {time}',
     'weekPanel.collapseHabits': '折叠习惯',
+    'weekPanel.timePlan': '时间计划',
     'weekPanel.habitSummary': '习惯数量 {count} · 总时长 {duration}',
     'weekPanel.habitSummaryCount': '习惯数量 {count}',
     'weekPanel.habitSummaryDuration': '总时长 {duration}',

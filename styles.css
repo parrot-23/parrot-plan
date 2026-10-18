@@ -156,6 +156,28 @@
     background: var(--interactive-hover);
 }
 
+/* 时间计划按钮（工具栏，位于折叠习惯按钮右侧） */
+.week-time-plan-btn {
+    padding: 6px 10px;
+    border-radius: 4px;
+    border: 1px solid var(--background-modifier-border);
+    background: var(--interactive-normal);
+    color: var(--text-normal);
+    cursor: pointer;
+    font-size: 13px;
+    white-space: nowrap;
+}
+
+.week-time-plan-btn:hover {
+    background: var(--interactive-hover);
+}
+
+.week-time-plan-btn.is-active {
+    background: var(--interactive-accent);
+    color: var(--text-on-accent);
+    border-color: var(--interactive-accent);
+}
+
 /* 折叠习惯后的统计行：与上方饼图统计行一致，整行撑满、单元格之间用分隔线连接 */
 .week-panel-habit-summary {
     flex-shrink: 0;
@@ -6057,6 +6079,53 @@
     flex-direction: row;
     gap: 12px;
     height: 480px;
+}
+
+/* 周计划视图内嵌的时间计划日历：撑满日历区域（覆盖弹窗内的固定高度） */
+.week-calendar .plan-scheme-body {
+    height: 100%;
+    min-height: 0;
+}
+
+/* 周计划视图内嵌时：加宽左侧列，容纳方案管理面板（默认/名称/删除/切换） */
+.week-calendar .plan-scheme-legend {
+    width: 280px;
+}
+
+/* 时间计划模式下的方案管理面板（黑色边框，位于图例上方） */
+.time-plan-scheme-panel {
+    border: 1px solid #000000;
+    border-radius: 4px;
+    padding: 8px;
+    margin-bottom: 8px;
+}
+
+.time-plan-scheme-panel .tbcat-modal-header {
+    margin-bottom: 6px;
+}
+
+.time-plan-scheme-panel .tbcat-modal-header h3 {
+    margin: 0;
+    font-size: 14px;
+}
+
+.time-plan-scheme-panel .tbcat-list {
+    margin-bottom: 0;
+}
+
+/* 方案管理面板内的行：按钮不换行、不收缩，名称输入框可收缩 */
+.time-plan-scheme-panel .tbcat-row {
+    flex-wrap: nowrap;
+}
+
+.time-plan-scheme-panel .tbcat-action-btn,
+.time-plan-scheme-panel .tbcat-del-btn,
+.time-plan-scheme-panel .tbcat-lock {
+    flex-shrink: 0;
+}
+
+.time-plan-scheme-panel .tbcat-name {
+    min-width: 0;
 }
 
 /* 左侧：图例管理 */
