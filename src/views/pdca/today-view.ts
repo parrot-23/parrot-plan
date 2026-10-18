@@ -316,9 +316,14 @@ export class TodayView {
             const estMinutes = typeof ev.estimatedMinutes === 'number' && ev.estimatedMinutes >= 0
                 ? ev.estimatedMinutes
                 : undefined;
-            // 已执行时长：按 eventId 或 inboxId 匹配（「开始任务→完成」路径写入的记录只有 inboxId）
+            // 已执行时长：按 eventId 或 inboxId 匹配（「开始任务→完成」路径写入的记录只有 inboxId），
+            // 且只统计当前查看日期当天的执行记录，而非该任务所有历史累计
+            const viewInfo = this.getViewDayInfo();
             const execMinutes = this.getExecutions()
-                .filter(ex => !ex.replaced && (ex.eventId === ev.id || (ev.inboxId && ex.inboxId === ev.inboxId)))
+                .filter(ex => !ex.replaced
+                    && ex.weekKey === viewInfo.weekKey
+                    && ex.day === viewInfo.day
+                    && (ex.eventId === ev.id || (ev.inboxId && ex.inboxId === ev.inboxId)))
                 .reduce((sum, ex) => sum + Math.max(0, ex.end - ex.start), 0);
 
             this.renderTaskCard(list, {
