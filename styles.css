@@ -2447,6 +2447,157 @@
     color: var(--text-faint);
 }
 
+/* 统计模式：执行 vs 实际（分类名 + 时长文字 + 两条方块进度条） */
+.check-exec-row {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 4px 0;
+}
+
+.check-exec-head {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+}
+
+.check-exec-values {
+    margin-left: auto;
+    flex-shrink: 0;
+    color: var(--text-muted);
+    font-variant-numeric: tabular-nums;
+}
+
+/* 方块进度条容器 */
+.check-exec-blocks {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 3px;
+    min-height: 14px;
+}
+
+.check-exec-blocks-empty {
+    font-size: 11px;
+    color: var(--text-faint);
+}
+
+/* 单个方块：每满 1 小时一个 */
+.check-exec-block {
+    width: 14px;
+    height: 14px;
+    border-radius: 3px;
+    background: var(--background-modifier-hover);
+    overflow: hidden;
+    box-sizing: border-box;
+}
+
+/* 计划条：无色黑边方块（内部不填充） */
+.check-exec-block.is-outline {
+    background: transparent;
+    border: 1px solid #000000;
+}
+
+.check-exec-block.is-outline .check-exec-block-fill {
+    display: none;
+}
+
+.check-exec-block-fill {
+    height: 100%;
+    width: var(--fill-width, 100%);
+    background: var(--block-color, #888888);
+}
+
+/* 详细模式：计划分布图 + 执行分布图左右并排 */
+.check-charts-row {
+    display: flex;
+    flex-direction: row;
+    gap: 16px;
+    align-items: flex-start;
+}
+
+/* 详细模式：分布图（周一到周日，纵向 24 小时） */
+.check-plan-chart {
+    display: flex;
+    flex-direction: row;
+    gap: 8px;
+    height: 320px;
+    /* 固定宽度，不随父容器变化，保证大小稳定 */
+    flex: 0 0 320px;
+    width: 320px;
+    box-sizing: border-box;
+}
+
+/* 左侧时间刻度 */
+.check-plan-chart-axis {
+    flex-shrink: 0;
+    width: 44px;
+    display: flex;
+    flex-direction: column;
+    /* 与列标题高度对齐 */
+    padding-top: 22px;
+    box-sizing: border-box;
+}
+
+.check-plan-chart-axis-cell {
+    flex: 1;
+    font-size: 10px;
+    color: var(--text-faint);
+    text-align: right;
+    padding-right: 4px;
+    /* 刻度文字对齐格子顶部 */
+    transform: translateY(-50%);
+}
+
+/* 7 列容器 */
+.check-plan-chart-cols {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: row;
+    gap: 6px;
+}
+
+.check-plan-chart-col {
+    flex: 1 1 0;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.check-plan-chart-col-title {
+    flex-shrink: 0;
+    height: 22px;
+    line-height: 22px;
+    text-align: center;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-normal);
+}
+
+/* 列主体：24 小时背景轨道 */
+.check-plan-chart-track {
+    position: relative;
+    flex: 1;
+    min-height: 0;
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 4px;
+    background: var(--background-secondary);
+    overflow: hidden;
+}
+
+/* 时间区块：按分类颜色填充 */
+.check-plan-chart-block {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: var(--block-top, 0);
+    height: var(--block-height, 0);
+    background-color: var(--block-color, #888888);
+    opacity: 0.85;
+}
+
 /* 详细模式：执行记录文字列表 */
 .check-detail-list {
     display: flex;
