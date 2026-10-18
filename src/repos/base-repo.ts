@@ -41,6 +41,8 @@ export interface PluginData {
     runningTask?: RunningTask;
     /** 周计划视图是否折叠习惯任务（随主数据一起持久化） */
     habitsCollapsed?: boolean;
+    /** 周计划视图是否激活「时间计划」模式（随主数据一起持久化） */
+    timePlanActive?: boolean;
 }
 
 /**
@@ -92,6 +94,7 @@ export class BaseRepo {
             executingEventId: d.executingEventId,
             runningTask: d.runningTask,
             habitsCollapsed: d.habitsCollapsed,
+            timePlanActive: d.timePlanActive,
             cacheDirName: this.cacheDirName,
             cacheEnabled: this.cacheEnabled,
             helpDismissed: this.helpDismissed,
@@ -217,6 +220,8 @@ export class BaseRepo {
         const initialRunningTask = parseRunningTask(savedData.runningTask);
         // 周计划视图是否折叠习惯任务（兼容旧数据：默认不折叠）
         const initialHabitsCollapsed = savedData.habitsCollapsed === true;
+        // 周计划视图是否激活「时间计划」模式（兼容旧数据：默认未激活）
+        const initialTimePlanActive = savedData.timePlanActive === true;
 
         // 存入仓库实例，作为唯一数据源（视图重建时从这里读取最新数据）
         this.data = {
@@ -233,6 +238,7 @@ export class BaseRepo {
             executingEventId: initialExecutingEventId,
             runningTask: initialRunningTask,
             habitsCollapsed: initialHabitsCollapsed,
+            timePlanActive: initialTimePlanActive,
         };
     }
 

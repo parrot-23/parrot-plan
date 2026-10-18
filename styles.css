@@ -6092,6 +6092,41 @@
     width: 280px;
 }
 
+/* 时间计划模式下的配置面板（位于方案管理面板上方） */
+.time-plan-config-panel {
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 4px;
+    padding: 8px;
+    margin-bottom: 8px;
+}
+
+.time-plan-config-panel .tbcat-modal-header {
+    margin-bottom: 6px;
+}
+
+.time-plan-config-panel .tbcat-modal-header h3 {
+    margin: 0;
+    font-size: 14px;
+}
+
+/* 配置行：开关 + 文字 */
+.time-plan-config-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.time-plan-config-toggle {
+    flex-shrink: 0;
+    margin: 0;
+    cursor: pointer;
+}
+
+.time-plan-config-label {
+    font-size: 13px;
+    color: var(--text-normal);
+}
+
 /* 时间计划模式下的方案管理面板（黑色边框，位于图例上方） */
 .time-plan-scheme-panel {
     border: 1px solid #000000;

@@ -56,8 +56,10 @@ export class WeekScheduleView extends ItemView {
     private get habitsCollapsed(): boolean {
         return this.baseRepo().data?.habitsCollapsed === true;
     }
-    /** 是否激活「时间计划」模式（激活时隐藏下方日历，改为显示时间计划方案弹窗里的日历功能点） */
-    private timePlanActive = false;
+    /** 是否激活「时间计划」模式（激活时隐藏下方日历，改为显示时间计划方案弹窗里的日历功能点；状态持久化在仓库数据中） */
+    private get timePlanActive(): boolean {
+        return this.baseRepo().data?.timePlanActive === true;
+    }
     /** 时间计划模式下图例选中的分类（新建区间时的默认分类） */
     private timePlanSelectedCategoryId?: string;
     /** 已标记为「已制定周计划」的周键列表（与年视图联动） */
@@ -292,8 +294,11 @@ export class WeekScheduleView extends ItemView {
     private renderTimePlanCalendar(calendar: HTMLElement) {
         const body = calendar.createDiv({ cls: 'plan-scheme-body' });
 
-        // 左侧：方案管理（黑色边框面板）+ 日模板
+        // 左侧：配置 + 方案管理（黑色边框面板）+ 日模板
         const legendPanel = body.createDiv({ cls: 'plan-scheme-legend' });
+
+        // 配置（方案管理上方）
+        this.renderTimePlanConfigPanel(legendPanel);
 
         // 方案管理（黑色边框面板）
         this.renderTimePlanSchemePanel(legendPanel);
@@ -313,6 +318,34 @@ export class WeekScheduleView extends ItemView {
         const calendarPanel = body.createDiv({ cls: 'plan-scheme-calendar' });
         const refs = renderWeekGrid(calendarPanel);
         this.renderTimePlanRangeLayer(refs.bodyRowInner);
+    }
+
+    /**
+     * 渲染「配置」面板（位于方案管理面板上方）：
+     * 标题 + 一行「开关 + 显示习惯任务」。
+     */
+    private renderTimePlanConfigPanel(container: HTMLElement) {
+        const panel = container.createDiv({ cls: 'time-plan-config-panel' });
+
+        // 标题
+        const header = panel.createDiv({ cls: 'tbcat-modal-header' });
+        header.createEl('h3', { text: t('weekPanel.config') });
+
+        // 第一行：开关 + 显示习惯任务
+        const row = panel.createDiv({ cls: 'time-plan-config-row' });
+        const toggle = row.createEl('input', { type: 'checkbox', cls: 'time-plan-config-toggle' });
+        // 开关状态与「折叠习惯」相反：显示习惯任务 = 未折叠
+        toggle.checked = !this.habitsCollapsed;
+        toggle.onchange = () => {
+            const data = this.baseRepo().data;
+            if (!data) return;
+            data.habitsCollapsed = !toggle.checked;
+            void (async () => {
+                await this.save();
+                await this.onOpen();
+            })();
+        };
+        row.createSpan({ text: t('weekPanel.showHabits'), cls: 'time-plan-config-label' });
     }
 
     /**
@@ -1351,8 +1384,13 @@ export class WeekScheduleView extends ItemView {
         });
         timePlanBtn.toggleClass('is-active', this.timePlanActive);
         timePlanBtn.onclick = () => {
-            this.timePlanActive = !this.timePlanActive;
-            void this.onOpen();
+            const data = this.baseRepo().data;
+            if (!data) return;
+            data.timePlanActive = !this.timePlanActive;
+            void (async () => {
+                await this.save();
+                await this.onOpen();
+            })();
         };
 
         // 时间计划方案按钮 + 当前方案下拉框
