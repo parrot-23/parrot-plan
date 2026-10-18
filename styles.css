@@ -140,6 +140,27 @@
     border-color: var(--interactive-accent);
 }
 
+/* 时间计划激活时：折叠习惯按钮禁用（悬停无任何样式变化） */
+.week-habit-toggle-btn:disabled,
+.week-habit-toggle-btn:disabled:hover,
+.week-habit-toggle-btn:disabled:active {
+    opacity: 0.5;
+    cursor: not-allowed;
+    background: var(--interactive-normal);
+    color: var(--text-normal);
+    border-color: var(--background-modifier-border);
+    box-shadow: none;
+}
+
+/* 禁用且处于激活态时保持激活配色 */
+.week-habit-toggle-btn.is-active:disabled,
+.week-habit-toggle-btn.is-active:disabled:hover,
+.week-habit-toggle-btn.is-active:disabled:active {
+    background: var(--interactive-accent);
+    color: var(--text-on-accent);
+    border-color: var(--interactive-accent);
+}
+
 /* 时间计划方案按钮（工具栏，位于折叠习惯按钮右侧） */
 .week-scheme-btn {
     padding: 6px 10px;
@@ -6087,9 +6108,19 @@
     min-height: 0;
 }
 
-/* 周计划视图内嵌时：加宽左侧列，容纳方案管理面板（默认/名称/删除/切换） */
-.week-calendar .plan-scheme-legend {
-    width: 280px;
+/* 时间计划模式左侧面板：占据原任务面板位置，内容可滚动 */
+.time-plan-side-panel {
+    overflow-y: auto;
+}
+
+/* 时间计划模式左侧面板的行标题 */
+.time-plan-panel-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-normal);
+    padding-bottom: 6px;
+    margin-bottom: 8px;
+    border-bottom: 1px solid var(--background-modifier-border);
 }
 
 /* 时间计划模式下的配置面板（位于方案管理面板上方） */
@@ -6130,8 +6161,10 @@
 /* 时间计划模式下的习惯任务标记：在时间轴对应时间点以透明化色块显示 */
 .time-plan-habit-marker {
     position: absolute;
-    left: 0;
-    right: 0;
+    /* 向右偏移 10px，宽度约为格子的 2/3 */
+    left: 10px;
+    right: auto;
+    width: calc((100% - 10px) * 2 / 3);
     top: var(--habit-top, 0);
     height: 20px;
     transform: translateY(-50%);
@@ -6140,7 +6173,8 @@
     padding: 0 6px;
     border-radius: 4px;
     border-left: 3px solid var(--habit-color, #888888);
-    background-color: color-mix(in srgb, var(--habit-color, #888888) 22%, transparent);
+    /* 不透明背景：用分类色与底色混合，保持与原先透明效果相近的浅色调 */
+    background-color: color-mix(in srgb, var(--habit-color, #888888) 22%, var(--background-primary));
     font-size: 11px;
     font-weight: 500;
     color: var(--text-normal);
@@ -6148,7 +6182,8 @@
     text-overflow: ellipsis;
     white-space: nowrap;
     pointer-events: none;
-    z-index: 1;
+    /* 习惯任务优先于时间区块绘制，显示在其上层（时间区块 z-index: 2） */
+    z-index: 3;
 }
 
 /* 时间计划模式下的方案管理面板（黑色边框，位于图例上方） */

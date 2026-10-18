@@ -219,34 +219,40 @@ export class WeekScheduleView extends ItemView {
         // 在容器内部创建 .week-schedule 根节点，避免与宿主容器样式冲突
         const root = content.createDiv({ cls: 'week-schedule' });
 
-        // ===== 左侧：任务面板 =====
-        const taskPanel = root.createDiv({ cls: 'week-task-panel' });
-        renderTaskPanel(
-            this.app,
-            taskPanel,
-            this.inboxData,
-            this.planCategoryData,
-            async () => {
-                // onAdd 回调
-                await this.save();
-            },
-            () => {
-                // onRefresh 回调
-                void this.onOpen();
-            },
-            async (action, item) => {
-                // 占位：后续实现各按钮功能
-                new Notice(`[placeholder] ${action}: ${item.title}`);
-            },
-            async (item) => {              // onUpdate 回调
-                await this.save();
-            },
-            { inboxRepo: this.inboxRepo() },
-        );
-        // 恢复任务面板列表的滚动位置，实现无感刷新
-        if (prevTaskListScrollTop > 0) {
-            const listEl = taskPanel.querySelector<HTMLElement>('.inbox-list');
-            if (listEl) listEl.scrollTop = prevTaskListScrollTop;
+        // ===== 左侧：任务面板 / 时间计划配置面板 =====
+        if (this.timePlanActive) {
+            // 时间计划模式：隐藏任务面板，配置面板占据原任务面板的位置
+            const configPanel = root.createDiv({ cls: 'week-task-panel time-plan-side-panel' });
+            this.renderTimePlanSidePanel(configPanel);
+        } else {
+            const taskPanel = root.createDiv({ cls: 'week-task-panel' });
+            renderTaskPanel(
+                this.app,
+                taskPanel,
+                this.inboxData,
+                this.planCategoryData,
+                async () => {
+                    // onAdd 回调
+                    await this.save();
+                },
+                () => {
+                    // onRefresh 回调
+                    void this.onOpen();
+                },
+                async (action, item) => {
+                    // 占位：后续实现各按钮功能
+                    new Notice(`[placeholder] ${action}: ${item.title}`);
+                },
+                async (item) => {              // onUpdate 回调
+                    await this.save();
+                },
+                { inboxRepo: this.inboxRepo() },
+            );
+            // 恢复任务面板列表的滚动位置，实现无感刷新
+            if (prevTaskListScrollTop > 0) {
+                const listEl = taskPanel.querySelector<HTMLElement>('.inbox-list');
+                if (listEl) listEl.scrollTop = prevTaskListScrollTop;
+            }
         }
 
         // ===== 右侧：顶部工具栏 + 日历 =====
@@ -291,24 +297,24 @@ export class WeekScheduleView extends ItemView {
     }
 
     /**
-     * 渲染「时间计划」模式下的日历：左侧方案管理 + 日模板，右侧时间轴日历。
-     * 选中分类的功能集成到日历顶部的图例（工具栏），选中后点击日历分配时间区间，
-     * 点击已有色块可编辑，× 可删除；数据写入当前激活方案。
+     * 渲染「时间计划」模式下的左侧配置面板（占据原任务面板的位置）：
+     * 行标题 + 配置 + 方案管理（黑色边框面板）+ 日模板。
      */
-    private renderTimePlanCalendar(calendar: HTMLElement) {
-        const body = calendar.createDiv({ cls: 'plan-scheme-body' });
-
-        // 左侧：配置 + 方案管理（黑色边框面板）+ 日模板
-        const legendPanel = body.createDiv({ cls: 'plan-scheme-legend' });
+    private renderTimePlanSidePanel(container: HTMLElement) {
+        // 行标题（最上方）
+        container.createDiv({
+            cls: 'time-plan-panel-title',
+            text: t('weekPanel.timePlanConfigTitle'),
+        });
 
         // 配置（方案管理上方）
-        this.renderTimePlanConfigPanel(legendPanel);
+        this.renderTimePlanConfigPanel(container);
 
         // 方案管理（黑色边框面板）
-        this.renderTimePlanSchemePanel(legendPanel);
+        this.renderTimePlanSchemePanel(container);
 
         // 日模板（方案管理下方）
-        const templateContainer = legendPanel.createDiv({ cls: 'template-container' });
+        const templateContainer = container.createDiv({ cls: 'template-container' });
         renderTemplatePanel(this.app, templateContainer, this, async (templateId, targetDays) => {
             await this.applyTemplate(templateId, targetDays);
             // 应用后刷新日历
@@ -317,6 +323,15 @@ export class WeekScheduleView extends ItemView {
             // 新增模板后刷新
             void this.onOpen();
         });
+    }
+
+    /**
+     * 渲染「时间计划」模式下的日历：右侧时间轴日历。
+     * 选中分类的功能集成到日历顶部的图例（工具栏），选中后点击日历分配时间区间，
+     * 点击已有色块可编辑，× 可删除；数据写入当前激活方案。
+     */
+    private renderTimePlanCalendar(calendar: HTMLElement) {
+        const body = calendar.createDiv({ cls: 'plan-scheme-body' });
 
         // 右侧：时间轴日历
         const calendarPanel = body.createDiv({ cls: 'plan-scheme-calendar' });
@@ -357,9 +372,9 @@ export class WeekScheduleView extends ItemView {
     }
 
     /**
-     * 渲染「方案管理」面板（黑色边框），内容与时间计划方案弹窗里的方案管理弹窗一致：
-     * 标题 + 新增按钮 + 方案列表（设为默认 / 名称 / 删除 / 切换）。
-     * 与弹窗不同，这里直接操作仓库并即时保存，无需草稿 + 确认/取消。
+     * 渲染「方案管理」面板（黑色边框）：
+     * 标题 + 新增按钮 + 方案列表（名称 / 删除 / 切换）。
+     * 直接操作仓库并即时保存，无需草稿 + 确认/取消。
      */
     private renderTimePlanSchemePanel(container: HTMLElement) {
         const panel = container.createDiv({ cls: 'time-plan-scheme-panel' });
@@ -390,22 +405,6 @@ export class WeekScheduleView extends ItemView {
 
         schemes.forEach((scheme, index) => {
             const row = list.createDiv({ cls: 'tbcat-row' });
-
-            // 设为默认
-            const defaultBtn = row.createEl('button', {
-                text: t('planScheme.isDefault'),
-                cls: 'tbcat-action-btn',
-            });
-            if (scheme.id === this.planSchemeRepo().defaultSchemeId) {
-                defaultBtn.addClass('is-active');
-            }
-            defaultBtn.onclick = () => {
-                this.planSchemeRepo().setDefaultSchemeId(scheme.id);
-                void (async () => {
-                    await this.save();
-                    await this.onOpen();
-                })();
-            };
 
             // 名称
             const name = row.createEl('input', {
@@ -1408,7 +1407,10 @@ export class WeekScheduleView extends ItemView {
             cls: 'week-habit-toggle-btn',
         });
         habitToggleBtn.toggleClass('is-active', this.habitsCollapsed);
+        // 时间计划激活时：折叠习惯按钮不可点击
+        habitToggleBtn.disabled = this.timePlanActive;
         habitToggleBtn.onclick = () => {
+            if (this.timePlanActive) return;
             const data = this.baseRepo().data;
             if (!data) return;
             data.habitsCollapsed = !this.habitsCollapsed;

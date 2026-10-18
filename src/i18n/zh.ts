@@ -460,6 +460,7 @@ export const zh = {
     'weekPanel.timePlan': '时间计划',
     'weekPanel.config': '配置',
     'weekPanel.showHabits': '显示习惯任务',
+    'weekPanel.timePlanConfigTitle': '时间计划配置面板',
     'weekPanel.habitSummary': '习惯数量 {count} · 总时长 {duration}',
     'weekPanel.habitSummaryCount': '习惯数量 {count}',
     'weekPanel.habitSummaryDuration': '总时长 {duration}',

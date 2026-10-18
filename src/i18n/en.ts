@@ -462,6 +462,7 @@ export const en: I18nMessages = {
     'weekPanel.timePlan': 'Time plan',
     'weekPanel.config': 'Config',
     'weekPanel.showHabits': 'Show habit tasks',
+    'weekPanel.timePlanConfigTitle': 'Time plan config',
     'weekPanel.habitSummary': 'Habits {count} · Total {duration}',
     'weekPanel.habitSummaryCount': 'Habits {count}',
     'weekPanel.habitSummaryDuration': 'Total {duration}',
