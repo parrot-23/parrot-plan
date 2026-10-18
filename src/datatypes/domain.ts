@@ -146,6 +146,15 @@ export interface OkrRecord {
     value: number;
 }
 
+/** 里程碑 / 成果条目下的清单行（一个条目可包含多行） */
+export interface OkrConditionItem {
+    id: string;
+    /** 行文本（如「里程碑1」） */
+    text: string;
+    /** 是否已完成 */
+    done: boolean;
+}
+
 /** OKR 条目（一条：类型 + 对应字段） */
 export interface OkrCondition {
     id: string;
@@ -158,6 +167,8 @@ export interface OkrCondition {
     text?: string;
     /** 是否已完成（里程碑 / 成果使用，旧数据无此字段默认未完成） */
     done?: boolean;
+    /** 清单行（里程碑 / 成果使用：一个条目表示一整个清单，可包含多行） */
+    items?: OkrConditionItem[];
     /** 单位（累积 / 区间使用，如「分钟」「小时」） */
     unit?: string;
     /** 周期粒度（周期型使用） */
@@ -226,6 +237,12 @@ export function migrateOkrConditions(raw: unknown): OkrCondition[] {
         if (typeof c.title === 'string') cond.title = c.title;
         if (typeof c.text === 'string') cond.text = c.text;
         if (typeof c.done === 'boolean') cond.done = c.done;
+        if (Array.isArray(c.items)) {
+            cond.items = c.items
+                .filter((it): it is Record<string, unknown> => !!it && typeof it === 'object')
+                .filter(it => typeof it.id === 'string' && typeof it.text === 'string')
+                .map(it => ({ id: it.id as string, text: it.text as string, done: it.done === true }));
+        }
         if (typeof c.unit === 'string') cond.unit = c.unit;
         if (type === 'cumulative' && !cond.unit) cond.unit = 'min';
         if (c.period === 'day' || c.period === 'week' || c.period === 'month') cond.period = c.period;

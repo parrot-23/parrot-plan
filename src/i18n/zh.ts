@@ -186,6 +186,10 @@ export const zh = {
     'okr.recordMiss': '未达标',
     'okr.noSelection': '请在左侧选择一个任务',
     'okr.emptyList': '暂无 OKR 条目，点击右上角 + 添加',
+    'okr.checklistAdd': '添加一行',
+    'okr.checklistEmpty': '暂无条目，点击「添加一行」',
+    'okr.checklistItemPlaceholder': '条目内容',
+    'okr.checklistProgress': '已完成 {done} / {total}',
 
     // OKR 进度
     'okr.progressTitle': 'OKR进度',

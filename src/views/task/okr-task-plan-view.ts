@@ -2,7 +2,7 @@ import type { App } from 'obsidian';
 import { Modal, Notice, Setting, setIcon } from 'obsidian';
 
 import type { PlanCategoryData } from '../../shared/plan-category-manager';
-import type { InboxData, InboxItem, Section, ChecklistData, StepsData, HabitData, FileData, BasketItem, ImprovementEntry, ExecutionRecord } from '../../datatypes/domain';
+import type { InboxData, InboxItem, Section, ChecklistData, StepsData, HabitData, FileData, BasketItem, ImprovementEntry, ExecutionRecord, OkrConditionItem } from '../../datatypes/domain';
 import type { InboxRepo } from '../../repos/inbox-repo';
 import { SECTION_TYPE_META, OKR_CONDITION_META } from '../../datatypes/domain';
 import { renderTaskPanel, FilePathSuggest } from '../../shared/task-panel';
@@ -765,7 +765,7 @@ export class OkrTaskPlanView {
                 line.createSpan({ cls: 'task-plan-overview-value', text: `0/${targetSum} ${unit}` });
             }
 
-            // 成果 / 里程碑：已完成数 / 总数
+            // 成果 / 里程碑：已完成数 / 总数（按清单行统计，旧数据无清单行时按条目统计）
             const outcomeConds = conditions.filter(c => c.type === 'outcome' || c.type === 'milestone');
             if (outcomeConds.length > 0) {
                 const line = detail.createDiv({ cls: 'task-plan-overview-line' });
@@ -773,10 +773,14 @@ export class OkrTaskPlanView {
                     cls: 'task-plan-overview-label',
                     text: t(OKR_CONDITION_META.outcome.labelKey as Parameters<typeof t>[0]),
                 });
-                const doneCount = outcomeConds.filter(c => c.done).length;
+                const rows = outcomeConds.reduce<OkrConditionItem[]>((acc, c) => acc.concat(c.items ?? []), []);
+                const doneCount = rows.length > 0
+                    ? rows.filter(it => it.done).length
+                    : outcomeConds.filter(c => c.done).length;
+                const totalCount = rows.length > 0 ? rows.length : outcomeConds.length;
                 line.createSpan({
                     cls: 'task-plan-overview-value',
-                    text: `${doneCount}/${outcomeConds.length}`,
+                    text: `${doneCount}/${totalCount}`,
                 });
             }
         }

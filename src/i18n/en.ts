@@ -188,6 +188,10 @@ export const en: I18nMessages = {
     'okr.recordMiss': 'Off target',
     'okr.noSelection': 'Select a task on the left',
     'okr.emptyList': 'No OKR entries yet. Click + at the top right to add.',
+    'okr.checklistAdd': 'Add row',
+    'okr.checklistEmpty': 'No rows yet. Click "Add row".',
+    'okr.checklistItemPlaceholder': 'Row text',
+    'okr.checklistProgress': '{done} / {total} done',
 
     // OKR progress
     'okr.progressTitle': 'OKR Progress',

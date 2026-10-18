@@ -1,9 +1,10 @@
 // OKR 视图：左侧任务面板（与任务计划视图一致）+ 右侧 OKR 方框。
 // 右侧按「拆解型 / 周期型」两类展示当前选中任务的 OKR 条目卡片。
 import type { App } from 'obsidian';
+import { Notice } from 'obsidian';
 
 import type { PlanCategoryData } from '../../shared/plan-category-manager';
-import type { InboxData, InboxItem, OkrCondition, OkrConditionType, OkrPeriod } from '../../datatypes/domain';
+import type { InboxData, InboxItem, OkrCondition, OkrConditionItem, OkrConditionType, OkrPeriod } from '../../datatypes/domain';
 import { OKR_CONDITION_META, OKR_GROUP_META, OKR_PERIOD_META } from '../../datatypes/domain';
 import type { InboxRepo } from '../../repos/inbox-repo';
 import { renderTaskPanel } from '../../shared/task-panel';
@@ -15,6 +16,11 @@ function makeOkrId(): string {
     return `okr_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
 }
 
+/** 生成清单行 id */
+function makeItemId(): string {
+    return `okr_item_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+}
+
 /** 按类型生成新条目的默认字段 */
 function makeCondition(type: OkrConditionType, index: number): OkrCondition {
     const cond: OkrCondition = {
@@ -23,6 +29,10 @@ function makeCondition(type: OkrConditionType, index: number): OkrCondition {
         target: 0,
         title: `${t(OKR_CONDITION_META[type].labelKey as Parameters<typeof t>[0])}${index}`,
     };
+    if (type === 'milestone' || type === 'outcome') {
+        // 里程碑 / 成果：一个条目表示一整个清单，默认带一行
+        cond.items = [makeItem(type, 1)];
+    }
     if (type === 'cumulative') cond.unit = t('okr.unitMinute');
     if (type === 'frequency') cond.period = 'week';
     if (type === 'range') {
@@ -32,6 +42,15 @@ function makeCondition(type: OkrConditionType, index: number): OkrCondition {
         cond.unit = '';
     }
     return cond;
+}
+
+/** 按类型生成清单行的默认内容（里程碑1 / 成果1） */
+function makeItem(type: OkrConditionType, index: number): OkrConditionItem {
+    return {
+        id: makeItemId(),
+        text: `${t(OKR_CONDITION_META[type].labelKey as Parameters<typeof t>[0])}${index}`,
+        done: false,
+    };
 }
 
 /**
@@ -88,6 +107,7 @@ export class OkrView {
                 await this.save();
             },
             () => {
+                // 任务面板选中变化：只重绘右侧 OKR 方框，避免重建左侧面板
                 void this.refresh();
             },
             undefined,
@@ -114,6 +134,19 @@ export class OkrView {
         return selectedId
             ? this.inboxData.items.find(i => i.id === selectedId && !i.removed)
             : undefined;
+    }
+
+    /**
+     * 新增条目后重新渲染。
+     * 注意：不能走 renderInto（它会清空并重建左侧任务面板），
+     * 否则任务面板的点击事件会丢失，导致「+」下拉里的条目点击无反应。
+     * 这里只重绘右侧 OKR 方框。
+     */
+    private async refresh(): Promise<void> {
+        const panel = this.container?.querySelector<HTMLElement>('.task-plan-content-panel');
+        if (!panel) return;
+        panel.empty();
+        this.renderOkrBox(panel);
     }
 
     /** OKR 方框：标题栏（含「+」下拉）+ 条目卡片列表 */
@@ -185,7 +218,10 @@ export class OkrView {
     /** 新增一条 OKR 条目并刷新 */
     private async addEntry(type: OkrConditionType): Promise<void> {
         const item = this.getSelectedItem();
-        if (!item) return;
+        if (!item) {
+            new Notice(t('okr.noSelection'));
+            return;
+        }
         if (!item.okr) item.okr = { conditions: [] };
         const sameTypeCount = item.okr.conditions.filter(c => c.type === type).length;
         item.okr.conditions.push(makeCondition(type, sameTypeCount + 1));
@@ -229,10 +265,8 @@ export class OkrView {
 
         // 卡片主体：按类型渲染
         const body = card.createDiv({ cls: 'okr-entry-body' });
-        if (cond.type === 'milestone') {
-            this.renderMilestoneBody(body, cond);
-        } else if (cond.type === 'outcome') {
-            this.renderOutcomeBody(body, cond);
+        if (cond.type === 'milestone' || cond.type === 'outcome') {
+            this.renderChecklistBody(body, cond);
         } else if (cond.type === 'cumulative') {
             this.renderCumulativeBody(body, cond);
         } else if (cond.type === 'frequency') {
@@ -245,48 +279,63 @@ export class OkrView {
         this.renderDimensions(card, item, cond);
     }
 
-    /** 里程碑：状态进度（0–100%） */
-    private renderMilestoneBody(body: HTMLElement, cond: OkrCondition): void {
-        const row = body.createDiv({ cls: 'okr-entry-row' });
-        row.createSpan({ cls: 'okr-entry-label', text: t('okr.progressCurrent') });
+    /**
+     * 里程碑 / 成果：卡片表示一整个清单，可添加多行（里程碑1、里程碑2…）。
+     * 每行可勾选完成、编辑文本、删除；卡片底部显示完成进度。
+     */
+    private renderChecklistBody(body: HTMLElement, cond: OkrCondition): void {
+        if (!cond.items) cond.items = [];
+        const items = cond.items;
 
-        const target = Math.max(0, Math.min(100, cond.target || 0));
-        const bar = row.createDiv({ cls: 'okr-progress-bar' });
-        bar.createDiv({ cls: 'okr-progress-fill' }).style.width = `${target}%`;
+        const list = body.createDiv({ cls: 'okr-entry-checklist' });
+        if (items.length === 0) {
+            list.createDiv({ cls: 'okr-entry-checklist-empty', text: t('okr.checklistEmpty') });
+        }
+        for (const row of items) {
+            const rowEl = list.createDiv({ cls: 'okr-entry-checklist-row' });
 
-        const input = row.createEl('input', {
-            type: 'number',
-            cls: 'okr-entry-number',
-            attr: { min: '0', max: '100' },
+            const cb = rowEl.createEl('input', { type: 'checkbox', cls: 'okr-progress-checkbox' });
+            cb.checked = row.done;
+            cb.onchange = () => {
+                row.done = cb.checked;
+                void this.save();
+                void this.refresh();
+            };
+
+            const input = rowEl.createEl('input', {
+                type: 'text',
+                cls: 'okr-entry-text',
+                attr: { placeholder: t('okr.checklistItemPlaceholder') },
+            });
+            input.value = row.text;
+            input.onchange = () => {
+                row.text = input.value.trim();
+                void this.save();
+            };
+
+            const delBtn = rowEl.createEl('button', { cls: 'okr-entry-del', text: '✕' });
+            delBtn.onclick = (e) => {
+                e.stopPropagation();
+                cond.items = (cond.items ?? []).filter(it => it.id !== row.id);
+                void this.save();
+                void this.refresh();
+            };
+        }
+
+        // 底部：完成进度 + 添加一行
+        const foot = body.createDiv({ cls: 'okr-entry-row' });
+        const doneCount = items.filter(it => it.done).length;
+        foot.createSpan({
+            cls: 'okr-progress-value',
+            text: t('okr.checklistProgress', { done: String(doneCount), total: String(items.length) }),
         });
-        input.value = String(target);
-        input.onchange = () => {
-            const v = Number(input.value);
-            cond.target = Number.isFinite(v) ? Math.max(0, Math.min(100, v)) : 0;
+        const addBtn = foot.createEl('button', { cls: 'okr-record-btn', text: t('okr.checklistAdd') });
+        addBtn.onclick = (e) => {
+            e.stopPropagation();
+            if (!cond.items) cond.items = [];
+            cond.items.push(makeItem(cond.type, cond.items.length + 1));
             void this.save();
             void this.refresh();
-        };
-        row.createSpan({ cls: 'okr-entry-unit', text: '%' });
-    }
-
-    /** 成果：交付物文本 + 完成勾选 */
-    private renderOutcomeBody(body: HTMLElement, cond: OkrCondition): void {
-        const row = body.createDiv({ cls: 'okr-entry-row' });
-        const cb = row.createEl('input', { type: 'checkbox', cls: 'okr-progress-checkbox' });
-        cb.checked = cond.done ?? false;
-        cb.onchange = () => {
-            cond.done = cb.checked;
-            void this.save();
-        };
-        const input = row.createEl('input', {
-            type: 'text',
-            cls: 'okr-entry-text',
-            attr: { placeholder: t('okr.outcomePlaceholder') },
-        });
-        input.value = cond.text ?? '';
-        input.onchange = () => {
-            cond.text = input.value;
-            void this.save();
         };
     }
 
@@ -518,10 +567,5 @@ export class OkrView {
             cond.subtaskId = sel.value || undefined;
             void this.save();
         };
-    }
-
-    /** 重新渲染自身 */
-    private async refresh(): Promise<void> {
-        if (this.container) await this.renderInto(this.container);
     }
 }

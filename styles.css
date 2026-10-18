@@ -5062,6 +5062,24 @@
     font-size: 12px;
 }
 
+/* 里程碑 / 成果：卡片内的清单行 */
+.okr-entry-checklist {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.okr-entry-checklist-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.okr-entry-checklist-empty {
+    font-size: 12px;
+    color: var(--text-muted);
+}
+
 /* 维度信息行 */
 .okr-entry-dimensions {
     display: flex;
