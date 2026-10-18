@@ -485,12 +485,14 @@ export const en: I18nMessages = {
     'eventCopy.copied': 'Copied {count} event(s)',
     'eventCopy.emptyClipboard': 'Clipboard is empty, copy a day first',
     'eventCopy.pasted': 'Pasted {count} event(s)',
-    'eventCopy.copyWeek': 'Copy Week Events',
-    'eventCopy.pasteWeek': 'Paste Week Events',
-    'eventCopy.pasteWeekTitle': 'Paste Week Events',
+    'eventCopy.copyWeek': 'Copy Week Habit Tasks',
+    'eventCopy.pasteWeek': 'Paste Week Habit Tasks',
+    'eventCopy.pasteWeekTitle': 'Paste Week Habit Tasks',
     'eventCopy.weekLabel': 'Year {year}, Week {week}',
     'eventCopy.weekUnknown': 'Unknown week',
     'eventCopy.moreTools': 'More Tools',
+    'eventCopy.nothingHabitToCopy': 'No habit tasks to copy this week',
+    'eventCopy.habitCopied': 'Copied {count} habit task(s)',
 
     // Time block
     'range.title': 'Time Block',

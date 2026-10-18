@@ -483,12 +483,14 @@ export const zh = {
     'eventCopy.copied': '已复制 {count} 个事件',
     'eventCopy.emptyClipboard': '剪贴板为空，请先复制某天事件',
     'eventCopy.pasted': '已粘贴 {count} 个事件',
-    'eventCopy.copyWeek': '复制本周事件',
-    'eventCopy.pasteWeek': '粘贴一周事件',
-    'eventCopy.pasteWeekTitle': '粘贴一周事件',
+    'eventCopy.copyWeek': '复制本周习惯任务',
+    'eventCopy.pasteWeek': '粘贴一周习惯任务',
+    'eventCopy.pasteWeekTitle': '粘贴一周习惯任务',
     'eventCopy.weekLabel': '{year} 年 第 {week} 周',
     'eventCopy.weekUnknown': '未知周',
     'eventCopy.moreTools': '更多工具',
+    'eventCopy.nothingHabitToCopy': '本周没有可复制的习惯任务',
+    'eventCopy.habitCopied': '已复制 {count} 个习惯任务',
 
     // 时间区块
     'range.title': '时间区块',

@@ -46,10 +46,10 @@ export class WeekScheduleView extends ItemView {
     private savedScrollTop: number | null = null;
     /** 被主视图复用时的宿主容器（用于刷新） */
     private hostContainer?: HTMLElement;
-    /** 全周事件剪贴板：暂存「复制全周事件」的事件模板（保留 day，不含 id/weekKey） */
-    private clipboardWeekEvents: Omit<EventBlock, 'id' | 'weekKey'>[] | null = null;
-    /** 全周剪贴板来源周键，用于粘贴弹窗提示 */
-    private clipboardWeekSource: WeekKey | null = null;
+    /** 全周习惯任务剪贴板：暂存「复制本周习惯任务」的任务模板（保留 day，不含 id/weekKey） */
+    private clipboardWeekHabitEvents: Omit<EventBlock, 'id' | 'weekKey'>[] | null = null;
+    /** 全周习惯任务剪贴板来源周键，用于粘贴弹窗提示 */
+    private clipboardWeekHabitSource: WeekKey | null = null;
     /** 「更多工具」下拉面板是否展开 */
     private moreToolsOpen = false;
     /** 是否折叠习惯任务（折叠时列内隐藏习惯任务，改为显示一行统计；状态持久化在仓库数据中） */
@@ -1401,26 +1401,7 @@ export class WeekScheduleView extends ItemView {
         // 年 / 周切换
         this.renderWeekNav(toolbar);
 
-        // 折叠习惯按钮：折叠后列内隐藏习惯任务，改为显示一行统计
-        const habitToggleBtn = toolbar.createEl('button', {
-            text: t('weekPanel.collapseHabits'),
-            cls: 'week-habit-toggle-btn',
-        });
-        habitToggleBtn.toggleClass('is-active', this.habitsCollapsed);
-        // 时间计划激活时：折叠习惯按钮不可点击
-        habitToggleBtn.disabled = this.timePlanActive;
-        habitToggleBtn.onclick = () => {
-            if (this.timePlanActive) return;
-            const data = this.baseRepo().data;
-            if (!data) return;
-            data.habitsCollapsed = !this.habitsCollapsed;
-            void (async () => {
-                await this.save();
-                await this.onOpen();
-            })();
-        };
-
-        // 时间计划按钮（位于折叠习惯按钮右侧）：激活后隐藏下方日历，改为显示时间计划方案弹窗里的日历功能点
+        // 时间计划按钮：激活后隐藏下方日历，改为显示时间计划方案弹窗里的日历功能点
         const timePlanBtn = toolbar.createEl('button', {
             text: t('weekPanel.timePlan'),
             cls: 'week-time-plan-btn',
@@ -1452,6 +1433,25 @@ export class WeekScheduleView extends ItemView {
         schemeSelect.value = activeId;
         schemeSelect.onchange = () => {
             this.planSchemeRepo().setActiveSchemeId(schemeSelect.value || undefined);
+            void (async () => {
+                await this.save();
+                await this.onOpen();
+            })();
+        };
+
+        // 折叠习惯按钮（位于图例左侧）：折叠后列内隐藏习惯任务，改为显示一行统计
+        const habitToggleBtn = toolbar.createEl('button', {
+            text: t('weekPanel.collapseHabits'),
+            cls: 'week-habit-toggle-btn',
+        });
+        habitToggleBtn.toggleClass('is-active', this.habitsCollapsed);
+        // 时间计划激活时：折叠习惯按钮不可点击
+        habitToggleBtn.disabled = this.timePlanActive;
+        habitToggleBtn.onclick = () => {
+            if (this.timePlanActive) return;
+            const data = this.baseRepo().data;
+            if (!data) return;
+            data.habitsCollapsed = !this.habitsCollapsed;
             void (async () => {
                 await this.save();
                 await this.onOpen();
@@ -1495,13 +1495,13 @@ export class WeekScheduleView extends ItemView {
         if (this.moreToolsOpen) {
             const panel = moreToolsWrap.createDiv({ cls: 'more-tools-panel' });
 
-            // 复制本周事件
+            // 复制本周习惯任务
             const copyWeekBtn = panel.createEl('button', {
                 text: t('eventCopy.copyWeek'),
                 cls: 'more-tools-item',
             });
             copyWeekBtn.onclick = () => {
-                this.copyWeekEvents();
+                this.copyWeekHabitEvents();
             };
 
             // 粘贴一周事件
@@ -1510,16 +1510,16 @@ export class WeekScheduleView extends ItemView {
                 cls: 'more-tools-item',
             });
             pasteWeekBtn.onclick = () => {
-                if (!this.clipboardWeekEvents || this.clipboardWeekEvents.length === 0) {
+                if (!this.clipboardWeekHabitEvents || this.clipboardWeekHabitEvents.length === 0) {
                     new Notice(t('eventCopy.emptyClipboard'));
                     return;
                 }
-                new PasteWeekEventsModal(
+                new PasteWeekHabitEventsModal(
                     this.app,
-                    this.clipboardWeekSource,
+                    this.clipboardWeekHabitSource,
                     this.currentWeekKey,
                     () => {
-                        void this.pasteWeekEvents();
+                        void this.pasteWeekHabitEvents();
                     },
                 ).open();
             };
@@ -1559,27 +1559,30 @@ export class WeekScheduleView extends ItemView {
         await this.onOpen();
     }
 
-    /** 复制当前周的全部事件到全周剪贴板（保留 day，粘贴时按原星期几还原） */
-    private copyWeekEvents() {
-        const weekEvents = this.events.filter(ev => ev.weekKey === this.currentWeekKey);
-        if (weekEvents.length === 0) {
-            new Notice(t('eventCopy.nothingToCopy'));
+    /** 复制当前周的全部习惯任务到全周剪贴板（保留 day，粘贴时按原星期几还原） */
+    private copyWeekHabitEvents() {
+        // 仅复制习惯任务（来源任务已启用习惯时间点）
+        const weekHabitEvents = this.events.filter(
+            ev => ev.weekKey === this.currentWeekKey && this.getEventHabitTime(ev) !== null,
+        );
+        if (weekHabitEvents.length === 0) {
+            new Notice(t('eventCopy.nothingHabitToCopy'));
             return;
         }
-        // 暂存事件模板（去掉 id / weekKey，保留 day）
-        this.clipboardWeekEvents = weekEvents.map(({ id, weekKey: _w, ...rest }) => rest);
-        this.clipboardWeekSource = this.currentWeekKey;
-        new Notice(t('eventCopy.copied', { count: weekEvents.length }));
+        // 暂存任务模板（去掉 id / weekKey，保留 day）
+        this.clipboardWeekHabitEvents = weekHabitEvents.map(({ id, weekKey: _w, ...rest }) => rest);
+        this.clipboardWeekHabitSource = this.currentWeekKey;
+        new Notice(t('eventCopy.habitCopied', { count: weekHabitEvents.length }));
     }
 
-    /** 将全周剪贴板事件粘贴到当前周（按原星期几还原，保留源事件，可多次粘贴） */
-    private async pasteWeekEvents() {
-        if (!this.clipboardWeekEvents || this.clipboardWeekEvents.length === 0) {
+    /** 将全周习惯任务剪贴板粘贴到当前周（按原星期几还原，保留源任务，可多次粘贴） */
+    private async pasteWeekHabitEvents() {
+        if (!this.clipboardWeekHabitEvents || this.clipboardWeekHabitEvents.length === 0) {
             new Notice(t('eventCopy.emptyClipboard'));
             return;
         }
         let added = 0;
-        for (const tpl of this.clipboardWeekEvents) {
+        for (const tpl of this.clipboardWeekHabitEvents) {
             this.pdcaRepo().addEvent({
                 ...tpl,
                 id: `ev_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
@@ -1763,8 +1766,8 @@ export class RangeEditModal extends Modal {
 
 }
 
-/** 粘贴全周事件弹窗：显示「来源周 → 复制到 → 当前周」，确认后生效 */
-class PasteWeekEventsModal extends Modal {
+/** 粘贴全周习惯任务弹窗：显示「来源周 → 复制到 → 当前周」，确认后生效 */
+class PasteWeekHabitEventsModal extends Modal {
     constructor(
         app: App,
         /** 来源周键 */
