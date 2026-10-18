@@ -140,6 +140,22 @@
     border-color: var(--interactive-accent);
 }
 
+/* 时间计划方案按钮（工具栏，位于折叠习惯按钮右侧） */
+.week-scheme-btn {
+    padding: 6px 10px;
+    border-radius: 4px;
+    border: 1px solid var(--background-modifier-border);
+    background: var(--interactive-normal);
+    color: var(--text-normal);
+    cursor: pointer;
+    font-size: 13px;
+    white-space: nowrap;
+}
+
+.week-scheme-btn:hover {
+    background: var(--interactive-hover);
+}
+
 /* 折叠习惯后的统计行：与上方饼图统计行一致，整行撑满、单元格之间用分隔线连接 */
 .week-panel-habit-summary {
     flex-shrink: 0;
@@ -222,6 +238,22 @@
     height: 0;
     margin: 2px 0;
     border-top: 1px dashed var(--background-modifier-border);
+}
+
+/* 习惯任务按时间点分行：同一时间点的卡片跨列对齐 */
+.week-panel-habit-slot {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+    /* 行高由脚本统一设置，保证各列同一行等高 */
+    box-sizing: border-box;
+    overflow: hidden;
+}
+
+/* 该时间点没有习惯任务的列：留出与有卡片时等高的空白占位 */
+.week-panel-habit-slot.is-empty {
+    min-height: 52px;
 }
 
 /* 列内任务条目（两行：标题 + 预估时长） */

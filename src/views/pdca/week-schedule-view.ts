@@ -267,9 +267,48 @@ export class WeekScheduleView extends ItemView {
         }
 
         // 渲染每天列内的任务清单
+        // 习惯任务按「时间点 + 任务」跨列对齐：先收集本周所有习惯任务行，作为各列共用的行顺序
+        const habitRows = this.collectHabitRows();
         for (let d = 1; d <= 7; d++) {
-            this.renderDayColumn(dayColumns[d - 1], d);
+            this.renderDayColumn(dayColumns[d - 1], d, habitRows);
         }
+    }
+
+    /**
+     * 收集本周所有习惯任务行（升序），用于各列习惯任务按行对齐。
+     * 同一时间点可能有多个不同任务：按「时间点 + 任务」拆成多行，
+     * 这样相同任务能对齐到同一行；某列该行没有任务时留空白占位。
+     * 行顺序按「时间点 → 该时间点内任务首次出现的先后」排列，
+     * 保证同一时间点的任务在各列占用相同的行位置。
+     */
+    private collectHabitRows(): { time: number; key: string }[] {
+        const rows = new Map<string, { time: number; key: string; order: number }>();
+        let order = 0;
+        for (const ev of this.events) {
+            if (ev.weekKey !== this.currentWeekKey) continue;
+            const time = this.getEventHabitTime(ev);
+            if (time === null) continue;
+            const key = this.getHabitRowKey(ev);
+            if (!rows.has(key)) rows.set(key, { time, key, order: order++ });
+        }
+        return Array.from(rows.values())
+            .sort((a, b) => (a.time !== b.time ? a.time - b.time : a.order - b.order))
+            .map(({ time, key }) => ({ time, key }));
+    }
+
+    /** 习惯任务行的对齐键：优先按来源任务（同一任务跨列对齐），无来源任务时按标题 */
+    private getHabitRowKey(ev: EventBlock): string {
+        return ev.inboxId ? `item:${ev.inboxId}` : `title:${ev.title}`;
+    }
+
+    /**
+     * 计算习惯任务行的统一高度（像素）。
+     * 各列的习惯行必须等高，否则某列卡片换行（标题/时长占两行）时，
+     * 后续行会被整体下推，导致相同任务在不同列错位。
+     * 这里按「卡片最高可能高度」估算：标题一行 + 预估时长一行 + 习惯时间点一行 + 内边距。
+     */
+    private getHabitRowHeight(): number {
+        return 52;
     }
 
     /**
@@ -407,14 +446,19 @@ export class WeekScheduleView extends ItemView {
      * 列内分为上下两部分：上方习惯任务、下方当天任务，中间用分割线区分；
      * 两部分各自在无任务时显示对应提示文字。
      * 折叠习惯时不再显示习惯任务区（统计行已展示习惯数量与总时长）。
+     * 习惯任务按「时间点 + 任务」分行，各列共用同一组行顺序，
+     * 保证相同任务（同一时间点）的卡片在同一高度；该行没有任务的列留空白占位。
      */
-    private renderDayColumn(col: HTMLElement, day: number) {
+    private renderDayColumn(col: HTMLElement, day: number, habitRows: { time: number; key: string }[]) {
         const dayEvents = this.events.filter(
             ev => ev.day === day && ev.weekKey === this.currentWeekKey,
         );
 
         // 按是否设置习惯时间点拆分：习惯任务在上，当天任务在下（各自保持原有顺序）
-        const habitEvents = dayEvents.filter(ev => this.getEventHabitTime(ev) !== null);
+        const habitEvents = dayEvents
+            .filter(ev => this.getEventHabitTime(ev) !== null)
+            // 习惯任务按时间点先后顺序从上往下排列
+            .sort((a, b) => (this.getEventHabitTime(a) ?? 0) - (this.getEventHabitTime(b) ?? 0));
         const normalEvents = dayEvents.filter(ev => this.getEventHabitTime(ev) === null);
 
         // ===== 上半部分：习惯任务（折叠习惯时整块隐藏，由统计行代替）=====
@@ -423,8 +467,20 @@ export class WeekScheduleView extends ItemView {
             if (habitEvents.length === 0) {
                 habitSection.createDiv({ cls: 'week-panel-empty', text: t('weekPanel.emptyHabit') });
             } else {
-                for (const ev of habitEvents) {
-                    this.renderDayEventChip(habitSection, ev, this.getEventHabitTime(ev));
+                // 按本周所有习惯任务行逐行渲染：该行没有任务的列留出等高空白占位
+                const rowHeight = this.getHabitRowHeight();
+                for (const row of habitRows) {
+                    const slot = habitSection.createDiv({ cls: 'week-panel-habit-slot' });
+                    // 固定行高：保证各列同一行高度一致，避免卡片内容换行导致后续行错位
+                    slot.style.height = `${rowHeight}px`;
+                    const evs = habitEvents.filter(ev => this.getHabitRowKey(ev) === row.key);
+                    if (evs.length === 0) {
+                        slot.addClass('is-empty');
+                        continue;
+                    }
+                    for (const ev of evs) {
+                        this.renderDayEventChip(slot, ev, this.getEventHabitTime(ev));
+                    }
                 }
             }
 
@@ -1084,6 +1140,28 @@ export class WeekScheduleView extends ItemView {
             })();
         };
 
+        // 时间计划方案按钮（位于折叠习惯按钮右侧）：打开时间计划方案弹窗
+        const schemeBtn = toolbar.createEl('button', {
+            text: t('planScheme.open'),
+            cls: 'week-scheme-btn',
+        });
+        schemeBtn.onclick = () => {
+            new PlanSchemeModal(
+                this.app,
+                this.planCategoryData,
+                this.planSchemeData,
+                this,
+                (templateId, targetDays) => this.applyTemplate(templateId, targetDays),
+                () => this.save(),
+                () => {
+                    void this.save();
+                    void this.onOpen();
+                },
+                this.categoryRepo(),
+                this.planSchemeRepo(),
+            ).open();
+        };
+
         // 时间计划方案按钮 + 当前方案下拉框
         const schemeBar = toolbar.createDiv({ cls: 'plan-scheme-bar' });
 
@@ -1136,28 +1214,6 @@ export class WeekScheduleView extends ItemView {
         // 下拉面板：每行一个按钮
         if (this.moreToolsOpen) {
             const panel = moreToolsWrap.createDiv({ cls: 'more-tools-panel' });
-
-            // 时间计划方案
-            const schemeBtn = panel.createEl('button', {
-                text: t('planScheme.open'),
-                cls: 'more-tools-item',
-            });
-            schemeBtn.onclick = () => {
-                new PlanSchemeModal(
-                    this.app,
-                    this.planCategoryData,
-                    this.planSchemeData,
-                    this,
-                    (templateId, targetDays) => this.applyTemplate(templateId, targetDays),
-                    () => this.save(),
-                    () => {
-                        void this.save();
-                        void this.onOpen();
-                    },
-                    this.categoryRepo(),
-                    this.planSchemeRepo(),
-                ).open();
-            };
 
             // 复制本周事件
             const copyWeekBtn = panel.createEl('button', {
