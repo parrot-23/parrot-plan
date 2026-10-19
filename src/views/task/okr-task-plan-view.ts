@@ -532,15 +532,15 @@ export class OkrTaskPlanView {
     }
 
     /**
-     * 渲染「板块信息」方框（公共组件）：标题行（右侧「+」新增板块按钮）+ 各板块面板。
-     * 「当前任务」与「收集篮子」选项卡共用，保证呈现方式一致（每个板块一个面板，垂直排列）。
+     * 渲染「板块信息」（公共组件）：标题行（右侧「+」新增板块按钮）+ 各板块面板。
+     * 「当前任务」与「收集篮子」选项卡共用，保证呈现方式一致。
+     * 板块信息本身无方框，仅标题行 + 各清单/文件面板（每个面板一个方框，垂直排列）。
      */
     private renderSectionsArea(container: HTMLElement): void {
-        const sectionsArea = container.createDiv({ cls: 'swimlane-section-area okr-basket-sections-area' });
-        const sectionsHeader = sectionsArea.createDiv({ cls: 'swimlane-section-area-header' });
-        sectionsHeader.createDiv({ cls: 'swimlane-section-area-title', text: t('projectPicture.sectionsTitle') });
-        this.renderAddSectionButton(sectionsHeader);
-        const sectionsBody = sectionsArea.createDiv({ cls: 'swimlane-section-area-body' });
+        const sectionsHead = container.createDiv({ cls: 'swimlane-section-area-header task-plan-basket-sections-head' });
+        sectionsHead.createDiv({ cls: 'swimlane-section-area-title', text: t('projectPicture.sectionsTitle') });
+        this.renderAddSectionButton(sectionsHead);
+        const sectionsBody = container.createDiv({ cls: 'swimlane-section-area-body okr-basket-sections-area' });
         this.renderSectionCards(sectionsBody);
     }
 

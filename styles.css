@@ -6040,8 +6040,16 @@
     height: 14px;
 }
 
+/* 板块信息标题行：单独一行标题 + 右侧「+」新增板块按钮（无方框） */
+.task-plan-basket-sections-head {
+    flex-shrink: 0;
+    margin-top: 20px;
+    margin-bottom: 10px;
+    padding-left: 2px;
+}
+
 /* 板块信息：每个板块一个面板（与左侧收集篮子同款样式，无「整理」按钮），按顺序垂直排列 */
-.okr-basket-sections-area .swimlane-section-area-body {
+.okr-basket-sections-area {
     flex-direction: column;
     overflow-x: visible;
 }
