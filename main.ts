@@ -1,8 +1,8 @@
-import { App, Modal, Notice, Plugin, PluginSettingTab, type SettingDefinitionItem } from 'obsidian';
+import { Plugin } from 'obsidian';
 
 import { VIEW_TYPE_MAIN, MainView } from './src/main-view';
 import type { FileData } from './src/datatypes/domain';
-import { BaseRepo, DEFAULT_CACHE_DIR_NAME, type PluginData } from './src/repos/base-repo';
+import { BaseRepo, type PluginData } from './src/repos/base-repo';
 import { GtdRepo } from './src/repos/gtd-repo';
 import { PdcaRepo } from './src/repos/pdca-repo';
 import { WorkbenchRepo } from './src/repos/workbench-repo';
@@ -14,6 +14,8 @@ import { initI18n, t, getLangDebugInfo } from './src/i18n';
 import { initLogger, log } from './src/shared/logger';
 import { downloadImageToCache } from './src/helper/cache-image';
 import { HelpModal } from './src/helper/help-modal';
+import { ParrotPlanSettingTab } from './src/system/setting-tab';
+import { RunningTaskStatusBar } from './src/system/status-bar';
 
 export default class ParrotPlanPlugin extends Plugin {
     /** 基础数据仓库：唯一数据源 + 唯一保存出口 */
@@ -40,11 +42,8 @@ export default class ParrotPlanPlugin extends Plugin {
     /** 时间计划方案领域仓库 */
     planSchemeRepo: PlanSchemeRepo;
 
-    /** 状态栏「进行中任务」元素（插件加载即创建，不依赖主视图是否打开） */
-    statusBarEl?: HTMLElement;
-
-    /** 状态栏已用时长刷新定时器（每分钟更新） */
-    private statusBarTimer?: number;
+    /** 状态栏「进行中任务」显示（插件加载即创建，不依赖主视图是否打开） */
+    private statusBar?: RunningTaskStatusBar;
 
     /**
      * 插件持有的唯一数据源（委托给 BaseRepo）。
@@ -226,59 +225,17 @@ export default class ParrotPlanPlugin extends Plugin {
      * 状态栏元素由插件创建（随插件卸载自动清理），不依赖主视图是否打开。
      */
     private initStatusBar(): void {
-        this.statusBarEl = this.addStatusBarItem();
-        this.statusBarEl.addClass('parrot-plan-status-running');
-        this.renderStatusBarRunningTask();
-        // 每分钟刷新已用时长
-        this.statusBarTimer = window.setInterval(() => this.renderStatusBarRunningTask(), 60 * 1000);
+        this.statusBar = new RunningTaskStatusBar(
+            this,
+            () => this.pdcaRepo.runningTask,
+            (inboxId) => this.data?.inboxData.items.find(i => i.id === inboxId && !i.removed),
+        );
+        this.statusBar.init();
     }
 
-    /**
-     * 渲染状态栏中的「进行中任务」：显示「任务名称：时长」。
-     * 无进行中任务（或任务已被移除）时隐藏；点击打开主视图并跳转到日执行视图。
-     */
+    /** 刷新状态栏中的「进行中任务」显示（进行中任务变化时由主视图调用） */
     renderStatusBarRunningTask(): void {
-        const el = this.statusBarEl;
-        if (!el) return;
-        el.empty();
-
-        const running = this.pdcaRepo.runningTask;
-        const item = running
-            ? this.data?.inboxData.items.find(i => i.id === running.inboxId && !i.removed)
-            : undefined;
-        if (!running || !item) {
-            el.addClass('is-hidden');
-            return;
-        }
-        el.removeClass('is-hidden');
-
-        const now = new Date();
-        const nowMinutes = now.getHours() * 60 + now.getMinutes();
-        const elapsed = Math.max(0, nowMinutes - running.start);
-        el.setText(t('nav.runningStatusBar', {
-            name: item.title,
-            duration: t('nav.runningStatusBarDuration', { minutes: String(elapsed) }),
-        }));
-        el.setAttribute('aria-label', t('nav.runningLabel'));
-        el.onclick = () => {
-            void this.openTodayTab();
-        };
-    }
-
-    /** 打开主视图并切换到「日执行」二级视图（状态栏点击用） */
-    private async openTodayTab(): Promise<void> {
-        const { workspace } = this.app;
-        let leaf = workspace.getLeavesOfType(VIEW_TYPE_MAIN)[0];
-        if (!leaf) {
-            leaf = workspace.getLeaf('tab');
-            await leaf.setViewState({ type: VIEW_TYPE_MAIN });
-        }
-        await workspace.revealLeaf(leaf);
-
-        const view = leaf.view;
-        if (view instanceof MainView) {
-            await view.openTodayTab();
-        }
+        this.statusBar?.render();
     }
 
     /**
@@ -306,12 +263,8 @@ export default class ParrotPlanPlugin extends Plugin {
     onunload() {
         log('插件 onunload（卸载/重载）');
         // 清理状态栏定时器与元素
-        if (this.statusBarTimer !== undefined) {
-            window.clearInterval(this.statusBarTimer);
-            this.statusBarTimer = undefined;
-        }
-        this.statusBarEl?.remove();
-        this.statusBarEl = undefined;
+        this.statusBar?.destroy();
+        this.statusBar = undefined;
         // 只保存数据，不 detach leaf（否则会打乱用户布局）
         const leaves = this.app.workspace.getLeavesOfType(VIEW_TYPE_MAIN);
         for (const leaf of leaves) {
@@ -330,168 +283,5 @@ export default class ParrotPlanPlugin extends Plugin {
                 await leaf.view.resetData();
             }
         }
-    }
-}
-
-
-class ParrotPlanSettingTab extends PluginSettingTab {
-    private plugin: ParrotPlanPlugin;
-
-    constructor(app: App, plugin: ParrotPlanPlugin) {
-        super(app, plugin);
-        this.plugin = plugin;
-    }
-
-    /** 刷新设置页 */
-    private refresh(): void {
-        this.update();
-    }
-
-    getSettingDefinitions(): SettingDefinitionItem[] {
-        return [
-            {
-                name: t('settings.title'),
-                desc: t('settings.about'),
-                render: (setting) => {
-                    setting.setName(t('settings.title'));
-                    setting.setDesc(t('settings.about'));
-                },
-            },
-            {
-                name: t('settings.cache'),
-                searchable: false,
-                render: (setting) => {
-                    setting.setName(t('settings.cache')).setHeading();
-                },
-            },
-            {
-                name: t('settings.cacheEnabled'),
-                desc: t('settings.cacheEnabledDesc'),
-                render: (setting) => {
-                    setting
-                        .setName(t('settings.cacheEnabled'))
-                        .setDesc(t('settings.cacheEnabledDesc'))
-                        .addToggle((toggle) => {
-                            toggle.setValue(this.plugin.cacheEnabled).onChange(async (value) => {
-                                await this.plugin.saveCacheEnabled(value);
-                                // 刷新设置页，更新下方缓存目录名称的禁用状态
-                                this.refresh();
-                            });
-                        });
-                },
-            },
-            {
-                name: t('settings.cacheDirName'),
-                desc: t('settings.cacheDirNameDesc'),
-                render: (setting) => {
-                    setting
-                        .setName(t('settings.cacheDirName'))
-                        .setDesc(t('settings.cacheDirNameDesc'))
-                        .addText((text) => {
-                            text.setPlaceholder(DEFAULT_CACHE_DIR_NAME)
-                                .setValue(this.plugin.cacheDirName)
-                                .onChange(async (value) => {
-                                    const name = value.trim() || DEFAULT_CACHE_DIR_NAME;
-                                    await this.plugin.saveCacheDirName(name);
-                                });
-                            // 缓存关闭时禁用输入框
-                            text.setDisabled(!this.plugin.cacheEnabled);
-                        });
-                    // 缓存关闭时整行置灰
-                    if (!this.plugin.cacheEnabled) {
-                        setting.settingEl.addClass('parrot-setting-disabled');
-                    }
-                },
-            },
-            {
-                name: t('settings.scriptMode'),
-                searchable: false,
-                render: (setting) => {
-                    setting.setName(t('settings.scriptMode')).setHeading();
-                },
-            },
-            {
-                name: t('settings.scriptModeEnabled'),
-                desc: t('settings.scriptModeEnabledDesc'),
-                render: (setting) => {
-                    setting
-                        .setName(t('settings.scriptModeEnabled'))
-                        .setDesc(t('settings.scriptModeEnabledDesc'))
-                        .addToggle((toggle) => {
-                            toggle.setValue(this.plugin.scriptModeEnabled).onChange(async (value) => {
-                                await this.plugin.saveScriptModeEnabled(value);
-                            });
-                        });
-                },
-            },
-            {
-                name: t('settings.data'),
-                searchable: false,
-                render: (setting) => {
-                    setting.setName(t('settings.data')).setHeading();
-                },
-            },
-            {
-                name: t('settings.clearData'),
-                desc: t('settings.clearDataDesc'),
-                render: (setting) => {
-                    setting
-                        .setName(t('settings.clearData'))
-                        .setDesc(t('settings.clearDataDesc'))
-                        .addButton((btn) => {
-                            btn.setButtonText(t('settings.clearData'))
-                                .setDestructive()
-                                .onClick(() => {
-                                    new ConfirmModal(
-                                        this.app,
-                                        t('settings.clearDataConfirm'),
-                                        t('settings.clearDataConfirmDesc'),
-                                        async () => {
-                                            await this.plugin.clearAllData();
-                                            new Notice(t('settings.clearDataDone'));
-                                        },
-                                    ).open();
-                                });
-                        });
-                },
-            },
-        ];
-    }
-}
-
-/** 通用确认弹窗 */
-class ConfirmModal extends Modal {
-    private message: string;
-    private detail: string;
-    private onConfirm: () => void | Promise<void>;
-
-    constructor(app: App, message: string, detail: string, onConfirm: () => void | Promise<void>) {
-        super(app);
-        this.message = message;
-        this.detail = detail;
-        this.onConfirm = onConfirm;
-    }
-
-    onOpen() {
-        const { contentEl } = this;
-        contentEl.createEl('h3', { text: this.message });
-        contentEl.createEl('p', { text: this.detail });
-
-        const btnRow = contentEl.createDiv({ cls: 'modal-button-container' });
-        btnRow.createEl('button', { text: t('settings.cancel') }).onclick = () => this.close();
-        const confirmBtn = btnRow.createEl('button', {
-            text: t('settings.confirm'),
-            cls: 'mod-warning',
-        });
-        confirmBtn.onclick = () => {
-            void (async () => {
-                await this.onConfirm();
-                this.close();
-            })();
-        };
-    }
-
-    onClose() {
-        this.contentEl.empty();
     }
 }

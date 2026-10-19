@@ -1567,6 +1567,8 @@ export class TodayView {
             this.selectedEventId = undefined;
             this.selectedExecId = undefined;
             this.clearInboxSelection();
+            // 选中进行中任务时自动切到「当天任务」选项卡（与选中事件/执行记录保持一致）
+            this.rightTab = 'dayTasks';
         }
         void this.refresh();
     }
