@@ -286,6 +286,8 @@ export const zh = {
     'today.taskShareEmpty': '今日暂无执行记录',
     'today.completedListTitle': '已完成任务列表',
     'today.completedListEmpty': '今日暂无已完成任务',
+    'today.unfinishedListTitle': '未完成任务列表',
+    'today.unfinishedListEmpty': '今日暂无未完成任务',
     'today.addedListTitle': '新增事项',
     'today.addedListEmpty': '今日暂无新增事项',
     'today.addUnplannedTitle': '执行非计划事件',

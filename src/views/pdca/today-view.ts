@@ -237,11 +237,13 @@ export class TodayView {
             this.renderSectionsBox(panel);
             return;
         }
-        // 今日情况：今日各分类已执行时长 + 今日任务占比（左右各一半）+ 已完成任务列表
+        // 今日情况：今日各分类已执行时长 + 今日任务占比（左右各一半）+ 已完成/未完成任务列表（左右各一半）
         const statsRow = panel.createDiv({ cls: 'today-stats-row' });
         this.renderCategoryDurationBox(statsRow);
         this.renderTaskShareBox(statsRow);
-        this.renderCompletedListBox(panel);
+        const doneRow = panel.createDiv({ cls: 'today-done-row' });
+        this.renderCompletedListBox(doneRow);
+        this.renderUnfinishedListBox(doneRow);
     }
 
     /** 重新渲染自身 */
@@ -1384,6 +1386,72 @@ export class TodayView {
             row.createSpan({
                 cls: 'today-completed-duration',
                 text: t('check.detailDuration', { duration: formatHours(Math.max(0, ex.end - ex.start)) }),
+            });
+        }
+    }
+
+    /**
+     * 渲染「未完成任务列表」方框（「今日情况」选项卡底部右侧）。
+     * 列出当前查看日期当天计划事件中尚未完成的任务，
+     * 每条内容：分类色点 · 名称 · 分类名 · 习惯任务/当天任务。
+     */
+    private renderUnfinishedListBox(panel: HTMLElement) {
+        const { day, weekKey } = this.getViewDayInfo();
+
+        const box = panel.createDiv({ cls: 'today-completed-box' });
+        box.createDiv({ cls: 'today-cat-duration-title', text: t('today.unfinishedListTitle') });
+
+        // 当天计划事件：习惯时间点任务按时间点排序，当天任务按分类聚合后拼接
+        const dayEvents = this.getEvents()
+            .filter(ev => ev.day === day && ev.weekKey === weekKey);
+        const habitEvents = dayEvents
+            .filter(ev => this.getEventHabitTime(ev) !== null)
+            .sort((a, b) => (this.getEventHabitTime(a) ?? 0) - (this.getEventHabitTime(b) ?? 0));
+        const normalEvents = this.groupEventsByCategory(
+            dayEvents.filter(ev => this.getEventHabitTime(ev) === null),
+        );
+        const orderedEvents = [...habitEvents, ...normalEvents];
+
+        // 未完成：未标记/未判定为完成的任务
+        const unfinished = orderedEvents.filter(ev => {
+            const item = ev.inboxId
+                ? this.inboxData.items.find(i => i.id === ev.inboxId && !i.removed)
+                : undefined;
+            return item ? !this.isDayTaskDone(item.id) : true;
+        });
+
+        if (unfinished.length === 0) {
+            box.createDiv({ cls: 'today-cat-duration-empty', text: t('today.unfinishedListEmpty') });
+            return;
+        }
+
+        const list = box.createDiv({ cls: 'today-completed-list' });
+        for (const ev of unfinished) {
+            const cat = ev.categoryId
+                ? this.categoryData.categories.find(c => c.id === ev.categoryId)
+                : undefined;
+
+            const row = list.createDiv({ cls: 'today-completed-row' });
+
+            // 分类色点
+            const dot = row.createSpan({ cls: 'today-completed-dot' });
+            dot.setCssProps({ '--dot-color': cat?.color ?? '#888888' });
+
+            // 名称
+            row.createSpan({ cls: 'today-completed-name', text: ev.title });
+
+            // 分类名
+            row.createSpan({
+                cls: 'today-completed-category',
+                text: cat?.label ?? t('inbox.noCategory'),
+            });
+
+            // 习惯任务 / 当天任务
+            row.createSpan({
+                cls: 'today-completed-type',
+                text: this.getEventHabitTime(ev) !== null
+                    ? t('today.habitTaskListTitle')
+                    : t('today.taskListTitle'),
             });
         }
     }

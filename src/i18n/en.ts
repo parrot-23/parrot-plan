@@ -288,6 +288,8 @@ export const en: I18nMessages = {
     'today.taskShareEmpty': 'No executions today',
     'today.completedListTitle': 'Completed Tasks',
     'today.completedListEmpty': 'No completed tasks today',
+    'today.unfinishedListTitle': 'Unfinished Tasks',
+    'today.unfinishedListEmpty': 'No unfinished tasks today',
     'today.addedListTitle': 'Added Items',
     'today.addedListEmpty': 'No added items today',
     'today.addUnplannedTitle': 'Execute Unplanned Event',

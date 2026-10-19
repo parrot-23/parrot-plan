@@ -358,6 +358,22 @@
     color: var(--text-error);
 }
 
+/* 已完成标识（位于卡片右上角，取代删除按钮位置；样式与日执行当天事件卡片一致） */
+.week-panel-task-done {
+    position: absolute;
+    top: 2px;
+    right: 4px;
+    display: inline-flex;
+    align-items: center;
+    flex-shrink: 0;
+    color: var(--text-success, var(--interactive-accent));
+}
+
+.week-panel-task-done svg {
+    width: 14px;
+    height: 14px;
+}
+
 /* 列底部留白：高度约等于一张卡片，保证卡片较多时仍有可点击的空白区域 */
 .week-panel-column-spacer {
     flex-shrink: 0;
@@ -4424,6 +4440,19 @@
     background: var(--background-secondary);
 }
 
+/* 今日情况：已完成 / 未完成任务列表 左右各一半 */
+.today-done-row {
+    display: flex;
+    flex-direction: row;
+    align-items: stretch;
+    gap: 12px;
+}
+
+.today-done-row .today-completed-box {
+    flex: 1 1 0;
+    min-width: 0;
+}
+
 /* 已完成任务列表：每行「时间范围 · 色点 · 任务 · 分类 · 时长」，与二级视图（检查）执行详情一致 */
 .today-completed-list {
     display: flex;
@@ -4463,6 +4492,11 @@
 }
 
 .today-completed-category {
+    flex-shrink: 0;
+    color: var(--text-muted);
+}
+
+.today-completed-type {
     flex-shrink: 0;
     color: var(--text-muted);
 }

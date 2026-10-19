@@ -1,6 +1,6 @@
 
 
-import { ItemView, WorkspaceLeaf, Modal, Setting, Notice, App } from 'obsidian';
+import { ItemView, WorkspaceLeaf, Modal, Setting, Notice, App, setIcon } from 'obsidian';
 import type { Plugin } from 'obsidian';
 import type { CategorizedRange, PlanCategoryId, PlanSchemeData, DailyRange, WeekKey } from '../../shared/plan-data';
 import { hexToTransparent, getCurrentWeekKey, makeWeekKey, parseWeekKey, shiftWeekKey, makeDayKeyFromWeek, DEFAULT_SCHEME_ID } from '../../shared/plan-data';
@@ -810,8 +810,11 @@ export class WeekScheduleView extends ItemView {
             this.openEstimatePopover(chip, ev);
         };
 
-        // 删除按钮（已制定周计划时计划固定，不允许删除）
-        if (!this.plannedWeeks.includes(this.currentWeekKey)) {
+        // 右上角标记：当天已完成时显示完成标识，否则显示删除按钮
+        if (this.isEventDayDone(ev)) {
+            const doneIcon = chip.createSpan({ cls: 'week-panel-task-done' });
+            setIcon(doneIcon, 'check-circle');
+        } else if (!this.plannedWeeks.includes(this.currentWeekKey)) {
             const delBtn = chip.createDiv({ cls: 'week-panel-task-del' });
             delBtn.setText('×');
             delBtn.onclick = async (e) => {
@@ -822,6 +825,36 @@ export class WeekScheduleView extends ItemView {
                 await this.onOpen();
             };
         }
+    }
+
+    /**
+     * 判断某个计划事件在其对应「当天」是否已完成。
+     * 判定规则与二级视图（日执行）左侧当天事件卡片一致：
+     * 优先读取手动标记的完成 / 未完成日期，其次比较已执行时长与预估时长，
+     * 无预估时长时只要有执行记录即视为完成。
+     */
+    private isEventDayDone(ev: EventBlock): boolean {
+        const item = ev.inboxId
+            ? this.inboxData.items.find(i => i.id === ev.inboxId && !i.removed)
+            : undefined;
+        const dayKey = makeDayKeyFromWeek(ev.weekKey, ev.day);
+
+        // 手动标记优先：标记为未完成时不显示完成标识
+        if (item && (item.undoneDayKeys ?? []).includes(dayKey)) return false;
+        if (item && (item.doneDayKeys ?? []).includes(dayKey)) return true;
+
+        const estMinutes = typeof ev.estimatedMinutes === 'number' && ev.estimatedMinutes >= 0
+            ? ev.estimatedMinutes
+            : undefined;
+        const execMinutes = this.executions
+            .filter(ex => !ex.replaced
+                && ex.weekKey === ev.weekKey
+                && ex.day === ev.day
+                && (ex.eventId === ev.id || (ev.inboxId && ex.inboxId === ev.inboxId)))
+            .reduce((sum, ex) => sum + Math.max(0, ex.end - ex.start), 0);
+
+        if (estMinutes === undefined || estMinutes === 0) return execMinutes > 0;
+        return execMinutes >= estMinutes;
     }
 
     /**
