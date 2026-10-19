@@ -675,17 +675,42 @@ export class OkrTaskPlanView {
             return;
         }
 
-        // 任务详情方框（位于 OKR 信息方框上方）
-        const box = container.createDiv({ cls: 'task-plan-detail-box' });
-        box.createDiv({ cls: 'task-plan-detail-title', text: t('taskPlan.detailTitle') });
+        // 两栏布局：左侧任务详情方框、右侧任务状态 / 习惯任务方框，各占页面一半
+        const detailRow = container.createDiv({ cls: 'task-plan-detail-row' });
 
-        // 左右两栏：左侧为标题/描述/分类，右侧为属性卡片（截止日期/状态/习惯时间点/预估时长）
-        const body = box.createDiv({ cls: 'task-plan-detail-body' });
-        const form = body.createDiv({ cls: 'task-plan-form' });
-        const metaCard = body.createDiv({ cls: 'task-plan-meta-card' });
+        // ===== 左方框：任务详情（标题 / 描述 / 分类）=====
+        const detailBox = detailRow.createDiv({ cls: 'task-plan-detail-box' });
+        detailBox.createDiv({ cls: 'task-plan-detail-title', text: t('taskPlan.detailTitle') });
+        const form = detailBox.createDiv({ cls: 'task-plan-form' });
 
-        // 标题
-        form.createEl('h2', { cls: 'task-plan-title', text: item.title });
+        // 标题（点击铅笔图标后内联编辑）
+        const titleRow = form.createDiv({ cls: 'task-plan-title-row' });
+        const titleEl = titleRow.createEl('h2', { cls: 'task-plan-title', text: item.title });
+        const editTitleBtn = titleRow.createEl('button', {
+            cls: 'task-plan-edit-desc-btn',
+            attr: { 'aria-label': t('taskPlan.editTitle') },
+        });
+        setIcon(editTitleBtn, 'pencil');
+        editTitleBtn.onclick = () => {
+            // 已在编辑态则忽略
+            if (titleRow.querySelector('.task-plan-title-edit-input')) return;
+            const input = titleRow.createEl('input', {
+                cls: 'task-plan-title-edit-input',
+                type: 'text',
+            });
+            input.value = item.title;
+            titleEl.hide();
+            input.focus();
+            // 失焦后自动保存并恢复展示
+            input.onblur = () => {
+                void (async () => {
+                    const next = input.value.trim();
+                    if (next) item.title = next;
+                    await this.save();
+                    await this.refresh();
+                })();
+            };
+        };
 
         // 项目描述
         const descRow = form.createDiv({ cls: 'task-plan-field' });
@@ -720,12 +745,18 @@ export class OkrTaskPlanView {
             };
         };
 
-        // 分类
+        // 分类（点击铅笔图标后内联选择）
         const category = item.categoryId
             ? this.categoryData.categories.find(c => c.id === item.categoryId)
             : undefined;
         const catRow = form.createDiv({ cls: 'task-plan-field' });
-        catRow.createDiv({ cls: 'task-plan-field-label', text: t('taskPlan.category') });
+        const catLabelRow = catRow.createDiv({ cls: 'task-plan-field-label-row' });
+        catLabelRow.createDiv({ cls: 'task-plan-field-label', text: t('taskPlan.category') });
+        const editCatBtn = catLabelRow.createEl('button', {
+            cls: 'task-plan-edit-desc-btn',
+            attr: { 'aria-label': t('taskPlan.editCategory') },
+        });
+        setIcon(editCatBtn, 'pencil');
         const catValue = catRow.createDiv({ cls: 'task-plan-field-value' });
         if (category) {
             const dot = catValue.createSpan({ cls: 'task-plan-category-dot' });
@@ -734,10 +765,35 @@ export class OkrTaskPlanView {
         } else {
             catValue.setText(t('taskPlan.emptyValue'));
         }
+        editCatBtn.onclick = () => {
+            // 已在编辑态则忽略
+            if (catRow.querySelector('.task-plan-category-select')) return;
+            catValue.hide();
+            const select = catRow.createEl('select', { cls: 'task-plan-category-select' });
+            select.createEl('option', { text: t('inbox.noCategory'), value: '' });
+            for (const c of this.categoryData.categories) {
+                select.createEl('option', { text: c.label, value: c.id });
+            }
+            select.value = item.categoryId ?? '';
+            select.focus();
+            // 失焦后自动保存并恢复展示
+            select.onblur = () => {
+                void (async () => {
+                    item.categoryId = select.value || undefined;
+                    await this.save();
+                    await this.refresh();
+                })();
+            };
+        };
+
+        // ===== 右方框：任务状态 / 习惯任务 =====
+        const statusBox = detailRow.createDiv({ cls: 'task-plan-detail-box' });
+        statusBox.createDiv({ cls: 'task-plan-detail-title', text: t('taskPlan.typeTitle') });
+        const statusBody = statusBox.createDiv({ cls: 'task-plan-status-body' });
 
         // 任务状态（按钮组，当前状态高亮，点击后自动保存）
-        const statusRow = metaCard.createDiv({ cls: 'task-plan-field' });
-        statusRow.createDiv({ cls: 'task-plan-field-label', text: t('taskPlan.status') });
+        const statusRow = statusBody.createDiv({ cls: 'task-plan-field' });
+        statusRow.createDiv({ cls: 'task-plan-field-label', text: t('taskPlan.oneTimeTask') });
         const statusGroup = statusRow.createDiv({ cls: 'task-plan-status-group' });
         const statuses: { value: string; labelKey: 'taskPlan.statusNotStarted' | 'taskPlan.statusInProgress' | 'taskPlan.statusDone' }[] = [
             { value: 'notStarted', labelKey: 'taskPlan.statusNotStarted' },
@@ -761,14 +817,14 @@ export class OkrTaskPlanView {
         }
 
         // 习惯时间点（起始时间：小时下拉 + 分钟下拉，选择后自动保存）
-        const habitRow = metaCard.createDiv({ cls: 'task-plan-field' });
+        const habitRow = statusBody.createDiv({ cls: 'task-plan-field' });
         const habitLabelRow = habitRow.createDiv({ cls: 'task-plan-field-label-row' });
 
         // 启用开关（点击切换，禁用时时间下拉置灰）
         const habitEnabled = item.habitTimeEnabled ?? false;
         const toggleBtn = habitLabelRow.createEl('button', {
             cls: 'task-plan-habit-toggle',
-            attr: { 'aria-label': t('taskPlan.habitTask') },
+            attr: { 'aria-label': t('taskPlan.habitTypeTask') },
         });
         toggleBtn.toggleClass('is-on', habitEnabled);
         toggleBtn.onclick = () => {
@@ -779,7 +835,7 @@ export class OkrTaskPlanView {
             })();
         };
 
-        habitLabelRow.createDiv({ cls: 'task-plan-field-label', text: t('taskPlan.habitTask') });
+        habitLabelRow.createDiv({ cls: 'task-plan-field-label', text: t('taskPlan.habitTypeTask') });
 
         // 习惯时间点小标题（与下方「预估执行时长」标题样式一致）
         habitRow.createDiv({ cls: 'task-plan-field-label', text: t('taskPlan.habitTimePoint') });
@@ -823,7 +879,7 @@ export class OkrTaskPlanView {
 
         // 预估时长（仅在启用习惯时间点时显示，单位分钟，失焦后自动保存）
         if (habitEnabled) {
-            const estRow = metaCard.createDiv({ cls: 'task-plan-field' });
+            const estRow = statusBody.createDiv({ cls: 'task-plan-field' });
             estRow.createDiv({ cls: 'task-plan-field-label', text: t('weekPanel.estimatedLabel') });
             const estInput = estRow.createEl('input', {
                 cls: 'task-plan-est-input',

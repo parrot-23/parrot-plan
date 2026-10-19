@@ -3131,7 +3131,26 @@
 }
 
 .task-plan-title {
-    margin: 0 0 16px 0;
+    margin: 0;
+}
+
+/* 标题行：标题 + 铅笔编辑按钮 */
+.task-plan-title-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.task-plan-title-row .task-plan-title {
+    flex: 1;
+    min-width: 0;
+}
+
+/* 标题内联编辑输入框 */
+.task-plan-title-edit-input {
+    width: 100%;
+    font-size: 16px;
+    font-weight: 600;
 }
 
 /* 未选中任务时的提示 */
@@ -3208,15 +3227,23 @@
     color: var(--text-faint);
 }
 
-/* 任务详情方框（位于 OKR 信息方框上方） */
+/* 任务详情与任务状态两栏方框（左右各占页面一半） */
+.task-plan-detail-row {
+    display: flex;
+    align-items: stretch;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
 .task-plan-detail-box {
+    flex: 1;
+    min-width: 0;
     display: flex;
     flex-direction: column;
     border: 1px solid var(--background-modifier-border);
     border-radius: 10px;
     background: var(--background-secondary);
     overflow: hidden;
-    margin-bottom: 12px;
 }
 
 .task-plan-detail-title {
@@ -3227,32 +3254,12 @@
     border-bottom: 1px solid var(--background-modifier-border);
 }
 
-/* 详情方框左右两栏：左（标题/描述/分类） + 右（属性卡片） */
-.task-plan-detail-body {
-    display: flex;
-    align-items: flex-start;
-    /* 间距与卡片宽度一致 */
-    gap: 220px;
-}
-
-.task-plan-detail-body .task-plan-form {
-    flex: 0 1 auto;
-    min-width: 0;
-    padding: 12px 14px;
-}
-
-/* 右侧属性卡片：任务状态 / 习惯时间点 / 预估时长（紧贴左侧内容） */
-.task-plan-meta-card {
-    flex-shrink: 0;
-    width: 220px;
+/* 右侧任务状态 / 习惯任务方框主体 */
+.task-plan-status-body {
     display: flex;
     flex-direction: column;
     gap: 12px;
-    margin: 12px 14px 12px 0;
-    padding: 12px;
-    border: 1px solid var(--background-modifier-border);
-    border-radius: 8px;
-    background: var(--background-primary);
+    padding: 12px 14px;
 }
 
 /* 预估时长输入框（启用习惯时间点时显示） */
@@ -3334,11 +3341,12 @@
     opacity: 0.5;
 }
 
-/* 信息表单 */
+/* 信息表单（左侧任务详情方框主体） */
 .task-plan-form {
     display: flex;
     flex-direction: column;
     gap: 12px;
+    padding: 12px 14px;
 }
 
 .task-plan-field {
@@ -3410,6 +3418,12 @@
     border-radius: 50%;
     flex-shrink: 0;
     background-color: var(--dot-color, transparent);
+}
+
+/* 分类内联选择下拉 */
+.task-plan-category-select {
+    width: 100%;
+    max-width: 200px;
 }
 
 /* 泳道图与下方区域之间的分隔线 */
