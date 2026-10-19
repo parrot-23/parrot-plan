@@ -131,6 +131,7 @@ export const en: I18nMessages = {
     'taskPlan.dueDate': 'Due date',
     'taskPlan.oneTimeTask': 'One-time task',
     'taskPlan.oneTimeTaskDesc': 'For a specific thing',
+    'taskPlan.statusTitle': 'Task Status',
     'taskPlan.statusNotStarted': 'Not started',
     'taskPlan.statusInProgress': 'In progress',
     'taskPlan.statusDone': 'Done',

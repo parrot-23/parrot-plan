@@ -1415,28 +1415,6 @@ export class WeekScheduleView extends ItemView {
             })();
         };
 
-        // 时间计划方案按钮 + 当前方案下拉框
-        const schemeBar = toolbar.createDiv({ cls: 'plan-scheme-bar' });
-
-        // 当前时间计划方案下拉框（至少存在默认方案，无需「未选择方案」选项）
-        const schemeSelect = schemeBar.createEl('select', { cls: 'plan-scheme-select' });
-        for (const scheme of this.planSchemeData.schemes) {
-            schemeSelect.createEl('option', { text: scheme.name, value: scheme.id });
-        }
-        // 未激活时默认选中默认方案
-        const activeId = this.planSchemeData.activeSchemeId
-            ?? this.planSchemeData.defaultSchemeId
-            ?? this.planSchemeData.schemes[0]?.id
-            ?? '';
-        schemeSelect.value = activeId;
-        schemeSelect.onchange = () => {
-            this.planSchemeRepo().setActiveSchemeId(schemeSelect.value || undefined);
-            void (async () => {
-                await this.save();
-                await this.onOpen();
-            })();
-        };
-
         // 折叠习惯按钮（位于图例左侧）：折叠后列内隐藏习惯任务，改为显示一行统计
         const habitToggleBtn = toolbar.createEl('button', {
             text: t('weekPanel.collapseHabits'),

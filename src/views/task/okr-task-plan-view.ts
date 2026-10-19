@@ -805,6 +805,7 @@ export class OkrTaskPlanView {
         // 一次性任务配置区（选中时展开：任务状态按钮组）
         if (currentType === 'oneTime') {
             const oneTimeBody = oneTimeCard.createDiv({ cls: 'task-plan-type-config' });
+            oneTimeBody.createDiv({ cls: 'task-plan-field-label', text: t('taskPlan.statusTitle') });
             const statusGroup = oneTimeBody.createDiv({ cls: 'task-plan-status-group' });
             const statuses: { value: string; labelKey: 'taskPlan.statusNotStarted' | 'taskPlan.statusInProgress' | 'taskPlan.statusDone' }[] = [
                 { value: 'notStarted', labelKey: 'taskPlan.statusNotStarted' },
@@ -889,10 +890,10 @@ export class OkrTaskPlanView {
             hourSelect.onchange = applyHabit;
             minuteSelect.onchange = applyHabit;
 
-            // ===== 预估执行时长（小时下拉 + 分钟下拉，选择后自动保存）=====
+            // ===== 预估执行时长（手动输入：小时 + 分钟，失焦后自动保存）=====
             const estCol = habitRow.createDiv({ cls: 'task-plan-habit-col' });
             estCol.createDiv({ cls: 'task-plan-field-label', text: t('weekPanel.estimatedLabel') });
-            const estGroup = estCol.createDiv({ cls: 'task-plan-habit-group' });
+            const estGroup = estCol.createDiv({ cls: 'task-plan-habit-input-group' });
 
             // 未设置时默认 0 小时 0 分钟
             const estMinutes = typeof item.estimatedMinutes === 'number' && item.estimatedMinutes >= 0
@@ -901,30 +902,33 @@ export class OkrTaskPlanView {
             const estHour = Math.floor(estMinutes / 60);
             const estMinute = estMinutes % 60;
 
-            const estHourSelect = estGroup.createEl('select', { cls: 'task-plan-habit-select' });
-            for (let h = 0; h < 24; h++) {
-                estHourSelect.createEl('option', { text: `${String(h).padStart(2, '0')}`, value: `${h}` });
-            }
-            estHourSelect.value = `${estHour}`;
+            const estHourInput = estGroup.createEl('input', {
+                cls: 'task-plan-habit-input',
+                type: 'number',
+                attr: { min: '0', step: '1' },
+            });
+            estHourInput.value = String(estHour);
+            estGroup.createSpan({ cls: 'task-plan-habit-unit', text: t('weekPanel.hourUnit') });
 
-            estGroup.createSpan({ cls: 'task-plan-habit-sep', text: ':' });
-
-            const estMinuteSelect = estGroup.createEl('select', { cls: 'task-plan-habit-select' });
-            for (let m = 0; m < 60; m += 5) {
-                estMinuteSelect.createEl('option', { text: `${String(m).padStart(2, '0')}`, value: `${m}` });
-            }
-            estMinuteSelect.value = `${estMinute}`;
+            const estMinuteInput = estGroup.createEl('input', {
+                cls: 'task-plan-habit-input',
+                type: 'number',
+                attr: { min: '0', step: '5' },
+            });
+            estMinuteInput.value = String(estMinute);
+            estGroup.createSpan({ cls: 'task-plan-habit-unit', text: t('weekPanel.minuteUnit') });
 
             const applyEst = () => {
                 void (async () => {
-                    const total = Number(estHourSelect.value) * 60 + Number(estMinuteSelect.value);
-                    item.estimatedMinutes = total;
+                    const hour = Math.max(0, Math.floor(Number(estHourInput.value)) || 0);
+                    const minute = Math.max(0, Math.floor(Number(estMinuteInput.value)) || 0);
+                    item.estimatedMinutes = hour * 60 + minute;
                     await this.save();
                     await this.refresh();
                 })();
             };
-            estHourSelect.onchange = applyEst;
-            estMinuteSelect.onchange = applyEst;
+            estHourInput.onchange = applyEst;
+            estMinuteInput.onchange = applyEst;
         }
 
         // 点击习惯型任务卡片：切换类型

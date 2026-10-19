@@ -368,14 +368,16 @@ export function renderTaskPanel(
         titleRow.createSpan({ cls: 'inbox-item-title', text: item.title });
 
         // 行末状态标记：emoji 图标（避免纯色，防止与任务分类色冲突）
+        // 习惯型任务优先显示 ♻️，否则按任务状态显示对应图标
+        const isHabit = item.taskType === 'habit' || item.habitTimeEnabled === true;
         const status = item.status ?? 'notStarted';
         const statusMeta: Record<string, { emoji: string }> = {
-            notStarted: { emoji: '⚪' },
-            inProgress: { emoji: '⏳' },
-            done: { emoji: '✅' },
+            notStarted: { emoji: '🔘' },
+            inProgress: { emoji: '🎯' },
+            done: { emoji: '✔️' },
         };
-        const meta = statusMeta[status] ?? statusMeta.notStarted;
-        const statusEl = titleRow.createSpan({ cls: `inbox-item-status is-${status}` });
+        const meta = isHabit ? { emoji: '♻️' } : (statusMeta[status] ?? statusMeta.notStarted);
+        const statusEl = titleRow.createSpan({ cls: `inbox-item-status is-${isHabit ? 'habit' : status}` });
         statusEl.createSpan({ cls: 'inbox-item-status-icon', text: meta.emoji });
 
         // 展示板块摘要（只读，编辑在详情弹窗中）：仅显示类型图标，不显示名称

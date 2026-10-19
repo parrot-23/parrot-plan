@@ -129,6 +129,7 @@ export const zh = {
     'taskPlan.dueDate': '截止日期',
     'taskPlan.oneTimeTask': '一次性任务',
     'taskPlan.oneTimeTaskDesc': '适合某件具体事情',
+    'taskPlan.statusTitle': '任务状态',
     'taskPlan.statusNotStarted': '未开始',
     'taskPlan.statusInProgress': '进行中',
     'taskPlan.statusDone': '已完成',

@@ -1278,27 +1278,21 @@
     word-break: break-word;
 }
 
-/* 行末任务状态标记：图标 + 文字（弱化样式，避免与分类色冲突） */
+/* 行末任务状态标记：仅显示图标，无背景框 */
 .inbox-item-status {
     flex-shrink: 0;
     margin-left: auto;
     display: inline-flex;
     align-items: center;
-    gap: 3px;
-    padding: 1px 6px;
-    border-radius: 8px;
-    border: 1px solid var(--background-modifier-border);
-    background: var(--background-secondary);
-    font-size: 10px;
-    line-height: 1.4;
-    color: var(--text-muted);
+    font-size: 13px;
+    line-height: 1;
     white-space: nowrap;
 }
 
 .inbox-item-status-icon {
     display: inline-flex;
     align-items: center;
-    font-size: 11px;
+    font-size: 13px;
     line-height: 1;
 }
 
@@ -3364,6 +3358,23 @@
 
 .task-plan-habit-select {
     width: auto;
+}
+
+/* 预估执行时长：手动输入的小时/分钟输入框 */
+.task-plan-habit-input-group {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.task-plan-habit-input {
+    width: 56px;
+    text-align: center;
+}
+
+.task-plan-habit-unit {
+    font-size: 12px;
+    color: var(--text-muted);
 }
 
 .task-plan-habit-sep {
