@@ -4396,6 +4396,34 @@
     background: var(--background-secondary);
 }
 
+/* 今日情况：今日各分类已执行时长 + 今日任务占比 左右各一半排列 */
+.today-stats-row {
+    display: flex;
+    flex-direction: row;
+    align-items: stretch;
+    gap: 12px;
+}
+
+.today-stats-row .today-cat-duration-box,
+.today-stats-row .today-task-share-box {
+    flex: 1 1 0;
+    min-width: 0;
+    margin-bottom: 8px;
+}
+
+/* 今日情况：今日目标方框（习惯任务 + 当天任务） */
+.today-goal-box {
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 10px 14px;
+    margin-bottom: 8px;
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 10px;
+    background: var(--background-secondary);
+}
+
 .today-cat-duration-title {
     font-size: 13px;
     font-weight: 600;
@@ -6010,13 +6038,6 @@
 .task-plan-basket-count-icon svg {
     width: 14px;
     height: 14px;
-}
-
-/* 板块信息标题行：单独一行标题 + 右侧「+」新增板块按钮 */
-.task-plan-basket-sections-head {
-    flex-shrink: 0;
-    margin-bottom: 10px;
-    padding-left: 2px;
 }
 
 /* 板块信息：每个板块一个面板（与左侧收集篮子同款样式，无「整理」按钮），按顺序垂直排列 */

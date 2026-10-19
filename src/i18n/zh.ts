@@ -284,6 +284,8 @@ export const zh = {
     'today.categoryDurationEmpty': '今日暂无执行记录',
     'today.taskShareTitle': '今日任务占比',
     'today.taskShareEmpty': '今日暂无执行记录',
+    'today.todayGoalTitle': '今日目标',
+    'today.todayGoalEmpty': '今日暂无安排的习惯任务和当天任务',
     'today.addedListTitle': '新增事项',
     'today.addedListEmpty': '今日暂无新增事项',
     'today.addUnplannedTitle': '执行非计划事件',

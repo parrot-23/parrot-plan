@@ -237,9 +237,11 @@ export class TodayView {
             this.renderSectionsBox(panel);
             return;
         }
-        // 今日情况：今日各分类已执行时长 + 今日任务占比
-        this.renderCategoryDurationBox(panel);
-        this.renderTaskShareBox(panel);
+        // 今日情况：今日各分类已执行时长 + 今日任务占比（左右各一半）+ 今日目标
+        const statsRow = panel.createDiv({ cls: 'today-stats-row' });
+        this.renderCategoryDurationBox(statsRow);
+        this.renderTaskShareBox(statsRow);
+        this.renderTodayGoalBox(panel);
     }
 
     /** 重新渲染自身 */
@@ -1321,6 +1323,82 @@ export class TodayView {
             dot.setCssProps({ '--dot-color': color });
             row.createSpan({ cls: 'today-task-share-name', text: label });
             row.createSpan({ cls: 'today-task-share-value', text: formatHours(minutes) });
+        }
+    }
+
+    /**
+     * 渲染「今日目标」方框（「今日情况」选项卡底部）。
+     * 列出今日安排的习惯任务与当天任务（复用左侧当天任务面板的卡片样式）。
+     */
+    private renderTodayGoalBox(panel: HTMLElement) {
+        const { day, weekKey } = this.getViewDayInfo();
+
+        // 当天计划事件（统一为全天事件）
+        const dayEvents = this.getEvents()
+            .filter(ev => ev.day === day && ev.weekKey === weekKey);
+
+        // 习惯时间点任务与当天任务拆分（与左侧当天任务面板一致）
+        const habitEvents = dayEvents
+            .filter(ev => this.getEventHabitTime(ev) !== null)
+            .sort((a, b) => (this.getEventHabitTime(a) ?? 0) - (this.getEventHabitTime(b) ?? 0));
+        const normalEvents = this.groupEventsByCategory(
+            dayEvents.filter(ev => this.getEventHabitTime(ev) === null),
+        );
+
+        const box = panel.createDiv({ cls: 'today-goal-box' });
+        box.createDiv({ cls: 'today-cat-duration-title', text: t('today.todayGoalTitle') });
+
+        if (habitEvents.length === 0 && normalEvents.length === 0) {
+            box.createDiv({ cls: 'today-cat-duration-empty', text: t('today.todayGoalEmpty') });
+            return;
+        }
+
+        // 渲染单个目标事件卡片（复用 renderTaskCard）
+        const renderGoalEvent = (list: HTMLElement, ev: EventBlock) => {
+            const item = ev.inboxId
+                ? this.inboxData.items.find(i => i.id === ev.inboxId && !i.removed)
+                : undefined;
+            const cat = ev.categoryId
+                ? this.categoryData.categories.find(c => c.id === ev.categoryId)
+                : undefined;
+            const estMinutes = typeof ev.estimatedMinutes === 'number' && ev.estimatedMinutes >= 0
+                ? ev.estimatedMinutes
+                : undefined;
+            const viewInfo = this.getViewDayInfo();
+            const execMinutes = this.getExecutions()
+                .filter(ex => !ex.replaced
+                    && ex.weekKey === viewInfo.weekKey
+                    && ex.day === viewInfo.day
+                    && (ex.eventId === ev.id || (ev.inboxId && ex.inboxId === ev.inboxId)))
+                .reduce((sum, ex) => sum + Math.max(0, ex.end - ex.start), 0);
+
+            this.renderTaskCard(list, {
+                title: ev.title,
+                color: cat?.color,
+                estMinutes,
+                execMinutes,
+                done: item ? this.isDayTaskDone(item.id) : undefined,
+                habitTime: this.getEventHabitTime(ev) ?? undefined,
+                selected: !!item && this.inboxData.selectedId === item.id,
+                onSelect: () => this.selectTaskItem(item),
+            });
+        };
+
+        // 习惯任务
+        if (habitEvents.length > 0) {
+            box.createDiv({ cls: 'today-task-list-title', text: t('today.habitTaskListTitle') });
+            const habitList = box.createDiv({ cls: 'today-task-list' });
+            for (const ev of habitEvents) renderGoalEvent(habitList, ev);
+        }
+
+        // 当天任务
+        if (normalEvents.length > 0) {
+            box.createDiv({
+                cls: habitEvents.length > 0 ? 'today-task-list-title is-added' : 'today-task-list-title',
+                text: t('today.taskListTitle'),
+            });
+            const list = box.createDiv({ cls: 'today-task-list' });
+            for (const ev of normalEvents) renderGoalEvent(list, ev);
         }
     }
 

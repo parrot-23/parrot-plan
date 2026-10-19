@@ -133,12 +133,7 @@ export class OkrTaskPlanView {
                 this.renderImprovementBox(improveWrap);
 
                 // 板块信息方框（当前选中项目的板块卡片）
-                const sectionsArea = contentPanel.createDiv({ cls: 'swimlane-section-area' });
-                const sectionsHeader = sectionsArea.createDiv({ cls: 'swimlane-section-area-header' });
-                sectionsHeader.createDiv({ cls: 'swimlane-section-area-title', text: t('projectPicture.sectionsTitle') });
-                this.renderAddSectionButton(sectionsHeader);
-                const sectionsBody = sectionsArea.createDiv({ cls: 'swimlane-section-area-body' });
-                this.renderSectionCards(sectionsBody);
+                this.renderSectionsArea(contentPanel);
             }
         } else if (this.rightTab === 'overview') {
             // 「任务总览」选项卡：展示所有任务条目及其 OKR 进度、成果情况
@@ -531,14 +526,21 @@ export class OkrTaskPlanView {
         });
         this.renderBasketBox(left.createDiv({ cls: 'okr-basket-wrap' }));
 
-        // 右：板块信息标题行（右侧为「+」新增板块按钮）+ 各板块面板（每个板块一个面板，垂直排列）
-        const right = layout.createDiv({ cls: 'task-plan-basket-right okr-basket-sections-area' });
-        const sectionsHead = right.createDiv({
-            cls: 'swimlane-section-area-header task-plan-basket-sections-head',
-        });
-        sectionsHead.createDiv({ cls: 'swimlane-section-area-title', text: t('projectPicture.sectionsTitle') });
-        this.renderAddSectionButton(sectionsHead);
-        const sectionsBody = right.createDiv({ cls: 'swimlane-section-area-body' });
+        // 右：板块信息（标题行 + 各板块面板，垂直排列）
+        const right = layout.createDiv({ cls: 'task-plan-basket-right' });
+        this.renderSectionsArea(right);
+    }
+
+    /**
+     * 渲染「板块信息」方框（公共组件）：标题行（右侧「+」新增板块按钮）+ 各板块面板。
+     * 「当前任务」与「收集篮子」选项卡共用，保证呈现方式一致（每个板块一个面板，垂直排列）。
+     */
+    private renderSectionsArea(container: HTMLElement): void {
+        const sectionsArea = container.createDiv({ cls: 'swimlane-section-area okr-basket-sections-area' });
+        const sectionsHeader = sectionsArea.createDiv({ cls: 'swimlane-section-area-header' });
+        sectionsHeader.createDiv({ cls: 'swimlane-section-area-title', text: t('projectPicture.sectionsTitle') });
+        this.renderAddSectionButton(sectionsHeader);
+        const sectionsBody = sectionsArea.createDiv({ cls: 'swimlane-section-area-body' });
         this.renderSectionCards(sectionsBody);
     }
 

@@ -286,6 +286,8 @@ export const en: I18nMessages = {
     'today.categoryDurationEmpty': 'No executions today',
     'today.taskShareTitle': 'Task share today',
     'today.taskShareEmpty': 'No executions today',
+    'today.todayGoalTitle': "Today's Goals",
+    'today.todayGoalEmpty': 'No habit tasks or day tasks scheduled for today',
     'today.addedListTitle': 'Added Items',
     'today.addedListEmpty': 'No added items today',
     'today.addUnplannedTitle': 'Execute Unplanned Event',
