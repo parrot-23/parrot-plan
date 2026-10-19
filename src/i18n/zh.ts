@@ -49,7 +49,10 @@ export const zh = {
     'nav.runningLabel': '进行中',
     'nav.runningElapsed': '已用 {minutes} 分钟',
     'nav.runningStatusBar': '{name}：{duration}',
-    'nav.runningStatusBarDuration': '{minutes} 分钟',
+    'nav.statusBarIdle': '日程',
+    'nav.statusBarDurationHm': '{hours}小时{minutes}分钟',
+    'nav.statusBarDurationH': '{hours}小时',
+    'nav.statusBarDurationM': '{minutes}分钟',
 
     // 成就榜单视图
     'achievement.title': '成就榜单',

@@ -1892,6 +1892,9 @@
 
 /* 状态栏：进行中任务（任务名称：时长） */
 .parrot-plan-status-running {
+    display: flex;
+    align-items: center;
+    gap: 4px;
     cursor: pointer;
     max-width: 320px;
     overflow: hidden;
@@ -1899,9 +1902,15 @@
     white-space: nowrap;
 }
 
-/* 无进行中任务时隐藏 */
-.parrot-plan-status-running.is-hidden {
-    display: none;
+/* 状态栏图标（始终显示，不随进行中任务有无变化） */
+.parrot-plan-status-icon {
+    display: inline-flex;
+    align-items: center;
+}
+
+.parrot-plan-status-icon svg {
+    width: 14px;
+    height: 14px;
 }
 
 .parrot-plan-status-running:hover {

@@ -1,4 +1,4 @@
-import type { Plugin } from 'obsidian';
+import { setIcon, type Plugin } from 'obsidian';
 
 import { t } from '../i18n';
 import { VIEW_TYPE_MAIN, MainView } from '../main-view';
@@ -32,33 +32,55 @@ export class RunningTaskStatusBar {
     }
 
     /**
-     * 渲染状态栏中的「进行中任务」：显示「任务名称：时长」。
-     * 无进行中任务（或任务已被移除）时隐藏。
+     * 渲染状态栏：无进行中任务时显示「图标 + 日程」，
+     * 有进行中任务时显示「图标 + 任务名：时长」。
      */
     render(): void {
         const el = this.el;
         if (!el) return;
         el.empty();
 
+        // 统一的日历图标，始终显示
+        const icon = el.createSpan({ cls: 'parrot-plan-status-icon' });
+        setIcon(icon, 'calendar-clock');
+
         const running = this.getRunningTask();
         const item = running ? this.findItem(running.inboxId) : undefined;
+
         if (!running || !item) {
-            el.addClass('is-hidden');
+            // 无进行中任务（或任务已被移除）
+            el.createSpan({ text: t('nav.statusBarIdle') });
+            el.setAttribute('aria-label', t('nav.statusBarIdle'));
+            el.onclick = () => {
+                void this.openTodayTab();
+            };
             return;
         }
-        el.removeClass('is-hidden');
 
         const now = new Date();
         const nowMinutes = now.getHours() * 60 + now.getMinutes();
         const elapsed = Math.max(0, nowMinutes - running.start);
-        el.setText(t('nav.runningStatusBar', {
-            name: item.title,
-            duration: t('nav.runningStatusBarDuration', { minutes: String(elapsed) }),
-        }));
+        el.createSpan({
+            text: t('nav.runningStatusBar', {
+                name: item.title,
+                duration: this.formatDuration(elapsed),
+            }),
+        });
         el.setAttribute('aria-label', t('nav.runningLabel'));
         el.onclick = () => {
             void this.openTodayTab();
         };
+    }
+
+    /** 把已用分钟数格式化为「x小时x分钟」/「x小时」/「x分钟」 */
+    private formatDuration(minutes: number): string {
+        const hours = Math.floor(minutes / 60);
+        const mins = minutes % 60;
+        if (hours > 0 && mins > 0) {
+            return t('nav.statusBarDurationHm', { hours: String(hours), minutes: String(mins) });
+        }
+        if (hours > 0) return t('nav.statusBarDurationH', { hours: String(hours) });
+        return t('nav.statusBarDurationM', { minutes: String(mins) });
     }
 
     /** 清理定时器与状态栏元素（插件卸载时调用） */

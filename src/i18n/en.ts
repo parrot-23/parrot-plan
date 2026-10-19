@@ -51,7 +51,10 @@ export const en: I18nMessages = {
     'nav.runningLabel': 'Running',
     'nav.runningElapsed': '{minutes} min elapsed',
     'nav.runningStatusBar': '{name}: {duration}',
-    'nav.runningStatusBarDuration': '{minutes} min',
+    'nav.statusBarIdle': 'Schedule',
+    'nav.statusBarDurationHm': '{hours} h {minutes} min',
+    'nav.statusBarDurationH': '{hours} h',
+    'nav.statusBarDurationM': '{minutes} min',
 
     // Achievement view
     'achievement.title': 'Achievements',
