@@ -29,6 +29,8 @@ export class OkrTaskPlanView {
     private selectedBasketEntryId?: string;
     /** 收集盒领域仓库（任务面板增删改走仓库方法，保证跨视图一致） */
     private inboxRepo?: InboxRepo;
+    /** 右侧垂直选项卡当前选中项（刷新后保持不变） */
+    private rightTab: 'current' | 'overview' | 'basket' | 'improve' = 'current';
 
     constructor(
         app: App,
@@ -77,25 +79,54 @@ export class OkrTaskPlanView {
             { enableProjectFocus: true, inboxRepo: this.inboxRepo },
         );
 
-        // 右侧：内容区（当前选中任务的信息表单 + 收集篮子 + 改进项 + 板块信息）
+        // 中间：垂直选项卡（切换右侧内容区）
+        const tabStrip = container.createDiv({ cls: 'task-plan-right-tabs' });
+        const tabs: { id: 'current' | 'overview' | 'basket' | 'improve'; labelKey: 'taskPlan.tabCurrentTask' | 'taskPlan.tabOverview' | 'taskPlan.tabBasket' | 'taskPlan.tabImprove' }[] = [
+            { id: 'current', labelKey: 'taskPlan.tabCurrentTask' },
+            { id: 'overview', labelKey: 'taskPlan.tabOverview' },
+            { id: 'basket', labelKey: 'taskPlan.tabBasket' },
+            { id: 'improve', labelKey: 'taskPlan.tabImprove' },
+        ];
+        for (const tab of tabs) {
+            const tabEl = tabStrip.createDiv({ cls: 'task-plan-right-tab', text: t(tab.labelKey) });
+            tabEl.toggleClass('is-active', this.rightTab === tab.id);
+            tabEl.onclick = () => {
+                if (this.rightTab === tab.id) return;
+                this.rightTab = tab.id;
+                void this.refresh();
+            };
+        }
+
+        // 右侧：内容区（随选项卡切换）
         const contentPanel = container.createDiv({ cls: 'task-plan-content-panel' });
-        this.renderInfoForm(contentPanel);
+        if (this.rightTab === 'current') {
+            // 未选中任务时该选项卡内容留空
+            if (this.hasSelectedTask()) {
+                this.renderInfoForm(contentPanel);
 
-        // 收集篮子方框（当前选中任务的收集内容，供 GTD 梳理阶段放置笔记）
-        const basketWrap = contentPanel.createDiv({ cls: 'okr-basket-wrap' });
-        this.renderBasketBox(basketWrap);
+                // 收集篮子方框（当前选中任务的收集内容，供 GTD 梳理阶段放置笔记）
+                const basketWrap = contentPanel.createDiv({ cls: 'okr-basket-wrap' });
+                this.renderBasketBox(basketWrap);
 
-        // 改进项方框（当前选中任务的改进条目，可勾选完成）
-        const improveWrap = contentPanel.createDiv({ cls: 'okr-improve-wrap' });
-        this.renderImprovementBox(improveWrap);
+                // 改进项方框（当前选中任务的改进条目，可勾选完成）
+                const improveWrap = contentPanel.createDiv({ cls: 'okr-improve-wrap' });
+                this.renderImprovementBox(improveWrap);
 
-        // 板块信息方框（当前选中项目的板块卡片）
-        const sectionsArea = contentPanel.createDiv({ cls: 'swimlane-section-area' });
-        const sectionsHeader = sectionsArea.createDiv({ cls: 'swimlane-section-area-header' });
-        sectionsHeader.createDiv({ cls: 'swimlane-section-area-title', text: t('projectPicture.sectionsTitle') });
-        this.renderAddSectionButton(sectionsHeader);
-        const sectionsBody = sectionsArea.createDiv({ cls: 'swimlane-section-area-body' });
-        this.renderSectionCards(sectionsBody);
+                // 板块信息方框（当前选中项目的板块卡片）
+                const sectionsArea = contentPanel.createDiv({ cls: 'swimlane-section-area' });
+                const sectionsHeader = sectionsArea.createDiv({ cls: 'swimlane-section-area-header' });
+                sectionsHeader.createDiv({ cls: 'swimlane-section-area-title', text: t('projectPicture.sectionsTitle') });
+                this.renderAddSectionButton(sectionsHeader);
+                const sectionsBody = sectionsArea.createDiv({ cls: 'swimlane-section-area-body' });
+                this.renderSectionCards(sectionsBody);
+            }
+        } else if (this.rightTab === 'overview') {
+            // 「任务总览」选项卡：展示所有任务条目及其 OKR 进度、成果情况
+            this.renderAllTasksOverview(contentPanel);
+        } else {
+            // 「收集篮子」/「改进篮子」选项卡：内容暂留空
+            contentPanel.createDiv({ cls: 'task-plan-empty-pane' });
+        }
 
         // 恢复任务面板列表的滚动位置，实现无感刷新
         if (prevListScrollTop > 0) {
@@ -662,6 +693,12 @@ export class OkrTaskPlanView {
         }
     }
 
+    /** 当前任务面板是否选中了有效任务 */
+    private hasSelectedTask(): boolean {
+        const selectedId = this.inboxData.selectedId;
+        return !!selectedId && this.inboxData.items.some(i => i.id === selectedId && !i.removed);
+    }
+
     /** 渲染右侧信息表单：项目描述、分类、截止日期（跟随当前选中任务） */
     private renderInfoForm(container: HTMLElement): void {
         const selectedId = this.inboxData.selectedId;
@@ -670,8 +707,7 @@ export class OkrTaskPlanView {
             : undefined;
 
         if (!item) {
-            // 未选中任务：在右侧内容区直接展示所有任务条目及其 OKR 进度、成果情况
-            this.renderAllTasksOverview(container);
+            // 未选中任务：「当前任务」选项卡下不展示内容（总览已归并至「任务总览」选项卡）
             return;
         }
 

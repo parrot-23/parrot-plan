@@ -367,18 +367,19 @@ export function renderTaskPanel(
 
         titleRow.createSpan({ cls: 'inbox-item-title', text: item.title });
 
-        // 行末状态标记：emoji 图标（避免纯色，防止与任务分类色冲突）
-        // 习惯型任务优先显示 ♻️，否则按任务状态显示对应图标
+        // 行末状态标记：使用 Obsidian 内置 Lucide 图标
+        // 习惯型任务优先显示 rotate-cw-square，否则按任务状态显示对应图标
         const isHabit = item.taskType === 'habit' || item.habitTimeEnabled === true;
         const status = item.status ?? 'notStarted';
-        const statusMeta: Record<string, { emoji: string }> = {
-            notStarted: { emoji: '🔘' },
-            inProgress: { emoji: '🎯' },
-            done: { emoji: '✔️' },
+        const statusMeta: Record<string, { icon: string }> = {
+            notStarted: { icon: 'circle-dot-dashed' },
+            inProgress: { icon: 'zap' },
+            done: { icon: 'check' },
         };
-        const meta = isHabit ? { emoji: '♻️' } : (statusMeta[status] ?? statusMeta.notStarted);
+        const meta = isHabit ? { icon: 'rotate-cw-square' } : (statusMeta[status] ?? statusMeta.notStarted);
         const statusEl = titleRow.createSpan({ cls: `inbox-item-status is-${isHabit ? 'habit' : status}` });
-        statusEl.createSpan({ cls: 'inbox-item-status-icon', text: meta.emoji });
+        const iconEl = statusEl.createSpan({ cls: 'inbox-item-status-icon' });
+        setIcon(iconEl, meta.icon);
 
         // 展示板块摘要（只读，编辑在详情弹窗中）：仅显示类型图标，不显示名称
         if (item.sections && item.sections.length > 0) {
@@ -410,7 +411,14 @@ export function renderTaskPanel(
             longPressTimer = window.setTimeout(() => {
                 longPressTimer = undefined;
                 suppressClick = true;
-                startDrag(item, itemEl, () => { suppressClick = false; });
+                startDrag(item, itemEl, e.clientX, e.clientY, (moved) => {
+                    if (moved) {
+                        suppressClick = false;
+                    } else {
+                        // 长按未移动：抑制紧随其后的 click，稍后复位
+                        window.setTimeout(() => { suppressClick = false; }, 0);
+                    }
+                });
             }, 300);
         };
 
@@ -513,9 +521,15 @@ export function renderTaskPanel(
     /**
      * 开始拖动某任务：长按任务项后，跟随鼠标显示插入指示线，
      * 松手时根据落点重排 inboxData.items 并更新 parentId。
-     * onEnd 在拖动结束时回调（用于重置长按抑制标记）。
+     * onEnd 在拖动结束时回调（入参表示本次是否发生了实际位移）。
      */
-    function startDrag(item: InboxItem, itemEl: HTMLElement, onEnd?: () => void) {
+    function startDrag(
+        item: InboxItem,
+        itemEl: HTMLElement,
+        startX: number,
+        startY: number,
+        onEnd?: (moved: boolean) => void,
+    ) {
         // 被拖动任务及其所有后代（拖动时整体移动，且不能拖入自身后代）
         const movingIds = new Set<string>([item.id, ...collectDescendantIds(inboxData, item.id)]);
 
@@ -604,7 +618,13 @@ export function renderTaskPanel(
             });
         };
 
+        // 记录本次拖动是否发生实际位移（超过阈值才视为真正拖动）
+        let hasMoved = false;
+
         const onMove = (ev: MouseEvent) => {
+            if (!hasMoved && (Math.abs(ev.clientX - startX) > 5 || Math.abs(ev.clientY - startY) > 5)) {
+                hasMoved = true;
+            }
             updateIndicator(ev.clientX, ev.clientY);
         };
 
@@ -614,9 +634,12 @@ export function renderTaskPanel(
             indicator.remove();
             itemEl.removeClass('is-dragging');
 
-            const drop = computeDrop(ev.clientX, ev.clientY);
-            applyDrop(item, drop);
-            onEnd?.();
+            // 仅在实际拖动后才应用落点；原地长按松手视为取消
+            if (hasMoved) {
+                const drop = computeDrop(ev.clientX, ev.clientY);
+                applyDrop(item, drop);
+            }
+            onEnd?.(hasMoved);
         };
 
         document.addEventListener('mousemove', onMove);
