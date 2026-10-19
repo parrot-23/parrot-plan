@@ -4411,8 +4411,8 @@
     margin-bottom: 8px;
 }
 
-/* 今日情况：今日目标方框（习惯任务 + 当天任务） */
-.today-goal-box {
+/* 今日情况：已完成任务列表方框 */
+.today-completed-box {
     flex-shrink: 0;
     display: flex;
     flex-direction: column;
@@ -4422,6 +4422,57 @@
     border: 1px solid var(--background-modifier-border);
     border-radius: 10px;
     background: var(--background-secondary);
+}
+
+/* 已完成任务列表：每行「时间范围 · 色点 · 任务 · 分类 · 时长」，与二级视图（检查）执行详情一致 */
+.today-completed-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.today-completed-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    color: var(--text-normal);
+}
+
+.today-completed-dot {
+    flex-shrink: 0;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--dot-color, #888888);
+}
+
+.today-completed-time {
+    flex-shrink: 0;
+    min-width: 96px;
+    color: var(--text-muted);
+    font-variant-numeric: tabular-nums;
+}
+
+.today-completed-name {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.today-completed-category {
+    flex-shrink: 0;
+    color: var(--text-muted);
+}
+
+.today-completed-duration {
+    flex-shrink: 0;
+    min-width: 72px;
+    text-align: right;
+    color: var(--text-muted);
+    font-variant-numeric: tabular-nums;
 }
 
 .today-cat-duration-title {
@@ -4978,15 +5029,15 @@
     border-top: 1px solid var(--background-modifier-border);
 }
 
-/* 单个操作按钮：5 行字体高的方块，图标居中、文字在下 */
+/* 单个操作按钮：约 3.3 行字体高的方块，图标居中、文字在下 */
 .today-action-block {
     display: inline-flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
     gap: 6px;
-    /* 高度 ≈ 5 行文字，宽度与高度相同（方块） */
-    height: calc(5 * 1em * var(--line-height-normal, 1.5));
+    /* 高度约为原 5 行文字的 2/3，宽度与高度相同（方块） */
+    height: calc(10 / 3 * 1em * var(--line-height-normal, 1.5));
     aspect-ratio: 1 / 1;
     padding: 8px;
     border-radius: 8px;

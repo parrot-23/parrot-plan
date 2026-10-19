@@ -237,11 +237,11 @@ export class TodayView {
             this.renderSectionsBox(panel);
             return;
         }
-        // 今日情况：今日各分类已执行时长 + 今日任务占比（左右各一半）+ 今日目标
+        // 今日情况：今日各分类已执行时长 + 今日任务占比（左右各一半）+ 已完成任务列表
         const statsRow = panel.createDiv({ cls: 'today-stats-row' });
         this.renderCategoryDurationBox(statsRow);
         this.renderTaskShareBox(statsRow);
-        this.renderTodayGoalBox(panel);
+        this.renderCompletedListBox(panel);
     }
 
     /** 重新渲染自身 */
@@ -1327,78 +1327,64 @@ export class TodayView {
     }
 
     /**
-     * 渲染「今日目标」方框（「今日情况」选项卡底部）。
-     * 列出今日安排的习惯任务与当天任务（复用左侧当天任务面板的卡片样式）。
+     * 渲染「已完成任务列表」方框（「今日情况」选项卡底部）。
+     * 按时间顺序列出当前查看日期已记录的执行（即已完成任务），
+     * 每条格式与二级视图（检查）的执行详情一致：
+     * 时间范围 · 分类色点 · 任务名 · 分类 · 时长。
      */
-    private renderTodayGoalBox(panel: HTMLElement) {
+    private renderCompletedListBox(panel: HTMLElement) {
         const { day, weekKey } = this.getViewDayInfo();
 
-        // 当天计划事件（统一为全天事件）
-        const dayEvents = this.getEvents()
-            .filter(ev => ev.day === day && ev.weekKey === weekKey);
+        const box = panel.createDiv({ cls: 'today-completed-box' });
+        box.createDiv({ cls: 'today-cat-duration-title', text: t('today.completedListTitle') });
 
-        // 习惯时间点任务与当天任务拆分（与左侧当天任务面板一致）
-        const habitEvents = dayEvents
-            .filter(ev => this.getEventHabitTime(ev) !== null)
-            .sort((a, b) => (this.getEventHabitTime(a) ?? 0) - (this.getEventHabitTime(b) ?? 0));
-        const normalEvents = this.groupEventsByCategory(
-            dayEvents.filter(ev => this.getEventHabitTime(ev) === null),
-        );
+        // 当前查看日期的执行记录（按开始时间排序）
+        const execs = this.getExecutions()
+            .filter(ex => ex.day === day && ex.weekKey === weekKey)
+            .sort((a, b) => a.start - b.start);
 
-        const box = panel.createDiv({ cls: 'today-goal-box' });
-        box.createDiv({ cls: 'today-cat-duration-title', text: t('today.todayGoalTitle') });
-
-        if (habitEvents.length === 0 && normalEvents.length === 0) {
-            box.createDiv({ cls: 'today-cat-duration-empty', text: t('today.todayGoalEmpty') });
+        if (execs.length === 0) {
+            box.createDiv({ cls: 'today-cat-duration-empty', text: t('today.completedListEmpty') });
             return;
         }
 
-        // 渲染单个目标事件卡片（复用 renderTaskCard）
-        const renderGoalEvent = (list: HTMLElement, ev: EventBlock) => {
-            const item = ev.inboxId
-                ? this.inboxData.items.find(i => i.id === ev.inboxId && !i.removed)
+        const list = box.createDiv({ cls: 'today-completed-list' });
+        for (const ex of execs) {
+            const item = ex.inboxId
+                ? this.inboxData.items.find(i => i.id === ex.inboxId && !i.removed)
                 : undefined;
-            const cat = ev.categoryId
-                ? this.categoryData.categories.find(c => c.id === ev.categoryId)
+            const planned = ex.eventId ? this.getEvents().find(e => e.id === ex.eventId) : undefined;
+            const title = item?.title ?? planned?.title ?? t('check.unknownTask');
+            const cat = item?.categoryId
+                ? this.categoryData.categories.find(c => c.id === item.categoryId)
                 : undefined;
-            const estMinutes = typeof ev.estimatedMinutes === 'number' && ev.estimatedMinutes >= 0
-                ? ev.estimatedMinutes
-                : undefined;
-            const viewInfo = this.getViewDayInfo();
-            const execMinutes = this.getExecutions()
-                .filter(ex => !ex.replaced
-                    && ex.weekKey === viewInfo.weekKey
-                    && ex.day === viewInfo.day
-                    && (ex.eventId === ev.id || (ev.inboxId && ex.inboxId === ev.inboxId)))
-                .reduce((sum, ex) => sum + Math.max(0, ex.end - ex.start), 0);
 
-            this.renderTaskCard(list, {
-                title: ev.title,
-                color: cat?.color,
-                estMinutes,
-                execMinutes,
-                done: item ? this.isDayTaskDone(item.id) : undefined,
-                habitTime: this.getEventHabitTime(ev) ?? undefined,
-                selected: !!item && this.inboxData.selectedId === item.id,
-                onSelect: () => this.selectTaskItem(item),
+            const row = list.createDiv({ cls: 'today-completed-row' });
+
+            // 时间范围
+            row.createSpan({
+                cls: 'today-completed-time',
+                text: `${formatMinutes(ex.start)} - ${formatMinutes(ex.end)}`,
             });
-        };
 
-        // 习惯任务
-        if (habitEvents.length > 0) {
-            box.createDiv({ cls: 'today-task-list-title', text: t('today.habitTaskListTitle') });
-            const habitList = box.createDiv({ cls: 'today-task-list' });
-            for (const ev of habitEvents) renderGoalEvent(habitList, ev);
-        }
+            // 分类色点
+            const dot = row.createSpan({ cls: 'today-completed-dot' });
+            dot.setCssProps({ '--dot-color': cat?.color ?? '#888888' });
 
-        // 当天任务
-        if (normalEvents.length > 0) {
-            box.createDiv({
-                cls: habitEvents.length > 0 ? 'today-task-list-title is-added' : 'today-task-list-title',
-                text: t('today.taskListTitle'),
+            // 任务名
+            row.createSpan({ cls: 'today-completed-name', text: title });
+
+            // 分类名
+            row.createSpan({
+                cls: 'today-completed-category',
+                text: cat?.label ?? t('inbox.noCategory'),
             });
-            const list = box.createDiv({ cls: 'today-task-list' });
-            for (const ev of normalEvents) renderGoalEvent(list, ev);
+
+            // 时长
+            row.createSpan({
+                cls: 'today-completed-duration',
+                text: t('check.detailDuration', { duration: formatHours(Math.max(0, ex.end - ex.start)) }),
+            });
         }
     }
 
@@ -1650,6 +1636,14 @@ export class TodayView {
                     this.startRunningTask();
                 },
             });
+            // 已完成任务：直接为选中任务写入一条执行记录
+            actions.push({
+                labelKey: 'today.finishTask',
+                icon: 'check',
+                onClick: () => {
+                    void this.finishSelectedTask();
+                },
+            });
         }
 
         // 无可执行操作时不渲染按钮行，避免方框底部出现空白条
@@ -1722,6 +1716,28 @@ export class TodayView {
         void this.save();
         this.onRunningTaskChange?.();
         void this.refresh();
+    }
+
+    /** 已完成任务：直接为左侧选中的任务写入一条执行记录（按详情中编辑的时间区间） */
+    private async finishSelectedTask(): Promise<void> {
+        const item = this.getSelectedItem();
+        if (!item) return;
+
+        const { day, weekKey } = this.getViewDayInfo();
+        const start = this.detailStart;
+        const end = Math.min(24 * 60, this.detailEnd);
+
+        this.pdcaRepo.addExecution({
+            id: `exec_${Date.now()}`,
+            inboxId: item.id,
+            day,
+            start,
+            end,
+            weekKey,
+        });
+        await this.save();
+        new Notice(t('today.completeDone', { title: item.title }));
+        await this.refresh();
     }
 
     /** 切换「进行中任务」色块的选中状态 */
