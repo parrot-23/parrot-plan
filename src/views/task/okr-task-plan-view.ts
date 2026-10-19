@@ -2,7 +2,7 @@ import type { App } from 'obsidian';
 import { Modal, Notice, Setting, setIcon } from 'obsidian';
 
 import type { PlanCategoryData } from '../../shared/plan-category-manager';
-import type { InboxData, InboxItem, Section, ChecklistData, FileData, BasketItem, ImprovementEntry, OkrConditionItem } from '../../datatypes/domain';
+import type { InboxData, InboxItem, Section, ChecklistData, FileData, BasketItem, ImprovementEntry, OkrConditionItem, TaskType } from '../../datatypes/domain';
 import type { InboxRepo } from '../../repos/inbox-repo';
 import { SECTION_TYPE_META, OKR_CONDITION_META } from '../../datatypes/domain';
 import { renderTaskPanel, FilePathSuggest } from '../../shared/task-panel';
@@ -786,128 +786,157 @@ export class OkrTaskPlanView {
             };
         };
 
-        // ===== 右方框：任务状态 / 习惯任务 =====
+        // ===== 右方框：任务类型（卡片选择器）=====
         const statusBox = detailRow.createDiv({ cls: 'task-plan-detail-box' });
         statusBox.createDiv({ cls: 'task-plan-detail-title', text: t('taskPlan.typeTitle') });
         const statusBody = statusBox.createDiv({ cls: 'task-plan-status-body' });
 
-        // 任务状态（按钮组，当前状态高亮，点击后自动保存）
-        const statusRow = statusBody.createDiv({ cls: 'task-plan-field' });
-        statusRow.createDiv({ cls: 'task-plan-field-label', text: t('taskPlan.oneTimeTask') });
-        const statusGroup = statusRow.createDiv({ cls: 'task-plan-status-group' });
-        const statuses: { value: string; labelKey: 'taskPlan.statusNotStarted' | 'taskPlan.statusInProgress' | 'taskPlan.statusDone' }[] = [
-            { value: 'notStarted', labelKey: 'taskPlan.statusNotStarted' },
-            { value: 'inProgress', labelKey: 'taskPlan.statusInProgress' },
-            { value: 'done', labelKey: 'taskPlan.statusDone' },
-        ];
-        const currentStatus = item.status ?? 'notStarted';
-        for (const st of statuses) {
-            const btn = statusGroup.createEl('button', {
-                cls: 'task-plan-status-btn',
-                text: t(st.labelKey),
-            });
-            if (st.value === currentStatus) btn.addClass('is-active');
-            btn.onclick = () => {
-                void (async () => {
-                    item.status = st.value;
-                    await this.save();
-                    await this.refresh();
-                })();
-            };
-        }
+        // 当前任务类型（旧数据无 taskType 时，按 habitTimeEnabled 兜底）
+        const currentType: TaskType = item.taskType ?? (item.habitTimeEnabled ? 'habit' : 'oneTime');
 
-        // 习惯时间点（起始时间：小时下拉 + 分钟下拉，选择后自动保存）
-        const habitRow = statusBody.createDiv({ cls: 'task-plan-field' });
-        const habitLabelRow = habitRow.createDiv({ cls: 'task-plan-field-label-row' });
+        // ===== 卡片 1：一次性任务 =====
+        const oneTimeCard = statusBody.createDiv({ cls: 'task-plan-type-card' });
+        if (currentType === 'oneTime') oneTimeCard.addClass('is-selected');
+        const oneTimeHead = oneTimeCard.createDiv({ cls: 'task-plan-type-card-head' });
+        oneTimeHead.createSpan({ cls: 'task-plan-type-radio', text: currentType === 'oneTime' ? '🔘' : '⚪' });
+        oneTimeHead.createSpan({ cls: 'task-plan-type-name', text: t('taskPlan.oneTimeTask') });
+        oneTimeCard.createDiv({ cls: 'task-plan-type-desc', text: t('taskPlan.oneTimeTaskDesc') });
 
-        // 启用开关（点击切换，禁用时时间下拉置灰）
-        const habitEnabled = item.habitTimeEnabled ?? false;
-        const toggleBtn = habitLabelRow.createEl('button', {
-            cls: 'task-plan-habit-toggle',
-            attr: { 'aria-label': t('taskPlan.habitTypeTask') },
-        });
-        toggleBtn.toggleClass('is-on', habitEnabled);
-        toggleBtn.onclick = () => {
-            void (async () => {
-                item.habitTimeEnabled = !habitEnabled;
-                await this.save();
-                await this.refresh();
-            })();
-        };
-
-        habitLabelRow.createDiv({ cls: 'task-plan-field-label', text: t('taskPlan.habitTypeTask') });
-
-        // 习惯时间点小标题（与下方「预估执行时长」标题样式一致）
-        habitRow.createDiv({ cls: 'task-plan-field-label', text: t('taskPlan.habitTimePoint') });
-        const habitGroup = habitRow.createDiv({ cls: 'task-plan-habit-group' });
-
-        // 未设置时默认 09:00
-        const habitMinutes = item.habitTime ?? 9 * 60;
-        const habitHour = Math.floor(habitMinutes / 60);
-        const habitMinute = habitMinutes % 60;
-
-        const hourSelect = habitGroup.createEl('select', { cls: 'task-plan-habit-select' });
-        for (let h = 0; h < 24; h++) {
-            hourSelect.createEl('option', { text: `${String(h).padStart(2, '0')}`, value: `${h}` });
-        }
-        hourSelect.value = `${habitHour}`;
-
-        habitGroup.createSpan({ cls: 'task-plan-habit-sep', text: ':' });
-
-        const minuteSelect = habitGroup.createEl('select', { cls: 'task-plan-habit-select' });
-        for (let m = 0; m < 60; m += 5) {
-            minuteSelect.createEl('option', { text: `${String(m).padStart(2, '0')}`, value: `${m}` });
-        }
-        minuteSelect.value = `${habitMinute}`;
-
-        // 未启用时置灰不可点
-        if (!habitEnabled) {
-            hourSelect.disabled = true;
-            minuteSelect.disabled = true;
-            habitGroup.addClass('is-disabled');
-        }
-
-        const applyHabit = () => {
-            void (async () => {
-                item.habitTime = Number(hourSelect.value) * 60 + Number(minuteSelect.value);
-                await this.save();
-                await this.refresh();
-            })();
-        };
-        hourSelect.onchange = applyHabit;
-        minuteSelect.onchange = applyHabit;
-
-        // 预估时长（仅在启用习惯时间点时显示，单位分钟，失焦后自动保存）
-        if (habitEnabled) {
-            const estRow = statusBody.createDiv({ cls: 'task-plan-field' });
-            estRow.createDiv({ cls: 'task-plan-field-label', text: t('weekPanel.estimatedLabel') });
-            const estInput = estRow.createEl('input', {
-                cls: 'task-plan-est-input',
-                type: 'number',
-                attr: {
-                    min: '0',
-                    step: '5',
-                    placeholder: t('weekPanel.estimatedPlaceholder'),
-                },
-            });
-            if (typeof item.estimatedMinutes === 'number' && item.estimatedMinutes >= 0) {
-                estInput.value = String(item.estimatedMinutes);
+        // 一次性任务配置区（选中时展开：任务状态按钮组）
+        if (currentType === 'oneTime') {
+            const oneTimeBody = oneTimeCard.createDiv({ cls: 'task-plan-type-config' });
+            const statusGroup = oneTimeBody.createDiv({ cls: 'task-plan-status-group' });
+            const statuses: { value: string; labelKey: 'taskPlan.statusNotStarted' | 'taskPlan.statusInProgress' | 'taskPlan.statusDone' }[] = [
+                { value: 'notStarted', labelKey: 'taskPlan.statusNotStarted' },
+                { value: 'inProgress', labelKey: 'taskPlan.statusInProgress' },
+                { value: 'done', labelKey: 'taskPlan.statusDone' },
+            ];
+            const currentStatus = item.status ?? 'notStarted';
+            for (const st of statuses) {
+                const btn = statusGroup.createEl('button', {
+                    cls: 'task-plan-status-btn',
+                    text: t(st.labelKey),
+                });
+                if (st.value === currentStatus) btn.addClass('is-active');
+                btn.onclick = (e) => {
+                    e.stopPropagation();
+                    void (async () => {
+                        item.status = st.value;
+                        await this.save();
+                        await this.refresh();
+                    })();
+                };
             }
-            estInput.onchange = () => {
+        }
+
+        // 点击一次性任务卡片：切换类型
+        oneTimeCard.onclick = () => {
+            if (currentType === 'oneTime') return;
+            void (async () => {
+                item.taskType = 'oneTime';
+                item.habitTimeEnabled = false;
+                await this.save();
+                await this.refresh();
+            })();
+        };
+
+        // ===== 卡片 2：习惯型任务 =====
+        const habitCard = statusBody.createDiv({ cls: 'task-plan-type-card' });
+        if (currentType === 'habit') habitCard.addClass('is-selected');
+        const habitHead = habitCard.createDiv({ cls: 'task-plan-type-card-head' });
+        habitHead.createSpan({ cls: 'task-plan-type-radio', text: currentType === 'habit' ? '🔘' : '⚪' });
+        habitHead.createSpan({ cls: 'task-plan-type-name', text: t('taskPlan.habitTypeTask') });
+        habitCard.createDiv({ cls: 'task-plan-type-desc', text: t('taskPlan.habitTypeTaskDesc') });
+
+        // 习惯型任务配置区（选中时展开：习惯时间点 + 预估时长）
+        if (currentType === 'habit') {
+            const habitBody = habitCard.createDiv({ cls: 'task-plan-type-config' });
+
+            // 习惯时间点与预估执行时长并排
+            const habitRow = habitBody.createDiv({ cls: 'task-plan-habit-row' });
+
+            // ===== 习惯时间点（小时下拉 + 分钟下拉，选择后自动保存）=====
+            const habitTimeCol = habitRow.createDiv({ cls: 'task-plan-habit-col' });
+            habitTimeCol.createDiv({ cls: 'task-plan-field-label', text: t('taskPlan.habitTimePoint') });
+            const habitGroup = habitTimeCol.createDiv({ cls: 'task-plan-habit-group' });
+
+            // 未设置时默认 09:00
+            const habitMinutes = item.habitTime ?? 9 * 60;
+            const habitHour = Math.floor(habitMinutes / 60);
+            const habitMinute = habitMinutes % 60;
+
+            const hourSelect = habitGroup.createEl('select', { cls: 'task-plan-habit-select' });
+            for (let h = 0; h < 24; h++) {
+                hourSelect.createEl('option', { text: `${String(h).padStart(2, '0')}`, value: `${h}` });
+            }
+            hourSelect.value = `${habitHour}`;
+
+            habitGroup.createSpan({ cls: 'task-plan-habit-sep', text: ':' });
+
+            const minuteSelect = habitGroup.createEl('select', { cls: 'task-plan-habit-select' });
+            for (let m = 0; m < 60; m += 5) {
+                minuteSelect.createEl('option', { text: `${String(m).padStart(2, '0')}`, value: `${m}` });
+            }
+            minuteSelect.value = `${habitMinute}`;
+
+            const applyHabit = () => {
                 void (async () => {
-                    const raw = estInput.value.trim();
-                    const minutes = raw === '' ? undefined : Math.max(0, Math.floor(Number(raw)));
-                    if (minutes === undefined || !Number.isFinite(minutes)) {
-                        delete item.estimatedMinutes;
-                    } else {
-                        // 允许设置为 0（0 表示预估时长为零，与「未填写」区分）
-                        item.estimatedMinutes = minutes;
-                    }
+                    item.habitTime = Number(hourSelect.value) * 60 + Number(minuteSelect.value);
                     await this.save();
                     await this.refresh();
                 })();
             };
+            hourSelect.onchange = applyHabit;
+            minuteSelect.onchange = applyHabit;
+
+            // ===== 预估执行时长（小时下拉 + 分钟下拉，选择后自动保存）=====
+            const estCol = habitRow.createDiv({ cls: 'task-plan-habit-col' });
+            estCol.createDiv({ cls: 'task-plan-field-label', text: t('weekPanel.estimatedLabel') });
+            const estGroup = estCol.createDiv({ cls: 'task-plan-habit-group' });
+
+            // 未设置时默认 0 小时 0 分钟
+            const estMinutes = typeof item.estimatedMinutes === 'number' && item.estimatedMinutes >= 0
+                ? item.estimatedMinutes
+                : 0;
+            const estHour = Math.floor(estMinutes / 60);
+            const estMinute = estMinutes % 60;
+
+            const estHourSelect = estGroup.createEl('select', { cls: 'task-plan-habit-select' });
+            for (let h = 0; h < 24; h++) {
+                estHourSelect.createEl('option', { text: `${String(h).padStart(2, '0')}`, value: `${h}` });
+            }
+            estHourSelect.value = `${estHour}`;
+
+            estGroup.createSpan({ cls: 'task-plan-habit-sep', text: ':' });
+
+            const estMinuteSelect = estGroup.createEl('select', { cls: 'task-plan-habit-select' });
+            for (let m = 0; m < 60; m += 5) {
+                estMinuteSelect.createEl('option', { text: `${String(m).padStart(2, '0')}`, value: `${m}` });
+            }
+            estMinuteSelect.value = `${estMinute}`;
+
+            const applyEst = () => {
+                void (async () => {
+                    const total = Number(estHourSelect.value) * 60 + Number(estMinuteSelect.value);
+                    item.estimatedMinutes = total;
+                    await this.save();
+                    await this.refresh();
+                })();
+            };
+            estHourSelect.onchange = applyEst;
+            estMinuteSelect.onchange = applyEst;
         }
+
+        // 点击习惯型任务卡片：切换类型
+        habitCard.onclick = () => {
+            if (currentType === 'habit') return;
+            void (async () => {
+                item.taskType = 'habit';
+                item.habitTimeEnabled = true;
+                await this.save();
+                await this.refresh();
+            })();
+        };
     }
 
     /** 重新渲染自身 */

@@ -189,6 +189,10 @@ export class BaseRepo {
             if (item.okr) {
                 item.okr.conditions = migrateOkrConditions(item.okr.conditions);
             }
+            // 兼容旧数据：把旧的 habitTimeEnabled 迁移为 taskType（习惯型任务）
+            if (item.taskType === undefined && item.habitTimeEnabled === true) {
+                item.taskType = 'habit';
+            }
         }
         const initialPlanSchemeData = (savedData.schemeData ?? { schemes: [] }) as PlanSchemeData;
         // 兼容旧数据：确保默认方案始终存在且位于首位

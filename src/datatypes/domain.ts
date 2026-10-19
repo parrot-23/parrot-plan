@@ -57,6 +57,9 @@ export interface ExecutionRecord {
     replaced?: boolean;
 }
 
+/** 任务类型：一次性任务 / 习惯型任务 */
+export type TaskType = 'oneTime' | 'habit';
+
 /** 收集盒任务（可无限层级子任务） */
 export interface InboxItem {
     id: string;
@@ -80,6 +83,8 @@ export interface InboxItem {
     dueDate?: string;
     /** 任务状态（可选：notStarted / inProgress / done，旧任务无此字段，默认未开始） */
     status?: string;
+    /** 任务类型（可选：oneTime / habit，旧任务无此字段，默认一次性任务） */
+    taskType?: TaskType;
     /** 习惯时间点（可选，起始时间，单位分钟，如 540 表示 09:00，旧任务无此字段） */
     habitTime?: number;
     /** 习惯时间点是否启用（可选，旧任务无此字段，默认未启用） */
