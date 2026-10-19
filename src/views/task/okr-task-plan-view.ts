@@ -23,14 +23,14 @@ export class OkrTaskPlanView {
     private addPanelCloseHandler?: (e: MouseEvent) => void;
     /** 当前处于编辑态的板块 id（null 表示无） */
     private editingSectionId: string | null = null;
-    /** 收集篮子是否处于「整理」模式 */
-    private basketOrganizeMode = false;
-    /** 整理模式下选中的收集篮子条目 id */
-    private selectedBasketEntryId?: string;
+    /** 收集篮子中已多选选中的条目 id（整理到文件时使用） */
+    private selectedBasketEntryIds = new Set<string>();
+    /** 收集篮子多选时上次点击的条目 id（Shift 连选用） */
+    private lastClickedBasketEntryId?: string;
     /** 收集盒领域仓库（任务面板增删改走仓库方法，保证跨视图一致） */
     private inboxRepo?: InboxRepo;
     /** 右侧垂直选项卡当前选中项（刷新后保持不变） */
-    private rightTab: 'current' | 'overview' | 'basket' | 'improve' = 'current';
+    private rightTab: 'current' | 'overview' | 'basket' = 'current';
 
     constructor(
         app: App,
@@ -61,6 +61,8 @@ export class OkrTaskPlanView {
 
         // 左侧：任务面板
         const taskPanel = container.createDiv({ cls: 'task-plan-task-panel' });
+        // 记录渲染前的选中任务 id，用于判断点击任务面板条目是否改变了选中项
+        const prevSelectedId = this.inboxData.selectedId;
         renderTaskPanel(
             this.app,
             taskPanel,
@@ -70,6 +72,14 @@ export class OkrTaskPlanView {
                 await this.save();
             },
             () => {
+                // 在「任务总览」选项卡下点击任务面板条目选中任务时，自动切换到「当前任务」选项卡
+                if (
+                    this.rightTab === 'overview'
+                    && this.inboxData.selectedId
+                    && this.inboxData.selectedId !== prevSelectedId
+                ) {
+                    this.rightTab = 'current';
+                }
                 void this.refresh();
             },
             undefined,
@@ -81,19 +91,29 @@ export class OkrTaskPlanView {
 
         // 中间：垂直选项卡（切换右侧内容区）
         const tabStrip = container.createDiv({ cls: 'task-plan-right-tabs' });
-        const tabs: { id: 'current' | 'overview' | 'basket' | 'improve'; labelKey: 'taskPlan.tabCurrentTask' | 'taskPlan.tabOverview' | 'taskPlan.tabBasket' | 'taskPlan.tabImprove' }[] = [
-            { id: 'current', labelKey: 'taskPlan.tabCurrentTask' },
+        const tabs: { id: 'current' | 'overview' | 'basket'; labelKey: 'taskPlan.tabCurrentTask' | 'taskPlan.tabOverview' | 'taskPlan.tabBasket' }[] = [
             { id: 'overview', labelKey: 'taskPlan.tabOverview' },
+            { id: 'current', labelKey: 'taskPlan.tabCurrentTask' },
             { id: 'basket', labelKey: 'taskPlan.tabBasket' },
-            { id: 'improve', labelKey: 'taskPlan.tabImprove' },
         ];
         for (const tab of tabs) {
             const tabEl = tabStrip.createDiv({ cls: 'task-plan-right-tab', text: t(tab.labelKey) });
             tabEl.toggleClass('is-active', this.rightTab === tab.id);
             tabEl.onclick = () => {
-                if (this.rightTab === tab.id) return;
-                this.rightTab = tab.id;
-                void this.refresh();
+                const switched = this.rightTab !== tab.id;
+                if (switched) this.rightTab = tab.id;
+
+                // 「当前任务」/「收集篮子」的内容依赖选中任务：左侧未选中任何任务时自动选中第一个任务
+                let autoSelected = false;
+                if ((tab.id === 'current' || tab.id === 'basket') && !this.hasSelectedTask()) {
+                    const firstTask = this.inboxData.items.find((i) => !i.removed && !i.parentId);
+                    if (firstTask) {
+                        if (this.inboxRepo) this.inboxRepo.setSelectedId(firstTask.id);
+                        else this.inboxData.selectedId = firstTask.id;
+                        autoSelected = true;
+                    }
+                }
+                if (switched || autoSelected) void this.refresh();
             };
         }
 
@@ -126,9 +146,6 @@ export class OkrTaskPlanView {
         } else if (this.rightTab === 'basket') {
             // 「收集篮子」选项卡：左为任务名称 + 未处理数 + 收集篮子面板，右为板块信息
             this.renderBasketTab(contentPanel);
-        } else {
-            // 「改进篮子」选项卡：内容暂留空
-            contentPanel.createDiv({ cls: 'task-plan-empty-pane' });
         }
 
         // 恢复任务面板列表的滚动位置，实现无感刷新
@@ -298,8 +315,8 @@ export class OkrTaskPlanView {
         } else if (section.type === 'file') {
             for (const it of (section.data as FileData).items) {
                 const itemEl = this.renderSectionCardItem(itemsEl, '📄', it.text || it.path);
-                // 整理模式且已选中篮子条目：文件作为整理目标（悬停提示 + 点击写入）
-                if (this.basketOrganizeMode && this.selectedBasketEntryId && it.path) {
+                // 已多选篮子条目：文件作为整理目标（悬停提示 + 点击写入）
+                if (this.isBasketSelectable() && this.selectedBasketEntryIds.size > 0 && it.path) {
                     itemEl.addClass('is-organize-target');
                     itemEl.setAttribute('title', t('basket.organizeToFile'));
                     itemEl.onclick = (e) => {
@@ -320,12 +337,12 @@ export class OkrTaskPlanView {
         }
     }
 
-    /** 将选中的收集篮子条目内容追加到目标文件末尾，并从篮子移除该条目 */
+    /** 将选中的收集篮子条目内容逐条追加到目标文件末尾，并从篮子移除这些条目 */
     private async organizeToFile(item: InboxItem, path: string): Promise<void> {
-        const entryId = this.selectedBasketEntryId;
-        if (!entryId) return;
-        const entry = (item.basket ?? []).find((b) => b.id === entryId);
-        if (!entry) return;
+        const selectedIds = this.selectedBasketEntryIds;
+        // 按篮子中的原始顺序取选中的条目，保证写入顺序与列表一致
+        const entries = (item.basket ?? []).filter((b) => selectedIds.has(b.id));
+        if (entries.length === 0) return;
 
         try {
             const file = this.app.vault.getAbstractFileByPath(path);
@@ -333,15 +350,17 @@ export class OkrTaskPlanView {
                 new Notice(t('basket.organizeFileMissing'));
                 return;
             }
-            await this.app.vault.adapter.append(path, `\n${entry.text}\n`);
+            // 每条独立成行追加
+            await this.app.vault.adapter.append(path, `\n${entries.map(e => e.text).join('\n')}\n`);
         } catch {
             new Notice(t('basket.organizeFailed'));
             return;
         }
 
-        // 写入成功后从篮子移除该条目
-        item.basket = (item.basket ?? []).filter((b) => b.id !== entryId);
-        this.selectedBasketEntryId = undefined;
+        // 写入成功后从篮子移除这些条目
+        item.basket = (item.basket ?? []).filter((b) => !selectedIds.has(b.id));
+        selectedIds.clear();
+        this.lastClickedBasketEntryId = undefined;
         await this.save();
         this.refreshBasketBox();
         this.refreshSectionCards();
@@ -512,13 +531,14 @@ export class OkrTaskPlanView {
         });
         this.renderBasketBox(left.createDiv({ cls: 'okr-basket-wrap' }));
 
-        // 右：板块信息（每个板块一个面板，垂直排列）
+        // 右：板块信息标题行（右侧为「+」新增板块按钮）+ 各板块面板（每个板块一个面板，垂直排列）
         const right = layout.createDiv({ cls: 'task-plan-basket-right okr-basket-sections-area' });
-        const sectionsArea = right.createDiv({ cls: 'swimlane-section-area' });
-        const sectionsHeader = sectionsArea.createDiv({ cls: 'swimlane-section-area-header' });
-        sectionsHeader.createDiv({ cls: 'swimlane-section-area-title', text: t('projectPicture.sectionsTitle') });
-        this.renderAddSectionButton(sectionsHeader);
-        const sectionsBody = sectionsArea.createDiv({ cls: 'swimlane-section-area-body' });
+        const sectionsHead = right.createDiv({
+            cls: 'swimlane-section-area-header task-plan-basket-sections-head',
+        });
+        sectionsHead.createDiv({ cls: 'swimlane-section-area-title', text: t('projectPicture.sectionsTitle') });
+        this.renderAddSectionButton(sectionsHead);
+        const sectionsBody = right.createDiv({ cls: 'swimlane-section-area-body' });
         this.renderSectionCards(sectionsBody);
     }
 
@@ -536,19 +556,21 @@ export class OkrTaskPlanView {
         const header = area.createDiv({ cls: 'swimlane-section-area-header' });
         header.createDiv({ cls: 'swimlane-section-area-title', text: t('basket.title') });
 
-        // 整理按钮：位于「+」按钮左侧，切换整理模式
-        const organizeBtn = header.createEl('button', {
-            cls: 'okr-basket-organize-btn',
-            text: t('basket.organize'),
-        });
-        if (this.basketOrganizeMode) organizeBtn.addClass('is-active');
-        organizeBtn.onclick = (e) => {
-            e.stopPropagation();
-            this.basketOrganizeMode = !this.basketOrganizeMode;
-            if (!this.basketOrganizeMode) this.selectedBasketEntryId = undefined;
-            this.refreshBasketBox();
-            this.refreshSectionCards();
-        };
+        // 标题右侧：「收集篮子」选项卡内为多选提示文字；「当前任务」选项卡内为跳转到该选项卡的「整理」按钮
+        if (this.isBasketSelectable()) {
+            header.createSpan({ cls: 'okr-basket-multiselect-hint', text: t('basket.multiSelectHint') });
+        } else {
+            const organizeBtn = header.createEl('button', {
+                cls: 'okr-basket-organize-btn',
+                text: t('basket.organize'),
+            });
+            organizeBtn.onclick = (e) => {
+                e.stopPropagation();
+                // 整理在「收集篮子」选项卡中进行，此处直接跳转
+                this.rightTab = 'basket';
+                void this.refresh();
+            };
+        }
 
         // 添加按钮：放在标题同一行最右侧，点击弹窗输入
         const addBtn = header.createEl('button', { cls: 'okr-basket-add-btn', text: '+' });
@@ -567,7 +589,7 @@ export class OkrTaskPlanView {
 
         const body = area.createDiv({ cls: 'okr-basket-body' });
 
-        // 已收集条目列表（只读，不可删除；整理模式下可选中）
+        // 已收集条目列表（只读，不可删除；「收集篮子」选项卡内可点击多选）
         const list = body.createDiv({ cls: 'okr-basket-list' });
         const entries = item.basket ?? [];
         if (entries.length === 0) {
@@ -577,18 +599,49 @@ export class OkrTaskPlanView {
         for (const entry of entries) {
             const row = list.createDiv({ cls: 'okr-basket-item' });
             row.createSpan({ cls: 'okr-basket-item-text', text: entry.text });
-            if (this.basketOrganizeMode) {
-                row.addClass('is-organizable');
-                if (entry.id === this.selectedBasketEntryId) row.addClass('is-selected');
-                row.onclick = (e) => {
-                    e.stopPropagation();
-                    this.selectedBasketEntryId =
-                        this.selectedBasketEntryId === entry.id ? undefined : entry.id;
-                    this.refreshBasketBox();
-                    this.refreshSectionCards();
-                };
-            }
+            if (!this.isBasketSelectable()) continue;
+
+            // 「收集篮子」选项卡内可多选（交互与「梳理」视图的收集记录保持一致）
+            row.addClass('is-organizable');
+            if (this.selectedBasketEntryIds.has(entry.id)) row.addClass('is-active');
+            row.onclick = (e) => this.handleBasketEntryClick(entry.id, entries, e);
         }
+    }
+
+    /** 收集篮子条目是否可多选：仅在「收集篮子」选项卡内（整理到文件也在此选项卡内进行） */
+    private isBasketSelectable(): boolean {
+        return this.rightTab === 'basket';
+    }
+
+    /**
+     * 处理收集篮子条目点击（多选交互与「梳理」视图的收集记录一致）：
+     * - 普通点击：单选该条目
+     * - Ctrl/Cmd 点击：切换该条目的选中状态（多选）
+     * - Shift 点击：从上次点击的锚点到当前条目之间连选
+     */
+    private handleBasketEntryClick(id: string, entries: BasketItem[], e: MouseEvent): void {
+        if (e.shiftKey && this.lastClickedBasketEntryId) {
+            const ids = entries.map((it) => it.id);
+            const from = ids.indexOf(this.lastClickedBasketEntryId);
+            const to = ids.indexOf(id);
+            if (from !== -1 && to !== -1) {
+                const [start, end] = from < to ? [from, to] : [to, from];
+                this.selectedBasketEntryIds = new Set(ids.slice(start, end + 1));
+            } else {
+                this.selectedBasketEntryIds = new Set([id]);
+            }
+        } else if (e.ctrlKey || e.metaKey) {
+            // 切换当前条目的选中状态
+            if (this.selectedBasketEntryIds.has(id)) this.selectedBasketEntryIds.delete(id);
+            else this.selectedBasketEntryIds.add(id);
+            this.lastClickedBasketEntryId = id;
+        } else {
+            // 普通点击：单选
+            this.selectedBasketEntryIds = new Set([id]);
+            this.lastClickedBasketEntryId = id;
+        }
+        this.refreshBasketBox();
+        this.refreshSectionCards();
     }
 
     /** 同步刷新收集篮子方框（增删后调用） */

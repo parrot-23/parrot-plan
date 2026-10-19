@@ -1039,7 +1039,8 @@ export class TodayView {
     }
 
     /**
-     * 渲染时间区间编辑器：起始时间 / 结束时间 / 时长 三个输入框。
+     * 渲染时间区间编辑器：起始时间 / 结束时间 / 时长。
+     * 起始、结束时间采用「习惯时间点」的小时 / 分钟下拉方式，时长采用「预估执行时长」的输入框方式。
      * 修改任一项时联动更新其余两项（以起始时间为锚点，结束 = 起始 + 时长）。
      * onChange 回调返回规范化后的 (start, end)（分钟）。
      */
@@ -1053,78 +1054,85 @@ export class TodayView {
 
         const editor = container.createDiv({ cls: 'today-time-editor' });
 
+        // 小时 / 分钟下拉（与「习惯时间点」一致；分钟以 5 为步长，并保留当前分钟以保证选中值有效）
+        const buildTimeSelects = (
+            parent: HTMLElement,
+            minutes: number,
+            onApply: (value: number) => void,
+        ) => {
+            const group = parent.createDiv({ cls: 'task-plan-habit-group' });
+            const hourSelect = group.createEl('select', { cls: 'task-plan-habit-select' });
+            for (let h = 0; h < 24; h++) {
+                hourSelect.createEl('option', { text: String(h).padStart(2, '0'), value: `${h}` });
+            }
+            hourSelect.value = `${Math.floor(minutes / 60)}`;
+
+            group.createSpan({ cls: 'task-plan-habit-sep', text: ':' });
+
+            const minuteSelect = group.createEl('select', { cls: 'task-plan-habit-select' });
+            const minuteSet = new Set<number>();
+            for (let m = 0; m < 60; m += 5) minuteSet.add(m);
+            minuteSet.add(minutes % 60);
+            for (const m of Array.from(minuteSet).sort((a, b) => a - b)) {
+                minuteSelect.createEl('option', { text: String(m).padStart(2, '0'), value: `${m}` });
+            }
+            minuteSelect.value = `${minutes % 60}`;
+
+            const apply = () => onApply(clamp(Number(hourSelect.value) * 60 + Number(minuteSelect.value)));
+            hourSelect.onchange = apply;
+            minuteSelect.onchange = apply;
+        };
+
         // 第一行：起始时间 → 结束时间
         const rangeRow = editor.createDiv({ cls: 'today-time-range' });
 
         const startField = rangeRow.createDiv({ cls: 'today-time-field' });
-        startField.createSpan({ cls: 'today-time-field-label', text: t('today.startTime') });
-        const startInput = startField.createEl('input', {
-            cls: 'today-time-input',
-            type: 'time',
+        startField.createDiv({ cls: 'today-time-field-label', text: t('today.startTime') });
+        buildTimeSelects(startField, start, (value) => {
+            // 修改起始时间：保持时长不变，结束时间随之平移
+            const duration = Math.max(5, end - start);
+            onChange(value, clamp(value + duration));
         });
-        startInput.value = formatMinutes(start);
 
         rangeRow.createSpan({ cls: 'today-time-arrow', text: '→' });
 
         const endField = rangeRow.createDiv({ cls: 'today-time-field' });
-        endField.createSpan({ cls: 'today-time-field-label', text: t('today.endTime') });
-        const endInput = endField.createEl('input', {
-            cls: 'today-time-input',
-            type: 'time',
+        endField.createDiv({ cls: 'today-time-field-label', text: t('today.endTime') });
+        buildTimeSelects(endField, end, (value) => {
+            // 修改结束时间：起始时间不变，时长随之变化
+            onChange(start, Math.max(start + 5, value));
         });
-        endInput.value = formatMinutes(end);
 
-        // 第二行：时长
+        // 第二行：时长（小时 / 分钟输入框，与「预估执行时长」一致）
         const durationRow = editor.createDiv({ cls: 'today-time-duration' });
-        durationRow.createSpan({ cls: 'today-time-field-label', text: t('today.addUnplannedDuration') });
-        const durationInput = durationRow.createEl('input', {
-            cls: 'today-time-input today-time-duration-input',
+        durationRow.createDiv({ cls: 'today-time-field-label', text: t('today.addUnplannedDuration') });
+        const durationGroup = durationRow.createDiv({ cls: 'task-plan-habit-input-group' });
+
+        const duration = Math.max(0, end - start);
+        const durHourInput = durationGroup.createEl('input', {
+            cls: 'task-plan-habit-input',
             type: 'number',
-            attr: { min: '5', step: '5' },
+            attr: { min: '0', step: '1' },
         });
-        durationInput.value = String(Math.max(0, end - start));
-        durationRow.createSpan({ cls: 'today-time-unit', text: t('today.addUnplannedMinutes') });
+        durHourInput.value = String(Math.floor(duration / 60));
+        durationGroup.createSpan({ cls: 'task-plan-habit-unit', text: t('weekPanel.hourUnit') });
 
-        // 把 HH:MM 解析为分钟数；非法时返回 undefined
-        const parseTime = (value: string): number | undefined => {
-            const m = /^(\d{1,2}):(\d{2})$/.exec(value.trim());
-            if (!m) return undefined;
-            const h = Number(m[1]);
-            const min = Number(m[2]);
-            if (!Number.isFinite(h) || !Number.isFinite(min)) return undefined;
-            return clamp(h * 60 + min);
-        };
+        const durMinuteInput = durationGroup.createEl('input', {
+            cls: 'task-plan-habit-input',
+            type: 'number',
+            attr: { min: '0', step: '5' },
+        });
+        durMinuteInput.value = String(duration % 60);
+        durationGroup.createSpan({ cls: 'task-plan-habit-unit', text: t('weekPanel.minuteUnit') });
 
-        // 修改起始时间：保持时长不变，结束时间随之平移
-        startInput.onchange = () => {
-            const s = parseTime(startInput.value);
-            if (s === undefined) {
-                startInput.value = formatMinutes(start);
-                return;
-            }
-            const duration = Math.max(5, end - start);
-            onChange(s, clamp(s + duration));
+        const applyDuration = () => {
+            const hour = Math.max(0, Math.floor(Number(durHourInput.value)) || 0);
+            const minute = Math.max(0, Math.floor(Number(durMinuteInput.value)) || 0);
+            // 修改时长：起始时间不变，结束时间随之变化
+            onChange(start, clamp(start + Math.max(5, hour * 60 + minute)));
         };
-
-        // 修改结束时间：起始时间不变，时长随之变化
-        endInput.onchange = () => {
-            const e = parseTime(endInput.value);
-            if (e === undefined) {
-                endInput.value = formatMinutes(end);
-                return;
-            }
-            onChange(start, Math.max(start + 5, e));
-        };
-
-        // 修改时长：起始时间不变，结束时间随之变化
-        durationInput.onchange = () => {
-            const v = Number(durationInput.value);
-            if (!Number.isFinite(v) || v <= 0) {
-                durationInput.value = String(Math.max(0, end - start));
-                return;
-            }
-            onChange(start, clamp(start + Math.max(5, Math.round(v))));
-        };
+        durHourInput.onchange = applyDuration;
+        durMinuteInput.onchange = applyDuration;
     }
 
     /**

@@ -4919,29 +4919,6 @@
     color: var(--text-muted);
 }
 
-.today-time-input {
-    width: 100%;
-    box-sizing: border-box;
-    padding: 6px 10px;
-    border: 1px solid var(--background-modifier-border);
-    border-radius: 8px;
-    background: var(--background-primary);
-    color: var(--text-normal);
-    font-size: 14px;
-    font-variant-numeric: tabular-nums;
-    transition: border-color 0.15s ease, box-shadow 0.15s ease;
-}
-
-.today-time-input:hover {
-    border-color: var(--interactive-accent-hover);
-}
-
-.today-time-input:focus {
-    outline: none;
-    border-color: var(--interactive-accent);
-    box-shadow: 0 0 0 2px var(--interactive-accent-hover);
-}
-
 .today-time-arrow {
     flex-shrink: 0;
     padding-bottom: 8px;
@@ -4958,16 +4935,6 @@
 
 .today-time-duration .today-time-field-label {
     flex-shrink: 0;
-}
-
-.today-time-duration-input {
-    width: 72px;
-    flex-shrink: 0;
-}
-
-.today-time-unit {
-    font-size: 12px;
-    color: var(--text-muted);
 }
 
 /* 方框底部操作按钮行：位于详情方框内底部，按钮从左到右排列 */
@@ -5996,6 +5963,90 @@
     color: var(--text-normal);
 }
 
+/* 收集篮子选项卡：左右结构（左：任务名称 + 未处理数 + 收集篮子面板；右：板块信息） */
+.task-plan-basket-layout {
+    display: flex;
+    flex-direction: row;
+    align-items: stretch;
+    gap: 12px;
+    min-height: 100%;
+}
+
+.task-plan-basket-left,
+.task-plan-basket-right {
+    flex: 1 1 0;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+/* 左侧标题区：任务名称 + 未处理数 */
+.task-plan-basket-head {
+    flex-shrink: 0;
+}
+
+.task-plan-basket-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text-normal);
+    word-break: break-word;
+}
+
+.task-plan-basket-count {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-top: 4px;
+    font-size: 12px;
+    color: var(--text-muted);
+}
+
+.task-plan-basket-count-icon {
+    display: inline-flex;
+    align-items: center;
+}
+
+.task-plan-basket-count-icon svg {
+    width: 14px;
+    height: 14px;
+}
+
+/* 板块信息标题行：单独一行标题 + 右侧「+」新增板块按钮 */
+.task-plan-basket-sections-head {
+    flex-shrink: 0;
+    margin-bottom: 10px;
+    padding-left: 2px;
+}
+
+/* 板块信息：每个板块一个面板（与左侧收集篮子同款样式，无「整理」按钮），按顺序垂直排列 */
+.okr-basket-sections-area .swimlane-section-area-body {
+    flex-direction: column;
+    overflow-x: visible;
+}
+
+.okr-basket-sections-area .swimlane-section-card {
+    flex-shrink: 0;
+    width: 100%;
+    max-height: none;
+    background: var(--background-secondary);
+    padding: 12px;
+}
+
+/* 板块面板内的条目：样式与左侧收集篮子条目一致（间距 / 内边距 / 圆角 / 边框 / 白底），仅保留原有标记图标 */
+.okr-basket-sections-area .swimlane-section-card-items {
+    gap: 6px;
+}
+
+.okr-basket-sections-area .swimlane-section-card-item {
+    padding: 8px 12px;
+    border-radius: 6px;
+    border: 1px solid var(--background-modifier-border);
+    background: var(--background-primary);
+    gap: 8px;
+    font-size: 13px;
+}
+
 /* 收集篮子方框 */
 .okr-basket-body {
     display: flex;
@@ -6035,10 +6086,12 @@
     background: var(--background-modifier-hover);
 }
 
-.okr-basket-organize-btn.is-active {
-    background: var(--interactive-accent);
-    color: var(--text-on-accent);
-    border-color: var(--interactive-accent);
+/* 多选提示文字：位于标题右侧，与「梳理」视图的提示一致 */
+.okr-basket-multiselect-hint {
+    flex-shrink: 0;
+    font-size: 12px;
+    font-weight: 400;
+    color: var(--text-muted);
 }
 
 .okr-basket-list {
@@ -6057,7 +6110,7 @@
     background: var(--background-primary);
 }
 
-/* 整理模式下可点击选中的条目 */
+/* 「收集篮子」选项卡内可点击选中的条目 */
 .okr-basket-item.is-organizable {
     cursor: pointer;
 }
@@ -6066,7 +6119,8 @@
     background: var(--background-modifier-hover);
 }
 
-.okr-basket-item.is-selected {
+/* 选中态：与「梳理」视图的收集记录卡片一致 */
+.okr-basket-item.is-active {
     border-color: var(--interactive-accent);
     background: var(--background-modifier-hover);
 }
@@ -9161,167 +9215,6 @@ button.swimlane-section-card-exit {
 .inbox-section-chip svg {
     width: 12px;
     height: 12px;
-}
-
-/* 详情弹窗中的板块编辑区 */
-.section-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin: 12px 0 6px;
-    padding-top: 12px;
-    border-top: 1px solid var(--background-modifier-border);
-}
-
-.section-title {
-    font-size: 13px;
-    font-weight: 600;
-    color: var(--text-normal);
-}
-
-.section-add-btn {
-    padding: 4px 10px;
-    border-radius: 4px;
-    border: 1px solid var(--background-modifier-border);
-    background: var(--interactive-normal);
-    color: var(--text-normal);
-    cursor: pointer;
-    font-size: 12px;
-}
-
-.section-add-btn:hover {
-    background: var(--interactive-hover);
-}
-
-.section-list {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    margin-bottom: 12px;
-}
-
-.section-empty {
-    padding: 12px;
-    text-align: center;
-    color: var(--text-muted);
-    font-size: 12px;
-    font-style: italic;
-}
-
-.section-item {
-    border: 1px solid var(--background-modifier-border);
-    border-radius: 6px;
-    padding: 8px;
-    background: var(--background-secondary);
-}
-
-.section-item-head {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    margin-bottom: 6px;
-}
-
-.section-item-type {
-    flex-shrink: 0;
-    padding: 1px 6px;
-    border-radius: 3px;
-    background: var(--interactive-accent);
-    color: var(--text-on-accent);
-    font-size: 10px;
-}
-
-.section-item-name {
-    flex: 1;
-    min-width: 0;
-    font-size: 12px;
-    font-weight: 600;
-    color: var(--text-normal);
-    word-break: break-word;
-}
-
-.section-item-del {
-    flex-shrink: 0;
-    width: 20px;
-    height: 20px;
-    padding: 0;
-    border: none;
-    border-radius: 4px;
-    background: transparent;
-    color: var(--text-muted);
-    cursor: pointer;
-    font-size: 12px;
-    line-height: 1;
-}
-
-.section-item-del:hover {
-    background: var(--background-modifier-error);
-    color: var(--text-on-accent);
-}
-
-.section-items {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-}
-
-.section-item-row {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-}
-
-.section-item-row input[type='checkbox'] {
-    flex-shrink: 0;
-    width: 14px;
-    height: 14px;
-}
-
-.section-item-text {
-    flex: 1;
-    min-width: 0;
-    padding: 3px 6px;
-    border-radius: 4px;
-    border: 1px solid var(--background-modifier-border);
-    background: var(--background-primary);
-    color: var(--text-normal);
-    font-size: 12px;
-}
-
-.section-step-status {
-    flex-shrink: 0;
-    padding: 2px 4px;
-    border-radius: 4px;
-    border: 1px solid var(--background-modifier-border);
-    background: var(--background-primary);
-    color: var(--text-normal);
-    font-size: 12px;
-}
-
-/* 文件板块：路径输入框占主要宽度，显示名输入框较窄 */
-.section-file-path {
-    flex: 2;
-}
-
-.section-file-name {
-    flex: 1;
-}
-
-.section-add-item-btn {
-    align-self: flex-start;
-    margin-top: 4px;
-    padding: 3px 8px;
-    border-radius: 4px;
-    border: 1px dashed var(--background-modifier-border);
-    background: transparent;
-    color: var(--text-muted);
-    cursor: pointer;
-    font-size: 11px;
-}
-
-.section-add-item-btn:hover {
-    background: var(--background-modifier-hover);
-    color: var(--text-normal);
 }
 
 /* 项目聚焦模式下：板块作为只读子目录（复用 inbox-item 结构，缩进由 --inbox-depth 控制） */
