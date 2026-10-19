@@ -181,7 +181,6 @@ export class TodayView {
         this.renderRunningProgressBox(centerPanel);
         // 选项卡内容区
         this.renderRightTabContent(centerPanel);
-        this.renderActionButtons(centerPanel);
     }
 
     /** 右侧内容区选项卡行：今日情况 / 当天任务 / 额外任务 / 本周情况 */
@@ -332,6 +331,8 @@ export class TodayView {
                 color: cat?.color,
                 estMinutes,
                 execMinutes,
+                // 手动标记为已完成的任务同样显示勾选图标
+                done: item ? this.isDayTaskDone(item.id) : undefined,
                 habitTime: this.getEventHabitTime(ev) ?? undefined,
                 selected: !!item && this.inboxData.selectedId === item.id,
                 onSelect: () => this.selectTaskItem(item),
@@ -403,6 +404,8 @@ export class TodayView {
             color?: string;
             estMinutes?: number;
             execMinutes: number;
+            /** 已完成标记（提供时以此为准，用于手动标记等场景） */
+            done?: boolean;
             /** 习惯时间点（分钟），设置后显示在卡片右上角 */
             habitTime?: number;
             selected: boolean;
@@ -445,10 +448,8 @@ export class TodayView {
 
         // 完成图标：无预估时长（或预估为 0）时，只要有执行记录即视为完成；
         // 有预估时长时，需已执行时长达到预估时长才显示。
-        const isDone = opts.estMinutes === undefined || opts.estMinutes === 0
-            ? opts.execMinutes > 0
-            : opts.execMinutes >= opts.estMinutes;
-        if (isDone) {
+        const done = opts.done ?? this.isTaskDone(opts.estMinutes, opts.execMinutes);
+        if (done) {
             const doneIcon = execLine.createSpan({ cls: 'today-task-list-done' });
             setIcon(doneIcon, 'check-circle');
         }
@@ -457,6 +458,57 @@ export class TodayView {
             e.stopPropagation();
             opts.onSelect();
         };
+    }
+
+    /**
+     * 是否视为「已完成」：无预估时长（或预估为 0）时，只要有执行记录即完成；
+     * 否则需已执行时长达到预估时长。
+     */
+    private isTaskDone(estMinutes: number | undefined, execMinutes: number): boolean {
+        if (estMinutes === undefined || estMinutes === 0) return execMinutes > 0;
+        return execMinutes >= estMinutes;
+    }
+
+    /**
+     * 判断某个任务在当前查看日期是否已完成（与左侧当天任务卡片的判定规则一致）：
+     * 预估时长取自当天的计划事件；已执行时长取当天执行记录中匹配该事件 / 任务的累计时长。
+     */
+    private isDayTaskDone(inboxId: string): boolean {
+        // 手动标记为已完成（点击详情中的勾选按钮）
+        if (this.isManuallyDone(inboxId)) return true;
+
+        const { day, weekKey } = this.getViewDayInfo();
+        const ev = this.getEvents().find(e =>
+            e.day === day && e.weekKey === weekKey && e.inboxId === inboxId);
+        const estMinutes = ev
+            && typeof ev.estimatedMinutes === 'number' && ev.estimatedMinutes >= 0
+            ? ev.estimatedMinutes
+            : undefined;
+        const execMinutes = this.getExecutions()
+            .filter(ex => !ex.replaced
+                && ex.weekKey === weekKey
+                && ex.day === day
+                && (ex.inboxId === inboxId || (!!ev && ex.eventId === ev.id)))
+            .reduce((sum, ex) => sum + Math.max(0, ex.end - ex.start), 0);
+        return this.isTaskDone(estMinutes, execMinutes);
+    }
+
+    /** 该任务是否已被手动标记为当前查看日期的「已完成」 */
+    private isManuallyDone(inboxId: string): boolean {
+        const item = this.inboxData.items.find(i => i.id === inboxId && !i.removed);
+        if (!item) return false;
+        return (item.doneDayKeys ?? []).includes(this.getViewDayInfo().dayKey);
+    }
+
+    /** 手动标记当前任务为当前查看日期的「已完成」，并保存刷新 */
+    private async markTaskDone(inboxId: string): Promise<void> {
+        const item = this.inboxData.items.find(i => i.id === inboxId && !i.removed);
+        if (!item) return;
+        const { dayKey } = this.getViewDayInfo();
+        const keys = item.doneDayKeys ?? [];
+        if (!keys.includes(dayKey)) item.doneDayKeys = [...keys, dayKey];
+        await this.save();
+        await this.refresh();
     }
 
     /** 点击任务卡片：选中/取消选中该任务，并清除时间轴事件选中 */
@@ -904,31 +956,25 @@ export class TodayView {
         const body = box.createDiv({ cls: 'today-detail-body' });
 
         // 选中「进行中任务」：展示其来源任务详情
-        if (this.selectedRunningTask && this.runningTask) {
-            const runningItem = this.inboxData.items.find(
-                i => i.id === this.runningTask!.inboxId && !i.removed,
-            );
-            if (runningItem) {
-                // 进行中任务：不显示待执行时间编辑器（已在执行中）
-                this.renderItemDetail(body, runningItem, false);
-                return;
-            }
-        }
+        const runningItem = this.selectedRunningTask && this.runningTask
+            ? this.inboxData.items.find(i => i.id === this.runningTask!.inboxId && !i.removed)
+            : undefined;
 
-        if (selectedEvent) {
+        if (runningItem) {
+            // 进行中任务：不显示待执行时间编辑器（已在执行中）
+            this.renderItemDetail(body, runningItem, false);
+        } else if (selectedEvent) {
             this.renderEventDetail(body, selectedEvent);
-            return;
-        }
-        if (selectedExec) {
+        } else if (selectedExec) {
             this.renderExecDetail(body, selectedExec);
-            return;
-        }
-        if (selectedItem) {
+        } else if (selectedItem) {
             this.renderItemDetail(body, selectedItem);
-            return;
+        } else {
+            body.createDiv({ cls: 'today-detail-empty', text: t('today.noSelection') });
         }
 
-        body.createDiv({ cls: 'today-detail-empty', text: t('today.noSelection') });
+        // 方框底部操作按钮
+        this.renderActionButtons(box);
     }
 
     /**
@@ -969,6 +1015,9 @@ export class TodayView {
                 void this.refresh();
             },
         );
+
+        // 方框底部操作按钮：确认新增 / 取消
+        this.renderActionButtons(box);
     }
 
     /**
@@ -1379,130 +1428,140 @@ export class TodayView {
         }
     }
 
-    /** 渲染操作按钮：选中左侧任务显示「执行非计划任务」；选中时间轴事件显示「执行计划 / 替换计划」 */
-    private renderActionButtons(panel: HTMLElement) {
+    /**
+     * 渲染方框底部的操作按钮：5 行字体高的方块，图标居中、文字在下，从左到右排列。
+     * 按钮集合随选中目标变化（进行中任务 / 执行记录 / 新增非计划 / 时间轴事件 / 左侧任务）。
+     */
+    private renderActionButtons(box: HTMLElement) {
         const selectedEvent = this.getSelectedEvent();
         const selectedItem = this.getSelectedItem();
-        const row = panel.createDiv({ cls: 'today-action-row' });
+        const actions: {
+            labelKey: Parameters<typeof t>[0];
+            icon: string;
+            kind?: 'cta' | 'warning';
+            disabled?: boolean;
+            onClick: () => void;
+        }[] = [];
 
-        // 选中「进行中任务」色块：显示「完成 / 中断」按钮（两者都会写入一条执行记录）
+        // 选中「进行中任务」色块：完成 / 中断（两者都会写入一条执行记录）
         if (this.selectedRunningTask && this.runningTask) {
-            const finishBtn = row.createEl('button', {
-                cls: 'today-action-btn mod-cta',
-                text: t('today.finishRunning'),
+            actions.push({
+                labelKey: 'today.finishRunning',
+                icon: 'check',
+                kind: 'cta',
+                onClick: () => {
+                    void this.finishRunningTask();
+                },
             });
-            finishBtn.onclick = () => {
-                void this.finishRunningTask();
-            };
-
-            const interruptBtn = row.createEl('button', {
-                cls: 'today-action-btn mod-warning',
-                text: t('today.interruptRunning'),
+            actions.push({
+                labelKey: 'today.interruptRunning',
+                icon: 'pause',
+                kind: 'warning',
+                onClick: () => {
+                    void this.interruptRunningTask();
+                },
             });
-            interruptBtn.onclick = () => {
-                void this.interruptRunningTask();
-            };
-            return;
-        }
-
-        // 选中「新增」执行记录：显示删除按钮
-        if (this.selectedExecId) {
-            const delBtn = row.createEl('button', {
-                cls: 'today-action-btn mod-warning',
-                text: t('today.deleteExec'),
+        } else if (this.selectedExecId) {
+            // 选中「新增」执行记录：删除
+            actions.push({
+                labelKey: 'today.deleteExec',
+                icon: 'trash-2',
+                kind: 'warning',
+                onClick: () => {
+                    void this.deleteSelectedExec();
+                },
             });
-            delBtn.onclick = () => {
-                void this.deleteSelectedExec();
-            };
-            return;
-        }
-
-        // 新增非计划事件模式：确认新增 / 取消
-        if (this.addUnplannedMode) {
-            const confirmBtn = row.createEl('button', {
-                cls: 'today-action-btn mod-cta',
-                text: t('today.addUnplannedConfirm'),
+        } else if (this.addUnplannedMode) {
+            // 额外任务（新增非计划事件）：开始任务 / 已完成任务 / 取消
+            actions.push({
+                labelKey: 'today.startTask',
+                icon: 'play',
+                kind: 'cta',
+                // 必须先在左侧选中任务，才能开始
+                disabled: !selectedItem,
+                onClick: () => {
+                    this.startUnplannedTask();
+                },
             });
-            // 必须先在左侧选中任务，才能确认新增
-            confirmBtn.disabled = !selectedItem;
-            confirmBtn.onclick = () => {
-                void this.confirmAddUnplanned();
-            };
-
-            const cancelBtn = row.createEl('button', {
-                cls: 'today-action-btn',
-                text: t('today.addUnplannedCancel'),
+            actions.push({
+                labelKey: 'today.finishTask',
+                icon: 'check',
+                disabled: !selectedItem,
+                onClick: () => {
+                    void this.confirmAddUnplanned();
+                },
             });
-            cancelBtn.onclick = () => {
-                this.cancelAddUnplanned();
-            };
-            return;
-        }
-
-        // 选中时间轴事件：仅「计划」状态显示「执行计划」按钮
-        if (selectedEvent) {
-            const isExecuting = this.executingEventId === selectedEvent.id;
-
-            // 正在执行：显示「完成执行 / 取消执行」
-            if (isExecuting) {
-                const finishBtn = row.createEl('button', {
-                    cls: 'today-action-btn mod-cta',
-                    text: t('today.finishExec'),
+            actions.push({
+                labelKey: 'today.addUnplannedCancel',
+                icon: 'x',
+                onClick: () => {
+                    this.cancelAddUnplanned();
+                },
+            });
+        } else if (selectedEvent) {
+            if (this.executingEventId === selectedEvent.id) {
+                // 正在执行：完成执行 / 取消执行
+                actions.push({
+                    labelKey: 'today.finishExec',
+                    icon: 'check',
+                    kind: 'cta',
+                    onClick: () => {
+                        void this.finishExecuting();
+                    },
                 });
-                finishBtn.onclick = () => {
-                    void this.finishExecuting();
-                };
-
-                const cancelBtn = row.createEl('button', {
-                    cls: 'today-action-btn',
-                    text: t('today.cancelExec'),
+                actions.push({
+                    labelKey: 'today.cancelExec',
+                    icon: 'x',
+                    onClick: () => {
+                        this.cancelExecuting();
+                    },
                 });
-                cancelBtn.onclick = () => {
-                    this.cancelExecuting();
-                };
-                return;
+            } else {
+                // 仅「计划」状态显示「执行计划」按钮
+                if (getEventStatus(selectedEvent, this.getExecutions()) === 'planned') {
+                    actions.push({
+                        labelKey: 'today.execPlanned',
+                        icon: 'play',
+                        onClick: () => {
+                            void this.executePlannedEvent();
+                        },
+                    });
+                }
+                // 进入执行：切换当前任务的「正在执行」状态
+                actions.push({
+                    labelKey: 'today.enterExec',
+                    icon: 'zap',
+                    onClick: () => {
+                        this.toggleExecuting(selectedEvent.id);
+                    },
+                });
             }
-
-            const status = getEventStatus(selectedEvent, this.getExecutions());
-            if (status === 'planned') {
-                const execBtn = row.createEl('button', {
-                    cls: 'today-action-btn',
-                    text: t('today.execPlanned'),
-                });
-                execBtn.onclick = () => {
-                    void this.executePlannedEvent();
-                };
-            }
-
-            // 进入执行：切换当前任务的「正在执行」状态
-            const enterBtn = row.createEl('button', {
-                cls: 'today-action-btn',
-                text: t('today.enterExec'),
+        } else if (selectedItem && this.rightTab !== 'today') {
+            // 选中左侧任务：开始任务（「今日情况」选项卡下不显示）
+            actions.push({
+                labelKey: 'today.startTask',
+                icon: 'play',
+                kind: 'cta',
+                onClick: () => {
+                    this.startRunningTask();
+                },
             });
-            enterBtn.onclick = () => {
-                this.toggleExecuting(selectedEvent.id);
-            };
-            return;
         }
 
-        // 未选中任何任务/事件：不显示操作按钮
-        if (!selectedItem) {
-            return;
-        }
+        // 无可执行操作时不渲染按钮行，避免方框底部出现空白条
+        if (actions.length === 0) return;
 
-        // 「今日情况」选项卡下不显示「开始任务」按钮（该按钮属于任务执行场景）
-        if (this.rightTab === 'today') {
-            return;
+        const row = box.createDiv({ cls: 'today-action-row' });
+        for (const action of actions) {
+            const btn = row.createEl('button', { cls: 'today-action-block' });
+            if (action.kind === 'cta') btn.addClass('is-cta');
+            if (action.kind === 'warning') btn.addClass('is-warning');
+            btn.disabled = !!action.disabled;
+            const iconEl = btn.createSpan({ cls: 'today-action-block-icon' });
+            setIcon(iconEl, action.icon);
+            btn.createSpan({ cls: 'today-action-block-label', text: t(action.labelKey) });
+            btn.onclick = action.onClick;
         }
-
-        // 选中左侧任务：开始任务（在时间轴上创建进行中记录）
-        const startBtn = row.createEl('button', {
-            cls: 'today-action-btn mod-cta',
-            text: t('today.startTask'),
-        });
-        startBtn.onclick = () => {
-            this.startRunningTask();
-        };
     }
 
     /**
@@ -1534,10 +1593,11 @@ export class TodayView {
     }
 
     /**
-     * 开始任务：为左侧选中的任务创建一条「进行中」记录（从当前时刻开始）。
+     * 开始任务：为左侧选中的任务创建一条「进行中」记录。
      * 在时间轴上以透明色块呈现，等待用户点击「完成」写入执行记录。
+     * range 提供时以其时间区间为准（额外任务方框中填写的区间），否则取详情中编辑的时间。
      */
-    private startRunningTask(): void {
+    private startRunningTask(range?: { start: number; end: number }): void {
         const item = this.getSelectedItem();
         if (!item) return;
 
@@ -1545,9 +1605,9 @@ export class TodayView {
         // 起始时间取详情中编辑的起始时间（默认当前时刻）；结束时间取详情中编辑的结束时间
         this.runningTask = {
             inboxId: item.id,
-            start: this.detailStart,
+            start: range?.start ?? this.detailStart,
             dayKey,
-            end: this.detailEnd,
+            end: range?.end ?? this.detailEnd,
         };
         // 写回插件数据源，随 saveAll 一起持久化
         this.pdcaRepo.setRunningTask(this.runningTask);
@@ -1653,6 +1713,21 @@ export class TodayView {
         void this.refresh();
     }
 
+    /**
+     * 额外任务方框中的「开始任务」：按方框内填写的时间区间开始执行左侧选中的任务，
+     * 随后退出新增模式并切到「当天任务」选项卡（可直接点击「完成」写入执行记录）。
+     */
+    private startUnplannedTask(): void {
+        const item = this.getSelectedItem();
+        if (!item) return;
+
+        const start = this.addUnplannedStart;
+        const end = Math.min(24 * 60, start + this.addUnplannedDuration);
+        this.addUnplannedMode = false;
+        this.rightTab = 'dayTasks';
+        this.startRunningTask({ start, end });
+    }
+
     /** 确认新增非计划事件：用左侧选中任务生成一条执行记录 */
     private async confirmAddUnplanned(): Promise<void> {
         const item = this.getSelectedItem();
@@ -1750,9 +1825,36 @@ export class TodayView {
         await this.refresh();
     }
 
+    /**
+     * 渲染详情方框中的任务名称行：左侧标题 + 右侧的「已完成」状态标记。
+     * 已完成时显示放大的勾选图标；未完成时显示可点击的空勾选框，用于手动标记当天任务为已完成。
+     * 判定规则与左侧当天任务卡片一致。
+     */
+    private renderDetailNameRow(container: HTMLElement, title: string, inboxId?: string): void {
+        const row = container.createDiv({ cls: 'today-detail-name-row' });
+        row.createDiv({ cls: 'today-detail-name', text: title });
+        if (!inboxId) return;
+
+        if (this.isDayTaskDone(inboxId)) {
+            const doneIcon = row.createSpan({ cls: 'today-detail-done' });
+            setIcon(doneIcon, 'check-circle');
+            doneIcon.setAttribute('aria-label', t('today.taskDone'));
+            return;
+        }
+
+        // 未完成：空勾选框，点击后手动标记为「已完成」
+        const toggleIcon = row.createSpan({ cls: 'today-detail-done-toggle' });
+        setIcon(toggleIcon, 'square');
+        toggleIcon.setAttribute('aria-label', t('today.markDone'));
+        toggleIcon.onclick = (e) => {
+            e.stopPropagation();
+            void this.markTaskDone(inboxId);
+        };
+    }
+
     /** 展示收集盒任务详情（showTimeEditor 为 true 时显示可编辑的待执行时间区间） */
     private renderItemDetail(body: HTMLElement, item: InboxItem, showTimeEditor = true) {
-        body.createDiv({ cls: 'today-detail-name', text: item.title });
+        this.renderDetailNameRow(body, item.title, item.id);
         body.createDiv({ cls: 'today-detail-desc' })
             .setText(item.description || t('today.noDescription'));
 
@@ -1789,7 +1891,7 @@ export class TodayView {
 
     /** 展示时间轴事件详情 */
     private renderEventDetail(body: HTMLElement, ev: EventBlock) {
-        body.createDiv({ cls: 'today-detail-name', text: ev.title });
+        this.renderDetailNameRow(body, ev.title, ev.inboxId);
 
         const row = body.createDiv({ cls: 'today-detail-row' });
         row.createSpan({ cls: 'today-detail-label', text: `${t('today.timeRange')}:` });
@@ -1823,7 +1925,7 @@ export class TodayView {
         const item = ex.inboxId
             ? this.inboxData.items.find(i => i.id === ex.inboxId && !i.removed)
             : undefined;
-        body.createDiv({ cls: 'today-detail-name', text: item?.title ?? t('today.statusAdded') });
+        this.renderDetailNameRow(body, item?.title ?? t('today.statusAdded'), item?.id);
 
         const row = body.createDiv({ cls: 'today-detail-row' });
         row.createSpan({ cls: 'today-detail-label', text: `${t('today.timeRange')}:` });

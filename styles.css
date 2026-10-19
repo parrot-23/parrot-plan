@@ -4586,6 +4586,49 @@
     border-bottom: 1px solid var(--background-modifier-border);
 }
 
+/* 任务详情方框中的任务名称行：标题 + 右侧「已完成」标记 */
+.today-detail-name-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.today-detail-name-row .today-detail-name {
+    flex: 1;
+    min-width: 0;
+}
+
+/* 「已完成」标记（较左侧任务卡片放大显示） */
+.today-detail-done {
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    color: var(--text-success, var(--interactive-accent));
+}
+
+.today-detail-done svg {
+    width: 24px;
+    height: 24px;
+}
+
+/* 未完成时的空勾选框：可点击手动标记当天任务为已完成 */
+.today-detail-done-toggle {
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    color: var(--text-faint);
+    cursor: pointer;
+}
+
+.today-detail-done-toggle:hover {
+    color: var(--text-success, var(--interactive-accent));
+}
+
+.today-detail-done-toggle svg {
+    width: 24px;
+    height: 24px;
+}
+
 .today-detail-title {
     font-size: 14px;
     font-weight: 600;
@@ -4920,30 +4963,84 @@
     color: var(--text-muted);
 }
 
-/* 详情方框下方的操作按钮 */
+/* 方框底部操作按钮行：位于详情方框内底部，按钮从左到右排列 */
 .today-action-row {
     flex-shrink: 0;
     display: flex;
+    flex-direction: row;
+    align-items: center;
+    flex-wrap: wrap;
     gap: 10px;
+    padding: 12px 14px;
+    margin-top: auto;
+    border-top: 1px solid var(--background-modifier-border);
 }
 
-.today-action-btn {
-    flex: 1;
-    padding: 8px 12px;
+/* 单个操作按钮：5 行字体高的方块，图标居中、文字在下 */
+.today-action-block {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    /* 高度 ≈ 5 行文字，宽度与高度相同（方块） */
+    height: calc(5 * 1em * var(--line-height-normal, 1.5));
+    aspect-ratio: 1 / 1;
+    padding: 8px;
     border-radius: 8px;
-    border: 1px solid var(--interactive-accent);
+    border: 1px solid var(--background-modifier-border);
+    background: var(--background-primary);
+    color: var(--text-muted);
+    cursor: pointer;
+    box-shadow: none;
+}
+
+.today-action-block:hover:not(:disabled) {
+    border-color: var(--interactive-accent);
+    color: var(--text-normal);
+}
+
+.today-action-block-icon {
+    display: inline-flex;
+    align-items: center;
+}
+
+.today-action-block-icon svg {
+    width: 24px;
+    height: 24px;
+}
+
+.today-action-block-label {
+    font-size: 12px;
+    line-height: 1.2;
+    text-align: center;
+    white-space: nowrap;
+}
+
+/* 主操作（完成 / 确认新增 / 开始任务） */
+.today-action-block.is-cta {
+    border-color: var(--interactive-accent);
     background: var(--interactive-accent);
     color: var(--text-on-accent);
-    font-size: 13px;
-    font-weight: 600;
-    cursor: pointer;
 }
 
-.today-action-btn:hover:not(:disabled) {
+.today-action-block.is-cta:hover:not(:disabled) {
     background: var(--interactive-accent-hover);
+    color: var(--text-on-accent);
 }
 
-.today-action-btn:disabled {
+/* 风险操作（中断 / 删除） */
+.today-action-block.is-warning {
+    border-color: var(--color-red);
+    color: var(--color-red);
+}
+
+.today-action-block.is-warning:hover:not(:disabled) {
+    background: var(--color-red);
+    color: var(--text-on-accent);
+}
+
+.today-action-block:disabled {
     opacity: 0.5;
     cursor: not-allowed;
 }
