@@ -215,6 +215,7 @@ export const zh = {
 
     // 收集篮子
     'basket.title': '收集篮子',
+    'basket.pendingCount': '未处理数：{count}',
     'basket.empty': '暂无收集内容',
     'basket.addPlaceholder': '输入要收集的内容',
     'basket.add': '添加',
@@ -301,12 +302,14 @@ export const zh = {
     'today.habitTaskListTitle': '习惯任务',
     'today.taskEst': '预估时长：{duration}',
     'today.taskExec': '已执行时长：{duration}',
-    'today.taskDone': '已完成',
+    'today.unmarkDone': '标记为未完成',
     'today.markDone': '标记当天任务为已完成',
     'today.tabToday': '今日情况',
     'today.tabDayTasks': '当天任务',
     'today.tabExtraTasks': '额外任务',
     'today.tabWeek': '本周情况',
+    'today.tabSections': '板块信息',
+    'today.noSections': '该任务暂无板块信息',
     'today.weekCategoryDurationTitle': '本周各分类已执行时长',
     'today.weekCategoryDurationEmpty': '本周暂无执行记录',
 

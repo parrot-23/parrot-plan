@@ -97,8 +97,8 @@ export class TodayView {
     private inboxRepo?: InboxRepo;
     /** 进行中任务变化回调（开始/完成/中断时通知宿主刷新导航栏卡片） */
     private onRunningTaskChange?: () => void;
-    /** 右侧内容区当前选项卡：今日情况 / 当天任务 / 额外任务 / 本周情况 */
-    private rightTab: 'today' | 'dayTasks' | 'extraTasks' | 'week' = 'today';
+    /** 右侧内容区当前选项卡：今日情况 / 当天任务 / 额外任务 / 本周情况 / 板块信息 */
+    private rightTab: 'today' | 'dayTasks' | 'extraTasks' | 'week' | 'sections' = 'today';
 
     constructor(
         app: App,
@@ -183,13 +183,14 @@ export class TodayView {
         this.renderRightTabContent(centerPanel);
     }
 
-    /** 右侧内容区选项卡行：今日情况 / 当天任务 / 额外任务 / 本周情况 */
+    /** 右侧内容区选项卡行：今日情况 / 当天任务 / 额外任务 / 本周情况 / 板块信息 */
     private renderRightTabs(panel: HTMLElement): void {
-        const tabs: { id: 'today' | 'dayTasks' | 'extraTasks' | 'week'; labelKey: Parameters<typeof t>[0] }[] = [
+        const tabs: { id: 'today' | 'dayTasks' | 'extraTasks' | 'week' | 'sections'; labelKey: Parameters<typeof t>[0] }[] = [
             { id: 'today', labelKey: 'today.tabToday' },
             { id: 'dayTasks', labelKey: 'today.tabDayTasks' },
             { id: 'extraTasks', labelKey: 'today.tabExtraTasks' },
             { id: 'week', labelKey: 'today.tabWeek' },
+            { id: 'sections', labelKey: 'today.tabSections' },
         ];
         const row = panel.createDiv({ cls: 'today-right-tabs' });
         for (const tab of tabs) {
@@ -229,6 +230,11 @@ export class TodayView {
             // 本周情况：本周各分类已执行时长 + 周目标卡片方框
             this.renderWeekCategoryDurationBox(panel);
             this.renderWeekGoalBox(panel);
+            return;
+        }
+        if (this.rightTab === 'sections') {
+            // 板块信息：单独方框展示当前任务的板块卡片
+            this.renderSectionsBox(panel);
             return;
         }
         // 今日情况：今日各分类已执行时长 + 今日任务占比
@@ -474,6 +480,9 @@ export class TodayView {
      * 预估时长取自当天的计划事件；已执行时长取当天执行记录中匹配该事件 / 任务的累计时长。
      */
     private isDayTaskDone(inboxId: string): boolean {
+        // 手动标记优先：标记为未完成时，即使已执行时长达到预估也不显示已完成
+        const item = this.inboxData.items.find(i => i.id === inboxId && !i.removed);
+        if (item && (item.undoneDayKeys ?? []).includes(this.getViewDayInfo().dayKey)) return false;
         // 手动标记为已完成（点击详情中的勾选按钮）
         if (this.isManuallyDone(inboxId)) return true;
 
@@ -500,13 +509,22 @@ export class TodayView {
         return (item.doneDayKeys ?? []).includes(this.getViewDayInfo().dayKey);
     }
 
-    /** 手动标记当前任务为当前查看日期的「已完成」，并保存刷新 */
-    private async markTaskDone(inboxId: string): Promise<void> {
+    /** 手动标记当前查看日期的完成状态：done=true 标记为已完成，false 标记为未完成 */
+    private async markTaskDayState(inboxId: string, done: boolean): Promise<void> {
         const item = this.inboxData.items.find(i => i.id === inboxId && !i.removed);
         if (!item) return;
         const { dayKey } = this.getViewDayInfo();
-        const keys = item.doneDayKeys ?? [];
-        if (!keys.includes(dayKey)) item.doneDayKeys = [...keys, dayKey];
+
+        const doneKeys = item.doneDayKeys ?? [];
+        const undoneKeys = item.undoneDayKeys ?? [];
+        // 两个标记互斥：标记完成时清除未完成标记，反之亦然
+        item.doneDayKeys = done
+            ? (doneKeys.includes(dayKey) ? doneKeys : [...doneKeys, dayKey])
+            : doneKeys.filter(k => k !== dayKey);
+        item.undoneDayKeys = done
+            ? undoneKeys.filter(k => k !== dayKey)
+            : (undoneKeys.includes(dayKey) ? undoneKeys : [...undoneKeys, dayKey]);
+
         await this.save();
         await this.refresh();
     }
@@ -1827,7 +1845,8 @@ export class TodayView {
 
     /**
      * 渲染详情方框中的任务名称行：左侧标题 + 右侧的「已完成」状态标记。
-     * 已完成时显示放大的勾选图标；未完成时显示可点击的空勾选框，用于手动标记当天任务为已完成。
+     * 已完成时显示放大的勾选图标，点击可重新标记为未完成；
+     * 未完成时显示可点击的空勾选框，用于手动标记当天任务为已完成。
      * 判定规则与左侧当天任务卡片一致。
      */
     private renderDetailNameRow(container: HTMLElement, title: string, inboxId?: string): void {
@@ -1838,7 +1857,11 @@ export class TodayView {
         if (this.isDayTaskDone(inboxId)) {
             const doneIcon = row.createSpan({ cls: 'today-detail-done' });
             setIcon(doneIcon, 'check-circle');
-            doneIcon.setAttribute('aria-label', t('today.taskDone'));
+            doneIcon.setAttribute('aria-label', t('today.unmarkDone'));
+            doneIcon.onclick = (e) => {
+                e.stopPropagation();
+                void this.markTaskDayState(inboxId, false);
+            };
             return;
         }
 
@@ -1848,7 +1871,7 @@ export class TodayView {
         toggleIcon.setAttribute('aria-label', t('today.markDone'));
         toggleIcon.onclick = (e) => {
             e.stopPropagation();
-            void this.markTaskDone(inboxId);
+            void this.markTaskDayState(inboxId, true);
         };
     }
 
@@ -1884,9 +1907,6 @@ export class TodayView {
             dot.setCssProps({ '--dot-color': cat.color });
             row.createSpan({ text: cat.label });
         }
-
-        // 当前任务拥有的板块卡片
-        this.renderDetailSections(body, item);
     }
 
     /** 展示时间轴事件详情 */
@@ -1915,8 +1935,6 @@ export class TodayView {
         if (sourceItem) {
             body.createDiv({ cls: 'today-detail-desc' })
                 .setText(sourceItem.description || t('today.noDescription'));
-            // 来源任务拥有的板块卡片
-            this.renderDetailSections(body, sourceItem);
         }
     }
 
@@ -1991,8 +2009,6 @@ export class TodayView {
         if (item) {
             body.createDiv({ cls: 'today-detail-desc' })
                 .setText(item.description || t('today.noDescription'));
-            // 来源任务拥有的板块卡片
-            this.renderDetailSections(body, item);
         }
     }
 
@@ -2015,7 +2031,57 @@ export class TodayView {
         return latest.id === ex.id;
     }
 
-    /** 在任务详情方框中渲染板块卡片（清单可勾选，其余只读，复用任务计划视图的卡片样式） */
+    /**
+     * 当前选中目标（进行中任务 / 时间轴事件 / 执行记录 / 左侧任务）的来源任务。
+     * 取自任务详情方框一致的优先级顺序。
+     */
+    private getDetailSourceItem(): InboxItem | undefined {
+        const findItem = (id?: string) => id
+            ? this.inboxData.items.find(i => i.id === id && !i.removed)
+            : undefined;
+
+        if (this.selectedRunningTask && this.runningTask) {
+            const runningItem = findItem(this.runningTask.inboxId);
+            if (runningItem) return runningItem;
+        }
+
+        const selectedEvent = this.getSelectedEvent();
+        if (selectedEvent) {
+            const evItem = findItem(selectedEvent.inboxId);
+            if (evItem) return evItem;
+        }
+
+        const selectedExec = this.selectedExecId
+            ? this.getExecutions().find(ex => ex.id === this.selectedExecId)
+            : undefined;
+        if (selectedExec) {
+            const execItem = findItem(selectedExec.inboxId);
+            if (execItem) return execItem;
+        }
+
+        return this.getSelectedItem();
+    }
+
+    /** 「板块信息」选项卡：单独用方框展示当前任务的板块卡片 */
+    private renderSectionsBox(panel: HTMLElement) {
+        const box = panel.createDiv({ cls: 'today-detail-box' });
+        const titleRow = box.createDiv({ cls: 'today-detail-title-row' });
+        titleRow.createDiv({ cls: 'today-detail-title', text: t('today.tabSections') });
+
+        const body = box.createDiv({ cls: 'today-detail-body' });
+        const item = this.getDetailSourceItem();
+        if (!item) {
+            body.createDiv({ cls: 'today-detail-empty', text: t('today.noSelection') });
+            return;
+        }
+        if (!item.sections || item.sections.length === 0) {
+            body.createDiv({ cls: 'today-detail-empty', text: t('today.noSections') });
+            return;
+        }
+        this.renderDetailSections(body, item);
+    }
+
+    /** 渲染任务板块卡片（清单可勾选，其余只读，复用任务计划视图的卡片样式） */
     private renderDetailSections(body: HTMLElement, item: InboxItem): void {
         const sections = item.sections;
         if (!sections || sections.length === 0) return;

@@ -123,8 +123,11 @@ export class OkrTaskPlanView {
         } else if (this.rightTab === 'overview') {
             // 「任务总览」选项卡：展示所有任务条目及其 OKR 进度、成果情况
             this.renderAllTasksOverview(contentPanel);
+        } else if (this.rightTab === 'basket') {
+            // 「收集篮子」选项卡：左为任务名称 + 未处理数 + 收集篮子面板，右为板块信息
+            this.renderBasketTab(contentPanel);
         } else {
-            // 「收集篮子」/「改进篮子」选项卡：内容暂留空
+            // 「改进篮子」选项卡：内容暂留空
             contentPanel.createDiv({ cls: 'task-plan-empty-pane' });
         }
 
@@ -479,6 +482,44 @@ export class OkrTaskPlanView {
     /** 板块类型对应的 Obsidian 原生图标名 */
     private sectionTypeIcon(type: Section['type']): string {
         return SECTION_TYPE_META[type].icon;
+    }
+
+    /**
+     * 「收集篮子」选项卡内容：左右结构。
+     * 左侧为当前任务的名称 + 未处理数（篮子中尚未处理的条目数）+ 收集篮子面板；
+     * 右侧为板块信息，每个板块单独一行、按顺序自上而下排列。
+     */
+    private renderBasketTab(container: HTMLElement): void {
+        const selectedId = this.inboxData.selectedId;
+        const item = selectedId
+            ? this.inboxData.items.find(i => i.id === selectedId && !i.removed)
+            : undefined;
+        if (!item) {
+            container.createDiv({ cls: 'task-plan-empty-pane' });
+            return;
+        }
+
+        const layout = container.createDiv({ cls: 'task-plan-basket-layout' });
+
+        // 左：任务名称标题 + 未处理数，其下为收集篮子面板
+        const left = layout.createDiv({ cls: 'task-plan-basket-left' });
+        const head = left.createDiv({ cls: 'task-plan-basket-head' });
+        head.createDiv({ cls: 'task-plan-basket-title', text: item.title });
+        const countRow = head.createDiv({ cls: 'task-plan-basket-count' });
+        setIcon(countRow.createSpan({ cls: 'task-plan-basket-count-icon' }), 'inbox');
+        countRow.createSpan({
+            text: t('basket.pendingCount', { count: (item.basket ?? []).length }),
+        });
+        this.renderBasketBox(left.createDiv({ cls: 'okr-basket-wrap' }));
+
+        // 右：板块信息（每个板块一个面板，垂直排列）
+        const right = layout.createDiv({ cls: 'task-plan-basket-right okr-basket-sections-area' });
+        const sectionsArea = right.createDiv({ cls: 'swimlane-section-area' });
+        const sectionsHeader = sectionsArea.createDiv({ cls: 'swimlane-section-area-header' });
+        sectionsHeader.createDiv({ cls: 'swimlane-section-area-title', text: t('projectPicture.sectionsTitle') });
+        this.renderAddSectionButton(sectionsHeader);
+        const sectionsBody = sectionsArea.createDiv({ cls: 'swimlane-section-area-body' });
+        this.renderSectionCards(sectionsBody);
     }
 
     /** 收集篮子方框：当前选中任务的收集内容（供 GTD 梳理阶段放置笔记） */

@@ -75,6 +75,8 @@ export interface InboxItem {
     assignedDayKeys?: string[];
     /** 已手动标记为「当天已完成」的日期列表（如 ['2026-10-19']） */
     doneDayKeys?: string[];
+    /** 已手动标记为「当天未完成」的日期列表（如 ['2026-10-19']），优先级高于预估/执行时长的自动判定 */
+    undoneDayKeys?: string[];
     /** 已从收集盒移除（不再显示，但数据保留，可查历史） */
     removed?: boolean;
     /** 板块：任务内部的结构化内容（可选，旧任务无此字段） */

@@ -3960,11 +3960,12 @@
     overflow-y: auto;
 }
 
-/* 右侧内容区选项卡行（今日情况 / 当天任务 / 额外任务） */
+/* 选项卡行：今日情况 / 当天任务 / 额外任务 / 本周情况 / 板块信息（宽度不足时换行） */
 .today-right-tabs {
     flex-shrink: 0;
     display: flex;
     flex-direction: row;
+    flex-wrap: wrap;
     gap: 6px;
     border-bottom: 1px solid var(--background-modifier-border);
     padding-bottom: 6px;
@@ -3980,6 +3981,7 @@
     cursor: pointer;
     font-size: 13px;
     font-weight: 600;
+    white-space: nowrap;
 }
 
 .today-right-tab-btn:hover {
@@ -4598,12 +4600,17 @@
     min-width: 0;
 }
 
-/* 「已完成」标记（较左侧任务卡片放大显示） */
+/* 「已完成」标记（较左侧任务卡片放大显示）：点击可重新标记为未完成 */
 .today-detail-done {
     flex-shrink: 0;
     display: inline-flex;
     align-items: center;
     color: var(--text-success, var(--interactive-accent));
+    cursor: pointer;
+}
+
+.today-detail-done:hover {
+    color: var(--text-faint);
 }
 
 .today-detail-done svg {

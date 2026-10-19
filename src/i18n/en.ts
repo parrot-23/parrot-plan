@@ -217,6 +217,7 @@ export const en: I18nMessages = {
 
     // Collection basket
     'basket.title': 'Collection Basket',
+    'basket.pendingCount': 'Unprocessed: {count}',
     'basket.empty': 'No collected items yet',
     'basket.addPlaceholder': 'Enter content to collect',
     'basket.add': 'Add',
@@ -303,12 +304,14 @@ export const en: I18nMessages = {
     'today.habitTaskListTitle': 'Habit tasks',
     'today.taskEst': 'Est.: {duration}',
     'today.taskExec': 'Executed: {duration}',
-    'today.taskDone': 'Completed',
+    'today.unmarkDone': 'Mark as not done',
     'today.markDone': 'Mark day task as completed',
     'today.tabToday': 'Today',
     'today.tabDayTasks': "Today's tasks",
     'today.tabExtraTasks': 'Extra tasks',
     'today.tabWeek': 'This week',
+    'today.tabSections': 'Sections',
+    'today.noSections': 'No sections for this task',
     'today.weekCategoryDurationTitle': 'Executed duration by category this week',
     'today.weekCategoryDurationEmpty': 'No executions this week',
 
