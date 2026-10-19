@@ -1,13 +1,14 @@
 // OKR 视图：左侧任务面板（与任务计划视图一致）+ 右侧 OKR 方框。
 // 右侧按「拆解型 / 周期型」两类展示当前选中任务的 OKR 条目卡片。
 import type { App } from 'obsidian';
-import { Notice } from 'obsidian';
+import { Notice, setIcon } from 'obsidian';
 
 import type { PlanCategoryData } from '../../shared/plan-category-manager';
 import type { InboxData, InboxItem, OkrCondition, OkrConditionItem, OkrConditionType, OkrPeriod, ExecutionRecord } from '../../datatypes/domain';
 import { OKR_CONDITION_META, OKR_GROUP_META, OKR_PERIOD_META } from '../../datatypes/domain';
 import type { InboxRepo } from '../../repos/inbox-repo';
 import { renderTaskPanel } from '../../shared/task-panel';
+import { TaskSearchModal } from '../../shared/task-search-modal';
 import { makePeriodKey } from '../../datatypes/card';
 import { t } from '../../i18n';
 
@@ -53,10 +54,21 @@ function makeItem(type: OkrConditionType, index: number): OkrConditionItem {
     };
 }
 
+/** 截止日期（YYYY-MM-DD）距今天的天数：正数表示未来，负数表示已过期 */
+function daysUntil(dueDate: string): number {
+    const [y, m, d] = dueDate.split('-').map(Number);
+    const due = new Date(y, (m ?? 1) - 1, d ?? 1);
+    const today = new Date();
+    due.setHours(0, 0, 0, 0);
+    today.setHours(0, 0, 0, 0);
+    return Math.round((due.getTime() - today.getTime()) / 86400000);
+}
+
 /**
  * OKR 视图：与 WorkbenchView 一致，通过 renderInto 渲染到指定容器。
  * 左侧复用任务面板，右侧为当前选中任务的 OKR 条目卡片。
  */
+
 export class OkrView {
     private app: App;
     private inboxData: InboxData;
@@ -70,6 +82,8 @@ export class OkrView {
     private addPanelCloseHandler?: (e: MouseEvent) => void;
     /** 执行记录访问器（用于统计当前任务的执行时长） */
     private getExecutions: () => ExecutionRecord[];
+    /** 处于编辑模式的里程碑卡片对应的任务 id（本次会话内保留，可来回切换） */
+    private milestoneEditIds = new Set<string>();
 
     constructor(
         app: App,
@@ -221,9 +235,9 @@ export class OkrView {
         this.renderOkrBox(panel);
     }
 
-    /** OKR 方框：标题栏（含「+」下拉）+ 条目卡片列表 */
+    /** OKR 进度：标题栏（含「+」下拉）+ 条目卡片列表（不再使用外框） */
     private renderOkrBox(panel: HTMLElement): void {
-        const area = panel.createDiv({ cls: 'swimlane-section-area okr-area' });
+        const area = panel.createDiv({ cls: 'okr-area' });
         const header = area.createDiv({ cls: 'swimlane-section-area-header' });
         header.createDiv({ cls: 'swimlane-section-area-title', text: t('okr.progressTitle') });
         this.renderAddButton(header);
@@ -241,7 +255,16 @@ export class OkrView {
             return;
         }
 
+        // 里程碑：合并渲染为一个「里程碑」列表卡片（标题 + 行末「+」+ 多个条目）
+        let milestoneRendered = false;
         for (const cond of conditions) {
+            if (cond.type === 'milestone') {
+                if (!milestoneRendered) {
+                    milestoneRendered = true;
+                    this.renderMilestoneList(body, item, conditions.filter(c => c.type === 'milestone'));
+                }
+                continue;
+            }
             this.renderEntryCard(body, item, cond);
         }
     }
@@ -337,7 +360,7 @@ export class OkrView {
 
         // 卡片主体：按类型渲染
         const body = card.createDiv({ cls: 'okr-entry-body' });
-        if (cond.type === 'milestone' || cond.type === 'outcome') {
+        if (cond.type === 'outcome') {
             this.renderChecklistBody(body, cond);
         } else if (cond.type === 'cumulative') {
             this.renderCumulativeBody(body, cond);
@@ -349,6 +372,209 @@ export class OkrView {
 
         // 维度信息：期望时间点 + 绑定子任务
         this.renderDimensions(card, item, cond);
+    }
+
+    /**
+     * 里程碑列表卡片：卡片即一个里程碑列表，分「正常模式」与「编辑模式」。
+     * - 正常模式（默认）：每个条目是一个方块信息（奖杯图标 / 名称 / x 天后（具体日期） / 关联任务），
+     *   固定宽度、从左到右排列并自动换行；卡片右上角为编辑图标。
+     * - 编辑模式：沿用原有显示方式（右上角「+」号 + 下方逐条可编辑的条目）。
+     * 右上角编辑图标可来回切换两种模式，状态在本次会话内保留。
+     */
+    private renderMilestoneList(container: HTMLElement, item: InboxItem, conds: OkrCondition[]): void {
+        const card = container.createDiv({ cls: 'okr-entry-card okr-entry-milestone' });
+        const editing = this.milestoneEditIds.has(item.id);
+
+        // 标题行：标题 + 右侧按钮（编辑模式：「+」在编辑图标左侧；「+」的自动外边距由编辑图标承担）
+        const head = card.createDiv({ cls: 'okr-entry-head' });
+        head.createSpan({ cls: 'okr-entry-type', text: t('okr.typeMilestone') });
+
+        if (editing) {
+            const addBtn = head.createEl('button', { cls: 'okr-milestone-add-btn', text: '+' });
+            addBtn.onclick = (e) => {
+                e.stopPropagation();
+                void this.addEntry('milestone');
+            };
+        }
+
+        const editBtn = head.createEl('button', {
+            cls: `okr-milestone-edit-btn${editing ? ' is-active' : ''}`,
+            attr: { title: t('okr.toggleMilestoneEdit') },
+        });
+        setIcon(editBtn, 'pencil');
+        editBtn.onclick = (e) => {
+            e.stopPropagation();
+            if (editing) this.milestoneEditIds.delete(item.id);
+            else this.milestoneEditIds.add(item.id);
+            this.refresh();
+        };
+
+        if (editing) {
+            // 条目列表（逐条可编辑）
+            const list = card.createDiv({ cls: 'okr-milestone-list' });
+            for (const cond of conds) {
+                this.renderMilestoneItem(list, item, cond);
+            }
+            return;
+        }
+
+        // 正常模式：方块信息横向排列、自动换行
+        const grid = card.createDiv({ cls: 'okr-milestone-grid' });
+        for (const cond of conds) {
+            this.renderMilestoneTile(grid, item, cond);
+        }
+    }
+
+    /**
+     * 里程碑条目（正常模式）：方块信息，内容从上到下依次为
+     * 奖杯图标 / 名称 / x 天后（具体日期） / 关联任务（只读标签）。
+     */
+    private renderMilestoneTile(container: HTMLElement, item: InboxItem, cond: OkrCondition): void {
+        const tile = container.createDiv({ cls: 'okr-milestone-tile' });
+
+        tile.createDiv({ cls: 'okr-milestone-tile-icon', text: '🏆' });
+
+        tile.createDiv({ cls: 'okr-milestone-tile-name', text: cond.title ?? '' });
+
+        if (cond.dueDate) {
+            const diffDays = daysUntil(cond.dueDate);
+            tile.createDiv({
+                cls: 'okr-milestone-tile-deadline',
+                text: diffDays >= 0
+                    ? t('okr.deadlineDaysWithDate', { days: diffDays, date: cond.dueDate })
+                    : t('okr.deadlineOverdueWithDate', { days: Math.abs(diffDays), date: cond.dueDate }),
+            });
+        } else {
+            tile.createDiv({ cls: 'okr-milestone-tile-deadline', text: t('okr.deadlineUnset') });
+        }
+
+        // 关联任务：只读标签（增删需进入编辑模式）
+        const children = this.inboxData.items.filter(i => i.parentId === item.id && !i.removed);
+        const linkedIds = cond.subtaskIds ?? (cond.subtaskId ? [cond.subtaskId] : []);
+        const linked = linkedIds
+            .map(id => children.find(c => c.id === id))
+            .filter((c): c is InboxItem => !!c);
+        if (linked.length > 0) {
+            const tasks = tile.createDiv({ cls: 'okr-milestone-tile-tasks' });
+            for (const child of linked) {
+                const chip = tasks.createSpan({ cls: 'okr-milestone-linked-task' });
+                // 标签前显示该任务当前状态图标（与左侧任务面板的图标规则一致）
+                const isHabit = child.taskType === 'habit' || child.habitTimeEnabled === true;
+                const status = child.status ?? 'notStarted';
+                const statusMeta: Record<string, { icon: string }> = {
+                    notStarted: { icon: 'circle-dot-dashed' },
+                    inProgress: { icon: 'zap' },
+                    done: { icon: 'check' },
+                };
+                const meta = isHabit ? { icon: 'rotate-cw-square' } : (statusMeta[status] ?? statusMeta.notStarted);
+                const statusEl = chip.createSpan({ cls: `inbox-item-status is-${isHabit ? 'habit' : status}` });
+                const iconEl = statusEl.createSpan({ cls: 'inbox-item-status-icon' });
+                setIcon(iconEl, meta.icon);
+
+                chip.createSpan({ text: child.title });
+            }
+        }
+    }
+
+    /**
+     * 里程碑条目：奖杯位于条目最前、纵向占两行高度；
+     * 其右侧为纵向两行——第一行「条目名称 + 删除」；第二行「截止时间 + 关联任务」。
+     * 「关联任务」按钮点击弹出公共的任务搜索弹窗，输入关键词查找并选择子任务。
+     */
+    private renderMilestoneItem(container: HTMLElement, item: InboxItem, cond: OkrCondition): void {
+        const entry = container.createDiv({ cls: 'okr-milestone-item' });
+
+        // 奖杯置于条目最前，占两行高度
+        const body = entry.createDiv({ cls: 'okr-milestone-body' });
+        const icon = body.createSpan({ cls: 'okr-milestone-icon' });
+        setIcon(icon, 'trophy');
+
+        // 奖杯右侧的两行内容
+        const content = body.createDiv({ cls: 'okr-milestone-content' });
+
+        // 第一行：条目名称 + 删除
+        const head = content.createDiv({ cls: 'okr-entry-head' });
+
+        const titleInput = head.createEl('input', {
+            type: 'text',
+            cls: 'okr-entry-title',
+            attr: { placeholder: t('okr.entryTitlePlaceholder') },
+        });
+        titleInput.value = cond.title ?? '';
+        titleInput.onchange = () => {
+            cond.title = titleInput.value.trim();
+            void this.save();
+        };
+
+        const delBtn = head.createEl('button', { cls: 'okr-entry-del', text: '✕' });
+        delBtn.onclick = (e) => {
+            e.stopPropagation();
+            void this.deleteEntry(item, cond.id);
+        };
+
+        // 第二行：截止时间 + 关联任务（与第一行之间不设分割线）
+        const row = content.createDiv({ cls: 'okr-entry-row' });
+
+        // 截止时间文案：已设置时显示为「截止时间：x 天后」（已过期显示为已逾期 x 天）
+        const formatDeadline = (dueDate?: string): string => {
+            if (!dueDate) return t('okr.deadline');
+            const diffDays = daysUntil(dueDate);
+            return diffDays >= 0
+                ? t('okr.deadlineDays', { days: diffDays })
+                : t('okr.deadlineOverdue', { days: Math.abs(diffDays) });
+        };
+
+        const dateLabel = row.createSpan({ cls: 'okr-entry-dim-label', text: formatDeadline(cond.dueDate) });
+        const date = row.createEl('input', { type: 'date', cls: 'okr-entry-date' });
+        date.value = cond.dueDate ?? '';
+        date.onchange = () => {
+            cond.dueDate = date.value || undefined;
+            dateLabel.setText(formatDeadline(cond.dueDate));
+            void this.save();
+        };
+
+        // 关联任务：可关联多个子任务，已关联的任务依次显示在「关联任务」按钮右侧
+        const children = this.inboxData.items.filter(i => i.parentId === item.id && !i.removed);
+        const linkedIds = cond.subtaskIds ?? (cond.subtaskId ? [cond.subtaskId] : []);
+
+        const linkBtn = row.createEl('button', {
+            cls: 'okr-milestone-link-btn',
+            text: t('okr.linkTask'),
+        });
+        linkBtn.onclick = (e) => {
+            e.stopPropagation();
+            new TaskSearchModal(
+                this.app,
+                children.map(c => ({ id: c.id, title: c.title })),
+                {
+                    title: t('okr.linkTask'),
+                    placeholder: t('okr.linkTaskSearchPlaceholder'),
+                    empty: t('okr.linkTaskSearchEmpty'),
+                },
+                (id) => {
+                    if (!cond.subtaskIds) cond.subtaskIds = [...linkedIds];
+                    if (!cond.subtaskIds.includes(id)) cond.subtaskIds.push(id);
+                    cond.subtaskId = undefined;
+                    void this.save().then(() => this.refresh());
+                },
+            ).open();
+        };
+
+        // 已关联的任务（显示在「关联任务」按钮之后；标签末尾「✕」可取消该关联）
+        for (const linkedId of linkedIds) {
+            const child = children.find(c => c.id === linkedId);
+            if (!child) continue;
+            const chip = row.createSpan({ cls: 'okr-milestone-linked-task' });
+            chip.createSpan({ text: child.title });
+            const removeBtn = chip.createSpan({ cls: 'okr-milestone-linked-task-del', text: '✕' });
+            removeBtn.onclick = (e) => {
+                e.stopPropagation();
+                const rest = linkedIds.filter(id => id !== linkedId);
+                cond.subtaskIds = rest.length > 0 ? rest : undefined;
+                cond.subtaskId = undefined;
+                void this.save().then(() => this.refresh());
+            };
+        }
     }
 
     /**

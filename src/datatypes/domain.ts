@@ -190,8 +190,10 @@ export interface OkrCondition {
     records?: OkrRecord[];
     /** 期望时间点（维度信息，格式 YYYY-MM-DD） */
     dueDate?: string;
-    /** 绑定的子任务 id（维度信息） */
+    /** 绑定的子任务 id（维度信息，单个） */
     subtaskId?: string;
+    /** 绑定的子任务 id 列表（里程碑条目可关联多个子任务） */
+    subtaskIds?: string[];
 }
 
 /**
@@ -266,6 +268,9 @@ export function migrateOkrConditions(raw: unknown): OkrCondition[] {
         }
         if (typeof c.dueDate === 'string') cond.dueDate = c.dueDate;
         if (typeof c.subtaskId === 'string') cond.subtaskId = c.subtaskId;
+        if (Array.isArray(c.subtaskIds)) {
+            cond.subtaskIds = c.subtaskIds.filter((id): id is string => typeof id === 'string');
+        }
         result.push(cond);
     }
     return result;

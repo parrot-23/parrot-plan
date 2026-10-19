@@ -5683,6 +5683,15 @@
     background: var(--background-modifier-hover);
 }
 
+/* OKR 进度区域：不再使用外框，仅保留标题栏 + 条目卡片列表 */
+.okr-area {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+    margin-top: 16px;
+}
+
 /* ===== OKR 视图：条目卡片 ===== */
 /* 「+」下拉面板：按大类分组 */
 .okr-add-panel {
@@ -5704,15 +5713,15 @@
     gap: 10px;
 }
 
-/* 单条 OKR 条目卡片 */
+/* 单条 OKR 条目卡片：外观与「收集篮子」方框一致 */
 .okr-entry-card {
     display: flex;
     flex-direction: column;
     gap: 8px;
-    padding: 10px 12px;
+    padding: 12px;
     border: 1px solid var(--background-modifier-border);
     border-radius: 8px;
-    background: var(--background-primary);
+    background: var(--background-secondary);
     box-sizing: border-box;
 }
 
@@ -5827,6 +5836,233 @@
 
 .okr-entry-date {
     font-size: 12px;
+}
+
+/* 里程碑卡片：奖杯在条目最前、纵向占两行高度；名称与截止时间位于其右侧 */
+.okr-milestone-body {
+    display: flex;
+    flex-direction: row;
+    align-items: stretch;
+    gap: 10px;
+}
+
+.okr-milestone-content {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.okr-milestone-icon {
+    align-self: stretch;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--interactive-accent);
+}
+
+.okr-milestone-icon svg {
+    width: 34px;
+    height: 34px;
+}
+
+/* 里程碑列表：卡片内的条目列表 */
+.okr-milestone-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.okr-milestone-item {
+    display: flex;
+    flex-direction: column;
+}
+
+/* 里程碑标题行末尾的「+」按钮（仅编辑模式显示；由编辑图标占用左侧自动外边距） */
+.okr-milestone-add-btn {
+    flex-shrink: 0;
+    width: 24px;
+    height: 24px;
+    padding: 0;
+    border-radius: 6px;
+    border: none;
+    background: var(--interactive-accent);
+    color: var(--text-on-accent);
+    cursor: pointer;
+    font-size: 16px;
+    line-height: 1;
+}
+
+/* 里程碑卡片右上角的编辑图标（可来回切换正常 / 编辑模式） */
+.okr-milestone-edit-btn {
+    margin-left: auto;
+    flex-shrink: 0;
+    width: 24px;
+    height: 24px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    border-radius: 6px;
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+}
+
+.okr-milestone-edit-btn:hover {
+    background: var(--background-modifier-hover);
+    color: var(--text-normal);
+}
+
+.okr-milestone-edit-btn.is-active {
+    background: var(--interactive-accent);
+    color: var(--text-on-accent);
+}
+
+/* 里程碑正常模式：方块信息横向排列、自动换行 */
+.okr-milestone-grid {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.okr-milestone-tile {
+    /* 宽度由 150px 微调至 168px，保证「x 天后（具体日期）」单行显示 */
+    width: 168px;
+    min-height: 96px;
+    box-sizing: border-box;
+    /* 顶部留白在 10px 基础上再加 6px */
+    padding: 16px 10px 10px;
+    border-radius: 8px;
+    border: 1px solid var(--background-modifier-border);
+    background: var(--background-primary);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 6px;
+}
+
+/* 🏆 图标（字号为原 22px 图标的两倍） */
+.okr-milestone-tile-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 44px;
+    line-height: 1;
+}
+
+.okr-milestone-tile-name {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-normal);
+    word-break: break-word;
+}
+
+.okr-milestone-tile-deadline {
+    font-size: 12px;
+    color: var(--text-muted);
+    /* 「x 天后（具体日期）」保持单行显示，不换行 */
+    white-space: nowrap;
+}
+
+.okr-milestone-tile-tasks {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 4px;
+}
+
+/* 方块内任务标签中的状态图标：沿用左侧任务面板样式，仅取消行末自动外边距 */
+.okr-milestone-tile-tasks .inbox-item-status {
+    margin-left: 0;
+}
+
+/* 里程碑卡片：第二行的「关联任务」按钮 */
+.okr-milestone-link-btn {
+    flex-shrink: 0;
+    max-width: 160px;
+    padding: 4px 10px;
+    border-radius: 6px;
+    border: 1px solid var(--background-modifier-border);
+    background: var(--background-primary);
+    color: var(--text-normal);
+    font-size: 12px;
+    cursor: pointer;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.okr-milestone-link-btn:hover {
+    background: var(--background-modifier-hover);
+}
+
+/* 里程碑条目：已关联的任务（显示在「关联任务」按钮之后） */
+.okr-milestone-linked-task {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    flex-shrink: 0;
+    padding: 2px 8px;
+    border-radius: 10px;
+    border: 1px solid var(--background-modifier-border);
+    background: var(--background-primary);
+    font-size: 12px;
+    color: var(--text-normal);
+    white-space: nowrap;
+}
+
+/* 已关联任务标签末尾的「✕」：点击取消该关联 */
+.okr-milestone-linked-task-del {
+    display: inline-flex;
+    align-items: center;
+    cursor: pointer;
+    font-size: 11px;
+    line-height: 1;
+    color: var(--text-faint);
+}
+
+.okr-milestone-linked-task-del:hover {
+    color: var(--text-error);
+}
+
+/* ===== 任务搜索弹窗（shared 公共组件） ===== */
+.task-search-modal-input {
+    width: 100%;
+    margin-bottom: 8px;
+}
+
+.task-search-modal-list {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    max-height: 320px;
+    overflow-y: auto;
+}
+
+.task-search-modal-item {
+    padding: 8px 12px;
+    border-radius: 6px;
+    border: 1px solid var(--background-modifier-border);
+    background: var(--background-primary);
+    font-size: 13px;
+    cursor: pointer;
+}
+
+.task-search-modal-item:hover {
+    background: var(--background-modifier-hover);
+}
+
+.task-search-modal-empty {
+    padding: 8px 4px;
+    font-size: 13px;
+    color: var(--text-muted);
 }
 
 /* 打卡状态 */
