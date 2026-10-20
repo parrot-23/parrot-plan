@@ -825,9 +825,20 @@ export class OkrTaskPlanView {
             return;
         }
 
+        // 按任务聚合执行时长（分钟），用于每行的「总执行时长」卡片
+        const minutesByTask = new Map<string, number>();
+        for (const ex of this.getExecutions()) {
+            if (!ex.inboxId) continue;
+            const minutes = Math.max(0, (ex.end ?? ex.start) - ex.start);
+            minutesByTask.set(ex.inboxId, (minutesByTask.get(ex.inboxId) ?? 0) + minutes);
+        }
+
         const list = area.createDiv({ cls: 'task-plan-overview-list' });
         for (const { item, depth } of ordered) {
-            const row = list.createDiv({ cls: 'task-plan-overview-row' });
+            // 每行：任务条目卡片 + 总执行时长卡片（两者样式一致，横向排列）
+            const rowWrap = list.createDiv({ cls: 'task-plan-overview-row-wrap' });
+
+            const row = rowWrap.createDiv({ cls: 'task-plan-overview-row' });
             row.style.setProperty('--overview-depth', String(depth));
 
             // 任务条目（标题）
@@ -840,40 +851,48 @@ export class OkrTaskPlanView {
 
             if (conditions.length === 0) {
                 detail.createDiv({ cls: 'task-plan-overview-empty', text: t('taskPlan.overviewNoOkr') });
-                continue;
+            } else {
+                // 累积：当前值 / 目标（与 OKR 进度方框一致，当前值暂为 0）
+                const cumulativeConds = conditions.filter(c => c.type === 'cumulative');
+                if (cumulativeConds.length > 0) {
+                    const line = detail.createDiv({ cls: 'task-plan-overview-line' });
+                    line.createSpan({
+                        cls: 'task-plan-overview-label',
+                        text: t(OKR_CONDITION_META.cumulative.labelKey as Parameters<typeof t>[0]),
+                    });
+                    const unit = t(OKR_CONDITION_META.cumulative.unitKey as Parameters<typeof t>[0]);
+                    const targetSum = cumulativeConds.reduce((sum, c) => sum + (c.target || 0), 0);
+                    line.createSpan({ cls: 'task-plan-overview-value', text: `0/${targetSum} ${unit}` });
+                }
+
+                // 成果 / 里程碑：已完成数 / 总数（按清单行统计，旧数据无清单行时按条目统计）
+                const outcomeConds = conditions.filter(c => c.type === 'outcome' || c.type === 'milestone');
+                if (outcomeConds.length > 0) {
+                    const line = detail.createDiv({ cls: 'task-plan-overview-line' });
+                    line.createSpan({
+                        cls: 'task-plan-overview-label',
+                        text: t(OKR_CONDITION_META.outcome.labelKey as Parameters<typeof t>[0]),
+                    });
+                    const rows = outcomeConds.reduce<OkrConditionItem[]>((acc, c) => acc.concat(c.items ?? []), []);
+                    const doneCount = rows.length > 0
+                        ? rows.filter(it => it.done).length
+                        : outcomeConds.filter(c => c.done).length;
+                    const totalCount = rows.length > 0 ? rows.length : outcomeConds.length;
+                    line.createSpan({
+                        cls: 'task-plan-overview-value',
+                        text: `${doneCount}/${totalCount}`,
+                    });
+                }
             }
 
-            // 累积：当前值 / 目标（与 OKR 进度方框一致，当前值暂为 0）
-            const cumulativeConds = conditions.filter(c => c.type === 'cumulative');
-            if (cumulativeConds.length > 0) {
-                const line = detail.createDiv({ cls: 'task-plan-overview-line' });
-                line.createSpan({
-                    cls: 'task-plan-overview-label',
-                    text: t(OKR_CONDITION_META.cumulative.labelKey as Parameters<typeof t>[0]),
-                });
-                const unit = t(OKR_CONDITION_META.cumulative.unitKey as Parameters<typeof t>[0]);
-                const targetSum = cumulativeConds.reduce((sum, c) => sum + (c.target || 0), 0);
-                line.createSpan({ cls: 'task-plan-overview-value', text: `0/${targetSum} ${unit}` });
-            }
-
-            // 成果 / 里程碑：已完成数 / 总数（按清单行统计，旧数据无清单行时按条目统计）
-            const outcomeConds = conditions.filter(c => c.type === 'outcome' || c.type === 'milestone');
-            if (outcomeConds.length > 0) {
-                const line = detail.createDiv({ cls: 'task-plan-overview-line' });
-                line.createSpan({
-                    cls: 'task-plan-overview-label',
-                    text: t(OKR_CONDITION_META.outcome.labelKey as Parameters<typeof t>[0]),
-                });
-                const rows = outcomeConds.reduce<OkrConditionItem[]>((acc, c) => acc.concat(c.items ?? []), []);
-                const doneCount = rows.length > 0
-                    ? rows.filter(it => it.done).length
-                    : outcomeConds.filter(c => c.done).length;
-                const totalCount = rows.length > 0 ? rows.length : outcomeConds.length;
-                line.createSpan({
-                    cls: 'task-plan-overview-value',
-                    text: `${doneCount}/${totalCount}`,
-                });
-            }
+            // 总执行时长卡片（样式与任务条目卡片一致）
+            const durationCard = rowWrap.createDiv({ cls: 'task-plan-overview-row task-plan-overview-duration' });
+            durationCard.createDiv({ cls: 'task-plan-overview-item-title', text: t('taskPlan.statsTotalDuration') });
+            const total = Math.max(0, Math.round(minutesByTask.get(item.id) ?? 0));
+            durationCard.createDiv({
+                cls: 'task-plan-overview-value',
+                text: t('taskPlan.durationHourMinute', { hours: Math.floor(total / 60), minutes: total % 60 }),
+            });
         }
     }
 

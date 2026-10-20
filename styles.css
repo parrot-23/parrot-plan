@@ -3247,15 +3247,30 @@
     gap: 6px;
 }
 
+/* 每行：任务条目卡片（300px）+ 总执行时长卡片，横向排列并自动换行 */
+.task-plan-overview-row-wrap {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
 .task-plan-overview-row {
     display: flex;
     flex-direction: column;
     gap: 4px;
+    width: 300px;
+    box-sizing: border-box;
     padding: 8px 10px;
     padding-left: calc(10px + var(--overview-depth, 0) * 16px);
     border: 1px solid var(--background-modifier-border);
     border-radius: 8px;
     background: var(--background-secondary);
+}
+
+/* 总执行时长卡片：与任务条目卡片同样式，内容上下居中 */
+.task-plan-overview-duration {
+    justify-content: center;
+    gap: 6px;
 }
 
 .task-plan-overview-item-title {
