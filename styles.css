@@ -6060,6 +6060,14 @@
     color: var(--text-muted);
 }
 
+/* 记录卡正常模式的使用说明（位于记录总数上方） */
+.okr-record-hint {
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--text-faint);
+    margin-bottom: 8px;
+}
+
 .okr-record-empty {
     font-size: 12px;
     color: var(--text-muted);

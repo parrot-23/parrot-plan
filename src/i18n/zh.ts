@@ -184,6 +184,8 @@ export const zh = {
     'okr.recordFieldSelect': '选项',
     'okr.recordFieldNamePlaceholder': '字段名称',
     'okr.recordHeatmap': '热力图',
+    'okr.recordCardTitle': '记录卡',
+    'okr.recordCardHint': '记录卡用于定义表单：任务完成执行时会要求填写该表单，填写结果会记录在此处。',
     'okr.recordTotal': '记录总数：{count}',
     'okr.toggleRecordEdit': '编辑记录',
     'okr.recordFormTitle': '填写记录：{name}',

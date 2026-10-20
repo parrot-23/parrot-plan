@@ -186,6 +186,8 @@ export const en: I18nMessages = {
     'okr.recordFieldSelect': 'Select',
     'okr.recordFieldNamePlaceholder': 'Field name',
     'okr.recordHeatmap': 'Heatmap',
+    'okr.recordCardTitle': 'Record Card',
+    'okr.recordCardHint': 'The record card defines a form. When the task is completed, you will be asked to fill it in, and the results are recorded here.',
     'okr.recordTotal': 'Total records: {count}',
     'okr.toggleRecordEdit': 'Edit record',
     'okr.recordFormTitle': 'Fill record: {name}',

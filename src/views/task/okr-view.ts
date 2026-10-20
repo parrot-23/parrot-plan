@@ -4,13 +4,12 @@ import type { App } from 'obsidian';
 import { Notice, setIcon } from 'obsidian';
 
 import type { PlanCategoryData } from '../../shared/plan-category-manager';
-import type { InboxData, InboxItem, OkrCondition, OkrConditionItem, OkrConditionType, OkrPeriod, OkrRecordCard, OkrRecordFieldType, ExecutionRecord } from '../../datatypes/domain';
-import { OKR_CONDITION_META, OKR_GROUP_META, OKR_PERIOD_META, OKR_RECORD_FIELD_META } from '../../datatypes/domain';
+import type { InboxData, InboxItem, OkrCondition, OkrConditionItem, OkrConditionType, OkrPeriod, ExecutionRecord } from '../../datatypes/domain';
+import { OKR_CONDITION_META, OKR_GROUP_META, OKR_PERIOD_META } from '../../datatypes/domain';
 import type { InboxRepo } from '../../repos/inbox-repo';
 import { renderTaskPanel } from '../../shared/task-panel';
 import { TaskSearchModal } from '../../shared/task-search-modal';
 import { makePeriodKey } from '../../datatypes/card';
-import { getRecordStore } from '../../db/record-store';
 import { t } from '../../i18n';
 
 /** 生成条目 id */
@@ -44,14 +43,6 @@ function makeCondition(type: OkrConditionType, index: number): OkrCondition {
         cond.unit = '';
     }
     return cond;
-}
-
-/** 生成记录卡片（自定义表单设计，默认带一行字段） */
-function makeRecordCard(): OkrRecordCard {
-    return {
-        id: makeOkrId(),
-        fields: [{ id: makeItemId(), type: 'text', name: '' }],
-    };
 }
 
 /** 按类型生成清单行的默认内容（里程碑1 / 成果1） */
@@ -93,8 +84,6 @@ export class OkrView {
     private getExecutions: () => ExecutionRecord[];
     /** 处于编辑模式的里程碑卡片对应的任务 id（本次会话内保留，可来回切换） */
     private milestoneEditIds = new Set<string>();
-    /** 处于编辑模式的记录卡片对应的条目 id（本次会话内保留，可来回切换） */
-    private recordEditIds = new Set<string>();
     /** 右侧垂直选项卡：计划执行 / OKR 进度（默认 OKR 进度） */
     private rightTab: 'plan' | 'okrProgress' = 'okrProgress';
 
@@ -270,10 +259,9 @@ export class OkrView {
         // 「计划执行」选项卡：暂无内容
         if (this.rightTab === 'plan') return;
 
-        // 「OKR 进度」选项卡：统计信息方框 + 记录方框 + OKR 方框
+        // 「OKR 进度」选项卡：统计信息方框 + OKR 方框
         const statsWrap = panel.createDiv({ cls: 'okr-stats-wrap' });
         this.renderStatsBox(statsWrap);
-        await this.renderRecordBox(panel);
         this.renderOkrBox(panel);
     }
 
@@ -309,44 +297,6 @@ export class OkrView {
             }
             this.renderEntryCard(body, item, cond);
         }
-    }
-
-    /** 记录卡片：独立方框，标题「记录」+ 右上角编辑按钮（切换字段编辑） */
-    private async renderRecordBox(panel: HTMLElement): Promise<void> {
-        const area = panel.createDiv({ cls: 'swimlane-section-area okr-record-area' });
-        const header = area.createDiv({ cls: 'swimlane-section-area-header' });
-        header.createDiv({ cls: 'swimlane-section-area-title', text: t('okr.typeRecord') });
-
-        const editBtn = header.createEl('button', {
-            cls: 'okr-record-edit-btn',
-            attr: { title: t('okr.toggleRecordEdit') },
-        });
-        setIcon(editBtn, 'pencil');
-
-        const body = area.createDiv({ cls: 'okr-entry-list' });
-        const item = this.getSelectedItem();
-        if (!item) {
-            editBtn.disabled = true;
-            body.createDiv({ cls: 'swimlane-sections-empty', text: t('okr.noSelection') });
-            return;
-        }
-
-        // 记录方框即一张记录卡：无则自动初始化一张默认空卡片
-        if (!item.records || item.records.length === 0) {
-            item.records = [makeRecordCard()];
-        }
-        const recordCard = item.records[0];
-        const editing = this.recordEditIds.has(recordCard.id);
-
-        editBtn.toggleClass('is-active', editing);
-        editBtn.onclick = (e) => {
-            e.stopPropagation();
-            if (editing) this.recordEditIds.delete(recordCard.id);
-            else this.recordEditIds.add(recordCard.id);
-            this.refresh();
-        };
-
-        await this.renderRecordCard(body, recordCard, item);
     }
 
     /** 标题栏右上角「+」按钮：点击展开下拉面板（按大类分组列出条目类型） */
@@ -553,66 +503,6 @@ export class OkrView {
 
                 chip.createSpan({ text: child.title });
             }
-        }
-    }
-
-    /**
-     * 记录卡片内容：正常模式以表格展示当前任务的填写记录（日期 + 各字段值）；
-     * 编辑模式显示表单（字段类型 + 名称 + 删除）。
-     * 右上角编辑图标改由记录方框标题栏统一承载，此方法只渲染卡片主体，不再包裹卡片外框。
-     */
-    private async renderRecordCard(container: HTMLElement, recordCard: OkrRecordCard, item: InboxItem): Promise<void> {
-        const editing = this.recordEditIds.has(recordCard.id);
-
-        if (!editing) {
-            // 正常模式：仅显示记录总数
-            const entries = await getRecordStore(this.app).listEntriesByInbox(item.id);
-            container.createDiv({ cls: 'okr-record-total', text: t('okr.recordTotal', { count: entries.length }) });
-            return;
-        }
-
-        // 编辑模式：顶部「+」新增字段 + 表单设计，每行 = 字段类型 + 字段名称 + 删除
-        const addBtn = container.createEl('button', { cls: 'okr-record-add-btn', text: '+' });
-        addBtn.onclick = (e) => {
-            e.stopPropagation();
-            recordCard.fields.push({ id: makeItemId(), type: 'text', name: '' });
-            void this.save().then(() => this.refresh());
-        };
-
-        const form = container.createDiv({ cls: 'okr-record-form' });
-        for (const field of recordCard.fields) {
-            const row = form.createDiv({ cls: 'okr-record-field-row' });
-
-            const typeSelect = row.createEl('select', { cls: 'okr-record-field-type' });
-            for (const fieldType of Object.keys(OKR_RECORD_FIELD_META) as OkrRecordFieldType[]) {
-                const opt = typeSelect.createEl('option', {
-                    text: t(OKR_RECORD_FIELD_META[fieldType].labelKey as Parameters<typeof t>[0]),
-                    value: fieldType,
-                });
-                if (fieldType === field.type) opt.selected = true;
-            }
-            typeSelect.onchange = () => {
-                field.type = typeSelect.value as OkrRecordFieldType;
-                void this.save();
-            };
-
-            const nameInput = row.createEl('input', {
-                type: 'text',
-                cls: 'okr-record-field-name',
-                attr: { placeholder: t('okr.recordFieldNamePlaceholder') },
-            });
-            nameInput.value = field.name;
-            nameInput.onchange = () => {
-                field.name = nameInput.value.trim();
-                void this.save();
-            };
-
-            const delBtn = row.createEl('button', { cls: 'okr-entry-del', text: '✕' });
-            delBtn.onclick = (e) => {
-                e.stopPropagation();
-                recordCard.fields = recordCard.fields.filter(f => f.id !== field.id);
-                void this.save().then(() => this.refresh());
-            };
         }
     }
 

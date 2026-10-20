@@ -2,11 +2,25 @@ import type { App } from 'obsidian';
 import { Modal, Notice, Setting, setIcon } from 'obsidian';
 
 import type { PlanCategoryData } from '../../shared/plan-category-manager';
-import type { InboxData, InboxItem, Section, ChecklistData, FileData, BasketItem, ImprovementEntry, OkrConditionItem, TaskType, TaskStatus } from '../../datatypes/domain';
+import type { InboxData, InboxItem, Section, ChecklistData, FileData, BasketItem, ImprovementEntry, OkrConditionItem, OkrRecordCard, OkrRecordFieldType, TaskType, TaskStatus } from '../../datatypes/domain';
 import type { InboxRepo } from '../../repos/inbox-repo';
-import { SECTION_TYPE_META, OKR_CONDITION_META } from '../../datatypes/domain';
+import { SECTION_TYPE_META, OKR_CONDITION_META, OKR_RECORD_FIELD_META } from '../../datatypes/domain';
 import { renderTaskPanel, FilePathSuggest } from '../../shared/task-panel';
+import { getRecordStore } from '../../db/record-store';
 import { t } from '../../i18n';
+
+/** 生成记录卡片（自定义表单设计，默认带一行字段） */
+function makeRecordCard(): OkrRecordCard {
+    return {
+        id: `okr_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+        fields: [{ id: `okr_item_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`, type: 'text', name: '' }],
+    };
+}
+
+/** 生成记录卡字段 id */
+function makeRecordFieldId(): string {
+    return `okr_item_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+}
 
 /**
  * 任务 下的「任务计划」视图：左侧任务面板 + 右侧内容区（项目信息表单 + 已计划周数 + 板块信息）。
@@ -31,6 +45,8 @@ export class OkrTaskPlanView {
     private inboxRepo?: InboxRepo;
     /** 右侧垂直选项卡当前选中项（刷新后保持不变） */
     private rightTab: 'current' | 'overview' | 'basket' = 'current';
+    /** 处于编辑模式的记录卡片对应的卡片 id（本次会话内保留，可来回切换） */
+    private recordEditIds = new Set<string>();
 
     constructor(
         app: App,
@@ -122,7 +138,7 @@ export class OkrTaskPlanView {
         if (this.rightTab === 'current') {
             // 未选中任务时该选项卡内容留空
             if (this.hasSelectedTask()) {
-                this.renderInfoForm(contentPanel);
+                await this.renderInfoForm(contentPanel);
 
                 // 收集篮子方框（当前选中任务的收集内容，供 GTD 梳理阶段放置笔记）
                 const basketWrap = contentPanel.createDiv({ cls: 'okr-basket-wrap' });
@@ -796,7 +812,7 @@ export class OkrTaskPlanView {
     }
 
     /** 渲染右侧信息表单：项目描述、分类、截止日期（跟随当前选中任务） */
-    private renderInfoForm(container: HTMLElement): void {
+    private async renderInfoForm(container: HTMLElement): Promise<void> {
         const selectedId = this.inboxData.selectedId;
         const item = selectedId
             ? this.inboxData.items.find(i => i.id === selectedId && !i.removed)
@@ -1073,6 +1089,116 @@ export class OkrTaskPlanView {
                 await this.refresh();
             })();
         };
+
+        // 记录方框（任务详情方框下方）
+        await this.renderRecordBox(container);
+    }
+
+    /** 记录卡片：独立方框，标题「记录」+ 右上角编辑按钮（切换字段编辑） */
+    private async renderRecordBox(panel: HTMLElement): Promise<void> {
+        const area = panel.createDiv({ cls: 'swimlane-section-area okr-record-area' });
+        const header = area.createDiv({ cls: 'swimlane-section-area-header' });
+        header.createDiv({ cls: 'swimlane-section-area-title', text: t('okr.recordCardTitle') });
+
+        const editBtn = header.createEl('button', {
+            cls: 'okr-record-edit-btn',
+            attr: { title: t('okr.toggleRecordEdit') },
+        });
+        setIcon(editBtn, 'pencil');
+
+        const body = area.createDiv({ cls: 'okr-entry-list' });
+        const item = this.getSelectedItem();
+        if (!item) {
+            editBtn.disabled = true;
+            body.createDiv({ cls: 'swimlane-sections-empty', text: t('okr.noSelection') });
+            return;
+        }
+
+        // 记录方框即一张记录卡：无则自动初始化一张默认空卡片
+        if (!item.records || item.records.length === 0) {
+            item.records = [makeRecordCard()];
+        }
+        const recordCard = item.records[0];
+        const editing = this.recordEditIds.has(recordCard.id);
+
+        editBtn.toggleClass('is-active', editing);
+        editBtn.onclick = (e) => {
+            e.stopPropagation();
+            if (editing) this.recordEditIds.delete(recordCard.id);
+            else this.recordEditIds.add(recordCard.id);
+            void this.refresh();
+        };
+
+        await this.renderRecordCard(body, recordCard, item);
+    }
+
+    /**
+     * 记录卡片内容：正常模式以表格展示当前任务的填写记录（日期 + 各字段值）；
+     * 编辑模式显示表单（字段类型 + 名称 + 删除）。
+     * 右上角编辑图标改由记录方框标题栏统一承载，此方法只渲染卡片主体，不再包裹卡片外框。
+     */
+    private async renderRecordCard(container: HTMLElement, recordCard: OkrRecordCard, item: InboxItem): Promise<void> {
+        const editing = this.recordEditIds.has(recordCard.id);
+
+        if (!editing) {
+            // 正常模式：使用说明 + 记录总数
+            container.createDiv({ cls: 'okr-record-hint', text: t('okr.recordCardHint') });
+            const entries = await getRecordStore(this.app).listEntriesByInbox(item.id);
+            container.createDiv({ cls: 'okr-record-total', text: t('okr.recordTotal', { count: entries.length }) });
+            return;
+        }
+
+        // 编辑模式：顶部「+」新增字段 + 表单设计，每行 = 字段类型 + 字段名称 + 删除
+        const addBtn = container.createEl('button', { cls: 'okr-record-add-btn', text: '+' });
+        addBtn.onclick = (e) => {
+            e.stopPropagation();
+            recordCard.fields.push({ id: makeRecordFieldId(), type: 'text', name: '' });
+            void this.save().then(() => this.refresh());
+        };
+
+        const form = container.createDiv({ cls: 'okr-record-form' });
+        for (const field of recordCard.fields) {
+            const row = form.createDiv({ cls: 'okr-record-field-row' });
+
+            const typeSelect = row.createEl('select', { cls: 'okr-record-field-type' });
+            for (const fieldType of Object.keys(OKR_RECORD_FIELD_META) as OkrRecordFieldType[]) {
+                const opt = typeSelect.createEl('option', {
+                    text: t(OKR_RECORD_FIELD_META[fieldType].labelKey as Parameters<typeof t>[0]),
+                    value: fieldType,
+                });
+                if (fieldType === field.type) opt.selected = true;
+            }
+            typeSelect.onchange = () => {
+                field.type = typeSelect.value as OkrRecordFieldType;
+                void this.save();
+            };
+
+            const nameInput = row.createEl('input', {
+                type: 'text',
+                cls: 'okr-record-field-name',
+                attr: { placeholder: t('okr.recordFieldNamePlaceholder') },
+            });
+            nameInput.value = field.name;
+            nameInput.onchange = () => {
+                field.name = nameInput.value.trim();
+                void this.save();
+            };
+
+            const delBtn = row.createEl('button', { cls: 'okr-entry-del', text: '✕' });
+            delBtn.onclick = (e) => {
+                e.stopPropagation();
+                recordCard.fields = recordCard.fields.filter(f => f.id !== field.id);
+                void this.save().then(() => this.refresh());
+            };
+        }
+    }
+
+    /** 当前选中任务（未选中或已移除时返回 undefined） */
+    private getSelectedItem(): InboxItem | undefined {
+        const selectedId = this.inboxData.selectedId;
+        return selectedId
+            ? this.inboxData.items.find(i => i.id === selectedId && !i.removed)
+            : undefined;
     }
 
     /** 重新渲染自身 */
