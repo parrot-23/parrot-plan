@@ -8,8 +8,8 @@ import { ensureDefaultScheme } from '../shared/plan-data';
 import type { PlanCategoryData } from '../shared/plan-category-manager';
 import { ensureUncategorizedCategory } from '../shared/plan-category-manager';
 import type { DayTemplateData } from '../shared/template-manager';
-import type { EventBlock, ExecutionRecord, InboxData, ImprovementData, RunningTask } from '../datatypes/domain';
-import { DEFAULT_INBOX_DATA, DEFAULT_IMPROVEMENT_DATA, migrateOkrConditions } from '../datatypes/domain';
+import type { EventBlock, ExecutionRecord, InboxData, ImprovementData, RunningTask, OkrRecordEntry } from '../datatypes/domain';
+import { DEFAULT_INBOX_DATA, DEFAULT_IMPROVEMENT_DATA, migrateOkrConditions, migrateOkrEntries, migrateOkrRecordCards } from '../datatypes/domain';
 import type { WorkbenchData } from '../datatypes/card';
 import { defaultWorkbenchData } from '../datatypes/card';
 import type { GtdData } from '../datatypes/gtd';
@@ -35,6 +35,8 @@ export interface PluginData {
     gtdData: GtdData;
     /** 改进数据（改进视图右侧可填写列表，按周键存储） */
     improvementData: ImprovementData;
+    /** OKR 记录卡片的填写结果（顶层独立存储，不挂在任务上，避免任务对象膨胀） */
+    recordEntries: OkrRecordEntry[];
     /** 当前正在执行的事件 id（日执行视图顶部执行卡片，随主数据一起持久化） */
     executingEventId?: string;
     /** 当前进行中的任务（日执行视图点击「开始任务」后写入，随主数据一起持久化） */
@@ -93,6 +95,7 @@ export class BaseRepo {
             workbench: d.workbench,
             gtdData: d.gtdData,
             improvementData: d.improvementData,
+            recordEntries: d.recordEntries,
             executingEventId: d.executingEventId,
             runningTask: d.runningTask,
             habitsCollapsed: d.habitsCollapsed,
@@ -187,7 +190,20 @@ export class BaseRepo {
         // 兼容旧数据：把旧的 OKR 条件（duration / outcome）迁移为新类型
         for (const item of initialInboxData.items ?? []) {
             if (item.okr) {
-                item.okr.conditions = migrateOkrConditions(item.okr.conditions);
+                const rawConditions = item.okr.conditions ?? [];
+                // 兼容旧数据：旧的「记录」是 type 为 record 的 OKR 条件，拆出到 item.records
+                const legacyRecords = rawConditions.filter(c => (c as { type?: unknown })?.type === 'record');
+                if (legacyRecords.length > 0) {
+                    const migrated = migrateOkrRecordCards(legacyRecords);
+                    if (migrated.length > 0) {
+                        item.records = [...(item.records ?? []), ...migrated];
+                    }
+                }
+                item.okr.conditions = migrateOkrConditions(rawConditions);
+            }
+            // 兼容旧数据：规范化记录卡片
+            if (item.records) {
+                item.records = migrateOkrRecordCards(item.records);
             }
             // 兼容旧数据：把旧的 habitTimeEnabled 迁移为 taskType（习惯型任务）
             if (item.taskType === undefined && item.habitTimeEnabled === true) {
@@ -219,6 +235,8 @@ export class BaseRepo {
         if (!initialImprovementData.byWeek || typeof initialImprovementData.byWeek !== 'object') {
             initialImprovementData.byWeek = {};
         }
+        // OKR 记录卡片填写结果（顶层独立存储，兼容旧数据：默认空）
+        const initialOkrEntries = migrateOkrEntries(savedData.recordEntries ?? savedData.okrEntries);
         // 当前正在执行的事件 id（兼容旧数据：默认无）
         const initialExecutingEventId = typeof savedData.executingEventId === 'string'
             ? savedData.executingEventId
@@ -244,6 +262,7 @@ export class BaseRepo {
             workbench: initialWorkbench,
             gtdData: initialGtdData,
             improvementData: initialImprovementData,
+            recordEntries: initialOkrEntries,
             executingEventId: initialExecutingEventId,
             runningTask: initialRunningTask,
             habitsCollapsed: initialHabitsCollapsed,

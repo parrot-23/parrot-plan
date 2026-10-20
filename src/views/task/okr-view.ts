@@ -4,7 +4,7 @@ import type { App } from 'obsidian';
 import { Notice, setIcon } from 'obsidian';
 
 import type { PlanCategoryData } from '../../shared/plan-category-manager';
-import type { InboxData, InboxItem, OkrCondition, OkrConditionItem, OkrConditionType, OkrPeriod, OkrRecordFieldType, ExecutionRecord } from '../../datatypes/domain';
+import type { InboxData, InboxItem, OkrCondition, OkrConditionItem, OkrConditionType, OkrPeriod, OkrRecordCard, OkrRecordFieldType, ExecutionRecord } from '../../datatypes/domain';
 import { OKR_CONDITION_META, OKR_GROUP_META, OKR_PERIOD_META, OKR_RECORD_FIELD_META } from '../../datatypes/domain';
 import type { InboxRepo } from '../../repos/inbox-repo';
 import { renderTaskPanel } from '../../shared/task-panel';
@@ -42,11 +42,15 @@ function makeCondition(type: OkrConditionType, index: number): OkrCondition {
         cond.max = 0;
         cond.unit = '';
     }
-    if (type === 'record') {
-        // 记录：卡片为表单设计，默认带一行字段
-        cond.fields = [{ id: makeItemId(), type: 'text', name: '' }];
-    }
     return cond;
+}
+
+/** 生成记录卡片（自定义表单设计，默认带一行字段） */
+function makeRecordCard(): OkrRecordCard {
+    return {
+        id: makeOkrId(),
+        fields: [{ id: makeItemId(), type: 'text', name: '' }],
+    };
 }
 
 /** 按类型生成清单行的默认内容（里程碑1 / 成果1） */
@@ -148,6 +152,7 @@ export class OkrView {
         const statsWrap = contentPanel.createDiv({ cls: 'okr-stats-wrap' });
         this.renderStatsBox(statsWrap);
 
+        this.renderRecordBox(contentPanel);
         this.renderOkrBox(contentPanel);
 
         // 恢复任务面板列表的滚动位置，实现无感刷新
@@ -238,6 +243,7 @@ export class OkrView {
         panel.empty();
         const statsWrap = panel.createDiv({ cls: 'okr-stats-wrap' });
         this.renderStatsBox(statsWrap);
+        this.renderRecordBox(panel);
         this.renderOkrBox(panel);
     }
 
@@ -271,13 +277,46 @@ export class OkrView {
                 }
                 continue;
             }
-            if (cond.type === 'record') {
-                // 记录：独立的两模式卡片（正常模式展示热力图与记录总数）
-                this.renderRecordCard(body, item, cond);
-                continue;
-            }
             this.renderEntryCard(body, item, cond);
         }
+    }
+
+    /** 记录卡片：独立方框，标题「记录」+ 右上角编辑按钮（切换字段编辑） */
+    private renderRecordBox(panel: HTMLElement): void {
+        const area = panel.createDiv({ cls: 'swimlane-section-area okr-record-area' });
+        const header = area.createDiv({ cls: 'swimlane-section-area-header' });
+        header.createDiv({ cls: 'swimlane-section-area-title', text: t('okr.typeRecord') });
+
+        const editBtn = header.createEl('button', {
+            cls: 'okr-record-edit-btn',
+            attr: { title: t('okr.toggleRecordEdit') },
+        });
+        setIcon(editBtn, 'pencil');
+
+        const body = area.createDiv({ cls: 'okr-entry-list' });
+        const item = this.getSelectedItem();
+        if (!item) {
+            editBtn.disabled = true;
+            body.createDiv({ cls: 'swimlane-sections-empty', text: t('okr.noSelection') });
+            return;
+        }
+
+        // 记录方框即一张记录卡：无则自动初始化一张默认空卡片
+        if (!item.records || item.records.length === 0) {
+            item.records = [makeRecordCard()];
+        }
+        const recordCard = item.records[0];
+        const editing = this.recordEditIds.has(recordCard.id);
+
+        editBtn.toggleClass('is-active', editing);
+        editBtn.onclick = (e) => {
+            e.stopPropagation();
+            if (editing) this.recordEditIds.delete(recordCard.id);
+            else this.recordEditIds.add(recordCard.id);
+            this.refresh();
+        };
+
+        this.renderRecordCard(body, recordCard);
     }
 
     /** 标题栏右上角「+」按钮：点击展开下拉面板（按大类分组列出条目类型） */
@@ -461,7 +500,7 @@ export class OkrView {
 
         // 关联任务：只读标签（增删需进入编辑模式）
         const children = this.inboxData.items.filter(i => i.parentId === item.id && !i.removed);
-        const linkedIds = cond.subtaskIds ?? (cond.subtaskId ? [cond.subtaskId] : []);
+        const linkedIds = cond.subtaskIds ?? [];
         const linked = linkedIds
             .map(id => children.find(c => c.id === id))
             .filter((c): c is InboxItem => !!c);
@@ -488,52 +527,30 @@ export class OkrView {
     }
 
     /**
-     * 记录卡片：分「正常模式」与「编辑模式」。
-     * - 正常模式（默认）：显示热力图与记录总数（本次先做占位展示，具体统计规则后续实现）；
-     * - 编辑模式：表单设计，每行为「字段类型 + 字段名称 + 删除」，标题行「+」新增一行字段。
-     * 右上角编辑图标可来回切换两种模式，状态在本次会话内保留。
+     * 记录卡片内容：正常模式显示热力图与记录总数；编辑模式显示表单（字段类型 + 名称 + 删除）。
+     * 右上角编辑图标改由记录方框标题栏统一承载，此方法只渲染卡片主体，不再包裹卡片外框。
      */
-    private renderRecordCard(container: HTMLElement, item: InboxItem, cond: OkrCondition): void {
-        const card = container.createDiv({ cls: 'okr-entry-card okr-entry-record' });
-        const editing = this.recordEditIds.has(cond.id);
-
-        // 标题行：标题 + 右侧按钮（编辑模式：「+」在编辑图标左侧）
-        const head = card.createDiv({ cls: 'okr-entry-head' });
-        head.createSpan({ cls: 'okr-entry-type', text: t('okr.typeRecord') });
-
-        if (editing) {
-            const addBtn = head.createEl('button', { cls: 'okr-record-add-btn', text: '+' });
-            addBtn.onclick = (e) => {
-                e.stopPropagation();
-                if (!cond.fields) cond.fields = [];
-                cond.fields.push({ id: makeItemId(), type: 'text', name: '' });
-                void this.save().then(() => this.refresh());
-            };
-        }
-
-        const editBtn = head.createEl('button', {
-            cls: `okr-record-edit-btn${editing ? ' is-active' : ''}`,
-            attr: { title: t('okr.toggleRecordEdit') },
-        });
-        setIcon(editBtn, 'pencil');
-        editBtn.onclick = (e) => {
-            e.stopPropagation();
-            if (editing) this.recordEditIds.delete(cond.id);
-            else this.recordEditIds.add(cond.id);
-            this.refresh();
-        };
+    private renderRecordCard(container: HTMLElement, recordCard: OkrRecordCard): void {
+        const editing = this.recordEditIds.has(recordCard.id);
 
         if (!editing) {
             // 正常模式：热力图 + 记录总数
-            const view = card.createDiv({ cls: 'okr-record-view' });
+            const view = container.createDiv({ cls: 'okr-record-view' });
             view.createDiv({ cls: 'okr-record-heatmap', text: t('okr.recordHeatmap') });
             view.createDiv({ cls: 'okr-record-total', text: t('okr.recordTotal', { count: 0 }) });
             return;
         }
 
-        // 编辑模式：表单设计，每行 = 字段类型 + 字段名称 + 删除
-        const form = card.createDiv({ cls: 'okr-record-form' });
-        for (const field of cond.fields ?? []) {
+        // 编辑模式：顶部「+」新增字段 + 表单设计，每行 = 字段类型 + 字段名称 + 删除
+        const addBtn = container.createEl('button', { cls: 'okr-record-add-btn', text: '+' });
+        addBtn.onclick = (e) => {
+            e.stopPropagation();
+            recordCard.fields.push({ id: makeItemId(), type: 'text', name: '' });
+            void this.save().then(() => this.refresh());
+        };
+
+        const form = container.createDiv({ cls: 'okr-record-form' });
+        for (const field of recordCard.fields) {
             const row = form.createDiv({ cls: 'okr-record-field-row' });
 
             const typeSelect = row.createEl('select', { cls: 'okr-record-field-type' });
@@ -563,7 +580,7 @@ export class OkrView {
             const delBtn = row.createEl('button', { cls: 'okr-entry-del', text: '✕' });
             delBtn.onclick = (e) => {
                 e.stopPropagation();
-                cond.fields = (cond.fields ?? []).filter(f => f.id !== field.id);
+                recordCard.fields = recordCard.fields.filter(f => f.id !== field.id);
                 void this.save().then(() => this.refresh());
             };
         }
@@ -628,7 +645,7 @@ export class OkrView {
 
         // 关联任务：可关联多个子任务，已关联的任务依次显示在「关联任务」按钮右侧
         const children = this.inboxData.items.filter(i => i.parentId === item.id && !i.removed);
-        const linkedIds = cond.subtaskIds ?? (cond.subtaskId ? [cond.subtaskId] : []);
+        const linkedIds = cond.subtaskIds ?? [];
 
         const linkBtn = row.createEl('button', {
             cls: 'okr-milestone-link-btn',
@@ -647,7 +664,6 @@ export class OkrView {
                 (id) => {
                     if (!cond.subtaskIds) cond.subtaskIds = [...linkedIds];
                     if (!cond.subtaskIds.includes(id)) cond.subtaskIds.push(id);
-                    cond.subtaskId = undefined;
                     void this.save().then(() => this.refresh());
                 },
             ).open();
@@ -664,7 +680,6 @@ export class OkrView {
                 e.stopPropagation();
                 const rest = linkedIds.filter(id => id !== linkedId);
                 cond.subtaskIds = rest.length > 0 ? rest : undefined;
-                cond.subtaskId = undefined;
                 void this.save().then(() => this.refresh());
             };
         }
@@ -945,18 +960,43 @@ export class OkrView {
             void this.save();
         };
 
-        // 绑定子任务（当前任务的直接子任务）
+        // 绑定子任务：可关联多个子任务（当前任务的直接子任务）
         row.createSpan({ cls: 'okr-entry-dim-label', text: t('okr.subtask') });
-        const sel = row.createEl('select', { cls: 'okr-entry-select' });
-        sel.createEl('option', { text: t('okr.subtaskNone'), value: '' });
+        const linkedIds = cond.subtaskIds ?? [];
         const children = this.inboxData.items.filter(i => i.parentId === item.id && !i.removed);
-        for (const child of children) {
-            const opt = sel.createEl('option', { text: child.title, value: child.id });
-            if (cond.subtaskId === child.id) opt.selected = true;
-        }
-        sel.onchange = () => {
-            cond.subtaskId = sel.value || undefined;
-            void this.save();
+
+        const linkBtn = row.createEl('button', { cls: 'okr-milestone-link-btn', text: t('okr.linkTask') });
+        linkBtn.onclick = (e) => {
+            e.stopPropagation();
+            new TaskSearchModal(
+                this.app,
+                children.map(c => ({ id: c.id, title: c.title })),
+                {
+                    title: t('okr.linkTask'),
+                    placeholder: t('okr.linkTaskSearchPlaceholder'),
+                    empty: t('okr.linkTaskSearchEmpty'),
+                },
+                (id) => {
+                    if (!cond.subtaskIds) cond.subtaskIds = [...linkedIds];
+                    if (!cond.subtaskIds.includes(id)) cond.subtaskIds.push(id);
+                    void this.save().then(() => this.refresh());
+                },
+            ).open();
         };
+
+        // 已关联子任务标签（标签末尾「✕」可取消关联）
+        for (const linkedId of linkedIds) {
+            const child = children.find(c => c.id === linkedId);
+            if (!child) continue;
+            const chip = row.createSpan({ cls: 'okr-milestone-linked-task' });
+            chip.createSpan({ text: child.title });
+            const removeBtn = chip.createSpan({ cls: 'okr-milestone-linked-task-del', text: '✕' });
+            removeBtn.onclick = (e) => {
+                e.stopPropagation();
+                const rest = linkedIds.filter(id => id !== linkedId);
+                cond.subtaskIds = rest.length > 0 ? rest : undefined;
+                void this.save().then(() => this.refresh());
+            };
+        }
     }
 }

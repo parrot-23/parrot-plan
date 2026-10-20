@@ -60,6 +60,9 @@ export interface ExecutionRecord {
 /** 任务类型：一次性任务 / 习惯型任务 */
 export type TaskType = 'oneTime' | 'habit';
 
+/** 任务状态 */
+export type TaskStatus = 'notStarted' | 'inProgress' | 'done';
+
 /** 收集盒任务（可无限层级子任务） */
 export interface InboxItem {
     id: string;
@@ -83,10 +86,12 @@ export interface InboxItem {
     sections?: Section[];
     /** OKR 信息（可选，旧任务无此字段） */
     okr?: OkrInfo;
+    /** 记录卡片（自定义表单设计，与 OKR 平级，可选，旧任务无此字段） */
+    records?: OkrRecordCard[];
     /** 截止日期（可选，格式 YYYY-MM-DD，旧任务无此字段） */
     dueDate?: string;
-    /** 任务状态（可选：notStarted / inProgress / done，旧任务无此字段，默认未开始） */
-    status?: string;
+    /** 任务状态（可选，旧任务无此字段，默认未开始） */
+    status?: TaskStatus;
     /** 任务类型（可选：oneTime / habit，旧任务无此字段，默认一次性任务） */
     taskType?: TaskType;
     /** 习惯时间点（可选，起始时间，单位分钟，如 540 表示 09:00，旧任务无此字段） */
@@ -138,9 +143,8 @@ export interface OkrInfo {
  * - 周期型：每个周期内用某种判定，需要打卡记录
  *   - frequency 频次（执行次数等）
  *   - range     区间（保持合理睡眠时长等）
- *   - record    记录（自定义表单字段，按记录条数统计）
  */
-export type OkrConditionType = 'milestone' | 'outcome' | 'cumulative' | 'frequency' | 'range' | 'record';
+export type OkrConditionType = 'milestone' | 'outcome' | 'cumulative' | 'frequency' | 'range';
 
 /** OKR 条目所属大类 */
 export type OkrConditionGroup = 'breakdown' | 'periodic';
@@ -176,6 +180,36 @@ export interface OkrRecordField {
     name: string;
 }
 
+/**
+ * 记录卡片（自定义表单设计，与 OKR 概念平级，但当前仍展示在 OKR 页面下）。
+ * 记录卡片不是 OKR 条目，而是任务执行时按字段收集结构化数据的「追踪器」。
+ */
+export interface OkrRecordCard {
+    id: string;
+    /** 记录卡片标题（可选，旧数据无此字段） */
+    title?: string;
+    /** 表单字段定义 */
+    fields: OkrRecordField[];
+}
+
+/**
+ * 记录卡片的一次填写结果（顶层独立存储，不挂在任务上）。
+ * 日数据量可能很大，放顶层便于按需查询、统计与未来索引/分文件落盘。
+ */
+export interface OkrRecordEntry {
+    id: string;
+    /** 归属哪个记录卡片（对应 OkrRecordCard.id，全局唯一） */
+    recordId: string;
+    /** 归属哪个任务（冗余存储，便于按任务查询；任务删除后依然保留作历史） */
+    inboxId: string;
+    /** 所属日期键（YYYY-MM-DD） */
+    dayKey: string;
+    /** 创建时间戳（毫秒） */
+    createdAt: number;
+    /** 字段值：fieldId -> 值（类型随字段定义：文本/选项/日期→string，数字/时长→number，是否→boolean） */
+    values: Record<string, string | number | boolean>;
+}
+
 /** OKR 条目（一条：类型 + 对应字段） */
 export interface OkrCondition {
     id: string;
@@ -202,12 +236,8 @@ export interface OkrCondition {
     records?: OkrRecord[];
     /** 期望时间点（维度信息，格式 YYYY-MM-DD） */
     dueDate?: string;
-    /** 绑定的子任务 id（维度信息，单个） */
-    subtaskId?: string;
-    /** 绑定的子任务 id 列表（里程碑条目可关联多个子任务） */
+    /** 绑定的子任务 id 列表（可关联多个子任务） */
     subtaskIds?: string[];
-    /** 表单字段（记录卡片使用：自定义的字段设计） */
-    fields?: OkrRecordField[];
 }
 
 /**
@@ -220,7 +250,6 @@ export const OKR_CONDITION_META: Record<OkrConditionType, { labelKey: string; gr
     cumulative: { labelKey: 'okr.typeCumulative', group: 'breakdown', unitKey: 'okr.unitMinute' },
     frequency: { labelKey: 'okr.typeFrequency', group: 'periodic', unitKey: 'okr.unitTimes' },
     range: { labelKey: 'okr.typeRange', group: 'periodic', unitKey: 'okr.unitCount' },
-    record: { labelKey: 'okr.typeRecord', group: 'periodic', unitKey: 'okr.unitCount' },
 };
 
 /** 记录卡片字段类型原型数据：统一维护各类型的名称 i18n key */
@@ -236,7 +265,7 @@ export const OKR_RECORD_FIELD_META: Record<OkrRecordFieldType, { labelKey: strin
 /** OKR 大类原型数据：名称 i18n key + 该大类下的条目类型（按展示顺序） */
 export const OKR_GROUP_META: Record<OkrConditionGroup, { labelKey: string; types: OkrConditionType[] }> = {
     breakdown: { labelKey: 'okr.groupBreakdown', types: ['milestone', 'outcome', 'cumulative'] },
-    periodic: { labelKey: 'okr.groupPeriodic', types: ['frequency', 'range', 'record'] },
+    periodic: { labelKey: 'okr.groupPeriodic', types: ['frequency', 'range'] },
 };
 
 /** 周期粒度原型数据：名称 i18n key */
@@ -292,21 +321,89 @@ export function migrateOkrConditions(raw: unknown): OkrCondition[] {
             );
         }
         if (typeof c.dueDate === 'string') cond.dueDate = c.dueDate;
-        if (typeof c.subtaskId === 'string') cond.subtaskId = c.subtaskId;
-        if (Array.isArray(c.subtaskIds)) {
-            cond.subtaskIds = c.subtaskIds.filter((id): id is string => typeof id === 'string');
+        // 兼容旧数据：把旧的单值 subtaskId 并入多值 subtaskIds
+        if (typeof c.subtaskId === 'string' && c.subtaskId) {
+            cond.subtaskIds = cond.subtaskIds ?? [];
+            if (!cond.subtaskIds.includes(c.subtaskId)) cond.subtaskIds.push(c.subtaskId);
         }
-        if (Array.isArray(c.fields)) {
-            cond.fields = c.fields
-                .filter((f): f is Record<string, unknown> => !!f && typeof f === 'object')
-                .filter(f => typeof f.id === 'string' && typeof f.type === 'string' && f.type in OKR_RECORD_FIELD_META)
-                .map(f => ({
-                    id: f.id as string,
-                    type: f.type as OkrRecordFieldType,
-                    name: typeof f.name === 'string' ? f.name : '',
-                }));
+        if (Array.isArray(c.subtaskIds)) {
+            cond.subtaskIds = c.subtaskIds.filter((id): id is string => typeof id === 'string' && id !== '');
         }
         result.push(cond);
+    }
+    return result;
+}
+
+/**
+ * 兼容旧数据：还原顶层 OKR 记录卡片的填写结果（OkrRecordEntry[]）。
+ * 非法条目丢弃；values 只保留 string / number / boolean 三种值。
+ */
+export function migrateOkrEntries(raw: unknown): OkrRecordEntry[] {
+    if (!Array.isArray(raw)) return [];
+    const result: OkrRecordEntry[] = [];
+    for (const entry of raw) {
+        if (!entry || typeof entry !== 'object') continue;
+        const e = entry as Record<string, unknown>;
+        if (typeof e.id !== 'string') continue;
+        if (typeof e.recordId !== 'string') continue;
+        if (typeof e.inboxId !== 'string') continue;
+        if (typeof e.dayKey !== 'string') continue;
+
+        const values: Record<string, string | number | boolean> = {};
+        if (e.values && typeof e.values === 'object') {
+            for (const [k, v] of Object.entries(e.values as Record<string, unknown>)) {
+                if (typeof v === 'string' || typeof v === 'number' || typeof v === 'boolean') {
+                    values[k] = v;
+                }
+            }
+        }
+
+        result.push({
+            id: e.id,
+            recordId: e.recordId,
+            inboxId: e.inboxId,
+            dayKey: e.dayKey,
+            createdAt: typeof e.createdAt === 'number' ? e.createdAt : 0,
+            values,
+        });
+    }
+    return result;
+}
+
+/**
+ * 兼容旧数据：还原记录卡片（OkrRecordCard[]）。
+ * 旧数据中「记录」曾作为 type 为 record 的 OKR 条件存放在 conditions 里，
+ * 本函数同时兼容旧结构（{ id, title?, fields[] }）与新的 records 数组结构。
+ * 字段定义非法或无字段的卡片会被丢弃。
+ */
+export function migrateOkrRecordCards(raw: unknown): OkrRecordCard[] {
+    if (!Array.isArray(raw)) return [];
+    const result: OkrRecordCard[] = [];
+    for (const r of raw) {
+        if (!r || typeof r !== 'object') continue;
+        const c = r as Record<string, unknown>;
+        if (typeof c.id !== 'string') continue;
+
+        const rawFields = Array.isArray(c.fields) ? c.fields : [];
+        const fields: OkrRecordField[] = [];
+        for (const f of rawFields) {
+            if (!f || typeof f !== 'object') continue;
+            const fo = f as Record<string, unknown>;
+            if (typeof fo.id !== 'string') continue;
+            if (typeof fo.type !== 'string' || !(fo.type in OKR_RECORD_FIELD_META)) continue;
+            fields.push({
+                id: fo.id,
+                type: fo.type as OkrRecordFieldType,
+                name: typeof fo.name === 'string' ? fo.name : '',
+            });
+        }
+        if (fields.length === 0) continue;
+
+        result.push({
+            id: c.id,
+            title: typeof c.title === 'string' ? c.title : undefined,
+            fields,
+        });
     }
     return result;
 }

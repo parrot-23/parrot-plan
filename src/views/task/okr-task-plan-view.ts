@@ -2,7 +2,7 @@ import type { App } from 'obsidian';
 import { Modal, Notice, Setting, setIcon } from 'obsidian';
 
 import type { PlanCategoryData } from '../../shared/plan-category-manager';
-import type { InboxData, InboxItem, Section, ChecklistData, FileData, BasketItem, ImprovementEntry, OkrConditionItem, TaskType } from '../../datatypes/domain';
+import type { InboxData, InboxItem, Section, ChecklistData, FileData, BasketItem, ImprovementEntry, OkrConditionItem, TaskType, TaskStatus } from '../../datatypes/domain';
 import type { InboxRepo } from '../../repos/inbox-repo';
 import { SECTION_TYPE_META, OKR_CONDITION_META } from '../../datatypes/domain';
 import { renderTaskPanel, FilePathSuggest } from '../../shared/task-panel';
@@ -939,7 +939,7 @@ export class OkrTaskPlanView {
             const oneTimeBody = oneTimeCard.createDiv({ cls: 'task-plan-type-config' });
             oneTimeBody.createDiv({ cls: 'task-plan-field-label', text: t('taskPlan.statusTitle') });
             const statusGroup = oneTimeBody.createDiv({ cls: 'task-plan-status-group' });
-            const statuses: { value: string; labelKey: 'taskPlan.statusNotStarted' | 'taskPlan.statusInProgress' | 'taskPlan.statusDone' }[] = [
+            const statuses: { value: TaskStatus; labelKey: 'taskPlan.statusNotStarted' | 'taskPlan.statusInProgress' | 'taskPlan.statusDone' }[] = [
                 { value: 'notStarted', labelKey: 'taskPlan.statusNotStarted' },
                 { value: 'inProgress', labelKey: 'taskPlan.statusInProgress' },
                 { value: 'done', labelKey: 'taskPlan.statusDone' },
