@@ -4,8 +4,8 @@ import type { App } from 'obsidian';
 import { Notice, setIcon } from 'obsidian';
 
 import type { PlanCategoryData } from '../../shared/plan-category-manager';
-import type { InboxData, InboxItem, OkrCondition, OkrConditionItem, OkrConditionType, OkrPeriod, ExecutionRecord } from '../../datatypes/domain';
-import { OKR_CONDITION_META, OKR_GROUP_META, OKR_PERIOD_META } from '../../datatypes/domain';
+import type { InboxData, InboxItem, OkrCondition, OkrConditionItem, OkrConditionType, OkrPeriod, OkrRecordFieldType, ExecutionRecord } from '../../datatypes/domain';
+import { OKR_CONDITION_META, OKR_GROUP_META, OKR_PERIOD_META, OKR_RECORD_FIELD_META } from '../../datatypes/domain';
 import type { InboxRepo } from '../../repos/inbox-repo';
 import { renderTaskPanel } from '../../shared/task-panel';
 import { TaskSearchModal } from '../../shared/task-search-modal';
@@ -41,6 +41,10 @@ function makeCondition(type: OkrConditionType, index: number): OkrCondition {
         cond.min = 0;
         cond.max = 0;
         cond.unit = '';
+    }
+    if (type === 'record') {
+        // 记录：卡片为表单设计，默认带一行字段
+        cond.fields = [{ id: makeItemId(), type: 'text', name: '' }];
     }
     return cond;
 }
@@ -84,6 +88,8 @@ export class OkrView {
     private getExecutions: () => ExecutionRecord[];
     /** 处于编辑模式的里程碑卡片对应的任务 id（本次会话内保留，可来回切换） */
     private milestoneEditIds = new Set<string>();
+    /** 处于编辑模式的记录卡片对应的条目 id（本次会话内保留，可来回切换） */
+    private recordEditIds = new Set<string>();
 
     constructor(
         app: App,
@@ -263,6 +269,11 @@ export class OkrView {
                     milestoneRendered = true;
                     this.renderMilestoneList(body, item, conditions.filter(c => c.type === 'milestone'));
                 }
+                continue;
+            }
+            if (cond.type === 'record') {
+                // 记录：独立的两模式卡片（正常模式展示热力图与记录总数）
+                this.renderRecordCard(body, item, cond);
                 continue;
             }
             this.renderEntryCard(body, item, cond);
@@ -473,6 +484,88 @@ export class OkrView {
 
                 chip.createSpan({ text: child.title });
             }
+        }
+    }
+
+    /**
+     * 记录卡片：分「正常模式」与「编辑模式」。
+     * - 正常模式（默认）：显示热力图与记录总数（本次先做占位展示，具体统计规则后续实现）；
+     * - 编辑模式：表单设计，每行为「字段类型 + 字段名称 + 删除」，标题行「+」新增一行字段。
+     * 右上角编辑图标可来回切换两种模式，状态在本次会话内保留。
+     */
+    private renderRecordCard(container: HTMLElement, item: InboxItem, cond: OkrCondition): void {
+        const card = container.createDiv({ cls: 'okr-entry-card okr-entry-record' });
+        const editing = this.recordEditIds.has(cond.id);
+
+        // 标题行：标题 + 右侧按钮（编辑模式：「+」在编辑图标左侧）
+        const head = card.createDiv({ cls: 'okr-entry-head' });
+        head.createSpan({ cls: 'okr-entry-type', text: t('okr.typeRecord') });
+
+        if (editing) {
+            const addBtn = head.createEl('button', { cls: 'okr-record-add-btn', text: '+' });
+            addBtn.onclick = (e) => {
+                e.stopPropagation();
+                if (!cond.fields) cond.fields = [];
+                cond.fields.push({ id: makeItemId(), type: 'text', name: '' });
+                void this.save().then(() => this.refresh());
+            };
+        }
+
+        const editBtn = head.createEl('button', {
+            cls: `okr-record-edit-btn${editing ? ' is-active' : ''}`,
+            attr: { title: t('okr.toggleRecordEdit') },
+        });
+        setIcon(editBtn, 'pencil');
+        editBtn.onclick = (e) => {
+            e.stopPropagation();
+            if (editing) this.recordEditIds.delete(cond.id);
+            else this.recordEditIds.add(cond.id);
+            this.refresh();
+        };
+
+        if (!editing) {
+            // 正常模式：热力图 + 记录总数
+            const view = card.createDiv({ cls: 'okr-record-view' });
+            view.createDiv({ cls: 'okr-record-heatmap', text: t('okr.recordHeatmap') });
+            view.createDiv({ cls: 'okr-record-total', text: t('okr.recordTotal', { count: 0 }) });
+            return;
+        }
+
+        // 编辑模式：表单设计，每行 = 字段类型 + 字段名称 + 删除
+        const form = card.createDiv({ cls: 'okr-record-form' });
+        for (const field of cond.fields ?? []) {
+            const row = form.createDiv({ cls: 'okr-record-field-row' });
+
+            const typeSelect = row.createEl('select', { cls: 'okr-record-field-type' });
+            for (const fieldType of Object.keys(OKR_RECORD_FIELD_META) as OkrRecordFieldType[]) {
+                const opt = typeSelect.createEl('option', {
+                    text: t(OKR_RECORD_FIELD_META[fieldType].labelKey as Parameters<typeof t>[0]),
+                    value: fieldType,
+                });
+                if (fieldType === field.type) opt.selected = true;
+            }
+            typeSelect.onchange = () => {
+                field.type = typeSelect.value as OkrRecordFieldType;
+                void this.save();
+            };
+
+            const nameInput = row.createEl('input', {
+                type: 'text',
+                cls: 'okr-record-field-name',
+                attr: { placeholder: t('okr.recordFieldNamePlaceholder') },
+            });
+            nameInput.value = field.name;
+            nameInput.onchange = () => {
+                field.name = nameInput.value.trim();
+                void this.save();
+            };
+
+            const delBtn = row.createEl('button', { cls: 'okr-entry-del', text: '✕' });
+            delBtn.onclick = (e) => {
+                e.stopPropagation();
+                cond.fields = (cond.fields ?? []).filter(f => f.id !== field.id);
+                void this.save().then(() => this.refresh());
+            };
         }
     }
 

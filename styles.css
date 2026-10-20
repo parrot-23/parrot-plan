@@ -5880,8 +5880,9 @@
     flex-direction: column;
 }
 
-/* 里程碑标题行末尾的「+」按钮（仅编辑模式显示；由编辑图标占用左侧自动外边距） */
-.okr-milestone-add-btn {
+/* 里程碑 / 记录标题行末尾的「+」按钮（仅编辑模式显示；由编辑图标占用左侧自动外边距） */
+.okr-milestone-add-btn,
+.okr-record-add-btn {
     flex-shrink: 0;
     width: 24px;
     height: 24px;
@@ -5895,8 +5896,9 @@
     line-height: 1;
 }
 
-/* 里程碑卡片右上角的编辑图标（可来回切换正常 / 编辑模式） */
-.okr-milestone-edit-btn {
+/* 里程碑 / 记录卡片右上角的编辑图标（可来回切换正常 / 编辑模式） */
+.okr-milestone-edit-btn,
+.okr-record-edit-btn {
     margin-left: auto;
     flex-shrink: 0;
     width: 24px;
@@ -5912,12 +5914,14 @@
     cursor: pointer;
 }
 
-.okr-milestone-edit-btn:hover {
+.okr-milestone-edit-btn:hover,
+.okr-record-edit-btn:hover {
     background: var(--background-modifier-hover);
     color: var(--text-normal);
 }
 
-.okr-milestone-edit-btn.is-active {
+.okr-milestone-edit-btn.is-active,
+.okr-record-edit-btn.is-active {
     background: var(--interactive-accent);
     color: var(--text-on-accent);
 }
@@ -6030,6 +6034,53 @@
 
 .okr-milestone-linked-task-del:hover {
     color: var(--text-error);
+}
+
+/* ===== 记录卡片（正常模式：热力图 + 记录总数；编辑模式：表单设计） ===== */
+.okr-record-view {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.okr-record-heatmap {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 72px;
+    padding: 10px;
+    border-radius: 8px;
+    border: 1px dashed var(--background-modifier-border);
+    color: var(--text-faint);
+    font-size: 12px;
+}
+
+.okr-record-total {
+    font-size: 12px;
+    color: var(--text-muted);
+}
+
+.okr-record-form {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.okr-record-field-row {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
+}
+
+.okr-record-field-type {
+    flex-shrink: 0;
+    width: 88px;
+}
+
+.okr-record-field-name {
+    flex: 1;
+    min-width: 0;
 }
 
 /* ===== 任务搜索弹窗（shared 公共组件） ===== */

@@ -138,8 +138,9 @@ export interface OkrInfo {
  * - 周期型：每个周期内用某种判定，需要打卡记录
  *   - frequency 频次（执行次数等）
  *   - range     区间（保持合理睡眠时长等）
+ *   - record    记录（自定义表单字段，按记录条数统计）
  */
-export type OkrConditionType = 'milestone' | 'outcome' | 'cumulative' | 'frequency' | 'range';
+export type OkrConditionType = 'milestone' | 'outcome' | 'cumulative' | 'frequency' | 'range' | 'record';
 
 /** OKR 条目所属大类 */
 export type OkrConditionGroup = 'breakdown' | 'periodic';
@@ -162,6 +163,17 @@ export interface OkrConditionItem {
     text: string;
     /** 是否已完成 */
     done: boolean;
+}
+
+/** 记录卡片的字段类型 */
+export type OkrRecordFieldType = 'text' | 'number' | 'date' | 'duration' | 'boolean' | 'select';
+
+/** 记录卡片的一个字段定义（表单设计的一行） */
+export interface OkrRecordField {
+    id: string;
+    type: OkrRecordFieldType;
+    /** 字段名称 */
+    name: string;
 }
 
 /** OKR 条目（一条：类型 + 对应字段） */
@@ -194,6 +206,8 @@ export interface OkrCondition {
     subtaskId?: string;
     /** 绑定的子任务 id 列表（里程碑条目可关联多个子任务） */
     subtaskIds?: string[];
+    /** 表单字段（记录卡片使用：自定义的字段设计） */
+    fields?: OkrRecordField[];
 }
 
 /**
@@ -206,12 +220,23 @@ export const OKR_CONDITION_META: Record<OkrConditionType, { labelKey: string; gr
     cumulative: { labelKey: 'okr.typeCumulative', group: 'breakdown', unitKey: 'okr.unitMinute' },
     frequency: { labelKey: 'okr.typeFrequency', group: 'periodic', unitKey: 'okr.unitTimes' },
     range: { labelKey: 'okr.typeRange', group: 'periodic', unitKey: 'okr.unitCount' },
+    record: { labelKey: 'okr.typeRecord', group: 'periodic', unitKey: 'okr.unitCount' },
+};
+
+/** 记录卡片字段类型原型数据：统一维护各类型的名称 i18n key */
+export const OKR_RECORD_FIELD_META: Record<OkrRecordFieldType, { labelKey: string }> = {
+    text: { labelKey: 'okr.recordFieldText' },
+    number: { labelKey: 'okr.recordFieldNumber' },
+    date: { labelKey: 'okr.recordFieldDate' },
+    duration: { labelKey: 'okr.recordFieldDuration' },
+    boolean: { labelKey: 'okr.recordFieldBoolean' },
+    select: { labelKey: 'okr.recordFieldSelect' },
 };
 
 /** OKR 大类原型数据：名称 i18n key + 该大类下的条目类型（按展示顺序） */
 export const OKR_GROUP_META: Record<OkrConditionGroup, { labelKey: string; types: OkrConditionType[] }> = {
     breakdown: { labelKey: 'okr.groupBreakdown', types: ['milestone', 'outcome', 'cumulative'] },
-    periodic: { labelKey: 'okr.groupPeriodic', types: ['frequency', 'range'] },
+    periodic: { labelKey: 'okr.groupPeriodic', types: ['frequency', 'range', 'record'] },
 };
 
 /** 周期粒度原型数据：名称 i18n key */
@@ -270,6 +295,16 @@ export function migrateOkrConditions(raw: unknown): OkrCondition[] {
         if (typeof c.subtaskId === 'string') cond.subtaskId = c.subtaskId;
         if (Array.isArray(c.subtaskIds)) {
             cond.subtaskIds = c.subtaskIds.filter((id): id is string => typeof id === 'string');
+        }
+        if (Array.isArray(c.fields)) {
+            cond.fields = c.fields
+                .filter((f): f is Record<string, unknown> => !!f && typeof f === 'object')
+                .filter(f => typeof f.id === 'string' && typeof f.type === 'string' && f.type in OKR_RECORD_FIELD_META)
+                .map(f => ({
+                    id: f.id as string,
+                    type: f.type as OkrRecordFieldType,
+                    name: typeof f.name === 'string' ? f.name : '',
+                }));
         }
         result.push(cond);
     }
