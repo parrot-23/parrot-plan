@@ -7,7 +7,7 @@ import type { InboxData, InboxItem, OkrRecordCard, OkrRecordFieldType } from '..
 import { OKR_RECORD_FIELD_META } from '../../datatypes/domain';
 import type { InboxRepo } from '../../repos/inbox-repo';
 import { renderTaskPanel } from '../../shared/task-panel';
-import { getRecordStore } from '../../db/record-store';
+import { RecordRepo } from '../../repos/record-repo';
 import { t } from '../../i18n';
 
 /** 生成条目 id */
@@ -33,6 +33,7 @@ export class DataView {
     private categoryData: PlanCategoryData;
     private save: () => Promise<void>;
     private inboxRepo?: InboxRepo;
+    private recordRepo: RecordRepo;
     /** 当前渲染容器（用于自刷新） */
     private container?: HTMLElement;
     /** 处于编辑模式的记录卡片对应的条目 id（本次会话内保留，可来回切换） */
@@ -52,6 +53,7 @@ export class DataView {
         this.categoryData = categoryData;
         this.save = save;
         this.inboxRepo = inboxRepo;
+        this.recordRepo = new RecordRepo(app);
     }
 
     async renderInto(container: HTMLElement): Promise<void> {
@@ -195,7 +197,7 @@ export class DataView {
         if (!editing) {
             // 正常模式：表格展示填写记录（按 inbox_id 过滤，按日期倒序）
             const namedFields = recordCard.fields.filter(f => f.name && f.name.trim().length > 0);
-            const entries = await getRecordStore(this.app).listEntriesByInbox(item.id);
+            const entries = await this.recordRepo.listByInbox(item.id);
 
             if (entries.length === 0) {
                 container.createDiv({ cls: 'okr-record-empty', text: t('okr.recordNoData') });

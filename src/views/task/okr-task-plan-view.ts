@@ -6,7 +6,7 @@ import type { InboxData, InboxItem, Section, ChecklistData, FileData, BasketItem
 import type { InboxRepo } from '../../repos/inbox-repo';
 import { SECTION_TYPE_META, OKR_CONDITION_META, OKR_RECORD_FIELD_META } from '../../datatypes/domain';
 import { renderTaskPanel, FilePathSuggest } from '../../shared/task-panel';
-import { getRecordStore } from '../../db/record-store';
+import { RecordRepo } from '../../repos/record-repo';
 import { t } from '../../i18n';
 
 /** 生成记录卡片（自定义表单设计，默认带一行字段） */
@@ -43,6 +43,8 @@ export class OkrTaskPlanView {
     private lastClickedBasketEntryId?: string;
     /** 收集盒领域仓库（任务面板增删改走仓库方法，保证跨视图一致） */
     private inboxRepo?: InboxRepo;
+    /** 记录数据仓库（记录卡填写结果读写入口） */
+    private recordRepo: RecordRepo;
     /** 右侧垂直选项卡当前选中项（刷新后保持不变） */
     private rightTab: 'current' | 'overview' | 'basket' = 'current';
     /** 处于编辑模式的记录卡片对应的卡片 id（本次会话内保留，可来回切换） */
@@ -60,6 +62,7 @@ export class OkrTaskPlanView {
         this.categoryData = categoryData;
         this.save = save;
         this.inboxRepo = inboxRepo;
+        this.recordRepo = new RecordRepo(app);
     }
 
     async renderInto(container: HTMLElement): Promise<void> {
@@ -1143,7 +1146,7 @@ export class OkrTaskPlanView {
         if (!editing) {
             // 正常模式：使用说明 + 记录总数
             container.createDiv({ cls: 'okr-record-hint', text: t('okr.recordCardHint') });
-            const entries = await getRecordStore(this.app).listEntriesByInbox(item.id);
+            const entries = await this.recordRepo.listByInbox(item.id);
             container.createDiv({ cls: 'okr-record-total', text: t('okr.recordTotal', { count: entries.length }) });
             return;
         }

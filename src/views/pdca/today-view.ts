@@ -14,7 +14,7 @@ import type { PdcaRepo } from '../../repos/pdca-repo';
 import type { InboxRepo } from '../../repos/inbox-repo';
 import { renderTaskPanel } from '../../shared/task-panel';
 import { RecordFillModal } from '../../shared/record-fill-modal';
-import { getRecordStore } from '../../db/record-store';
+import { RecordRepo } from '../../repos/record-repo';
 import type { OkrRecordEntry } from '../../datatypes/domain';
 
 /** 时间轴每小时格子的最小高度（px）：面板较矮时保持该高度并出现滚动条 */
@@ -98,6 +98,8 @@ export class TodayView {
     private viewDate: Date = new Date();
     /** 收集盒领域仓库（任务选中状态走仓库方法，保证跨视图一致） */
     private inboxRepo?: InboxRepo;
+    /** 记录数据仓库（记录卡填写结果写入入口） */
+    private recordRepo: RecordRepo;
     /** 进行中任务变化回调（开始/完成/中断时通知宿主刷新导航栏卡片） */
     private onRunningTaskChange?: () => void;
     /** 右侧内容区当前选项卡：今日情况 / 当天任务 / 额外任务 / 本周情况 / 板块信息 */
@@ -130,6 +132,7 @@ export class TodayView {
         this.getPlanSchemeDays = getPlanSchemeDays ?? (() => []);
         this.runningTask = initialRunningTask;
         this.inboxRepo = inboxRepo;
+        this.recordRepo = new RecordRepo(app);
         this.onRunningTaskChange = onRunningTaskChange;
     }
 
@@ -1813,7 +1816,7 @@ export class TodayView {
             values,
         };
         try {
-            await getRecordStore(this.app).insertEntry(entry);
+            await this.recordRepo.insert(entry);
             new Notice(t('okr.recordFormSaved'));
         } catch (err) {
             console.error('[parrot-plan] 写入记录到 DB 失败', err);
