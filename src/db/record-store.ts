@@ -89,6 +89,42 @@ export class RecordStore {
         await this.persist();
     }
 
+    /**
+     * 按任务 id 查询该任务的全部填写记录（按日期倒序、创建时间倒序，最新在前）。
+     * values_json 解析回 fieldId -> value 映射。
+     */
+    async listEntriesByInbox(inboxId: string): Promise<OkrRecordEntry[]> {
+        await this.init();
+        const stmt = this.db!.prepare(
+            'SELECT id, record_id, inbox_id, day_key, created_at, values_json FROM record_entries WHERE inbox_id = ? ORDER BY day_key DESC, created_at DESC',
+        );
+        const results: OkrRecordEntry[] = [];
+        try {
+            stmt.bind([inboxId]);
+            while (stmt.step()) {
+                const row = stmt.getAsObject() as Record<string, unknown>;
+                let values: Record<string, string | number | boolean> = {};
+                try {
+                    const parsed = JSON.parse(String(row.values_json));
+                    if (parsed && typeof parsed === 'object') values = parsed as Record<string, string | number | boolean>;
+                } catch {
+                    // 非法 JSON 忽略，保留空 values
+                }
+                results.push({
+                    id: String(row.id),
+                    recordId: String(row.record_id),
+                    inboxId: String(row.inbox_id),
+                    dayKey: String(row.day_key),
+                    createdAt: Number(row.created_at),
+                    values,
+                });
+            }
+        } finally {
+            stmt.free();
+        }
+        return results;
+    }
+
     /** 将当前内存数据库整库导出并写回 .db 文件 */
     private async persist(): Promise<void> {
         const adapter = this.app.vault.adapter;

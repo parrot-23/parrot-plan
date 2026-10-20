@@ -40,6 +40,9 @@ export const zh = {
     'nav.gtd': 'GTD',
     'nav.scene': '剧本场景',
     'nav.scriptManage': '剧本管理',
+    'nav.data': '数据',
+    'data.tabExecutionRecords': '执行记录',
+    'data.tabRecordCard': '记录卡',
     'nav.gtdCollect': '收集',
     'nav.gtdConfig': '配置',
     'nav.gtdClarify': '梳理',
@@ -188,6 +191,8 @@ export const zh = {
     'okr.recordFormSkip': '跳过',
     'okr.recordFormSaved': '记录已保存',
     'okr.recordFormFailed': '记录写入失败',
+    'okr.recordDate': '日期',
+    'okr.recordNoData': '暂无记录',
     'okr.periodDay': '每天',
     'okr.periodWeek': '每周',
     'okr.periodMonth': '每月',
@@ -231,6 +236,8 @@ export const zh = {
 
     // OKR 进度
     'okr.progressTitle': 'OKR进度',
+    'okr.tabPlanExecution': '计划执行',
+    'okr.tabOkrProgress': 'okr进度',
     'okr.progressEmpty': '暂无 OKR 条目',
     'okr.progressTarget': '目标',
     'okr.progressCurrent': '当前',

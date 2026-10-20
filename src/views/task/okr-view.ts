@@ -10,6 +10,7 @@ import type { InboxRepo } from '../../repos/inbox-repo';
 import { renderTaskPanel } from '../../shared/task-panel';
 import { TaskSearchModal } from '../../shared/task-search-modal';
 import { makePeriodKey } from '../../datatypes/card';
+import { getRecordStore } from '../../db/record-store';
 import { t } from '../../i18n';
 
 /** 生成条目 id */
@@ -94,6 +95,8 @@ export class OkrView {
     private milestoneEditIds = new Set<string>();
     /** 处于编辑模式的记录卡片对应的条目 id（本次会话内保留，可来回切换） */
     private recordEditIds = new Set<string>();
+    /** 右侧垂直选项卡：计划执行 / OKR 进度（默认 OKR 进度） */
+    private rightTab: 'plan' | 'okrProgress' = 'okrProgress';
 
     constructor(
         app: App,
@@ -145,15 +148,25 @@ export class OkrView {
             { enableProjectFocus: true, inboxRepo: this.inboxRepo },
         );
 
-        // 右侧：统计信息方框（顶部）+ OKR 方框
+        // 中间：垂直选项卡（切换右侧内容区）
+        const tabStrip = container.createDiv({ cls: 'task-plan-right-tabs' });
+        const tabs: { id: 'plan' | 'okrProgress'; labelKey: 'okr.tabPlanExecution' | 'okr.tabOkrProgress' }[] = [
+            { id: 'plan', labelKey: 'okr.tabPlanExecution' },
+            { id: 'okrProgress', labelKey: 'okr.tabOkrProgress' },
+        ];
+        for (const tab of tabs) {
+            const tabEl = tabStrip.createDiv({ cls: 'task-plan-right-tab', text: t(tab.labelKey) });
+            tabEl.toggleClass('is-active', this.rightTab === tab.id);
+            tabEl.onclick = () => {
+                if (this.rightTab === tab.id) return;
+                this.rightTab = tab.id;
+                void this.refreshRight();
+            };
+        }
+
+        // 右侧：内容区（随选项卡切换）
         const contentPanel = container.createDiv({ cls: 'task-plan-content-panel' });
-
-        // 统计信息方框（当前选中任务的执行时长分布）
-        const statsWrap = contentPanel.createDiv({ cls: 'okr-stats-wrap' });
-        this.renderStatsBox(statsWrap);
-
-        this.renderRecordBox(contentPanel);
-        this.renderOkrBox(contentPanel);
+        await this.renderRightContent(contentPanel);
 
         // 恢复任务面板列表的滚动位置，实现无感刷新
         if (prevListScrollTop > 0) {
@@ -232,18 +245,35 @@ export class OkrView {
     }
 
     /**
-     * 新增条目后重新渲染。
-     * 注意：不能走 renderInto（它会清空并重建左侧任务面板），
-     * 否则任务面板的点击事件会丢失，导致「+」下拉里的条目点击无反应。
-     * 这里只重绘右侧统计方框 + OKR 方框。
+     * 重绘右侧内容区（不重建左侧任务面板，避免任务面板的点击事件丢失）。
      */
     private async refresh(): Promise<void> {
         const panel = this.container?.querySelector<HTMLElement>('.task-plan-content-panel');
         if (!panel) return;
+        await this.renderRightContent(panel);
+    }
+
+    /** 切换右侧选项卡后重绘内容区，并刷新选项卡高亮 */
+    private async refreshRight(): Promise<void> {
+        this.container?.querySelectorAll('.task-plan-right-tab').forEach((el, i) => {
+            const ids: ('plan' | 'okrProgress')[] = ['plan', 'okrProgress'];
+            el.toggleClass('is-active', ids[i] === this.rightTab);
+        });
+        const panel = this.container?.querySelector<HTMLElement>('.task-plan-content-panel');
+        if (!panel) return;
+        await this.renderRightContent(panel);
+    }
+
+    /** 按当前选项卡渲染右侧内容区 */
+    private async renderRightContent(panel: HTMLElement): Promise<void> {
         panel.empty();
+        // 「计划执行」选项卡：暂无内容
+        if (this.rightTab === 'plan') return;
+
+        // 「OKR 进度」选项卡：统计信息方框 + 记录方框 + OKR 方框
         const statsWrap = panel.createDiv({ cls: 'okr-stats-wrap' });
         this.renderStatsBox(statsWrap);
-        this.renderRecordBox(panel);
+        await this.renderRecordBox(panel);
         this.renderOkrBox(panel);
     }
 
@@ -282,7 +312,7 @@ export class OkrView {
     }
 
     /** 记录卡片：独立方框，标题「记录」+ 右上角编辑按钮（切换字段编辑） */
-    private renderRecordBox(panel: HTMLElement): void {
+    private async renderRecordBox(panel: HTMLElement): Promise<void> {
         const area = panel.createDiv({ cls: 'swimlane-section-area okr-record-area' });
         const header = area.createDiv({ cls: 'swimlane-section-area-header' });
         header.createDiv({ cls: 'swimlane-section-area-title', text: t('okr.typeRecord') });
@@ -316,7 +346,7 @@ export class OkrView {
             this.refresh();
         };
 
-        this.renderRecordCard(body, recordCard);
+        await this.renderRecordCard(body, recordCard, item);
     }
 
     /** 标题栏右上角「+」按钮：点击展开下拉面板（按大类分组列出条目类型） */
@@ -527,17 +557,17 @@ export class OkrView {
     }
 
     /**
-     * 记录卡片内容：正常模式显示热力图与记录总数；编辑模式显示表单（字段类型 + 名称 + 删除）。
+     * 记录卡片内容：正常模式以表格展示当前任务的填写记录（日期 + 各字段值）；
+     * 编辑模式显示表单（字段类型 + 名称 + 删除）。
      * 右上角编辑图标改由记录方框标题栏统一承载，此方法只渲染卡片主体，不再包裹卡片外框。
      */
-    private renderRecordCard(container: HTMLElement, recordCard: OkrRecordCard): void {
+    private async renderRecordCard(container: HTMLElement, recordCard: OkrRecordCard, item: InboxItem): Promise<void> {
         const editing = this.recordEditIds.has(recordCard.id);
 
         if (!editing) {
-            // 正常模式：热力图 + 记录总数
-            const view = container.createDiv({ cls: 'okr-record-view' });
-            view.createDiv({ cls: 'okr-record-heatmap', text: t('okr.recordHeatmap') });
-            view.createDiv({ cls: 'okr-record-total', text: t('okr.recordTotal', { count: 0 }) });
+            // 正常模式：仅显示记录总数
+            const entries = await getRecordStore(this.app).listEntriesByInbox(item.id);
+            container.createDiv({ cls: 'okr-record-total', text: t('okr.recordTotal', { count: entries.length }) });
             return;
         }
 

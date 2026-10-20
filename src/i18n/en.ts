@@ -42,6 +42,9 @@ export const en: I18nMessages = {
     'nav.gtd': 'GTD',
     'nav.scene': 'Scene',
     'nav.scriptManage': 'Script Manager',
+    'nav.data': 'Data',
+    'data.tabExecutionRecords': 'Execution Records',
+    'data.tabRecordCard': 'Record Card',
     'nav.gtdCollect': 'Collect',
     'nav.gtdConfig': 'Config',
     'nav.gtdClarify': 'Clarify',
@@ -190,6 +193,8 @@ export const en: I18nMessages = {
     'okr.recordFormSkip': 'Skip',
     'okr.recordFormSaved': 'Record saved',
     'okr.recordFormFailed': 'Failed to write record',
+    'okr.recordDate': 'Date',
+    'okr.recordNoData': 'No records yet',
     'okr.periodDay': 'Daily',
     'okr.periodWeek': 'Weekly',
     'okr.periodMonth': 'Monthly',
@@ -233,6 +238,8 @@ export const en: I18nMessages = {
 
     // OKR progress
     'okr.progressTitle': 'OKR Progress',
+    'okr.tabPlanExecution': 'Plan Execution',
+    'okr.tabOkrProgress': 'OKR Progress',
     'okr.progressEmpty': 'No OKR entries yet',
     'okr.progressTarget': 'Target',
     'okr.progressCurrent': 'Current',
