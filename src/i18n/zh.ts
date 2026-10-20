@@ -28,7 +28,6 @@ export const zh = {
     'nav.taskPlaceholder': '任务 功能开发中',
     'nav.year': '年计划',
     'nav.taskPlan': '任务',
-    'nav.okr': 'OKR',
     'nav.week': '周计划',
     'nav.today': '日执行',
     'nav.check': '检查',
@@ -145,12 +144,12 @@ export const zh = {
     'taskPlan.tabCurrentTask': '当前任务',
     'taskPlan.tabOverview': '任务总览',
     'taskPlan.tabBasket': '收集篮子',
+    'taskPlan.tabExecution': '执行情况',
+    'taskPlan.tabOkr': 'OKR',
     'taskPlan.plannedWeeks': '已计划周数',
     'taskPlan.emptyValue': '—',
-    'taskPlan.statsTitle': '统计信息',
-    'taskPlan.statsExecCount': '已执行次数',
     'taskPlan.statsTotalDuration': '总执行时长',
-    'taskPlan.statsTreeDuration': '任务树总时长',
+    'taskPlan.statsSelfDuration': '任务执行时长',
     'taskPlan.durationHourMinute': '{hours} 小时 {minutes} 分钟',
     'taskPlan.durationMinute': '{minutes} 分钟',
 
@@ -238,8 +237,6 @@ export const zh = {
 
     // OKR 进度
     'okr.progressTitle': 'OKR进度',
-    'okr.tabPlanExecution': '计划执行',
-    'okr.tabOkrProgress': 'okr进度',
     'okr.progressEmpty': '暂无 OKR 条目',
     'okr.progressTarget': '目标',
     'okr.progressCurrent': '当前',

@@ -13,7 +13,6 @@ import { CheckView } from './views/pdca/check-view';
 import { ImproveView } from './views/pdca/improve-view';
 import { WorkbenchView } from './views/workbench/workbench-view';
 import { OkrTaskPlanView } from './views/task/okr-task-plan-view';
-import { OkrView } from './views/task/okr-view';
 import { DataView } from './views/task/data-view';
 import { AchievementView } from './views/task/achievement-view';
 import { ScriptManageView } from './views/task/script-manage-view';
@@ -41,7 +40,7 @@ export const VIEW_TYPE_MAIN = 'parrot-plan-main-view';
 type PrimaryView = 'pdca' | 'task' | 'workbench' | 'gtd';
 
 /** 二级视图（tab）标识 */
-type NavTab = 'year' | 'taskPlan' | 'week' | 'today' | 'check' | 'improve' | 'swimlane' | 'workbench' | 'achievement' | 'gtd' | 'okrHome' | 'okrTaskPlan' | 'okr' | 'data' | 'scene' | 'scriptManage' | 'gtdCollect' | 'gtdConfig' | 'gtdClarify' | 'gtdReview' | 'gtdEngage';
+type NavTab = 'year' | 'taskPlan' | 'week' | 'today' | 'check' | 'improve' | 'swimlane' | 'workbench' | 'achievement' | 'gtd' | 'okrHome' | 'okrTaskPlan' | 'data' | 'scene' | 'scriptManage' | 'gtdCollect' | 'gtdConfig' | 'gtdClarify' | 'gtdReview' | 'gtdEngage';
 
 /** 一级视图定义（顶部第一行） */
 const PRIMARY_VIEWS: { id: PrimaryView; labelKey: 'nav.pdca' | 'nav.task' | 'nav.workbench' | 'nav.gtd' }[] = [
@@ -52,7 +51,7 @@ const PRIMARY_VIEWS: { id: PrimaryView; labelKey: 'nav.pdca' | 'nav.task' | 'nav
 ];
 
 /** 二级视图定义（顶部第二行，按一级视图分组；label 存 i18n key，渲染时再求值） */
-const SECONDARY_TABS: Record<PrimaryView, { id: NavTab; labelKey: 'nav.year' | 'nav.taskPlan' | 'nav.week' | 'nav.today' | 'nav.check' | 'nav.improve' | 'nav.projectPicture' | 'nav.workbench' | 'nav.achievement' | 'nav.gtd' | 'nav.task' | 'nav.okr' | 'nav.data' | 'nav.scene' | 'nav.scriptManage' | 'nav.gtdCollect' | 'nav.gtdConfig' | 'nav.gtdClarify' | 'nav.gtdReview' | 'nav.gtdEngage' }[]> = {
+const SECONDARY_TABS: Record<PrimaryView, { id: NavTab; labelKey: 'nav.year' | 'nav.taskPlan' | 'nav.week' | 'nav.today' | 'nav.check' | 'nav.improve' | 'nav.projectPicture' | 'nav.workbench' | 'nav.achievement' | 'nav.gtd' | 'nav.task' | 'nav.data' | 'nav.scene' | 'nav.scriptManage' | 'nav.gtdCollect' | 'nav.gtdConfig' | 'nav.gtdClarify' | 'nav.gtdReview' | 'nav.gtdEngage' }[]> = {
     pdca: [
         { id: 'week', labelKey: 'nav.week' },
         { id: 'today', labelKey: 'nav.today' },
@@ -61,7 +60,6 @@ const SECONDARY_TABS: Record<PrimaryView, { id: NavTab; labelKey: 'nav.year' | '
     ],
     task: [
         { id: 'okrTaskPlan', labelKey: 'nav.taskPlan' },
-        { id: 'okr', labelKey: 'nav.okr' },
         { id: 'data', labelKey: 'nav.data' },
         { id: 'achievement', labelKey: 'nav.achievement' },
         { id: 'scene', labelKey: 'nav.scene' },
@@ -99,7 +97,6 @@ export class MainView extends ItemView {
     private improveView: ImproveView;
     private workbenchView: WorkbenchView;
     private okrTaskPlanView: OkrTaskPlanView;
-    private okrView: OkrView;
     private dataView: DataView;
     private achievementView: AchievementView;
     private scriptManageView: ScriptManageView;
@@ -223,13 +220,6 @@ export class MainView extends ItemView {
             () => this.weekView.save(),
             this.inboxRepo(),
             () => this.weekView.executions,
-        );
-        this.okrView = new OkrView(
-            this.app,
-            this.weekView.inboxData,
-            this.weekView.planCategoryData,
-            () => this.weekView.save(),
-            this.inboxRepo(),
         );
         this.dataView = new DataView(
             this.app,
@@ -549,11 +539,6 @@ export class MainView extends ItemView {
 
         if (this.activeTab === 'okrTaskPlan') {
             await this.okrTaskPlanView.renderInto(this.contentRoot);
-            return;
-        }
-
-        if (this.activeTab === 'okr') {
-            await this.okrView.renderInto(this.contentRoot);
             return;
         }
 

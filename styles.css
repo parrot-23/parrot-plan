@@ -3185,6 +3185,14 @@
     font-weight: 600;
 }
 
+/* 逐字符竖排（如 OKR）：每个字符独占一行，宽度保持不变 */
+.task-plan-right-tab.is-stacked-chars {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
 /* 留空选项卡的占位内容区 */
 .task-plan-empty-pane {
     height: 100%;
@@ -3267,7 +3275,7 @@
     background: var(--background-secondary);
 }
 
-/* 总执行时长卡片：与任务条目卡片同样式，内容上下居中 */
+/* 执行时长卡片：与任务条目卡片同样式，内容上下排列 */
 .task-plan-overview-duration {
     justify-content: center;
     gap: 6px;
@@ -6208,57 +6216,6 @@
     color: var(--text-faint);
 }
 
-/* 任务计划视图：统计信息方框（任务树 / 当前任务 / 各直接子任务的执行时长） */
-.task-plan-stats-body {
-    display: flex;
-    flex-direction: row;
-    align-items: flex-start;
-    gap: 12px;
-    overflow-x: auto;
-}
-
-.task-plan-stats-block {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 4px;
-    flex-shrink: 0;
-    max-width: 120px;
-}
-
-.task-plan-stats-box {
-    display: flex;
-    align-items: baseline;
-    justify-content: center;
-    gap: 2px;
-    min-width: 72px;
-    padding: 8px 10px;
-    border: 1px solid var(--background-modifier-border);
-    border-radius: 6px;
-    background: var(--background-primary);
-    color: var(--text-normal);
-    white-space: nowrap;
-}
-
-.task-plan-stats-value {
-    font-size: 15px;
-    font-weight: 600;
-}
-
-.task-plan-stats-unit {
-    font-size: 11px;
-    color: var(--text-muted);
-}
-
-.task-plan-stats-name {
-    font-size: 12px;
-    color: var(--text-muted);
-    text-align: center;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    max-width: 100%;
-}
 
 /* 统计信息方框（当前任务的执行次数与总时长） */
 .okr-stats-body {

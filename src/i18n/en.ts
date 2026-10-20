@@ -30,7 +30,6 @@ export const en: I18nMessages = {
     'nav.taskPlaceholder': 'Task is under development',
     'nav.year': 'Year Plan',
     'nav.taskPlan': 'Task',
-    'nav.okr': 'OKR',
     'nav.week': 'Week Plan',
     'nav.today': 'Today Todo',
     'nav.check': 'Check',
@@ -147,12 +146,12 @@ export const en: I18nMessages = {
     'taskPlan.tabCurrentTask': 'Current Task',
     'taskPlan.tabOverview': 'Task Overview',
     'taskPlan.tabBasket': 'Inbox Basket',
+    'taskPlan.tabExecution': 'Execution',
+    'taskPlan.tabOkr': 'OKR',
     'taskPlan.plannedWeeks': 'Planned weeks',
     'taskPlan.emptyValue': '—',
-    'taskPlan.statsTitle': 'Statistics',
-    'taskPlan.statsExecCount': 'Executions',
     'taskPlan.statsTotalDuration': 'Total duration',
-    'taskPlan.statsTreeDuration': 'Task tree total',
+    'taskPlan.statsSelfDuration': 'Task duration',
     'taskPlan.durationHourMinute': '{hours} h {minutes} min',
     'taskPlan.durationMinute': '{minutes} min',
 
@@ -240,8 +239,6 @@ export const en: I18nMessages = {
 
     // OKR progress
     'okr.progressTitle': 'OKR Progress',
-    'okr.tabPlanExecution': 'Plan Execution',
-    'okr.tabOkrProgress': 'OKR Progress',
     'okr.progressEmpty': 'No OKR entries yet',
     'okr.progressTarget': 'Target',
     'okr.progressCurrent': 'Current',
