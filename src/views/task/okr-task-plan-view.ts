@@ -2,7 +2,7 @@ import type { App } from 'obsidian';
 import { Modal, Notice, Setting, setIcon } from 'obsidian';
 
 import type { PlanCategoryData } from '../../shared/plan-category-manager';
-import type { InboxData, InboxItem, Section, ChecklistData, FileData, BasketItem, ImprovementEntry, OkrConditionItem, OkrRecordCard, OkrRecordFieldType, TaskType, TaskStatus } from '../../datatypes/domain';
+import type { InboxData, InboxItem, Section, ChecklistData, FileData, BasketItem, ImprovementEntry, OkrConditionItem, OkrRecordCard, OkrRecordFieldType, ExecutionRecord, TaskType, TaskStatus } from '../../datatypes/domain';
 import type { InboxRepo } from '../../repos/inbox-repo';
 import { SECTION_TYPE_META, OKR_CONDITION_META, OKR_RECORD_FIELD_META } from '../../datatypes/domain';
 import { renderTaskPanel, FilePathSuggest } from '../../shared/task-panel';
@@ -45,6 +45,8 @@ export class OkrTaskPlanView {
     private inboxRepo?: InboxRepo;
     /** 记录数据仓库（记录卡填写结果读写入口） */
     private recordRepo: RecordRepo;
+    /** 执行记录访问器（用于统计当前任务的执行时长） */
+    private getExecutions: () => ExecutionRecord[];
     /** 右侧垂直选项卡当前选中项（刷新后保持不变） */
     private rightTab: 'current' | 'overview' | 'basket' = 'current';
     /** 处于编辑模式的记录卡片对应的卡片 id（本次会话内保留，可来回切换） */
@@ -56,6 +58,7 @@ export class OkrTaskPlanView {
         categoryData: PlanCategoryData,
         save: () => Promise<void>,
         inboxRepo?: InboxRepo,
+        getExecutions?: () => ExecutionRecord[],
     ) {
         this.app = app;
         this.inboxData = inboxData;
@@ -63,6 +66,7 @@ export class OkrTaskPlanView {
         this.save = save;
         this.inboxRepo = inboxRepo;
         this.recordRepo = new RecordRepo(app);
+        this.getExecutions = getExecutions ?? (() => []);
     }
 
     async renderInto(container: HTMLElement): Promise<void> {
@@ -735,8 +739,73 @@ export class OkrTaskPlanView {
         if (body) this.renderSectionCards(body);
     }
 
+    /**
+     * 统计信息方框：一行从左到右依次为
+     * 任务树总时长（含所有子孙）→ 当前任务自身时长 → 各直接子任务总时长（含其所有子孙）。
+     * 每项为「方块 + 方块下方任务名」，方块内显示时长。
+     * 数据来源为执行记录（按 inboxId 聚合），无选中任务时不渲染。
+     */
+    private renderStatsBox(wrap: HTMLElement): void {
+        wrap.empty();
+
+        const item = this.getSelectedItem();
+        if (!item) return;
+
+        // 按任务聚合执行时长（分钟）
+        const minutesByTask = new Map<string, number>();
+        for (const ex of this.getExecutions()) {
+            if (!ex.inboxId) continue;
+            const minutes = Math.max(0, (ex.end ?? ex.start) - ex.start);
+            minutesByTask.set(ex.inboxId, (minutesByTask.get(ex.inboxId) ?? 0) + minutes);
+        }
+
+        // 任务自身 + 所有子孙的执行时长
+        const subtreeMinutes = (taskId: string): number => {
+            let total = minutesByTask.get(taskId) ?? 0;
+            for (const child of this.inboxData.items) {
+                if (child.removed || child.parentId !== taskId) continue;
+                total += subtreeMinutes(child.id);
+            }
+            return total;
+        };
+
+        const area = wrap.createDiv({ cls: 'swimlane-section-area task-plan-stats-area' });
+        const header = area.createDiv({ cls: 'swimlane-section-area-header' });
+        header.createDiv({ cls: 'swimlane-section-area-title', text: t('taskPlan.statsTitle') });
+
+        const body = area.createDiv({ cls: 'task-plan-stats-body' });
+
+        // 1. 当前任务树总时长（含所有子孙）
+        this.renderStatsBlock(body, subtreeMinutes(item.id), t('taskPlan.statsTreeDuration'));
+
+        // 2. 当前任务节点自身时长
+        this.renderStatsBlock(body, minutesByTask.get(item.id) ?? 0, item.title);
+
+        // 3. 每个直接子任务的总时长（含其所有子孙）
+        const children = this.inboxData.items.filter(i => !i.removed && i.parentId === item.id);
+        for (const child of children) {
+            this.renderStatsBlock(body, subtreeMinutes(child.id), child.title);
+        }
+    }
+
+    /** 统计方块：方块内为时长，方块下方为任务名 */
+    private renderStatsBlock(row: HTMLElement, minutes: number, label: string): void {
+        const block = row.createDiv({ cls: 'task-plan-stats-block' });
+        const box = block.createDiv({ cls: 'task-plan-stats-box' });
+        const total = Math.max(0, Math.round(minutes));
+        box.createSpan({ cls: 'task-plan-stats-value', text: String(Math.floor(total / 60)) });
+        box.createSpan({ cls: 'task-plan-stats-unit', text: 'h' });
+        box.createSpan({ cls: 'task-plan-stats-value', text: String(total % 60) });
+        box.createSpan({ cls: 'task-plan-stats-unit', text: 'm' });
+        block.createDiv({ cls: 'task-plan-stats-name', text: label });
+    }
+
     /** 未选中任务时：在右侧内容区展示所有任务条目及其 OKR 进度、成果情况 */
     private renderAllTasksOverview(container: HTMLElement): void {
+        // 统计信息方框（当前选中任务的执行时长分布）
+        const statsWrap = container.createDiv({ cls: 'okr-stats-wrap' });
+        this.renderStatsBox(statsWrap);
+
         const area = container.createDiv({ cls: 'task-plan-overview' });
         area.createDiv({ cls: 'task-plan-overview-title', text: t('taskPlan.overviewTitle') });
 
