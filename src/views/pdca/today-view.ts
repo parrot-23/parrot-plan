@@ -13,6 +13,9 @@ import { EVENT_STATUS_EMOJI, EVENT_STATUS_LABEL_KEY, getEventStatus, type EventS
 import type { PdcaRepo } from '../../repos/pdca-repo';
 import type { InboxRepo } from '../../repos/inbox-repo';
 import { renderTaskPanel } from '../../shared/task-panel';
+import { RecordFillModal } from '../../shared/record-fill-modal';
+import { getRecordStore } from '../../db/record-store';
+import type { OkrRecordEntry } from '../../datatypes/domain';
 
 /** 时间轴每小时格子的最小高度（px）：面板较矮时保持该高度并出现滚动条 */
 const MIN_HOUR_HEIGHT = 30;
@@ -531,6 +534,7 @@ export class TodayView {
 
         await this.save();
         await this.refresh();
+        if (done) await this.maybePromptRecordForm(inboxId);
     }
 
     /** 点击任务卡片：选中/取消选中该任务，并清除时间轴事件选中 */
@@ -1786,6 +1790,37 @@ export class TodayView {
         void this.refresh();
     }
 
+    /** 完成/手动标记完成后，若任务带记录卡片则弹出填写表单并写入 DB（一次完成对应一个表单，可跳过） */
+    private async maybePromptRecordForm(inboxId: string | undefined): Promise<void> {
+        if (!inboxId) return;
+        const item = this.inboxData.items.find((i) => i.id === inboxId && !i.removed);
+        if (!item) return;
+        const card = item.records?.[0];
+        if (!card || !card.fields || !card.fields.some((f) => f.name && f.name.trim().length > 0)) return;
+
+        const modal = new RecordFillModal(this.app, card, item.title);
+        const resultPromise = modal.waitForResult();
+        modal.open();
+        const values = await resultPromise;
+        if (!values) return;
+
+        const entry: OkrRecordEntry = {
+            id: `rec_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
+            recordId: card.id,
+            inboxId: item.id,
+            dayKey: this.getViewDayInfo().dayKey,
+            createdAt: Date.now(),
+            values,
+        };
+        try {
+            await getRecordStore(this.app).insertEntry(entry);
+            new Notice(t('okr.recordFormSaved'));
+        } catch (err) {
+            console.error('[parrot-plan] 写入记录到 DB 失败', err);
+            new Notice(t('okr.recordFormFailed'));
+        }
+    }
+
     /** 已完成任务：直接为左侧选中的任务写入一条执行记录（按详情中编辑的时间区间） */
     private async finishSelectedTask(): Promise<void> {
         const item = this.getSelectedItem();
@@ -1795,17 +1830,24 @@ export class TodayView {
         const start = this.detailStart;
         const end = Math.min(24 * 60, this.detailEnd);
 
+        const execId = `exec_${Date.now()}`;
         this.pdcaRepo.addExecution({
-            id: `exec_${Date.now()}`,
+            id: execId,
             inboxId: item.id,
             day,
             start,
             end,
             weekKey,
         });
+        // 完成后选中刚写入的执行记录，详情方框切换为「执行记录」样式（底部删除按钮）
+        this.selectedExecId = execId;
+        this.selectedEventId = undefined;
+        this.selectedRunningTask = false;
+        this.clearInboxSelection();
         await this.save();
         new Notice(t('today.completeDone', { title: item.title }));
         await this.refresh();
+        await this.maybePromptRecordForm(item.id);
     }
 
     /** 切换「进行中任务」色块的选中状态 */
@@ -1835,8 +1877,9 @@ export class TodayView {
         const plannedEnd = typeof running.end === 'number' ? running.end : actualEnd;
         const end = actualEnd < plannedEnd ? plannedEnd : actualEnd;
 
+        const execId = `exec_${Date.now()}`;
         this.pdcaRepo.addExecution({
-            id: `exec_${Date.now()}`,
+            id: execId,
             inboxId: running.inboxId,
             day,
             start: running.start,
@@ -1847,10 +1890,15 @@ export class TodayView {
         this.runningTask = undefined;
         this.pdcaRepo.setRunningTask(undefined);
         this.selectedRunningTask = false;
+        // 完成后选中刚写入的执行记录，详情方框切换为「执行记录」样式（底部删除按钮）
+        this.selectedExecId = execId;
+        this.selectedEventId = undefined;
+        this.clearInboxSelection();
         await this.save();
         this.onRunningTaskChange?.();
         new Notice(t('today.completeDone', { title: item?.title ?? '' }));
         await this.refresh();
+        await this.maybePromptRecordForm(running.inboxId);
     }
 
     /** 中断进行中任务：写入执行记录（start=开始时刻，end=当前时刻），并清除进行中状态 */
@@ -1925,8 +1973,9 @@ export class TodayView {
         const start = this.addUnplannedStart;
         const end = Math.min(24 * 60, start + this.addUnplannedDuration);
 
+        const execId = `exec_${Date.now()}`;
         this.pdcaRepo.addExecution({
-            id: `exec_${Date.now()}`,
+            id: execId,
             inboxId: item.id,
             day,
             start,
@@ -1936,9 +1985,15 @@ export class TodayView {
         this.addUnplannedMode = false;
         // 新增完成后回到「今日情况」选项卡
         this.rightTab = 'today';
+        // 完成后选中刚写入的执行记录，详情方框切换为「执行记录」样式（底部删除按钮）
+        this.selectedExecId = execId;
+        this.selectedEventId = undefined;
+        this.selectedRunningTask = false;
+        this.clearInboxSelection();
         await this.save();
         new Notice(t('today.completeDone', { title: item.title }));
         await this.refresh();
+        await this.maybePromptRecordForm(item.id);
     }
 
     /** 执行计划：为时间轴上选中的事件生成一条执行记录 */
@@ -1948,8 +2003,9 @@ export class TodayView {
 
         const { day, weekKey } = this.getViewDayInfo();
 
+        const execId = `exec_${Date.now()}`;
         this.pdcaRepo.addExecution({
-            id: `exec_${Date.now()}`,
+            id: execId,
             eventId: ev.id,
             inboxId: ev.inboxId,
             day,
@@ -1957,9 +2013,15 @@ export class TodayView {
             end: ev.end,
             weekKey,
         });
+        // 完成后选中刚写入的执行记录，详情方框切换为「执行记录」样式（底部删除按钮）
+        this.selectedExecId = execId;
+        this.selectedEventId = undefined;
+        this.selectedRunningTask = false;
+        this.clearInboxSelection();
         await this.save();
         new Notice(t('today.completeDone', { title: ev.title }));
         await this.refresh();
+        await this.maybePromptRecordForm(ev.inboxId);
     }
 
     /**
@@ -1980,8 +2042,9 @@ export class TodayView {
 
         const { day, weekKey } = this.getViewDayInfo();
 
+        const execId = `exec_${Date.now()}`;
         this.pdcaRepo.addExecution({
-            id: `exec_${Date.now()}`,
+            id: execId,
             eventId: ev.id,
             inboxId: ev.inboxId,
             day,
@@ -1991,9 +2054,15 @@ export class TodayView {
         });
         this.executingEventId = undefined;
         this.pdcaRepo.setExecutingEventId(undefined);
+        // 完成后选中刚写入的执行记录，详情方框切换为「执行记录」样式（底部删除按钮）
+        this.selectedExecId = execId;
+        this.selectedEventId = undefined;
+        this.selectedRunningTask = false;
+        this.clearInboxSelection();
         await this.save();
         new Notice(t('today.completeDone', { title: ev.title }));
         await this.refresh();
+        await this.maybePromptRecordForm(ev.inboxId);
     }
 
     /** 取消执行：清除「正在执行」状态，不写入执行记录 */

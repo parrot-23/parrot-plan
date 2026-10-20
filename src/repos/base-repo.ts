@@ -17,7 +17,7 @@ import { defaultGtdData } from '../datatypes/gtd';
 import { t } from '../i18n';
 
 /** 缓存目录默认名称 */
-export const DEFAULT_CACHE_DIR_NAME = 'parrotPlanCache';
+export const DEFAULT_CACHE_DIR_NAME = '.parrot-plan/cache';
 
 /** 插件持有的全量数据（唯一数据源） */
 export interface PluginData {
@@ -142,8 +142,12 @@ export class BaseRepo {
             rawData && typeof rawData === 'object' ? rawData as Record<string, unknown> : {};
 
         // 读取缓存目录名称（随主数据一起存储，兼容旧数据：默认值）
-        this.cacheDirName = typeof savedData.cacheDirName === 'string' && savedData.cacheDirName
+        const savedCacheDirName = typeof savedData.cacheDirName === 'string' && savedData.cacheDirName
             ? savedData.cacheDirName
+            : '';
+        // 兼容旧数据：旧默认目录 parrotPlanCache 迁移为新默认 .parrot-plan/cache
+        this.cacheDirName = savedCacheDirName && savedCacheDirName !== 'parrotPlanCache'
+            ? savedCacheDirName
             : DEFAULT_CACHE_DIR_NAME;
 
         // 读取是否启用缓存（兼容旧数据：默认启用）
