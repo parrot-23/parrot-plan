@@ -242,6 +242,8 @@
 
 /* 习惯任务网格：与当天任务网格同宽，按周等分 7 列；斜杠条纹背景 */
 .week-panel-habit-grid {
+    position: relative;
+    z-index: 0;
     flex-shrink: 0;
     display: grid;
     grid-template-columns: repeat(7, 1fr);
@@ -255,6 +257,25 @@
         #fff 8px,
         #fff 16px
     );
+}
+
+/* 习惯区同列悬停高亮：仅覆盖悬浮当天对应的一列，位于卡片之下 */
+.week-panel-habit-grid::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: calc((var(--hover-day, 0) - 1) * 100% / 7);
+    width: calc(100% / 7);
+    z-index: -1;
+    background: rgba(128, 128, 128, 0.12);
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.08s ease;
+}
+
+.week-panel-habit-grid.is-col-hovered::before {
+    opacity: 1;
 }
 
 /* 习惯卡片左右留白，避免相邻列卡片互相贴边，同时不改变列边界对齐 */
@@ -280,6 +301,7 @@
 /* 单日列 */
 .week-panel-column {
     position: relative;
+    z-index: 0;
     min-width: 0;
     display: flex;
     flex-direction: column;
@@ -293,12 +315,13 @@
     border-right: none;
 }
 
-/* 悬停高亮：用覆盖层盖住整列，保证内容再高也整列高亮 */
-.week-panel-column:hover::after {
+/* 列悬停高亮：浅灰半透明背景，位于卡片之下；悬浮某列时同时点亮该列与习惯区同列 */
+.week-panel-column.is-col-hovered::after {
     content: '';
     position: absolute;
     inset: 0;
-    background: var(--background-modifier-hover);
+    z-index: -1;
+    background: rgba(128, 128, 128, 0.12);
     pointer-events: none;
 }
 

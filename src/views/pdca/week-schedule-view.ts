@@ -278,6 +278,9 @@ export class WeekScheduleView extends ItemView {
             },
         });
 
+        // 列悬停：同时点亮习惯区同列与全天区整列（背景位于卡片之下）
+        this.setupColumnHover(dayColumns, habitGrid);
+
         // 渲染每列顶部的分类时长统计（依据当前时间计划方案）
         for (let d = 1; d <= 7; d++) {
             this.renderDayStats(statsCells[d - 1], d);
@@ -295,6 +298,25 @@ export class WeekScheduleView extends ItemView {
         // 渲染每天列内的当天任务清单
         for (let d = 1; d <= 7; d++) {
             this.renderDayColumn(dayColumns[d - 1], d);
+        }
+    }
+
+    /**
+     * 列悬停高亮：悬浮某一天列时，同时点亮该列（全天区）与习惯区同列（浅灰半透明背景）。
+     * 背景通过 CSS 伪元素置于卡片之下，不遮挡卡片。
+     */
+    private setupColumnHover(dayColumns: HTMLElement[], habitGrid: HTMLElement) {
+        for (let d = 1; d <= 7; d++) {
+            const col = dayColumns[d - 1];
+            col.onmouseenter = () => {
+                habitGrid.style.setProperty('--hover-day', String(d));
+                habitGrid.addClass('is-col-hovered');
+                col.addClass('is-col-hovered');
+            };
+            col.onmouseleave = () => {
+                habitGrid.removeClass('is-col-hovered');
+                col.removeClass('is-col-hovered');
+            };
         }
     }
 
