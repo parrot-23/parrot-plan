@@ -231,17 +231,55 @@
     border-right: none;
 }
 
-/* 7 列容器 */
+/* 表体滚动容器：习惯任务网格在上、当天任务网格在下 */
 .week-panel-columns {
     flex: 1;
     min-height: 0;
     display: flex;
+    flex-direction: column;
     overflow-y: auto;
+}
+
+/* 习惯任务网格：与当天任务网格同宽，按周等分 7 列；斜杠条纹背景 */
+.week-panel-habit-grid {
+    flex-shrink: 0;
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    row-gap: 4px;
+    padding: 6px 0;
+    border-bottom: 1px dashed var(--background-modifier-border);
+    background-image: repeating-linear-gradient(
+        45deg,
+        #fafafa 0,
+        #fafafa 8px,
+        #fff 8px,
+        #fff 16px
+    );
+}
+
+/* 习惯卡片左右留白，避免相邻列卡片互相贴边，同时不改变列边界对齐 */
+.week-panel-habit-grid > .week-panel-task {
+    margin: 0 4px;
+    box-sizing: border-box;
+    min-height: 52px;
+}
+
+/* 习惯任务折叠时隐藏整块 */
+.week-panel-habit-grid.is-hidden {
+    display: none;
+}
+
+/* 当天任务网格：7 列日期面板 */
+.week-panel-day-grid {
+    flex: 1;
+    min-height: 0;
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
 }
 
 /* 单日列 */
 .week-panel-column {
-    flex: 1;
+    position: relative;
     min-width: 0;
     display: flex;
     flex-direction: column;
@@ -255,8 +293,13 @@
     border-right: none;
 }
 
-.week-panel-column:hover {
+/* 悬停高亮：用覆盖层盖住整列，保证内容再高也整列高亮 */
+.week-panel-column:hover::after {
+    content: '';
+    position: absolute;
+    inset: 0;
     background: var(--background-modifier-hover);
+    pointer-events: none;
 }
 
 /* 空列提示 */
@@ -267,7 +310,7 @@
     padding: 4px 0;
 }
 
-/* 列内分区：上方习惯任务 / 下方当天任务 */
+/* 列内任务分区 */
 .week-panel-section {
     display: flex;
     flex-direction: column;
@@ -275,28 +318,32 @@
     min-width: 0;
 }
 
-/* 分区之间的分割线 */
-.week-panel-section-divider {
-    flex-shrink: 0;
-    height: 0;
-    margin: 2px 0;
-    border-top: 1px dashed var(--background-modifier-border);
-}
-
-/* 习惯任务按时间点分行：同一时间点的卡片跨列对齐 */
+/* 习惯任务按行占位：空档列留出等高空白 */
 .week-panel-habit-slot {
     display: flex;
     flex-direction: column;
     gap: 4px;
     min-width: 0;
-    /* 行高由脚本统一设置，保证各列同一行等高 */
     box-sizing: border-box;
     overflow: hidden;
 }
 
-/* 该时间点没有习惯任务的列：留出与有卡片时等高的空白占位 */
+/* 该天无此习惯任务的列：留出与有卡片时等高的空白占位 */
 .week-panel-habit-slot.is-empty {
     min-height: 52px;
+}
+
+/* 合并后的跨列习惯卡片 */
+.week-panel-task-merged {
+    /* 内容单块展示，标记绝对定位到各列段右上角 */
+    position: relative;
+}
+
+/* 合并卡片内每个列段右上角的标记：按 JS 计算的 left 百分比定位到对应列右缘 */
+.week-panel-task-merged .week-panel-task-del,
+.week-panel-task-merged .week-panel-task-done {
+    position: absolute;
+    top: 2px;
 }
 
 /* 列内任务条目（两行：标题 + 预估时长） */
@@ -352,6 +399,15 @@
     color: var(--text-muted);
     padding: 0 2px;
     line-height: 1;
+    font-size: 20px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.15s ease;
+}
+
+.week-panel-task:hover .week-panel-task-del {
+    opacity: 1;
+    pointer-events: auto;
 }
 
 .week-panel-task-del:hover {
@@ -2879,10 +2935,8 @@
 
 .improve-week-task-row {
     display: flex;
-    flex-direction: row;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 8px;
+    flex-direction: column;
+    gap: 6px;
     padding: 8px 6px;
     border-bottom: 1px solid var(--background-modifier-border);
 }
@@ -2910,11 +2964,41 @@
     color: var(--text-normal);
 }
 
-.improve-week-task-meta {
-    flex-shrink: 0;
+.improve-week-task-line1 {
     display: flex;
     flex-direction: row;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+}
+
+.improve-week-task-completion {
+    flex-shrink: 0;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-accent);
+    font-variant-numeric: tabular-nums;
+}
+
+.improve-week-task-line2 {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px 14px;
+    padding-left: 16px;
+}
+
+.improve-week-task-seg {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
     gap: 6px;
+}
+
+.improve-week-task-seg-label {
+    font-size: 11px;
+    color: var(--text-faint);
 }
 
 .improve-week-task-chip {
@@ -2924,6 +3008,14 @@
     background: var(--background-primary);
     border: 1px solid var(--background-modifier-border);
     color: var(--text-muted);
+}
+
+.improve-week-task-chip.is-ok {
+    color: var(--text-success, var(--interactive-accent));
+}
+
+.improve-week-task-chip.is-bad {
+    color: var(--text-error);
 }
 
 .improve-week-task-okr {

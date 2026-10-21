@@ -213,26 +213,42 @@ export class ImproveView {
             if (this.pendingImprovement?.taskId === item.id) row.addClass('is-active');
             row.onclick = () => this.selectTaskForImprovement(item.id, item.title);
 
-            // 分类色点 + 任务名
+            // 本周计划（次数 + 预估时长合计）与执行（次数 + 执行时长合计）
+            const planEvents = weekEvents.filter(ev => ev.inboxId === item.id);
+            const planCount = planEvents.length;
+            const planMinutes = planEvents.reduce(
+                (s, ev) => s + (typeof ev.estimatedMinutes === 'number' ? Math.max(0, ev.estimatedMinutes) : 0),
+                0,
+            );
+            const execs = weekExecs.filter(ex => ex.inboxId === item.id);
+            const execCount = execs.length;
+            const execMinutes = execs.reduce((s, ex) => s + Math.max(0, ex.end - ex.start), 0);
+
+            // 第一行：分类色点 + 任务名 + 完成程度 %
+            const line1 = row.createDiv({ cls: 'improve-week-task-line1' });
             const cat = item.categoryId
                 ? this.categoryData.categories.find(c => c.id === item.categoryId)
                 : undefined;
-            const dot = row.createSpan({ cls: 'improve-week-task-dot' });
+            const dot = line1.createSpan({ cls: 'improve-week-task-dot' });
             dot.setCssProps({ '--dot-color': cat?.color ?? '#888888' });
-            row.createSpan({ cls: 'improve-week-task-name', text: item.title });
+            line1.createSpan({ cls: 'improve-week-task-name', text: item.title });
 
-            // 本周执行情况：执行次数 + 总时长
-            const execs = weekExecs.filter(ex => ex.inboxId === item.id);
-            const totalMinutes = execs.reduce((s, ex) => s + Math.max(0, ex.end - ex.start), 0);
-            const meta = row.createDiv({ cls: 'improve-week-task-meta' });
-            meta.createSpan({
-                cls: 'improve-week-task-chip',
-                text: t('improve.weekTaskExecCount', { count: String(execs.length) }),
-            });
-            meta.createSpan({
-                cls: 'improve-week-task-chip',
-                text: t('improve.weekTaskDuration', { duration: formatHours(totalMinutes) }),
-            });
+            const pct = this.computeWeekTaskCompletion(planCount, planMinutes, execCount, execMinutes);
+            if (pct !== null) {
+                line1.createSpan({ cls: 'improve-week-task-completion', text: `${pct}%` });
+            }
+
+            // 第二行：计划（次数、时长） · 执行（次数、时长） · 偏差（是否次数少了/时长不足）
+            const line2 = row.createDiv({ cls: 'improve-week-task-line2' });
+            this.renderWeekTaskSegment(line2, t('improve.weekTaskPlan'), [
+                t('improve.weekTaskTimes', { count: String(planCount) }),
+                formatHours(planMinutes),
+            ]);
+            this.renderWeekTaskSegment(line2, t('improve.weekTaskExec'), [
+                t('improve.weekTaskTimes', { count: String(execCount) }),
+                formatHours(execMinutes),
+            ]);
+            this.renderWeekTaskBias(line2, planCount, planMinutes, execCount, execMinutes);
 
             // 本周新增 OKR 进度：仅统计本周执行记录带来的增量
             const conditions = item.okr?.conditions ?? [];
@@ -242,13 +258,80 @@ export class ImproveView {
                 for (const cond of conditions) {
                     const unit = t(OKR_CONDITION_META[cond.type].unitKey as Parameters<typeof t>[0]);
                     // 累积类型：本周执行总时长；其余类型：本周执行次数
-                    const added = cond.type === 'cumulative' ? totalMinutes : execs.length;
+                    const added = cond.type === 'cumulative' ? execMinutes : execCount;
                     okrRow.createSpan({
                         cls: 'improve-week-task-okr-chip',
                         text: `+${added} ${unit}`,
                     });
                 }
             }
+        }
+    }
+
+    /**
+     * 计算任务本周完成程度（百分比，四舍五入到整数，截断至 0–100）。
+     * 有预估时长则按时长完成率，无预估时长则按次数完成率；完全无计划返回 null。
+     */
+    private computeWeekTaskCompletion(
+        planCount: number,
+        planMinutes: number,
+        execCount: number,
+        execMinutes: number,
+    ): number | null {
+        if (planMinutes > 0) {
+            const pct = Math.round((execMinutes / planMinutes) * 100);
+            return Math.max(0, Math.min(100, pct));
+        }
+        if (planCount > 0) {
+            const pct = Math.round((execCount / planCount) * 100);
+            return Math.max(0, Math.min(100, pct));
+        }
+        return null;
+    }
+
+    /** 渲染第二行的一组「标签 + 值」片段 */
+    private renderWeekTaskSegment(container: HTMLElement, label: string, values: string[]): void {
+        const seg = container.createDiv({ cls: 'improve-week-task-seg' });
+        seg.createSpan({ cls: 'improve-week-task-seg-label', text: label });
+        for (const value of values) {
+            seg.createSpan({ cls: 'improve-week-task-chip', text: value });
+        }
+    }
+
+    /**
+     * 渲染第二行的偏差片段：次数/时长都达标则显示「正常」，
+     * 否则分别列出「次数少 N」与「时长少 N」（仅在确实不足时出现）。
+     */
+    private renderWeekTaskBias(
+        container: HTMLElement,
+        planCount: number,
+        planMinutes: number,
+        execCount: number,
+        execMinutes: number,
+    ): void {
+        const seg = container.createDiv({ cls: 'improve-week-task-seg improve-week-task-bias' });
+        seg.createSpan({ cls: 'improve-week-task-seg-label', text: t('improve.weekTaskBias') });
+
+        const lessCount = planCount - execCount;
+        const lessMinutes = planMinutes - execMinutes;
+        const hasCount = lessCount > 0;
+        const hasDuration = lessMinutes > 0;
+
+        if (!hasCount && !hasDuration) {
+            seg.createSpan({ cls: 'improve-week-task-chip is-ok', text: t('improve.weekTaskBiasOk') });
+            return;
+        }
+        if (hasCount) {
+            seg.createSpan({
+                cls: 'improve-week-task-chip is-bad',
+                text: t('improve.weekTaskLessCount', { count: String(lessCount) }),
+            });
+        }
+        if (hasDuration) {
+            seg.createSpan({
+                cls: 'improve-week-task-chip is-bad',
+                text: t('improve.weekTaskLessDuration', { duration: formatHours(lessMinutes) }),
+            });
         }
     }
 

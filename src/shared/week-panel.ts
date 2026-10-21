@@ -16,8 +16,12 @@ export interface WeekPanelRefs {
     statsRow: HTMLElement;
     /** 7 个统计单元格（.week-panel-stats-cell） */
     statsCells: HTMLElement[];
-    /** 7 列容器（.week-panel-columns） */
+    /** 表体滚动容器（.week-panel-columns） */
     columnsRow: HTMLElement;
+    /** 习惯任务网格（.week-panel-habit-grid），与日列网格同宽、按周等分 7 列 */
+    habitGrid: HTMLElement;
+    /** 当天任务网格（.week-panel-day-grid），7 个日期列 */
+    dayGrid: HTMLElement;
     /** 7 个日期列（.week-panel-column） */
     dayColumns: HTMLElement[];
 }
@@ -53,14 +57,20 @@ export function renderWeekPanel(
         statsCells.push(cell);
     }
 
-    // ===== 7 列日期面板 =====
+    // ===== 表体滚动容器 =====
     const columnsRow = panel.createDiv({ cls: 'week-panel-columns' });
+
+    // ===== 习惯任务网格（跨列合并同一任务，与日列网格同宽） =====
+    const habitGrid = columnsRow.createDiv({ cls: 'week-panel-habit-grid' });
+
+    // ===== 当天任务网格（7 列日期面板） =====
+    const dayGrid = columnsRow.createDiv({ cls: 'week-panel-day-grid' });
     const dayColumns: HTMLElement[] = [];
     for (let d = 1; d <= 7; d++) {
-        const col = columnsRow.createDiv({ cls: 'week-panel-column' });
+        const col = dayGrid.createDiv({ cls: 'week-panel-column' });
         col.onclick = () => options.onColumnClick?.(d);
         dayColumns.push(col);
     }
 
-    return { panel, headerRow, statsRow, statsCells, columnsRow, dayColumns };
+    return { panel, headerRow, statsRow, statsCells, columnsRow, habitGrid, dayGrid, dayColumns };
 }

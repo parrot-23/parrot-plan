@@ -271,7 +271,7 @@ export class WeekScheduleView extends ItemView {
         }
 
         // ===== 周面板（公共组件）：一周七天，每天一列 =====
-        const { dayColumns, statsCells } = renderWeekPanel(calendar, {
+        const { dayColumns, statsCells, habitGrid } = renderWeekPanel(calendar, {
             onColumnClick: (d) => {
                 // 点击某天列：将左侧选中的任务添加到这一天
                 void this.addTaskToDay(d);
@@ -288,11 +288,13 @@ export class WeekScheduleView extends ItemView {
             this.renderHabitSummaryRow(statsCells[0].parentElement as HTMLElement);
         }
 
-        // 渲染每天列内的任务清单
-        // 习惯任务按「时间点 + 任务」跨列对齐：先收集本周所有习惯任务行，作为各列共用的行顺序
+        // 习惯任务：按「时间点 + 任务」分行，同一任务连续出现在多天时合并为跨列卡片
         const habitRows = this.collectHabitRows();
+        this.renderHabitGrid(habitGrid, habitRows);
+
+        // 渲染每天列内的当天任务清单
         for (let d = 1; d <= 7; d++) {
-            this.renderDayColumn(dayColumns[d - 1], d, habitRows);
+            this.renderDayColumn(dayColumns[d - 1], d);
         }
     }
 
@@ -579,16 +581,6 @@ export class WeekScheduleView extends ItemView {
     }
 
     /**
-     * 计算习惯任务行的统一高度（像素）。
-     * 各列的习惯行必须等高，否则某列卡片换行（标题/时长占两行）时，
-     * 后续行会被整体下推，导致相同任务在不同列错位。
-     * 这里按「卡片最高可能高度」估算：标题一行 + 预估时长一行 + 习惯时间点一行 + 内边距。
-     */
-    private getHabitRowHeight(): number {
-        return 52;
-    }
-
-    /**
      * 渲染折叠习惯后的统计行：7 个单元格，每列显示「习惯数 · 总时长」。
      * 结构与上方饼图统计行一致（整行撑满、单元格之间用分隔线连接）。
      */
@@ -719,52 +711,16 @@ export class WeekScheduleView extends ItemView {
 
     /**
      * 渲染某天列内的任务清单（当天已排入的任务）。
-     * 列内分为上下两部分：上方习惯任务、下方当天任务，中间用分割线区分；
-     * 两部分各自在无任务时显示对应提示文字。
-     * 折叠习惯时不再显示习惯任务区（统计行已展示习惯数量与总时长）。
-     * 习惯任务按「时间点 + 任务」分行，各列共用同一组行顺序，
-     * 保证相同任务（同一时间点）的卡片在同一高度；该行没有任务的列留空白占位。
+     * 习惯任务已移至独立的习惯任务网格（renderHabitGrid），此处仅渲染当天任务。
      */
-    private renderDayColumn(col: HTMLElement, day: number, habitRows: { time: number; key: string }[]) {
+    private renderDayColumn(col: HTMLElement, day: number) {
         const dayEvents = this.events.filter(
             ev => ev.day === day && ev.weekKey === this.currentWeekKey,
         );
 
-        // 按是否设置习惯时间点拆分：习惯任务在上，当天任务在下（各自保持原有顺序）
-        const habitEvents = dayEvents
-            .filter(ev => this.getEventHabitTime(ev) !== null)
-            // 习惯任务按时间点先后顺序从上往下排列
-            .sort((a, b) => (this.getEventHabitTime(a) ?? 0) - (this.getEventHabitTime(b) ?? 0));
+        // 当天任务（未设置习惯时间点的事件）
         const normalEvents = dayEvents.filter(ev => this.getEventHabitTime(ev) === null);
 
-        // ===== 上半部分：习惯任务（折叠习惯时整块隐藏，由统计行代替）=====
-        if (!this.habitsCollapsed) {
-            const habitSection = col.createDiv({ cls: 'week-panel-section week-panel-section-habit' });
-            if (habitEvents.length === 0) {
-                habitSection.createDiv({ cls: 'week-panel-empty', text: t('weekPanel.emptyHabit') });
-            } else {
-                // 按本周所有习惯任务行逐行渲染：该行没有任务的列留出等高空白占位
-                const rowHeight = this.getHabitRowHeight();
-                for (const row of habitRows) {
-                    const slot = habitSection.createDiv({ cls: 'week-panel-habit-slot' });
-                    // 固定行高：保证各列同一行高度一致，避免卡片内容换行导致后续行错位
-                    slot.setCssProps({ height: `${rowHeight}px` });
-                    const evs = habitEvents.filter(ev => this.getHabitRowKey(ev) === row.key);
-                    if (evs.length === 0) {
-                        slot.addClass('is-empty');
-                        continue;
-                    }
-                    for (const ev of evs) {
-                        this.renderDayEventChip(slot, ev, this.getEventHabitTime(ev));
-                    }
-                }
-            }
-
-            // 分割线
-            col.createDiv({ cls: 'week-panel-section-divider' });
-        }
-
-        // ===== 下半部分：当天任务 =====
         const taskSection = col.createDiv({ cls: 'week-panel-section week-panel-section-task' });
         if (normalEvents.length === 0) {
             taskSection.createDiv({ cls: 'week-panel-empty', text: t('weekPanel.emptyTask') });
@@ -778,14 +734,129 @@ export class WeekScheduleView extends ItemView {
         col.createDiv({ cls: 'week-panel-column-spacer' });
     }
 
-    /** 渲染列内单个任务卡片（标题 + 预估时长 + 习惯时间点 + 删除按钮） */
-    private renderDayEventChip(container: HTMLElement, ev: EventBlock, habit: number | null) {
+    /**
+     * 渲染习惯任务网格：同一任务在连续日期出现时合并为跨列卡片。
+     * 每个习惯行（时间点 + 任务）占网格一行，行内按「连续日期 → 合并卡片、
+     * 空档 → 占位」铺满 7 列，与下方当天任务网格严格对齐。
+     */
+    private renderHabitGrid(habitGrid: HTMLElement, habitRows: { time: number; key: string }[]) {
+        habitGrid.empty();
+
+        // 折叠习惯时整块隐藏（由统计行代替）
+        if (this.habitsCollapsed) {
+            habitGrid.addClass('is-hidden');
+            return;
+        }
+        habitGrid.removeClass('is-hidden');
+
+        if (habitRows.length === 0) {
+            const empty = habitGrid.createDiv({ cls: 'week-panel-empty' });
+            empty.style.gridColumn = '1 / -1';
+            empty.setText(t('weekPanel.emptyHabit'));
+            return;
+        }
+
+        for (const row of habitRows) {
+            // 该习惯行每天是否有事件（day 1..7）
+            const dayEvents: (EventBlock | undefined)[] = new Array(7).fill(undefined);
+            for (let d = 1; d <= 7; d++) {
+                const evs = this.events.filter(ev =>
+                    ev.weekKey === this.currentWeekKey
+                    && ev.day === d
+                    && this.getHabitRowKey(ev) === row.key
+                    && this.getEventHabitTime(ev) !== null,
+                );
+                dayEvents[d - 1] = evs[0];
+            }
+
+            let d = 1;
+            while (d <= 7) {
+                if (!dayEvents[d - 1]) {
+                    // 该天无此习惯任务：留出等高空白占位
+                    const ph = habitGrid.createDiv({ cls: 'week-panel-habit-slot is-empty' });
+                    ph.style.gridColumn = `${d} / ${d + 1}`;
+                    d++;
+                    continue;
+                }
+
+                // 计算连续出现区间 [d, e]
+                let e = d;
+                while (e + 1 <= 7 && dayEvents[e]) e++;
+                const runEvents: EventBlock[] = [];
+                for (let dd = d; dd <= e; dd++) runEvents.push(dayEvents[dd - 1]!);
+                this.renderHabitRunCard(habitGrid, runEvents, d);
+                d = e + 1;
+            }
+        }
+    }
+
+    /**
+     * 渲染一个习惯任务的连续区间卡片。
+     * 单天：复用普通卡片并放到对应列；多天：合并为一个跨列卡片，
+     * 内容（标题/预估时长/习惯时间点）仅显示一次，但每列段右上角保留各自 × / ✓。
+     */
+    private renderHabitRunCard(habitGrid: HTMLElement, runEvents: EventBlock[], startDay: number) {
+        const count = runEvents.length;
+        const first = runEvents[0];
+        const habitTime = this.getEventHabitTime(first);
+
+        // 单天：直接复用普通卡片，放到对应列
+        if (count === 1) {
+            const chip = this.renderDayEventChip(habitGrid, first, habitTime);
+            chip.style.gridColumn = `${startDay} / ${startDay + 1}`;
+            return;
+        }
+
+        // 多天：合并为跨列卡片
+        const chip = habitGrid.createDiv({ cls: 'week-panel-task week-panel-task-merged' });
+        chip.style.gridColumn = `${startDay} / ${startDay + count}`;
+        const cat = first.categoryId
+            ? this.planCategoryData.categories.find(c => c.id === first.categoryId)
+            : undefined;
+        chip.setCssProps({ '--chip-color': cat?.color ?? '#888888' });
+
+        // 内容仅显示一次（标题 + 预估时长 + 习惯时间点）
+        this.buildChipContent(chip, first, habitTime);
+
+        // 每个列段右上角各自独立的 × / ✓（按天独立操作）
+        runEvents.forEach((ev, i) => {
+            const marker = this.buildDayMarker(chip, ev);
+            if (!marker) return;
+            marker.style.right = 'auto';
+            marker.style.left = `${((i + 1) * 100) / count}%`;
+            marker.style.transform = 'translateX(calc(-100% - 4px))';
+        });
+
+        // 整卡统一点击：编辑预估时长并同步到本卡片内所有天
+        chip.onclick = (e) => {
+            e.stopPropagation();
+            this.openEstimatePopoverForEvents(chip, runEvents);
+        };
+    }
+
+    /** 渲染列内单个任务卡片（标题 + 预估时长 + 习惯时间点 + 删除按钮），返回卡片元素 */
+    private renderDayEventChip(container: HTMLElement, ev: EventBlock, habit: number | null): HTMLElement {
         const chip = container.createDiv({ cls: 'week-panel-task' });
         const cat = ev.categoryId
             ? this.planCategoryData.categories.find(c => c.id === ev.categoryId)
             : undefined;
         chip.setCssProps({ '--chip-color': cat?.color ?? '#888888' });
 
+        this.buildChipContent(chip, ev, habit);
+
+        // 点击卡片：在卡片旁弹出悬浮面板，填写预估执行时长
+        chip.onclick = (e) => {
+            e.stopPropagation();
+            this.openEstimatePopover(chip, ev);
+        };
+
+        // 右上角标记：当天已完成时显示完成标识，否则显示删除按钮
+        this.buildDayMarker(chip, ev);
+        return chip;
+    }
+
+    /** 构建卡片的正文（标题 + 预估时长 + 习惯时间点），不含标记与点击 */
+    private buildChipContent(chip: HTMLElement, ev: EventBlock, habit: number | null) {
         // 第一行：标题
         chip.createSpan({ cls: 'week-panel-task-title', text: ev.title });
 
@@ -803,17 +874,14 @@ export class WeekScheduleView extends ItemView {
             const habitLine = chip.createDiv({ cls: 'week-panel-task-habit' });
             habitLine.setText(t('weekPanel.habitTime', { time: this.formatClock(habit) }));
         }
+    }
 
-        // 点击卡片：在卡片旁弹出悬浮面板，填写预估执行时长
-        chip.onclick = (e) => {
-            e.stopPropagation();
-            this.openEstimatePopover(chip, ev);
-        };
-
-        // 右上角标记：当天已完成时显示完成标识，否则显示删除按钮
+    /** 构建卡片右上角的完成/删除标记（按天独立），返回标记元素（无标记时返回 null） */
+    private buildDayMarker(chip: HTMLElement, ev: EventBlock): HTMLElement | null {
         if (this.isEventDayDone(ev)) {
             const doneIcon = chip.createSpan({ cls: 'week-panel-task-done' });
             setIcon(doneIcon, 'check-circle');
+            return doneIcon;
         } else if (!this.plannedWeeks.includes(this.currentWeekKey)) {
             const delBtn = chip.createDiv({ cls: 'week-panel-task-del' });
             delBtn.setText('×');
@@ -824,7 +892,9 @@ export class WeekScheduleView extends ItemView {
                 await this.save();
                 await this.onOpen();
             };
+            return delBtn;
         }
+        return null;
     }
 
     /**
@@ -859,12 +929,21 @@ export class WeekScheduleView extends ItemView {
 
     /**
      * 在卡片旁弹出悬浮面板，用于填写「预估执行时长」。
-     * 面板挂在卡片内部（绝对定位），点击外部或按 Esc 关闭。
+     * 单个事件版本：委托给多事件版本。
      */
     private openEstimatePopover(anchor: HTMLElement, ev: EventBlock) {
+        this.openEstimatePopoverForEvents(anchor, [ev]);
+    }
+
+    /**
+     * 在卡片旁弹出悬浮面板，用于填写「预估执行时长」，保存时同步应用到给定的一组事件。
+     * 合并后的习惯卡片点击时传递该卡片内的所有天事件，实现整卡统一编辑。
+     */
+    private openEstimatePopoverForEvents(anchor: HTMLElement, events: EventBlock[]) {
         // 同一时刻只保留一个面板
         this.closeEstimatePopover();
 
+        const first = events[0];
         const pop = anchor.createDiv({ cls: 'week-panel-est-popover' });
         this.estimatePopover = pop;
 
@@ -875,8 +954,8 @@ export class WeekScheduleView extends ItemView {
         input.min = '0';
         input.step = '5';
         input.placeholder = t('weekPanel.estimatedPlaceholder');
-        if (typeof ev.estimatedMinutes === 'number' && ev.estimatedMinutes >= 0) {
-            input.value = String(ev.estimatedMinutes);
+        if (typeof first.estimatedMinutes === 'number' && first.estimatedMinutes >= 0) {
+            input.value = String(first.estimatedMinutes);
         }
 
         const actions = pop.createDiv({ cls: 'week-panel-est-actions' });
@@ -892,10 +971,12 @@ export class WeekScheduleView extends ItemView {
             }
             // 原地修改，保持数组引用不变（插件持有同一引用）
             // 允许设置为 0（0 表示预估时长为零，与「未填写」区分）
-            if (minutes === undefined) {
-                this.pdcaRepo().updateEvent(ev.id, { estimatedMinutes: undefined });
-            } else {
-                this.pdcaRepo().updateEvent(ev.id, { estimatedMinutes: minutes });
+            for (const ev of events) {
+                if (minutes === undefined) {
+                    this.pdcaRepo().updateEvent(ev.id, { estimatedMinutes: undefined });
+                } else {
+                    this.pdcaRepo().updateEvent(ev.id, { estimatedMinutes: minutes });
+                }
             }
             this.closeEstimatePopover();
             await this.save();
