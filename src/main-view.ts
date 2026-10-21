@@ -116,6 +116,14 @@ export class MainView extends ItemView {
     private contentRoot!: HTMLElement;
     /** 二级视图 tab 行容器（切换一级视图时重建） */
     private secondaryRow?: HTMLElement;
+    /** 导航栏容器（用于二级标签行对齐与悬停还原） */
+    private navEl?: HTMLElement;
+    /** 当前「预览」的一级视图：悬停时展示其二级标签，但不改变内容 */
+    private previewPrimary: PrimaryView = 'pdca';
+    /** 一级按钮元素映射（用于将二级标签行对齐到所属一级按钮左侧） */
+    private primaryBtnEls: Partial<Record<PrimaryView, HTMLElement>> = {};
+    /** 一级标签行右侧的「当前二级视图」标题 */
+    private secondaryTitleEl?: HTMLElement;
     /** 缓存目录名称（用于帮助弹窗引用缓存图片） */
     private cacheDirName: string;
     /** 一级标签行中的「进行中任务」卡片容器 */
@@ -304,9 +312,9 @@ export class MainView extends ItemView {
     /** 剧本模式关闭时需要隐藏的二级视图 */
     private static readonly SCRIPT_MODE_TABS: NavTab[] = ['scene', 'scriptManage'];
 
-    /** 当前一级视图下应展示的二级视图（按剧本模式开关过滤） */
+    /** 当前「预览」一级视图下应展示的二级视图（按剧本模式开关过滤） */
     private visibleSecondaryTabs(): { id: NavTab; labelKey: Parameters<typeof t>[0] }[] {
-        const tabs = SECONDARY_TABS[this.activePrimary];
+        const tabs = SECONDARY_TABS[this.previewPrimary];
         if (this.isScriptModeEnabled()) return tabs;
         return tabs.filter(tab => !MainView.SCRIPT_MODE_TABS.includes(tab.id));
     }
@@ -342,6 +350,9 @@ export class MainView extends ItemView {
 
         // 顶部导航栏：第一行一级视图，第二行二级视图
         const nav = root.createDiv({ cls: 'parrot-plan-nav' });
+        this.navEl = nav;
+        // 悬停预览一级视图：展示其二级标签，但内容不变；移出导航栏后还原
+        this.previewPrimary = this.activePrimary;
 
         // 第一行：一级视图（工作台 / 任务 / PDCA / GTD）
         const primaryRow = nav.createDiv({ cls: 'parrot-plan-nav-primary-row' });
@@ -351,18 +362,24 @@ export class MainView extends ItemView {
                 cls: 'parrot-plan-nav-primary-btn',
             });
             if (pv.id === this.activePrimary) btn.addClass('is-active');
-            btn.onclick = () => {
-                if (this.activePrimary === pv.id) return;
-                // 记录当前一级视图正在查看的二级视图
-                this.lastTabByPrimary[this.activePrimary] = this.activeTab;
-                this.activePrimary = pv.id;
-                // 恢复该一级视图上次打开的二级视图（无记录时用默认值兜底）
-                this.activeTab = this.lastTabByPrimary[pv.id] ?? DEFAULT_TAB[pv.id];
-                // 重建二级视图 tab 行
-                this.renderSecondaryTabs();
-                void this.renderContent();
+            this.primaryBtnEls[pv.id] = btn;
+            const show = () => {
+                this.previewPrimary = pv.id;
+                this.applyPrimaryHoverState(pv.id);
+                this.setSecondaryVisible(true);
             };
+            btn.onmouseenter = show;
+            btn.onclick = show;
         }
+
+        // 移出导航栏时，二级标签行完全隐藏，并清除一级按钮悬浮边框
+        nav.onmouseleave = () => {
+            this.applyPrimaryHoverState(null);
+            this.setSecondaryVisible(false);
+        };
+
+        // 当前二级视图标题（紧贴一级标签行右侧）
+        this.secondaryTitleEl = primaryRow.createDiv({ cls: 'parrot-plan-nav-secondary-title' });
 
         // 进行中任务卡片（一级标签行右侧，紧邻帮助按钮左侧；无进行中任务时隐藏）
         this.runningCardEl = primaryRow.createDiv({ cls: 'parrot-plan-running-card-wrap' });
@@ -383,8 +400,8 @@ export class MainView extends ItemView {
             }).open();
         };
 
-        // 第二行：当前一级视图下的二级视图
-        this.secondaryRow = nav.createDiv({ cls: 'parrot-plan-nav-secondary-row' });
+        // 第二行：当前一级视图下的二级视图（默认隐藏，悬停一级标签时显示）
+        this.secondaryRow = nav.createDiv({ cls: 'parrot-plan-nav-secondary-row is-hidden' });
         this.renderSecondaryTabs();
 
         // 内容区
@@ -392,7 +409,26 @@ export class MainView extends ItemView {
         await this.renderContent();
     }
 
-    /** 重建二级视图 tab 行（切换一级视图时调用） */
+    /** 高亮「预览中」的一级按钮：仅加蓝色边框（不改文字/背景） */
+    private applyPrimaryHoverState(hovered: PrimaryView | null) {
+        for (const pv of PRIMARY_VIEWS) {
+            const btn = this.primaryBtnEls[pv.id];
+            if (btn) btn.toggleClass('is-hovered', pv.id === hovered);
+        }
+    }
+
+    /** 显示 / 隐藏二级标签行（显示时重新填充并对齐） */
+    private setSecondaryVisible(visible: boolean) {
+        if (!this.secondaryRow) return;
+        if (visible) {
+            this.secondaryRow.removeClass('is-hidden');
+            this.renderSecondaryTabs();
+        } else {
+            this.secondaryRow.addClass('is-hidden');
+        }
+    }
+
+    /** 重建二级视图 tab 行（切换预览一级视图时调用） */
     private renderSecondaryTabs() {
         if (!this.secondaryRow) return;
         this.secondaryRow.empty();
@@ -408,11 +444,25 @@ export class MainView extends ItemView {
             });
             if (tab.id === this.activeTab) btn.addClass('is-active');
             btn.onclick = () => {
+                // 点击二级标签才切换内容，并让内容归属到当前预览的一级视图
+                this.activePrimary = this.previewPrimary;
                 this.activeTab = tab.id;
-                // 记录当前一级视图正在查看的二级视图
                 this.lastTabByPrimary[this.activePrimary] = tab.id;
+                this.previewPrimary = this.activePrimary;
+                this.renderSecondaryTabs();
                 void this.renderContent();
             };
+        }
+
+        // 面板左边缘对齐第一个一级按钮（工作台），按钮缩进到所属一级按钮左侧，中间留白
+        const owner = this.primaryBtnEls[this.previewPrimary];
+        const first = this.primaryBtnEls['workbench'];
+        if (owner && first && this.navEl) {
+            const navLeft = this.navEl.getBoundingClientRect().left;
+            const panelLeft = first.getBoundingClientRect().left;
+            const ownerLeft = owner.getBoundingClientRect().left;
+            this.secondaryRow.style.left = `${Math.max(0, panelLeft - navLeft)}px`;
+            this.secondaryRow.style.paddingLeft = `${Math.max(0, ownerLeft - panelLeft)}px`;
         }
     }
 
@@ -467,6 +517,7 @@ export class MainView extends ItemView {
             this.lastTabByPrimary[this.activePrimary] = this.activeTab;
             this.activePrimary = 'pdca';
             this.activeTab = 'today';
+            this.previewPrimary = 'pdca';
             this.lastTabByPrimary['pdca'] = 'today';
             this.renderSecondaryTabs();
             void this.renderContent();
@@ -487,9 +538,23 @@ export class MainView extends ItemView {
         this.lastTabByPrimary[this.activePrimary] = this.activeTab;
         this.activePrimary = 'pdca';
         this.activeTab = 'today';
+        this.previewPrimary = 'pdca';
         this.lastTabByPrimary['pdca'] = 'today';
         this.renderSecondaryTabs();
         await this.renderContent();
+    }
+
+    /** 更新一级标签行右侧的「当前二级视图」标题 */
+    private renderSecondaryTitle() {
+        if (!this.secondaryTitleEl) return;
+        let label = '';
+        if (this.activeTab === 'workbench') {
+            label = this.workbenchView.getActiveLayoutName();
+        } else {
+            const tab = SECONDARY_TABS[this.activePrimary]?.find(t => t.id === this.activeTab);
+            if (tab) label = t(tab.labelKey);
+        }
+        this.secondaryTitleEl.setText(label);
     }
 
     /** 根据当前 tab 渲染内容区 */
@@ -516,6 +581,7 @@ export class MainView extends ItemView {
             const tabId = btn.getAttribute('data-tab');
             btn.toggleClass('is-active', tabId === this.activeTab);
         });
+        this.renderSecondaryTitle();
 
         this.contentRoot.empty();
         // 清除上一次视图残留在共享容器上的视图类，避免多个视图样式叠加导致布局错乱

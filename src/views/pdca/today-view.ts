@@ -183,8 +183,6 @@ export class TodayView {
         this.renderDateBox(centerPanel);
         // 选项卡行（今日情况 / 当天任务 / 额外任务）
         this.renderRightTabs(centerPanel);
-        // 进行中任务进度方框（位于选项卡下方）
-        this.renderRunningProgressBox(centerPanel);
         // 选项卡内容区
         this.renderRightTabContent(centerPanel);
     }
@@ -904,33 +902,6 @@ export class TodayView {
 
             row.createSpan({ cls: 'today-hierarchy-name', text: item.title });
         });
-    }
-
-    /**
-     * 进行中任务进度方框：仅在选中「进行中任务」时显示（位于任务层级方框下方）。
-     * 从左到右展示进度：左侧为起始时间点，右侧为不断增加的末尾时间点。
-     */
-    private renderRunningProgressBox(panel: HTMLElement) {
-        const running = this.runningTask;
-        if (!running || !this.selectedRunningTask) return;
-        // 仅当进行中任务属于当前查看日期时显示
-        const { dayKey } = this.getViewDayInfo();
-        if (running.dayKey !== dayKey) return;
-
-        const item = this.inboxData.items.find(i => i.id === running.inboxId && !i.removed);
-        if (!item) return;
-
-        const box = panel.createDiv({ cls: 'today-running-progress-box' });
-        box.createDiv({ cls: 'today-running-progress-title', text: t('today.runningProgressTitle') });
-
-        const body = box.createDiv({ cls: 'today-running-progress-body' });
-
-        // 进度条：左侧起始时间，右侧当前（末尾）时间
-        const bar = body.createDiv({ cls: 'today-running-progress-bar' });
-        bar.createSpan({ cls: 'today-running-progress-start', text: formatMinutes(running.start) });
-        const track = bar.createDiv({ cls: 'today-running-progress-track' });
-        track.createDiv({ cls: 'today-running-progress-fill' });
-        bar.createSpan({ cls: 'today-running-progress-end', text: formatMinutes(this.nowMinutes()) });
     }
 
     /** 是否存在选中项（时间轴事件 / 新增执行记录 / 进行中任务 / 任务面板任务） */

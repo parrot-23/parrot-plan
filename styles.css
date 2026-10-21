@@ -1819,6 +1819,7 @@
 
 /* 顶部导航栏（左上角按钮组） */
 .parrot-plan-nav {
+    position: relative;
     flex-shrink: 0;
     display: flex;
     flex-direction: column;
@@ -1834,11 +1835,24 @@
     gap: 6px;
 }
 
-/* 第二行：二级视图 */
+/* 第二行：二级视图（绝对定位浮层，悬浮时覆盖在内容上方，随内容自适应宽度） */
 .parrot-plan-nav-secondary-row {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    z-index: 100;
     display: flex;
     flex-wrap: wrap;
     gap: 6px;
+    padding: 6px 8px;
+    background: var(--background-primary);
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 6px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
+}
+
+.parrot-plan-nav-secondary-row.is-hidden {
+    display: none;
 }
 
 /* 一级视图按钮：比二级更醒目 */
@@ -1853,14 +1867,24 @@
     font-weight: 600;
 }
 
-.parrot-plan-nav-primary-btn:hover {
-    background: var(--interactive-hover);
+.parrot-plan-nav-primary-btn.is-active {
+    background: #dbeafe;
+    color: #2563eb;
+    border-color: #93c5fd;
 }
 
-.parrot-plan-nav-primary-btn.is-active {
-    background: var(--interactive-accent);
-    color: var(--text-on-accent);
-    border-color: var(--interactive-accent);
+.parrot-plan-nav-primary-btn.is-hovered {
+    border-color: #2563eb;
+}
+
+/* 一级标签行右侧：当前二级视图标题 */
+.parrot-plan-nav-secondary-title {
+    color: var(--text-normal);
+    font-size: 16px;
+    font-weight: 700;
+    padding: 0 4px;
+    white-space: nowrap;
+    border-left: 1px solid var(--background-modifier-border);
 }
 
 .parrot-plan-nav-btn {
@@ -1878,9 +1902,9 @@
 }
 
 .parrot-plan-nav-btn.is-active {
-    background: var(--interactive-accent);
-    color: var(--text-on-accent);
-    border-color: var(--interactive-accent);
+    background: #dbeafe;
+    color: #2563eb;
+    border-color: #93c5fd;
 }
 
 /* 帮助按钮：推到导航栏最右侧 */
@@ -5389,69 +5413,6 @@
 .today-running-block.is-selected {
     outline: 2px solid var(--running-color, #4c8dff);
     outline-offset: -1px;
-}
-
-/* 进行中任务进度方框（位于任务层级方框下方，仅选中进行中任务时显示） */
-.today-running-progress-box {
-    flex-shrink: 0;
-    display: flex;
-    flex-direction: column;
-    border: 1px solid var(--background-modifier-border);
-    border-radius: 10px;
-    background: var(--background-secondary);
-    overflow: hidden;
-}
-
-.today-running-progress-title {
-    flex-shrink: 0;
-    padding: 10px 14px;
-    font-size: 14px;
-    font-weight: 600;
-    border-bottom: 1px solid var(--background-modifier-border);
-}
-
-.today-running-progress-body {
-    padding: 12px 14px;
-}
-
-/* 进度条：左侧起始时间，中间进度轨道，右侧当前（末尾）时间 */
-.today-running-progress-bar {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-
-.today-running-progress-start,
-.today-running-progress-end {
-    flex-shrink: 0;
-    font-size: 13px;
-    font-weight: 600;
-    font-variant-numeric: tabular-nums;
-    color: var(--text-normal);
-}
-
-.today-running-progress-track {
-    flex: 1;
-    min-width: 0;
-    height: 10px;
-    border-radius: 5px;
-    background: var(--background-modifier-border);
-    overflow: hidden;
-}
-
-.today-running-progress-fill {
-    width: 100%;
-    height: 100%;
-    border-radius: 5px;
-    /* 斜向条纹背景，突出进行中 */
-    background-image: repeating-linear-gradient(
-        45deg,
-        var(--interactive-accent) 0,
-        var(--interactive-accent) 6px,
-        color-mix(in srgb, var(--interactive-accent) 45%, #ffffff) 6px,
-        color-mix(in srgb, var(--interactive-accent) 45%, #ffffff) 12px
-    );
-    background-color: var(--interactive-accent);
 }
 
 /* 事件状态气泡：贴在区块内部左侧（图标 + 文字，不使用颜色分类） */

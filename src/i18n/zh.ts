@@ -291,7 +291,6 @@ export const zh = {
     'today.finishRunning': '完成',
     'today.interruptRunning': '中断',
     'today.runningLabel': '进行中',
-    'today.runningProgressTitle': '进行中',
     'today.interruptDone': '已中断「{title}」并记录执行',
     'today.execPlanned': '已执行计划',
     'today.enterExec': '进入执行',

@@ -293,7 +293,6 @@ export const en: I18nMessages = {
     'today.finishRunning': 'Finish',
     'today.interruptRunning': 'Interrupt',
     'today.runningLabel': 'In Progress',
-    'today.runningProgressTitle': 'In Progress',
     'today.interruptDone': 'Interrupted "{title}" and recorded execution',
     'today.execPlanned': 'Executed Planned',
     'today.enterExec': 'Enter Execution',
