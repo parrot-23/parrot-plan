@@ -3,7 +3,7 @@ import { Notice } from 'obsidian';
 
 import type { PlanCategoryData } from '../../shared/plan-category-manager';
 import type { InboxData, EventBlock, ExecutionRecord, ImprovementItem, ImprovementEntry } from '../../datatypes/domain';
-import { getEventStatus, OKR_CONDITION_META } from '../../datatypes/domain';
+import { getEventStatus } from '../../datatypes/domain';
 import type { PdcaRepo } from '../../repos/pdca-repo';
 import type { InboxRepo } from '../../repos/inbox-repo';
 import {
@@ -249,22 +249,6 @@ export class ImproveView {
                 formatHours(execMinutes),
             ]);
             this.renderWeekTaskBias(line2, planCount, planMinutes, execCount, execMinutes);
-
-            // 本周新增 OKR 进度：仅统计本周执行记录带来的增量
-            const conditions = item.okr?.conditions ?? [];
-            if (conditions.length > 0) {
-                const okrRow = row.createDiv({ cls: 'improve-week-task-okr' });
-                okrRow.createSpan({ cls: 'improve-week-task-okr-label', text: t('improve.weekTaskOkrNew') });
-                for (const cond of conditions) {
-                    const unit = t(OKR_CONDITION_META[cond.type].unitKey as Parameters<typeof t>[0]);
-                    // 累积类型：本周执行总时长；其余类型：本周执行次数
-                    const added = cond.type === 'cumulative' ? execMinutes : execCount;
-                    okrRow.createSpan({
-                        cls: 'improve-week-task-okr-chip',
-                        text: `+${added} ${unit}`,
-                    });
-                }
-            }
         }
     }
 
@@ -299,8 +283,8 @@ export class ImproveView {
     }
 
     /**
-     * 渲染第二行的偏差片段：次数/时长都达标则显示「正常」，
-     * 否则分别列出「次数少 N」与「时长少 N」（仅在确实不足时出现）。
+     * 渲染第二行的偏差片段：次数、时长各显示一个偏差值。
+     * 次数：正常 / 次数少 N；时长：无预估时长 / 正常 / 时长少 N。
      */
     private renderWeekTaskBias(
         container: HTMLElement,
@@ -312,26 +296,30 @@ export class ImproveView {
         const seg = container.createDiv({ cls: 'improve-week-task-seg improve-week-task-bias' });
         seg.createSpan({ cls: 'improve-week-task-seg-label', text: t('improve.weekTaskBias') });
 
+        // 次数偏差
         const lessCount = planCount - execCount;
-        const lessMinutes = planMinutes - execMinutes;
-        const hasCount = lessCount > 0;
-        const hasDuration = lessMinutes > 0;
-
-        if (!hasCount && !hasDuration) {
-            seg.createSpan({ cls: 'improve-week-task-chip is-ok', text: t('improve.weekTaskBiasOk') });
-            return;
-        }
-        if (hasCount) {
+        if (lessCount > 0) {
             seg.createSpan({
                 cls: 'improve-week-task-chip is-bad',
                 text: t('improve.weekTaskLessCount', { count: String(lessCount) }),
             });
+        } else {
+            seg.createSpan({ cls: 'improve-week-task-chip is-ok', text: t('improve.weekTaskBiasCountOk') });
         }
-        if (hasDuration) {
-            seg.createSpan({
-                cls: 'improve-week-task-chip is-bad',
-                text: t('improve.weekTaskLessDuration', { duration: formatHours(lessMinutes) }),
-            });
+
+        // 时长偏差：无预估时长时单独提示，不参与「正常/不足」判定
+        if (planMinutes <= 0) {
+            seg.createSpan({ cls: 'improve-week-task-chip', text: t('improve.weekTaskNoEstimate') });
+        } else {
+            const lessMinutes = planMinutes - execMinutes;
+            if (lessMinutes > 0) {
+                seg.createSpan({
+                    cls: 'improve-week-task-chip is-bad',
+                    text: t('improve.weekTaskLessDuration', { duration: formatHours(lessMinutes) }),
+                });
+            } else {
+                seg.createSpan({ cls: 'improve-week-task-chip is-ok', text: t('improve.weekTaskBiasDurationOk') });
+            }
         }
     }
 

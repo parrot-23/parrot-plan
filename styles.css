@@ -3018,30 +3018,6 @@
     color: var(--text-error);
 }
 
-.improve-week-task-okr {
-    flex-basis: 100%;
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 6px;
-    padding-left: 16px;
-}
-
-.improve-week-task-okr-label {
-    font-size: 11px;
-    color: var(--text-faint);
-}
-
-.improve-week-task-okr-chip {
-    padding: 1px 8px;
-    border-radius: 8px;
-    font-size: 12px;
-    font-variant-numeric: tabular-nums;
-    color: var(--text-on-accent);
-    background: var(--interactive-accent);
-}
-
 /* 右块：可填写改进项列表 */
 .improve-input-list {
     display: flex;
@@ -9576,6 +9552,34 @@ button.swimlane-section-card-exit {
     color: var(--text-normal);
     cursor: pointer;
     font-size: 14px;
+}
+
+/* 复制按钮 */
+.gtd-clarify-copy-btn {
+    padding: 8px 24px;
+    border-radius: 6px;
+    border: 1px solid var(--background-modifier-border);
+    background: var(--background-secondary);
+    color: var(--text-normal);
+    cursor: pointer;
+    font-size: 14px;
+}
+
+/* 删除按钮 */
+.gtd-clarify-delete-btn {
+    padding: 8px 24px;
+    border-radius: 6px;
+    border: 1px solid var(--text-error);
+    background: var(--background-primary);
+    color: var(--text-error);
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.gtd-clarify-copy-btn:disabled,
+.gtd-clarify-delete-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
 }
 
 /* 创建新任务表单 */

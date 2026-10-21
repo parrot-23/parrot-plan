@@ -254,6 +254,38 @@ export class GtdClarifyView {
             this.creatingTask = true;
             if (this.container) void this.renderInto(this.container);
         };
+
+        // 复制到剪贴板：将选中收集记录的内容写入系统剪贴板
+        const copyBtn = footer.createEl('button', {
+            cls: 'gtd-clarify-copy-btn',
+            text: t('gtd.clarifyCopy'),
+        });
+        copyBtn.disabled = selectedItems.length === 0;
+        copyBtn.onclick = () => {
+            if (selectedItems.length === 0) return;
+            const text = selectedItems.map(it => it.content).join('\n');
+            void navigator.clipboard.writeText(text).then(() => {
+                new Notice(t('gtd.clarifyCopyDone'));
+            });
+        };
+
+        // 删除：移除选中的收集记录
+        const deleteBtn = footer.createEl('button', {
+            cls: 'gtd-clarify-delete-btn',
+            text: t('gtd.clarifyDelete'),
+        });
+        deleteBtn.disabled = selectedItems.length === 0;
+        deleteBtn.onclick = () => {
+            if (selectedItems.length === 0) return;
+            for (const it of selectedItems) {
+                this.gtdRepo.removeItem(it.id);
+            }
+            this.selectedItemIds.clear();
+            this.lastClickedItemId = undefined;
+            void this.save().then(() => {
+                if (this.container) void this.renderInto(this.container);
+            });
+        };
     }
 
     /** 当前选中的收集记录（按左栏顺序） */
