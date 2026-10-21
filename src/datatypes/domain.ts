@@ -36,6 +36,8 @@ export interface RunningTask {
     dayKey: string;
     /** 用户填写的结束时间（当天分钟数，可选，旧数据无此字段） */
     end?: number;
+    /** 实际开始时刻（Unix 毫秒时间戳，用于精确展示已执行时长；旧数据无此字段） */
+    startedAt?: number;
 }
 
 /** 执行记录（日执行视图写入） */

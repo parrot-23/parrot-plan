@@ -62,6 +62,8 @@ export class TodayView {
     private container?: HTMLElement;
     /** 红线定时器 */
     private timer?: number;
+    /** 进行中任务卡片已执行时长的秒级刷新定时器 */
+    private runningTimer?: number;
     /** 时间轴上被选中的事件 id（用于在中心方框展示详情） */
     private selectedEventId?: string;
     /** 时间轴上被选中的「新增」执行记录 id（与计划事件选中互斥） */
@@ -709,7 +711,7 @@ export class TodayView {
 
     /**
      * 渲染「进行中」任务卡片（位于日期信息旁边）。
-     * 点击「开始任务」后展示任务内容与起始时间，背景使用斜向条纹突出进行中；无则不显示。
+     * 点击「开始任务」后展示任务内容与起始时间，卡片右侧附带一个已执行时长计时器；无则不显示。
      */
     private renderRunningCard(box: HTMLElement) {
         const running = this.runningTask;
@@ -721,24 +723,73 @@ export class TodayView {
         const item = this.inboxData.items.find(i => i.id === running.inboxId && !i.removed);
         if (!item) return;
 
-        const card = box.createDiv({ cls: 'today-executing-card today-running-card' });
         const cat = item.categoryId
             ? this.categoryData.categories.find(c => c.id === item.categoryId)
             : undefined;
-        card.setCssProps({ '--exec-color': cat?.color ?? '#4c8dff' });
-        card.createDiv({ cls: 'today-executing-label', text: t('today.runningLabel') });
-        card.createDiv({ cls: 'today-executing-name', text: item.title });
-        card.createDiv({
-            cls: 'today-executing-time',
-            text: `${formatMinutes(running.start)} - ${formatMinutes(this.nowMinutes())}`,
+        const color = cat?.color ?? '#4c8dff';
+
+        const card = box.createDiv({ cls: 'today-running-card' });
+        card.setCssProps({ '--exec-color': color });
+
+        // 左侧：标签 + 任务名 + 起始时间
+        const main = card.createDiv({ cls: 'today-running-main' });
+        const label = main.createDiv({ cls: 'today-running-label' });
+        label.createSpan({ cls: 'today-running-dot' });
+        label.createSpan({ text: t('today.runningLabel') });
+        main.createDiv({ cls: 'today-running-name', text: item.title });
+        main.createDiv({
+            cls: 'today-running-time',
+            text: `${t('today.runningStart')} ${formatMinutes(running.start)}`,
         });
 
-        // 点击卡片 → 选中该进行中任务，同步更新任务层级 / 进度方框 / 操作按钮
+        // 右侧：已执行时长计时器
+        const timerWrap = card.createDiv({ cls: 'today-running-clock' });
+        timerWrap.createDiv({ cls: 'today-running-timer-label', text: t('today.runningElapsedLabel') });
+        timerWrap.createDiv({ cls: 'today-running-timer', text: this.formatElapsed(this.getRunningElapsed()) });
+
+        // 点击卡片 → 选中该进行中任务，同步更新任务层级 / 操作按钮
         card.addClass('is-clickable');
         if (this.selectedRunningTask) card.addClass('is-selected');
         card.onclick = () => {
             this.toggleRunningTaskSelection();
         };
+
+        // 启动秒级刷新，实时更新已执行时长
+        this.clearRunningTimer();
+        this.runningTimer = window.setInterval(() => this.updateRunningTimer(), 1000);
+    }
+
+    /** 清理已执行时长计时器 */
+    private clearRunningTimer() {
+        if (this.runningTimer !== undefined) {
+            window.clearInterval(this.runningTimer);
+            this.runningTimer = undefined;
+        }
+    }
+
+    /** 已执行时长（毫秒）：优先按真实开始时刻，旧数据退化为按起始分钟估算 */
+    private getRunningElapsed(): number {
+        const running = this.runningTask;
+        if (!running) return 0;
+        if (running.startedAt != null) return Math.max(0, Date.now() - running.startedAt);
+        return Math.max(0, (this.nowMinutes() - running.start) * 60_000);
+    }
+
+    /** 将毫秒格式化为 HH:MM:SS（不足一小时时显示 MM:SS） */
+    private formatElapsed(ms: number): string {
+        const totalSec = Math.floor(ms / 1000);
+        const h = Math.floor(totalSec / 3600);
+        const m = Math.floor((totalSec % 3600) / 60);
+        const s = totalSec % 60;
+        const pad = (n: number) => String(n).padStart(2, '0');
+        return h > 0 ? `${pad(h)}:${pad(m)}:${pad(s)}` : `${pad(m)}:${pad(s)}`;
+    }
+
+    /** 每秒刷新卡片上的已执行时长文本 */
+    private updateRunningTimer() {
+        const el = this.container?.querySelector<HTMLElement>('.today-running-timer');
+        if (!el) return;
+        el.textContent = this.formatElapsed(this.getRunningElapsed());
     }
 
     /** 当前时刻换算为当天分钟数 */
@@ -1752,6 +1803,7 @@ export class TodayView {
             start: range?.start ?? this.detailStart,
             dayKey,
             end: range?.end ?? this.detailEnd,
+            startedAt: Date.now(),
         };
         // 写回插件数据源，随 saveAll 一起持久化
         this.pdcaRepo.setRunningTask(this.runningTask);
@@ -2750,6 +2802,10 @@ export class TodayView {
         if (this.timer !== undefined) {
             window.clearInterval(this.timer);
             this.timer = undefined;
+        }
+        if (this.runningTimer !== undefined) {
+            window.clearInterval(this.runningTimer);
+            this.runningTimer = undefined;
         }
     }
 
