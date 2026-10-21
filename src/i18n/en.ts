@@ -344,6 +344,8 @@ export const en: I18nMessages = {
     'today.habitTaskListTitle': 'Habit tasks',
     'today.taskEst': 'Est.: {duration}',
     'today.taskExec': 'Executed: {duration}',
+    'today.todayExecuted': 'Executed today',
+    'today.todayEstTarget': 'Target today',
     'today.unmarkDone': 'Mark as not done',
     'today.markDone': 'Mark day task as completed',
     'today.tabToday': 'Today',

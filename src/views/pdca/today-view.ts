@@ -264,13 +264,14 @@ export class TodayView {
 
     /**
      * 取事件来源任务的「习惯时间点」（分钟）。
-     * 仅当来源任务存在且已启用习惯时间点时返回，否则返回 null。
+     * 仅当来源任务存在且已启用习惯时间点时返回；未手动设置时间点时按默认 09:00，
+     * 与周计划周日历及任务计划页面的默认值保持一致。
      */
     private getEventHabitTime(ev: EventBlock): number | null {
         if (!ev.inboxId) return null;
         const item = this.inboxData.items.find(i => i.id === ev.inboxId && !i.removed);
         if (!item || !item.habitTimeEnabled) return null;
-        return typeof item.habitTime === 'number' ? item.habitTime : null;
+        return typeof item.habitTime === 'number' ? item.habitTime : 9 * 60;
     }
 
     /**
@@ -342,6 +343,7 @@ export class TodayView {
                     && (ex.eventId === ev.id || (ev.inboxId && ex.inboxId === ev.inboxId)))
                 .reduce((sum, ex) => sum + Math.max(0, ex.end - ex.start), 0);
 
+            const habitTime = this.getEventHabitTime(ev);
             this.renderTaskCard(list, {
                 title: ev.title,
                 color: cat?.color,
@@ -349,7 +351,9 @@ export class TodayView {
                 execMinutes,
                 // 手动标记为已完成的任务同样显示勾选图标
                 done: item ? this.isDayTaskDone(item.id) : undefined,
-                habitTime: this.getEventHabitTime(ev) ?? undefined,
+                habitTime: habitTime ?? undefined,
+                // 习惯时间点任务：单行紧凑卡片，预估/已执行时长统一收进任务详情
+                compact: habitTime !== null,
                 selected: !!item && this.inboxData.selectedId === item.id,
                 onSelect: () => this.selectTaskItem(item),
             });
@@ -412,7 +416,7 @@ export class TodayView {
         }
     }
 
-    /** 渲染单个任务卡片（标题 + 预估/已执行时长 + 完成图标） */
+    /** 渲染单个任务卡片（标题 + 预估/已执行时长 + 完成图标）；习惯任务为单行紧凑卡片 */
     private renderTaskCard(
         list: HTMLElement,
         opts: {
@@ -424,6 +428,8 @@ export class TodayView {
             done?: boolean;
             /** 习惯时间点（分钟），设置后显示在卡片右上角 */
             habitTime?: number;
+            /** 习惯任务：仅单行显示标题 + 时间点 + 完成标识，不显示预估/已执行时长 */
+            compact?: boolean;
             selected: boolean;
             onSelect: () => void;
         },
@@ -434,40 +440,51 @@ export class TodayView {
         // 选中态高亮（与时间轴事件选中互斥，这里以任务来源 id 判断）
         if (opts.selected) row.addClass('is-selected');
 
-        // 第一行：标题
-        const nameEl = row.createSpan({ cls: 'today-task-list-name', text: opts.title });
-
-        // 右上角：习惯时间点（仅设置了习惯时间点的任务显示）
-        if (opts.habitTime !== undefined) {
-            // 标题预留右侧空间，避免与习惯时间点重叠
-            nameEl.addClass('has-habit');
-            row.createSpan({
-                cls: 'today-task-list-habit',
-                text: formatMinutes(opts.habitTime),
-            });
-        }
-
-        // 预估时长（取自周计划设置）与已执行时长（取自当前执行记录）分两行显示
-        const estLine = row.createDiv({ cls: 'today-task-list-meta' });
-        estLine.createSpan({
-            cls: 'today-task-list-est',
-            text: t('today.taskEst', {
-                duration: opts.estMinutes !== undefined ? formatDuration(opts.estMinutes) : '—',
-            }),
-        });
-
-        const execLine = row.createDiv({ cls: 'today-task-list-meta' });
-        execLine.createSpan({
-            cls: 'today-task-list-exec',
-            text: t('today.taskExec', { duration: formatDuration(opts.execMinutes) }),
-        });
-
-        // 完成图标：无预估时长（或预估为 0）时，只要有执行记录即视为完成；
-        // 有预估时长时，需已执行时长达到预估时长才显示。
         const done = opts.done ?? this.isTaskDone(opts.estMinutes, opts.execMinutes);
-        if (done) {
-            const doneIcon = execLine.createSpan({ cls: 'today-task-list-done' });
-            setIcon(doneIcon, 'check-circle');
+
+        // 习惯任务：单行紧凑卡片（标题 + 完成标识 + 习惯时间点）
+        if (opts.compact) {
+            row.addClass('is-compact');
+            row.createSpan({ cls: 'today-task-list-name', text: opts.title });
+            if (opts.habitTime !== undefined) {
+                row.createSpan({ cls: 'today-task-list-habit', text: formatMinutes(opts.habitTime) });
+            }
+            if (done) {
+                const doneIcon = row.createSpan({ cls: 'today-task-list-done' });
+                setIcon(doneIcon, 'check-circle');
+            }
+        } else {
+            const nameEl = row.createSpan({ cls: 'today-task-list-name', text: opts.title });
+
+            // 右上角：习惯时间点（仅设置了习惯时间点的任务显示）
+            if (opts.habitTime !== undefined) {
+                // 标题预留右侧空间，避免与习惯时间点重叠
+                nameEl.addClass('has-habit');
+                row.createSpan({
+                    cls: 'today-task-list-habit',
+                    text: formatMinutes(opts.habitTime),
+                });
+            }
+
+            // 预估时长（取自周计划设置）与已执行时长（取自当前执行记录）分两行显示
+            const estLine = row.createDiv({ cls: 'today-task-list-meta' });
+            estLine.createSpan({
+                cls: 'today-task-list-est',
+                text: t('today.taskEst', {
+                    duration: opts.estMinutes !== undefined ? formatDuration(opts.estMinutes) : '—',
+                }),
+            });
+
+            const execLine = row.createDiv({ cls: 'today-task-list-meta' });
+            execLine.createSpan({
+                cls: 'today-task-list-exec',
+                text: t('today.taskExec', { duration: formatDuration(opts.execMinutes) }),
+            });
+
+            if (done) {
+                const doneIcon = execLine.createSpan({ cls: 'today-task-list-done' });
+                setIcon(doneIcon, 'check-circle');
+            }
         }
 
         row.onclick = (e) => {
@@ -496,6 +513,15 @@ export class TodayView {
         // 手动标记为已完成（点击详情中的勾选按钮）
         if (this.isManuallyDone(inboxId)) return true;
 
+        const { estMinutes, execMinutes } = this.getTodayDurations(inboxId);
+        return this.isTaskDone(estMinutes, execMinutes);
+    }
+
+    /**
+     * 今日时长：预估时长（目标时长，取自当天计划事件）与已执行时长（取自当天执行记录）。
+     * 供任务详情方框展示当天任务的执行进度。
+     */
+    private getTodayDurations(inboxId: string): { estMinutes?: number; execMinutes: number } {
         const { day, weekKey } = this.getViewDayInfo();
         const ev = this.getEvents().find(e =>
             e.day === day && e.weekKey === weekKey && e.inboxId === inboxId);
@@ -509,7 +535,7 @@ export class TodayView {
                 && ex.day === day
                 && (ex.inboxId === inboxId || (!!ev && ex.eventId === ev.id)))
             .reduce((sum, ex) => sum + Math.max(0, ex.end - ex.start), 0);
-        return this.isTaskDone(estMinutes, execMinutes);
+        return { estMinutes, execMinutes };
     }
 
     /** 该任务是否已被手动标记为当前查看日期的「已完成」 */
@@ -2161,6 +2187,16 @@ export class TodayView {
                 void this.refresh();
             });
         }
+
+        // 今日执行时长：已执行 + 预估（目标时长）
+        const { estMinutes, execMinutes } = this.getTodayDurations(item.id);
+        const execRow = body.createDiv({ cls: 'today-detail-row' });
+        execRow.createSpan({ cls: 'today-detail-label', text: `${t('today.todayExecuted')}:` });
+        execRow.createSpan({ text: formatDuration(execMinutes) });
+
+        const estRow = body.createDiv({ cls: 'today-detail-row' });
+        estRow.createSpan({ cls: 'today-detail-label', text: `${t('today.todayEstTarget')}:` });
+        estRow.createSpan({ text: estMinutes !== undefined ? formatDuration(estMinutes) : '—' });
 
         const cat = item.categoryId
             ? this.categoryData.categories.find(c => c.id === item.categoryId)

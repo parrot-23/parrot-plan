@@ -4102,6 +4102,28 @@
     height: 14px;
 }
 
+/* 习惯任务：单行紧凑卡片（标题 + 完成标识 + 习惯时间点） */
+.today-task-list-item.is-compact {
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
+    padding-top: 4px;
+    padding-bottom: 4px;
+}
+
+.today-task-list-item.is-compact .today-task-list-name {
+    flex: 1;
+}
+
+.today-task-list-item.is-compact .today-task-list-habit,
+.today-task-list-item.is-compact .today-task-list-done {
+    position: static;
+    top: auto;
+    right: auto;
+    bottom: auto;
+    flex-shrink: 0;
+}
+
 /* 中间：日期方框 + 任务详情方框 */
 .today-center-panel {
     flex: 1;

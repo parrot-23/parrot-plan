@@ -342,6 +342,8 @@ export const zh = {
     'today.habitTaskListTitle': '习惯任务',
     'today.taskEst': '预估时长：{duration}',
     'today.taskExec': '已执行时长：{duration}',
+    'today.todayExecuted': '今日已执行时长',
+    'today.todayEstTarget': '今日预估时长（目标时长）',
     'today.unmarkDone': '标记为未完成',
     'today.markDone': '标记当天任务为已完成',
     'today.tabToday': '今日情况',
