@@ -140,6 +140,7 @@ export const zh = {
     'taskPlan.statusTitle': '任务状态',
     'taskPlan.statusNotStarted': '未开始',
     'taskPlan.statusInProgress': '进行中',
+    'taskPlan.statusPaused': '暂停',
     'taskPlan.statusDone': '已完成',
     'taskPlan.habitTypeTask': '习惯型任务',
     'taskPlan.habitTypeTaskDesc': '适合每天 / 每周重复',

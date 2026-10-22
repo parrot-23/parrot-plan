@@ -346,6 +346,7 @@ export function renderTaskPanel(
             notStarted: { icon: 'circle-dot-dashed' },
             inProgress: { icon: 'zap' },
             done: { icon: 'check' },
+            paused: { icon: 'circle-pause' },
         };
         const meta = isHabit ? { icon: 'rotate-cw-square' } : (statusMeta[status] ?? statusMeta.notStarted);
         const statusEl = titleRow.createSpan({ cls: `inbox-item-status is-${isHabit ? 'habit' : status}` });

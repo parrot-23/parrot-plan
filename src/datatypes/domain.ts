@@ -63,7 +63,7 @@ export interface ExecutionRecord {
 export type TaskType = 'oneTime' | 'habit';
 
 /** 任务状态 */
-export type TaskStatus = 'notStarted' | 'inProgress' | 'done';
+export type TaskStatus = 'notStarted' | 'inProgress' | 'done' | 'paused';
 
 /** 收集盒任务（可无限层级子任务） */
 export interface InboxItem {

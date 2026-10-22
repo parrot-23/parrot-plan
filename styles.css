@@ -375,6 +375,7 @@
     display: flex;
     flex-direction: column;
     gap: 2px;
+    min-width: 0;
     padding: 4px 6px;
     border-radius: 4px;
     border-left: 4px solid var(--chip-color, #888888);
@@ -1395,9 +1396,15 @@
     color: var(--text-normal);
 }
 
+.inbox-item-status.is-paused {
+    color: var(--text-normal);
+}
+
 .inbox-item-status.is-done {
     color: var(--text-faint);
 }
+
+/* 暂停状态图标颜色：与未开始一致（继承默认色），不做单独设置 */
 
 /* 习惯型任务图标颜色 */
 .inbox-item-status.is-habit {

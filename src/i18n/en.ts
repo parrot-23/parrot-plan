@@ -142,6 +142,7 @@ export const en: I18nMessages = {
     'taskPlan.statusTitle': 'Task Status',
     'taskPlan.statusNotStarted': 'Not started',
     'taskPlan.statusInProgress': 'In progress',
+    'taskPlan.statusPaused': 'Paused',
     'taskPlan.statusDone': 'Done',
     'taskPlan.habitTypeTask': 'Habit-type task',
     'taskPlan.habitTypeTaskDesc': 'For daily / weekly repetition',

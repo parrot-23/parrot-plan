@@ -1038,6 +1038,7 @@ export class OkrTaskPlanView {
                     notStarted: { icon: 'circle-dot-dashed' },
                     inProgress: { icon: 'zap' },
                     done: { icon: 'check' },
+                    paused: { icon: 'circle-pause' },
                 };
                 const meta = isHabit ? { icon: 'rotate-cw-square' } : (statusMeta[status] ?? statusMeta.notStarted);
                 const statusEl = chip.createSpan({ cls: `inbox-item-status is-${isHabit ? 'habit' : status}` });
@@ -1728,9 +1729,10 @@ export class OkrTaskPlanView {
             const oneTimeBody = oneTimeCard.createDiv({ cls: 'task-plan-type-config' });
             oneTimeBody.createDiv({ cls: 'task-plan-field-label', text: t('taskPlan.statusTitle') });
             const statusGroup = oneTimeBody.createDiv({ cls: 'task-plan-status-group' });
-            const statuses: { value: TaskStatus; labelKey: 'taskPlan.statusNotStarted' | 'taskPlan.statusInProgress' | 'taskPlan.statusDone' }[] = [
+            const statuses: { value: TaskStatus; labelKey: 'taskPlan.statusNotStarted' | 'taskPlan.statusInProgress' | 'taskPlan.statusDone' | 'taskPlan.statusPaused' }[] = [
                 { value: 'notStarted', labelKey: 'taskPlan.statusNotStarted' },
                 { value: 'inProgress', labelKey: 'taskPlan.statusInProgress' },
+                { value: 'paused', labelKey: 'taskPlan.statusPaused' },
                 { value: 'done', labelKey: 'taskPlan.statusDone' },
             ];
             const currentStatus = item.status ?? 'notStarted';
