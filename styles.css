@@ -6978,7 +6978,8 @@ button.swimlane-section-card-edit {
 
 /* 编辑态卡片：右上角删除 / 退出按钮 */
 button.swimlane-section-card-del,
-button.swimlane-section-card-exit {
+button.swimlane-section-card-exit,
+button.swimlane-section-card-settings {
     flex-shrink: 0;
     display: flex;
     align-items: center;
@@ -6993,9 +6994,21 @@ button.swimlane-section-card-exit {
 }
 
 .swimlane-section-card-del svg,
-.swimlane-section-card-exit svg {
+.swimlane-section-card-exit svg,
+.swimlane-section-card-settings svg {
     width: 14px;
     height: 14px;
+}
+
+/* 文件面板配置弹窗：目录 + 文件名规则预览 */
+.file-section-config-preview {
+    margin-top: 12px;
+    padding: 8px 10px;
+    border-radius: 6px;
+    background: var(--background-secondary);
+    color: var(--text-muted);
+    font-size: var(--font-ui-small);
+    word-break: break-all;
 }
 
 /* 编辑态条目行：控件 + 行尾删除按钮 */

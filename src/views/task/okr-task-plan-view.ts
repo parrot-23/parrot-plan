@@ -1,5 +1,5 @@
 import type { App } from 'obsidian';
-import { Modal, Notice, Setting, setIcon } from 'obsidian';
+import { AbstractInputSuggest, Modal, Notice, Setting, TFolder, setIcon } from 'obsidian';
 
 import type { PlanCategoryData } from '../../shared/plan-category-manager';
 import type { InboxData, InboxItem, Section, ChecklistData, FileData, BasketItem, ImprovementEntry, OkrCondition, OkrConditionItem, OkrConditionType, OkrPeriod, OkrRecordCard, OkrRecordFieldType, ExecutionRecord, TaskType, TaskStatus } from '../../datatypes/domain';
@@ -19,6 +19,30 @@ function makeOkrId(): string {
 /** 生成 OKR 清单行 id */
 function makeConditionItemId(): string {
     return `okr_item_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+}
+
+/** 规范化目录：去掉首尾斜杠与空白 */
+function normalizeFolder(folder: string): string {
+    return folder.trim().replace(/^\/+|\/+$/g, '');
+}
+
+/**
+ * 按命名规则渲染文件名：支持 {{date}}（yyyy-MM-dd）、{{time}}（HHmm）、{{datetime}} 占位符，
+ * 自动清理非法字符并补全 .md 后缀。规则为空或渲染结果为空时返回空字符串。
+ */
+function buildFileName(pattern: string, now = new Date()): string {
+    if (!pattern.trim()) return '';
+    const pad = (n: number) => String(n).padStart(2, '0');
+    const date = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+    const time = `${pad(now.getHours())}${pad(now.getMinutes())}`;
+    const name = pattern
+        .replace(/\{\{datetime\}\}/gi, `${date} ${time}`)
+        .replace(/\{\{date\}\}/gi, date)
+        .replace(/\{\{time\}\}/gi, time)
+        .replace(/[\\/:*?"<>|]/g, '-')
+        .trim();
+    if (!name) return '';
+    return /\.md$/i.test(name) ? name : `${name}.md`;
 }
 
 /** 按类型生成新 OKR 条目的默认字段 */
@@ -466,6 +490,20 @@ export class OkrTaskPlanView {
             cls: 'swimlane-section-card-name',
             text: section.title || this.sectionTypeLabel(section.type),
         });
+        // 文件面板：编辑态标题行提供配置按钮（目录 + 命名规则）
+        if (section.type === 'file') {
+            const cfgBtn = head.createEl('button', { cls: 'swimlane-section-card-settings' });
+            setIcon(cfgBtn, 'settings');
+            cfgBtn.setAttribute('aria-label', t('section.fileConfigTitle'));
+            cfgBtn.setAttribute('title', t('section.fileConfigTitle'));
+            cfgBtn.onclick = (ev) => {
+                ev.stopPropagation();
+                new FileSectionConfigModal(this.app, section.data as FileData, () => {
+                    void this.save();
+                    this.renderSectionCards(row);
+                }).open();
+            };
+        }
         const delBtn = head.createEl('button', { cls: 'swimlane-section-card-del', text: '🗑️' });
         delBtn.onclick = (e) => {
             e.stopPropagation();
@@ -503,22 +541,27 @@ export class OkrTaskPlanView {
             for (const it of (section.data as FileData).items) {
                 const line = itemsEl.createDiv({ cls: 'swimlane-section-card-edit-row' });
                 const pathInput = line.createEl('input', { type: 'text', cls: 'swimlane-section-card-edit-text' });
+                const nameInput = line.createEl('input', { type: 'text', cls: 'swimlane-section-card-edit-text' });
                 pathInput.value = it.path;
                 pathInput.placeholder = t('section.filePlaceholder');
+                nameInput.value = it.text;
+                nameInput.placeholder = t('section.fileNamePlaceholder');
+                // 未自定义显示名时，用文件名（不带路径）作为显示名
+                const syncName = (path: string) => {
+                    if (!it.text) {
+                        it.text = path.split('/').pop() ?? path;
+                        nameInput.value = it.text;
+                    }
+                };
                 pathInput.onchange = () => {
                     it.path = pathInput.value;
-                    // 未自定义显示名时，用文件路径作为显示名
-                    if (!it.text) it.text = pathInput.value;
+                    syncName(pathInput.value);
                 };
                 // 点击/输入时弹出 vault 文件下拉列表，按输入内容筛选
                 new FilePathSuggest(this.app, pathInput, (path) => {
                     it.path = path;
-                    // 未自定义显示名时，用文件路径作为显示名
-                    if (!it.text) it.text = path;
+                    syncName(path);
                 });
-                const nameInput = line.createEl('input', { type: 'text', cls: 'swimlane-section-card-edit-text' });
-                nameInput.value = it.text;
-                nameInput.placeholder = t('section.fileNamePlaceholder');
                 nameInput.onchange = () => { it.text = nameInput.value; };
                 this.renderEditRowDelete(line, () => {
                     (section.data as FileData).items = (section.data as FileData).items.filter(x => x.id !== it.id);
@@ -531,8 +574,7 @@ export class OkrTaskPlanView {
         const addRow = itemsEl.createEl('button', { cls: 'swimlane-section-card-add-row', text: '+' });
         addRow.onclick = (e) => {
             e.stopPropagation();
-            this.addSectionItem(section);
-            this.renderSectionCards(row);
+            this.addSectionItem(section, row);
         };
 
         // 编辑态：条目变更后保存（失焦时统一保存，避免频繁写盘）
@@ -550,13 +592,67 @@ export class OkrTaskPlanView {
         };
     }
 
-    /** 向板块添加一个空条目 */
-    private addSectionItem(section: Section): void {
+    /** 向板块添加一个空条目（文件板块已配置目录与命名规则时，自动创建文件并加入条目） */
+    private addSectionItem(section: Section, row: HTMLElement): void {
         const id = `sec_item_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
         if (section.type === 'checklist') {
             (section.data as ChecklistData).items.push({ id, text: '', done: false });
         } else if (section.type === 'file') {
-            (section.data as FileData).items.push({ id, text: '', path: '' });
+            const data = section.data as FileData;
+            const folder = normalizeFolder(data.folder ?? '');
+            const fileName = buildFileName(data.namePattern ?? '');
+            // 未配置目录或命名规则：退回手动填写路径
+            if (!folder || !fileName) {
+                data.items.push({ id, text: '', path: '' });
+            } else {
+                void this.createFileItem(data, id, folder, fileName, row);
+                return;
+            }
+        }
+        this.renderSectionCards(row);
+    }
+
+    /** 在配置目录下创建文件并写入条目，成功后刷新板块卡片 */
+    private async createFileItem(
+        data: FileData,
+        id: string,
+        folder: string,
+        fileName: string,
+        row: HTMLElement,
+    ): Promise<void> {
+        let path = `${folder}/${fileName}`;
+        const exists = (p: string) => this.app.vault.getAbstractFileByPath(p) !== null;
+        // 同名文件已存在时追加序号，避免覆盖已有笔记
+        if (exists(path)) {
+            const base = fileName.replace(/\.md$/i, '');
+            let index = 2;
+            while (exists(`${folder}/${base}-${index}.md`)) index += 1;
+            path = `${folder}/${base}-${index}.md`;
+        }
+        try {
+            await this.ensureFolder(folder);
+            await this.app.vault.create(path, '');
+        } catch (err) {
+            console.error(err);
+            new Notice(t('section.fileCreateFailed', { path }));
+            // 创建失败时退回手动填写路径，保证新增行不丢失
+            data.items.push({ id, text: '', path: '' });
+            this.renderSectionCards(row);
+            return;
+        }
+        data.items.push({ id, text: path.split('/').pop() ?? path, path });
+        await this.save();
+        this.renderSectionCards(row);
+    }
+
+    /** 按层级创建目录（目录已存在时跳过） */
+    private async ensureFolder(folder: string): Promise<void> {
+        let current = '';
+        for (const part of folder.split('/').filter(Boolean)) {
+            current = current ? `${current}/${part}` : part;
+            if (!this.app.vault.getAbstractFileByPath(current)) {
+                await this.app.vault.createFolder(current);
+            }
         }
     }
 
@@ -2122,5 +2218,128 @@ class ConfirmDeleteSectionModal extends Modal {
 
     onClose() {
         this.contentEl.empty();
+    }
+}
+
+// ===== 文件面板配置弹窗 =====
+/** 文件面板配置：设置自动生成文件的目录与命名规则 */
+class FileSectionConfigModal extends Modal {
+    private folder: string;
+    private pattern: string;
+
+    constructor(
+        app: App,
+        private data: FileData,
+        private onSave: () => void,
+    ) {
+        super(app);
+        this.folder = data.folder ?? '';
+        this.pattern = data.namePattern ?? '';
+    }
+
+    onOpen() {
+        const { contentEl } = this;
+        contentEl.empty();
+        contentEl.createEl('h3', { text: t('section.fileConfigTitle') });
+
+        // 实时预览：目录 + 渲染后的文件名
+        const preview = contentEl.createDiv({ cls: 'file-section-config-preview' });
+        const updatePreview = () => {
+            const folder = normalizeFolder(this.folder);
+            const name = buildFileName(this.pattern);
+            preview.setText(folder && name
+                ? t('section.filePreview', { path: `${folder}/${name}` })
+                : t('section.filePreviewEmpty'));
+        };
+
+        new Setting(contentEl)
+            .setName(t('section.fileFolderLabel'))
+            .setDesc(t('section.fileFolderDesc'))
+            .addText(text => {
+                text.setPlaceholder(t('section.fileFolderPlaceholder'))
+                    .setValue(this.folder)
+                    .onChange((value) => {
+                        this.folder = value;
+                        updatePreview();
+                    });
+                // 目录下拉建议
+                new FolderPathSuggest(this.app, text.inputEl, (path) => {
+                    this.folder = path;
+                    updatePreview();
+                });
+                // 弹窗打开时避免自动聚焦到目录输入框，防止下拉框自动弹出
+                window.setTimeout(() => text.inputEl.blur(), 0);
+            });
+
+        new Setting(contentEl)
+            .setName(t('section.fileNameRuleLabel'))
+            .setDesc(t('section.fileNameRuleDesc'))
+            .addText(text => text
+                .setPlaceholder(t('section.fileNameRulePlaceholder'))
+                .setValue(this.pattern)
+                .onChange((value) => {
+                    this.pattern = value;
+                    updatePreview();
+                })
+            );
+
+        updatePreview();
+
+        new Setting(contentEl)
+            .addButton(btn => btn
+                .setButtonText(t('common.confirm'))
+                .setCta()
+                .onClick(() => {
+                    const folder = normalizeFolder(this.folder);
+                    // 目录非空时必须为 vault 中已存在的目录，强制约束为目录
+                    if (folder) {
+                        const existing = this.app.vault.getAbstractFileByPath(folder);
+                        if (!(existing instanceof TFolder)) {
+                            new Notice(t('section.fileFolderInvalid'));
+                            return;
+                        }
+                    }
+                    this.data.folder = folder || undefined;
+                    this.data.namePattern = this.pattern.trim() || undefined;
+                    this.onSave();
+                    this.close();
+                })
+            )
+            .addButton(btn => btn
+                .setButtonText(t('common.cancel'))
+                .onClick(() => this.close())
+            );
+    }
+
+    onClose() {
+        this.contentEl.empty();
+    }
+}
+
+/** vault 目录下拉建议 */
+class FolderPathSuggest extends AbstractInputSuggest<TFolder> {
+    constructor(
+        app: App,
+        private suggestInputEl: HTMLInputElement,
+        private onPick: (path: string) => void,
+    ) {
+        super(app, suggestInputEl);
+    }
+
+    protected getSuggestions(query: string): TFolder[] {
+        const lower = query.toLowerCase();
+        return this.app.vault.getAllLoadedFiles()
+            .filter((f): f is TFolder => f instanceof TFolder && f.path.toLowerCase().includes(lower))
+            .slice(0, 50);
+    }
+
+    renderSuggestion(folder: TFolder, el: HTMLElement): void {
+        el.setText(folder.path || '/');
+    }
+
+    selectSuggestion(folder: TFolder): void {
+        this.suggestInputEl.value = folder.path;
+        this.onPick(folder.path);
+        this.close();
     }
 }

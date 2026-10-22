@@ -491,6 +491,10 @@ export interface HabitData {
 /** 文件板块数据 */
 export interface FileData {
     items: FileItem[];
+    /** 自动生成文件的目录（vault 内相对路径，留空表示未配置） */
+    folder?: string;
+    /** 自动生成文件的命名规则，支持 {{date}} / {{time}} / {{datetime}} 占位符 */
+    namePattern?: string;
 }
 
 /** 板块：任务内部的结构化内容 */
