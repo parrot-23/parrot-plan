@@ -17,6 +17,7 @@ import type {
 } from '../../datatypes/chart';
 import { executionDuration, getEventStatus } from '../../datatypes/domain';
 import { makeDayKeyFromWeek, getCurrentWeekKey, shiftWeekKey, parseWeekKey } from '../../shared/plan-data';
+import { UNCATEGORIZED_CATEGORY_COLOR } from '../../shared/plan-category-manager';
 
 /** 聚合结果：数字指标 + 可选图表序列 */
 export interface AggregationResult {
@@ -149,13 +150,35 @@ function aggregateExecutionsByDimension(provider: DataProvider, dimension: 'day'
     if (dimension === 'week' && typeof source.params?.windowWeeks === 'number') {
         const windowWeeks = Math.max(1, source.params.windowWeeks);
         const short = !!source.params.shortLabel;
+        const stackedByTask = !!source.params.stackedByTask;
         const buckets = new Map<string, number>();
+        // 堆叠分段：按 (周, 任务) 双重聚合时长，供柱内垂直分段
+        const segBuckets = new Map<string, Map<string, number>>();
         for (const ex of executions) {
             if (!ex.weekKey) continue;
             const val = metric === 'duration'
                 ? executionDuration(ex)
                 : 1;
             buckets.set(ex.weekKey, (buckets.get(ex.weekKey) ?? 0) + val);
+            if (stackedByTask) {
+                const inboxId = ex.inboxId ?? '';
+                let byTask = segBuckets.get(ex.weekKey);
+                if (!byTask) {
+                    byTask = new Map<string, number>();
+                    segBuckets.set(ex.weekKey, byTask);
+                }
+                byTask.set(inboxId, (byTask.get(inboxId) ?? 0) + val);
+            }
+        }
+
+        // 预解析任务标题与分类（任务 id → 标题 / 分类 id）
+        const taskTitle = new Map<string, string>();
+        const taskCategoryId = new Map<string, string | undefined>();
+        if (stackedByTask) {
+            for (const task of provider.getTasks()) {
+                taskTitle.set(task.id, task.title ?? task.id);
+                taskCategoryId.set(task.id, task.categoryId);
+            }
         }
 
         const weekKeys: string[] = [];
@@ -167,10 +190,25 @@ function aggregateExecutionsByDimension(provider: DataProvider, dimension: 'day'
 
         const data: ChartDatum[] = weekKeys.map((wk) => {
             const { week } = parseWeekKey(wk);
-            return {
+            const datum: ChartDatum = {
                 label: short ? `W${String(week).padStart(2, '0')}` : wk,
                 value: Math.round(buckets.get(wk) ?? 0),
+                weekKey: wk,
             };
+            if (stackedByTask) {
+                const byTask = segBuckets.get(wk);
+                if (byTask && byTask.size > 0) {
+                    // 从柱顶到柱底：时长大的在上方
+                    datum.segments = Array.from(byTask.entries())
+                        .map(([inboxId, segVal]) => ({
+                            label: taskTitle.get(inboxId) ?? (inboxId || '未分类'),
+                            value: Math.round(segVal),
+                            color: resolveCategoryColor(taskCategoryId.get(inboxId), provider),
+                        }))
+                        .sort((a, b) => b.value - a.value);
+                }
+            }
+            return datum;
         });
 
         // 坐标轴配置：由 source.params 控制（showAxes / yUnit），缺省不绘制坐标轴
@@ -286,6 +324,13 @@ function resolveExecutionCategory(ex: { inboxId?: string; eventId?: string }, pr
         if (ev?.categoryId) return ev.categoryId;
     }
     return 'uncategorized';
+}
+
+/** 解析分类颜色：按分类 id 在 DataProvider 的分类表中匹配，缺省回退「未分类」灰色 */
+function resolveCategoryColor(categoryId: string | undefined, provider: DataProvider): string {
+    const categories = provider.getCategories?.() ?? [];
+    const found = categories.find((c) => c.id === categoryId);
+    return found?.color ?? UNCATEGORIZED_CATEGORY_COLOR;
 }
 
 /** 计算执行记录在指定维度下的键 */

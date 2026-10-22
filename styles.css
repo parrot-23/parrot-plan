@@ -3587,8 +3587,12 @@
     margin-top: 6px;
 }
 .task-plan-focus-chart .wb-chart-label,
-.task-plan-focus-chart .wb-chart-axis-label {
+.task-plan-focus-chart .wb-chart-axis-label,
+.task-plan-focus-chart .wb-chart-seg-total {
     font-size: 14px;
+}
+.task-plan-focus-chart .wb-chart-month-label {
+    font-size: 12px;
 }
 
 /* 子任务行：整行一条白底，左右两块内容各占一半 */
@@ -9052,6 +9056,65 @@ button.swimlane-section-card-settings {
 .wb-chart-axis-label {
     font-size: 9px;
     fill: var(--text-muted);
+}
+
+/* 堆叠柱分段 */
+.wb-chart-seg-divider {
+    stroke: #ffffff;
+    stroke-width: 1px;
+    shape-rendering: crispEdges;
+}
+
+.wb-chart-seg-total {
+    font-size: 11px;
+    fill: var(--text-normal);
+    font-weight: 600;
+}
+
+/* 底部月份行 */
+.wb-chart-month-label {
+    font-size: 10px;
+    fill: var(--text-faint);
+}
+
+/* 柱子悬浮面板 */
+.wb-chart-tooltip {
+    position: absolute;
+    display: none;
+    z-index: 10;
+    pointer-events: none;
+    max-width: 260px;
+    padding: 6px 8px;
+    border-radius: 6px;
+    background: var(--background-primary);
+    border: 1px solid var(--background-modifier-border);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    font-size: 12px;
+}
+
+.wb-chart-tooltip-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    line-height: 1.7;
+}
+
+.wb-chart-tooltip-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.wb-chart-tooltip-name {
+    flex: 1;
+    color: var(--text-normal);
+    word-break: break-word;
+}
+
+.wb-chart-tooltip-val {
+    color: var(--text-muted);
+    white-space: nowrap;
 }
 
 .wb-chart-slice {

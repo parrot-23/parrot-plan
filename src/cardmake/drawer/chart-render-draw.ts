@@ -9,6 +9,7 @@ import type {
     FunnelSeries,
     WordCloudSeries,
 } from '../../datatypes/chart';
+import { makeDayKeyFromWeek } from '../../shared/plan-data';
 
 /** 图表渲染配置 */
 export interface ChartRenderOptions {
@@ -101,12 +102,16 @@ export function renderWordCloud(container: HTMLElement, series: WordCloudSeries)
 function renderBarChart(container: HTMLElement, data: ChartSeries['data'], options: ChartRenderOptions) {
     const width = options.width ?? 260;
     const height = options.height ?? 140;
-    const padBottom = 20;
-    const padTop = 8;
     const showAxes = !!options.showAxes;
     // 绘制坐标轴时左侧预留刻度与数值区域，否则沿用紧凑布局
     const padLeft = showAxes ? 34 : 8;
     const padRight = 8;
+    // 堆叠柱：柱顶需额外预留显示总时长的空间
+    const stacked = data.some((d) => !!d.segments && d.segments.length > 0);
+    const padTop = stacked ? 22 : 8;
+    // 含周键时底部预留月份行
+    const hasWeekKeys = data.some((d) => !!d.weekKey);
+    const padBottom = hasWeekKeys ? 36 : 20;
     const chartH = height - padTop - padBottom;
     const max = Math.max(...data.map((d) => d.value), 1);
     // 柱宽与间隔相等：plotWidth = n*barW + (n-1)*barW = (2n-1)*barW
@@ -120,32 +125,157 @@ function renderBarChart(container: HTMLElement, data: ChartSeries['data'], optio
         drawBarAxes(svg, width, padLeft, padTop, chartH, max, options.yAxisUnit);
     }
 
+    // 悬浮面板：鼠标移到柱子上时显示各任务时长
+    container.style.setProperty('position', 'relative');
+    const tooltip = container.createDiv({ cls: 'wb-chart-tooltip' });
+
     for (let i = 0; i < data.length; i++) {
         const d = data[i];
-        const h = (d.value / max) * chartH;
         const x = padLeft + i * (barW + step);
-        const y = padTop + (chartH - h);
-        const rect = svgEl('rect', {
-            x: String(x),
-            y: String(y),
-            width: String(barW),
-            height: String(Math.max(1, h)),
-            rx: '2',
-        });
-        rect.setAttribute('class', 'wb-chart-bar');
-        rect.setAttribute('data-value', String(d.value));
-        svg.appendChild(rect);
 
-        // 底部标签（截断过长文本）
+        if (stacked && d.segments && d.segments.length > 0) {
+            const group = drawStackedBar(svg, d, x, barW, padTop, chartH, max, options.yAxisUnit);
+            // 整根柱子（含分段）绑定悬浮
+            group.addEventListener('mouseenter', () => showTooltip(tooltip, d, options.yAxisUnit));
+            group.addEventListener('mousemove', (e) => positionTooltip(tooltip, container, e));
+            group.addEventListener('mouseleave', () => {
+                tooltip.style.display = 'none';
+            });
+        } else {
+            const h = (d.value / max) * chartH;
+            const y = padTop + (chartH - h);
+            const rect = svgEl('rect', {
+                x: String(x),
+                y: String(y),
+                width: String(barW),
+                height: String(Math.max(1, h)),
+                rx: '2',
+            });
+            rect.setAttribute('class', 'wb-chart-bar');
+            rect.setAttribute('data-value', String(d.value));
+            svg.appendChild(rect);
+        }
+
+        // 底部标签（周号，截断过长文本）
         const label = svgEl('text', {
             x: String(x + barW / 2),
-            y: String(height - 6),
+            y: String(height - (hasWeekKeys ? 18 : 6)),
             'text-anchor': 'middle',
         });
         label.setAttribute('class', 'wb-chart-label');
         label.textContent = truncate(d.label, 6);
         svg.appendChild(label);
     }
+
+    // 底部月份行：从左到右，进入新月份的位置显示月份名称
+    if (hasWeekKeys) {
+        let prevMonth = -1;
+        for (let i = 0; i < data.length; i++) {
+            const wk = data[i].weekKey;
+            if (!wk) continue;
+            const dayKey = makeDayKeyFromWeek(wk, 1);
+            const month = Number(dayKey.slice(5, 7));
+            if (month !== prevMonth) {
+                const x = padLeft + i * (barW + step) + barW / 2;
+                const monthLabel = svgEl('text', {
+                    x: String(x),
+                    y: String(height - 4),
+                    'text-anchor': 'middle',
+                });
+                monthLabel.setAttribute('class', 'wb-chart-month-label');
+                monthLabel.textContent = `${month}月`;
+                svg.appendChild(monthLabel);
+                prevMonth = month;
+            }
+        }
+    }
+}
+
+/** 绘制单根堆叠柱：按分段从底部向上堆叠（白线分隔），柱顶显示总时长；返回包含全部段的分组元素 */
+function drawStackedBar(
+    svg: SVGSVGElement,
+    d: { segments?: { label: string; value: number; color?: string }[]; value: number },
+    x: number,
+    barW: number,
+    padTop: number,
+    chartH: number,
+    max: number,
+    unit: 'minutes' | 'hours' | undefined,
+): SVGGElement {
+    const baseY = padTop + chartH;
+    let cursorY = baseY;
+
+    const group = svgEl('g', {});
+    group.setAttribute('class', 'wb-chart-bar-group');
+
+    for (const seg of d.segments ?? []) {
+        const h = (seg.value / max) * chartH;
+        const segTop = cursorY - h;
+        const y = Math.max(padTop, segTop);
+
+        const rect = svgEl('rect', {
+            x: String(x),
+            y: String(y),
+            width: String(barW),
+            height: String(Math.max(1, h)),
+        });
+        rect.setAttribute('class', 'wb-chart-bar wb-chart-seg');
+        if (seg.color) rect.setAttribute('fill', seg.color);
+        rect.setAttribute('data-value', String(seg.value));
+        rect.setAttribute('data-label', seg.label);
+        group.appendChild(rect);
+
+        // 白线分隔（段与段之间，最底部不画）
+        if (cursorY < baseY) {
+            const divider = svgEl('line', {
+                x1: String(x),
+                y1: String(y),
+                x2: String(x + barW),
+                y2: String(y),
+            });
+            divider.setAttribute('class', 'wb-chart-seg-divider');
+            group.appendChild(divider);
+        }
+
+        cursorY = segTop;
+    }
+
+    // 柱顶总时长
+    const total = svgEl('text', {
+        x: String(x + barW / 2),
+        y: String(padTop - 6),
+        'text-anchor': 'middle',
+    });
+    total.setAttribute('class', 'wb-chart-seg-total');
+    total.textContent = formatAxisValue(d.value, unit);
+    svg.appendChild(total);
+
+    svg.appendChild(group);
+    return group;
+}
+
+/** 填充并显示悬浮面板：列出该柱每个任务的时长 */
+function showTooltip(
+    tooltip: HTMLElement,
+    d: { segments?: { label: string; value: number; color?: string }[] },
+    unit: 'minutes' | 'hours' | undefined,
+) {
+    tooltip.empty();
+    for (const seg of d.segments ?? []) {
+        const row = tooltip.createDiv({ cls: 'wb-chart-tooltip-row' });
+        const dot = row.createSpan({ cls: 'wb-chart-tooltip-dot' });
+        if (seg.color) dot.style.background = seg.color;
+        row.createSpan({ cls: 'wb-chart-tooltip-name', text: seg.label });
+        row.createSpan({ cls: 'wb-chart-tooltip-val', text: formatAxisValue(seg.value, unit) });
+    }
+    tooltip.style.display = 'block';
+}
+
+/** 跟随鼠标定位悬浮面板 */
+function positionTooltip(tooltip: HTMLElement, container: HTMLElement, e: MouseEvent) {
+    const rect = container.getBoundingClientRect();
+    tooltip.style.left = `${e.clientX - rect.left + 12}px`;
+    tooltip.style.top = `${e.clientY - rect.top + 12}px`;
 }
 
 /** 绘制柱状图坐标轴：X 底部轴线 + Y 轴左侧轴线 + 均分刻度线与数值标签 */

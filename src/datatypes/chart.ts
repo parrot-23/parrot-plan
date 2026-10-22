@@ -57,6 +57,8 @@ export interface ChartDatum {
     value: number;
     /** 堆叠分段（按任务拆分，从柱顶到柱底排序），存在时柱状图渲染为堆叠柱 */
     segments?: ChartSegment[];
+    /** 原始周键（YYYY-Wxx），供渲染端推导月份标签 */
+    weekKey?: string;
 }
 
 /** 图表数据集：一组数据点，供图表渲染器绘制 */

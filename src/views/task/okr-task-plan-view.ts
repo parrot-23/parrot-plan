@@ -1851,6 +1851,7 @@ export class OkrTaskPlanView {
             () => [],
             () => this.getExecutions().filter(ex => ex.inboxId && ids.has(ex.inboxId)),
             () => this.inboxData.items,
+            () => this.categoryData.categories,
         );
 
         // 按容器可用宽度动态计算周数（柱宽=间隔，每格约 32px），并据此渲染
@@ -1876,6 +1877,7 @@ export class OkrTaskPlanView {
                         showAxes: true,
                         yUnit: 'hours',
                         width,
+                        stackedByTask: true,
                     },
                 },
             };
