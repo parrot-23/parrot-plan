@@ -797,6 +797,18 @@ export class TodayView {
         return Math.max(0, (this.nowMinutes() - running.start) * 60_000);
     }
 
+    /** 进行中任务的预期时长（分钟）：优先取开始前填写的计划区间，其次取当天计划事件的预估时长 */
+    private getRunningExpectedMinutes(): number | undefined {
+        const running = this.runningTask;
+        if (!running) return undefined;
+        if (typeof running.end === 'number') {
+            const planned = running.end + (running.endDayOffset ?? 0) * 24 * 60 - running.start;
+            if (planned > 0) return planned;
+        }
+        const { estMinutes } = this.getTodayDurations(running.inboxId);
+        return estMinutes !== undefined && estMinutes > 0 ? estMinutes : undefined;
+    }
+
     /** 将毫秒格式化为 HH:MM:SS（不足一小时时显示 MM:SS） */
     private formatElapsed(ms: number): string {
         const totalSec = Math.floor(ms / 1000);
@@ -809,9 +821,20 @@ export class TodayView {
 
     /** 每秒刷新卡片上的已执行时长文本 */
     private updateRunningTimer() {
-        const el = this.container?.querySelector<HTMLElement>('.today-running-timer');
-        if (!el) return;
-        el.textContent = this.formatElapsed(this.getRunningElapsed());
+        const els = this.container?.querySelectorAll<HTMLElement>('.today-running-timer, .today-action-elapsed-value');
+        if (!els) return;
+        const elapsed = this.getRunningElapsed();
+        els.forEach((el) => {
+            el.textContent = this.formatElapsed(elapsed);
+        });
+
+        // 跨过预期时长时，按钮文案由「提前完成」切换为「完成」
+        const finishLabel = this.container?.querySelector<HTMLElement>('.today-action-finish-label');
+        if (finishLabel) {
+            const expected = this.getRunningExpectedMinutes();
+            const reached = expected === undefined || elapsed / 60_000 >= expected;
+            finishLabel.textContent = t(reached ? 'today.finishRunning' : 'today.finishRunningEarly');
+        }
     }
 
     /** 当前时刻换算为当天分钟数 */
@@ -1548,10 +1571,13 @@ export class TodayView {
             onClick: () => void;
         }[] = [];
 
-        // 选中「进行中任务」色块：完成 / 中断（两者都会写入一条执行记录）
+        // 选中「进行中任务」色块：未达到预期时长显示「提前完成」，达到/超出显示「完成」；中断同样写入执行记录
         if (this.selectedRunningTask && this.runningTask) {
+            const expected = this.getRunningExpectedMinutes();
+            const elapsedMinutes = this.getRunningElapsed() / 60_000;
+            const reached = expected === undefined || elapsedMinutes >= expected;
             actions.push({
-                labelKey: 'today.finishRunning',
+                labelKey: reached ? 'today.finishRunning' : 'today.finishRunningEarly',
                 icon: 'check',
                 kind: 'cta',
                 onClick: () => {
@@ -1672,8 +1698,22 @@ export class TodayView {
             btn.disabled = !!action.disabled;
             const iconEl = btn.createSpan({ cls: 'today-action-block-icon' });
             setIcon(iconEl, action.icon);
-            btn.createSpan({ cls: 'today-action-block-label', text: t(action.labelKey) });
+            const labelEl = btn.createSpan({ cls: 'today-action-block-label', text: t(action.labelKey) });
+            // 进行中任务的「完成 / 提前完成」按钮：随时长推进实时切换文案
+            if (action.labelKey === 'today.finishRunning' || action.labelKey === 'today.finishRunningEarly') {
+                labelEl.addClass('today-action-finish-label');
+            }
             btn.onclick = action.onClick;
+        }
+
+        // 进行中任务：按钮后面显示当前已进行的时长（随秒级刷新同步更新）
+        if (this.selectedRunningTask && this.runningTask) {
+            const elapsed = row.createDiv({ cls: 'today-action-elapsed' });
+            elapsed.createSpan({ cls: 'today-action-elapsed-label', text: t('today.runningElapsedLabel') });
+            elapsed.createSpan({
+                cls: 'today-action-elapsed-value',
+                text: this.formatElapsed(this.getRunningElapsed()),
+            });
         }
     }
 

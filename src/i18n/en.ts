@@ -304,6 +304,7 @@ export const en: I18nMessages = {
     'today.execUnplanned': 'Execute Unplanned Task',
     'today.startTask': 'Start Task',
     'today.finishRunning': 'Finish',
+    'today.finishRunningEarly': 'Finish Early',
     'today.interruptRunning': 'Interrupt',
     'today.runningLabel': 'In Progress',
     'today.runningStart': 'Start',

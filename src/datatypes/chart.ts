@@ -36,7 +36,7 @@ export interface DataProvider {
 /** 统计指标聚合结果：一组带标签的数值项 */
 export interface StatItem {
     label: string;
-    value: number;
+    value: number | string;
 }
 
 /** 堆叠柱状图分段：柱内单个任务占用的时长，使用任务分类颜色 */

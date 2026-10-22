@@ -302,6 +302,7 @@ export const zh = {
     'today.execUnplanned': '执行非计划任务',
     'today.startTask': '开始任务',
     'today.finishRunning': '完成',
+    'today.finishRunningEarly': '提前完成',
     'today.interruptRunning': '中断',
     'today.runningLabel': '进行中',
     'today.runningStart': '开始',

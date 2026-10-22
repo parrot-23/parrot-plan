@@ -111,9 +111,13 @@ function renderBarChart(container: HTMLElement, data: ChartSeries['data'], optio
     const padTop = stacked ? 22 : 8;
     // 含周键时底部预留月份行
     const hasWeekKeys = data.some((d) => !!d.weekKey);
-    const padBottom = hasWeekKeys ? 36 : 20;
+    const padBottom = hasWeekKeys ? 44 : 20;
     const chartH = height - padTop - padBottom;
-    const max = Math.max(...data.map((d) => d.value), 1);
+    let max = Math.max(...data.map((d) => d.value), 1);
+    // hours 单位：纵轴按 10h 一个刻度，将最大值向上取整到 10h 的整数倍，保证柱体与刻度对齐
+    if (options.yAxisUnit === 'hours') {
+        max = Math.ceil(max / 600) * 600 || 600;
+    }
     // 柱宽与间隔相等：plotWidth = n*barW + (n-1)*barW = (2n-1)*barW
     const plotWidth = width - padLeft - padRight;
     const barW = Math.max(2, plotWidth / (data.length * 2 - 1));
@@ -135,9 +139,12 @@ function renderBarChart(container: HTMLElement, data: ChartSeries['data'], optio
 
         if (stacked && d.segments && d.segments.length > 0) {
             const group = drawStackedBar(svg, d, x, barW, padTop, chartH, max, options.yAxisUnit);
-            // 整根柱子（含分段）绑定悬浮
-            group.addEventListener('mouseenter', () => showTooltip(tooltip, d, options.yAxisUnit));
-            group.addEventListener('mousemove', (e) => positionTooltip(tooltip, container, e));
+            // 整根柱子（含分段）绑定悬浮：面板锚定在柱子左侧或右侧
+            const barCenterY = padTop + chartH / 2;
+            group.addEventListener('mouseenter', () => {
+                showTooltip(tooltip, d, options.yAxisUnit);
+                positionTooltip(tooltip, container, x, barW, barCenterY);
+            });
             group.addEventListener('mouseleave', () => {
                 tooltip.style.display = 'none';
             });
@@ -154,12 +161,24 @@ function renderBarChart(container: HTMLElement, data: ChartSeries['data'], optio
             rect.setAttribute('class', 'wb-chart-bar');
             rect.setAttribute('data-value', String(d.value));
             svg.appendChild(rect);
+
+            // 时长为 0 的柱：柱顶显示 0
+            if (stacked) {
+                const total = svgEl('text', {
+                    x: String(x + barW / 2),
+                    y: String(y - 4),
+                    'text-anchor': 'middle',
+                });
+                total.setAttribute('class', 'wb-chart-seg-total');
+                total.textContent = '0';
+                svg.appendChild(total);
+            }
         }
 
         // 底部标签（周号，截断过长文本）
         const label = svgEl('text', {
             x: String(x + barW / 2),
-            y: String(height - (hasWeekKeys ? 18 : 6)),
+            y: String(height - (hasWeekKeys ? 26 : 6)),
             'text-anchor': 'middle',
         });
         label.setAttribute('class', 'wb-chart-label');
@@ -220,7 +239,7 @@ function drawStackedBar(
             height: String(Math.max(1, h)),
         });
         rect.setAttribute('class', 'wb-chart-bar wb-chart-seg');
-        if (seg.color) rect.setAttribute('fill', seg.color);
+        if (seg.color) rect.style.setProperty('fill', seg.color);
         rect.setAttribute('data-value', String(seg.value));
         rect.setAttribute('data-label', seg.label);
         group.appendChild(rect);
@@ -240,10 +259,11 @@ function drawStackedBar(
         cursorY = segTop;
     }
 
-    // 柱顶总时长
+    // 柱顶总时长：紧贴该柱的实际顶边（cursorY 为堆叠后的柱顶）
+    const barTop = Math.max(padTop, cursorY);
     const total = svgEl('text', {
         x: String(x + barW / 2),
-        y: String(padTop - 6),
+        y: String(barTop - 4),
         'text-anchor': 'middle',
     });
     total.setAttribute('class', 'wb-chart-seg-total');
@@ -261,7 +281,10 @@ function showTooltip(
     unit: 'minutes' | 'hours' | undefined,
 ) {
     tooltip.empty();
-    for (const seg of d.segments ?? []) {
+    const segs = d.segments ?? [];
+    // 逆序遍历：柱体从上到下（drawStackedBar 中数组首元素在底部、末元素在顶部）
+    for (let i = segs.length - 1; i >= 0; i--) {
+        const seg = segs[i];
         const row = tooltip.createDiv({ cls: 'wb-chart-tooltip-row' });
         const dot = row.createSpan({ cls: 'wb-chart-tooltip-dot' });
         if (seg.color) dot.style.background = seg.color;
@@ -271,11 +294,42 @@ function showTooltip(
     tooltip.style.display = 'block';
 }
 
-/** 跟随鼠标定位悬浮面板 */
-function positionTooltip(tooltip: HTMLElement, container: HTMLElement, e: MouseEvent) {
-    const rect = container.getBoundingClientRect();
-    tooltip.style.left = `${e.clientX - rect.left + 12}px`;
-    tooltip.style.top = `${e.clientY - rect.top + 12}px`;
+/** 定位悬浮面板：优先在柱子右侧显示，右侧空间不足则放左侧；宽度保证单行文字完整显示 */
+function positionTooltip(
+    tooltip: HTMLElement,
+    container: HTMLElement,
+    x: number,
+    barW: number,
+    barCenterY: number,
+) {
+    // 先显示以测量面板尺寸
+    tooltip.style.visibility = 'hidden';
+    tooltip.style.display = 'block';
+    const panelW = tooltip.offsetWidth;
+    const panelH = tooltip.offsetHeight;
+    const containerW = container.clientWidth;
+    const containerH = container.clientHeight;
+    const margin = 8;
+
+    // 根据柱子左右两侧可用空间决定面板放置侧
+    const spaceRight = containerW - (x + barW) - margin;
+    const spaceLeft = x - margin;
+    let left: number;
+    if (spaceRight >= panelW || spaceRight >= spaceLeft) {
+        left = x + barW + margin; // 右侧
+    } else {
+        left = x - panelW - margin; // 左侧
+    }
+    // 兜底收束到容器内（极长单行可能略溢出）
+    if (left + panelW > containerW) left = containerW - panelW;
+    if (left < 0) left = 0;
+
+    let top = barCenterY - panelH / 2;
+    top = Math.max(0, Math.min(top, containerH - panelH));
+
+    tooltip.style.left = `${left}px`;
+    tooltip.style.top = `${top}px`;
+    tooltip.style.visibility = 'visible';
 }
 
 /** 绘制柱状图坐标轴：X 底部轴线 + Y 轴左侧轴线 + 均分刻度线与数值标签 */
@@ -310,10 +364,22 @@ function drawBarAxes(
     yAxis.setAttribute('class', 'wb-chart-axis');
     svg.appendChild(yAxis);
 
-    // Y 轴刻度：均分 4 段（0 / 1/3 / 2/3 / max）
-    const ticks = 4;
-    for (let i = 0; i < ticks; i++) {
-        const value = (max / (ticks - 1)) * i;
+    // Y 轴刻度：hours 单位按 10h 一个刻度，否则均分 4 段（0 / 1/3 / 2/3 / max）
+    const tickValues: number[] = [];
+    if (unit === 'hours') {
+        const stepMinutes = 600; // 10 小时
+        const count = Math.max(1, Math.ceil(max / stepMinutes));
+        for (let i = 0; i <= count; i++) {
+            tickValues.push(stepMinutes * i);
+        }
+    } else {
+        const ticks = 4;
+        for (let i = 0; i < ticks; i++) {
+            tickValues.push((max / (ticks - 1)) * i);
+        }
+    }
+
+    for (const value of tickValues) {
         const y = baseY - (value / max) * chartH;
 
         const tick = svgEl('line', {

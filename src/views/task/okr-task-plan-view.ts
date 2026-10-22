@@ -1858,8 +1858,8 @@ export class OkrTaskPlanView {
         const render = (width: number) => {
             // 与 renderBarChart 的坐标轴边距保持一致：左侧刻度区 34、右侧 8
             const plotWidth = Math.max(32, width - 34 - 8);
-            // 柱宽=间隔，每格（柱+间隔）约 32px，保证 14px 周号标签不重叠
-            const windowWeeks = Math.max(1, Math.min(104, Math.floor(plotWidth / 32) + 1));
+            // 柱宽与间隔相等且均加倍，每格（柱+间隔）约 64px，保证 14px 周号标签不重叠
+            const windowWeeks = Math.max(1, Math.min(104, Math.floor(plotWidth / 64) + 1));
 
             const template: CardTemplate = {
                 id: 'focus-activity-chart',

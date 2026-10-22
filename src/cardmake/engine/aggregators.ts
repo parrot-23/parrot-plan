@@ -215,8 +215,14 @@ function aggregateExecutionsByDimension(provider: DataProvider, dimension: 'day'
         const showAxes = !!source.params?.showAxes;
         const yUnit: 'minutes' | 'hours' = source.params?.yUnit === 'hours' ? 'hours' : 'minutes';
 
+        const totalValue = data.reduce((s, d) => s + d.value, 0);
+        const totalHours = Math.floor(totalValue / 60);
+        const totalRemainMinutes = totalValue % 60;
+
         return {
-            stats: [{ label: '执行总量', value: data.reduce((s, d) => s + d.value, 0) }],
+            stats: [metric === 'duration'
+                ? { label: `总执行时长：${totalHours}小时${totalRemainMinutes}分钟`, value: '' }
+                : { label: '执行总量', value: totalValue }],
             series: {
                 data,
                 metricLabel: metric === 'duration' ? '时长(分钟)' : '次数',

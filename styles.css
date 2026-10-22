@@ -3579,9 +3579,11 @@
     margin-bottom: 2px;
 }
 
-/* 项目活跃度区块 */
+/* 项目活跃度区块：标题行上方加分隔线 */
 .task-plan-focus-activity {
     margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid var(--background-modifier-border);
 }
 .task-plan-focus-chart {
     margin-top: 6px;
@@ -3592,7 +3594,7 @@
     font-size: 14px;
 }
 .task-plan-focus-chart .wb-chart-month-label {
-    font-size: 12px;
+    font-size: 14px;
 }
 
 /* 子任务行：整行一条白底，左右两块内容各占一半 */
@@ -5615,6 +5617,31 @@
     font-size: 12px;
     line-height: 1.2;
     text-align: center;
+    white-space: nowrap;
+}
+
+/* 进行中任务：按钮后面显示的已进行时长 */
+.today-action-elapsed {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: center;
+    gap: 2px;
+    margin-left: 4px;
+    line-height: 1.2;
+}
+
+.today-action-elapsed-label {
+    font-size: 11px;
+    color: var(--text-faint);
+    white-space: nowrap;
+}
+
+.today-action-elapsed-value {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text-normal);
+    font-variant-numeric: tabular-nums;
     white-space: nowrap;
 }
 
@@ -9083,7 +9110,7 @@ button.swimlane-section-card-settings {
     display: none;
     z-index: 10;
     pointer-events: none;
-    max-width: 260px;
+    width: max-content;
     padding: 6px 8px;
     border-radius: 6px;
     background: var(--background-primary);
@@ -9094,7 +9121,7 @@ button.swimlane-section-card-settings {
 
 .wb-chart-tooltip-row {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     gap: 6px;
     line-height: 1.7;
 }
@@ -9104,15 +9131,20 @@ button.swimlane-section-card-settings {
     height: 8px;
     border-radius: 50%;
     flex-shrink: 0;
+    margin-top: 6px;
 }
 
 .wb-chart-tooltip-name {
-    flex: 1;
+    width: 120px;
+    max-width: 120px;
     color: var(--text-normal);
+    white-space: normal;
     word-break: break-word;
+    overflow-wrap: break-word;
 }
 
 .wb-chart-tooltip-val {
+    flex-shrink: 0;
     color: var(--text-muted);
     white-space: nowrap;
 }
