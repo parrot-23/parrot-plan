@@ -162,6 +162,11 @@ export const zh = {
     'taskPlan.focusRemove': '取消关注',
     'taskPlan.focusLatest': '最近执行',
     'taskPlan.focusNoSubtask': '暂无子任务',
+    'taskPlan.focusProgressTitle': '目前任务进度',
+    'taskPlan.focusStatusUndone': '未完成',
+    'taskPlan.focusDescendantTask': '后代任务',
+    'taskPlan.focusActivityTitle': '项目活跃度',
+    'taskPlan.focusActivityMetric': '时长(分钟)',
 
     // OKR 信息
     'okr.title': 'OKR 信息',

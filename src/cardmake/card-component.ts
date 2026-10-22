@@ -19,6 +19,7 @@ import {
 } from '../datatypes/skin';
 import type { CardSkin } from '../datatypes/skin';
 import type { CardRenderContext } from '../datatypes/renderer';
+import type { DataProvider } from '../datatypes/chart';
 import { createDataProvider } from './engine/provider';
 import type { EventBlock, ExecutionRecord } from '../datatypes/domain';
 import type { InboxItem } from '../datatypes/domain';
@@ -403,4 +404,32 @@ export class CardComponent {
         };
         window.setTimeout(() => document.addEventListener('click', close), 0);
     }
+}
+
+/** 无外壳内容渲染的上下文：供内嵌场景（非工作台画布）复用卡片渲染管线 */
+export interface CardContentRenderOptions {
+    app: App;
+    save: () => Promise<void>;
+    refresh: () => void;
+    provider: DataProvider;
+}
+
+/**
+ * 按卡片机制渲染卡片内容（template → renderer → aggregate），不创建工作台卡片外壳。
+ * 供工作台之外的内嵌场景（如任务关注方框的项目活跃度柱状图）复用同一套渲染管线。
+ */
+export function renderCardContent(
+    container: HTMLElement,
+    instance: CardInstance,
+    template: CardTemplate,
+    opts: CardContentRenderOptions,
+): void {
+    const renderer = getCardRenderer(template.renderer);
+    const ctx: CardRenderContext = {
+        app: opts.app,
+        save: opts.save,
+        refresh: opts.refresh,
+        provider: opts.provider,
+    };
+    renderer.render(container, instance, template, ctx);
 }

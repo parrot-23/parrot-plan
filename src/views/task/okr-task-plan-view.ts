@@ -8,8 +8,12 @@ import { SECTION_TYPE_META, OKR_CONDITION_META, OKR_GROUP_META, OKR_PERIOD_META,
 import { renderTaskPanel, FilePathSuggest } from '../../shared/task-panel';
 import { TaskSearchModal } from '../../shared/task-search-modal';
 import { makePeriodKey } from '../../datatypes/card';
+import type { CardInstance } from '../../datatypes/card';
+import type { CardTemplate } from '../../datatypes/form';
 import { RecordRepo } from '../../repos/record-repo';
 import { makeDayKeyFromWeek } from '../../shared/plan-data';
+import { renderCardContent } from '../../cardmake/card-component';
+import { createDataProvider } from '../../cardmake/engine/provider';
 import { t } from '../../i18n';
 
 /** 生成 OKR 条目 id */
@@ -1102,7 +1106,7 @@ export class OkrTaskPlanView {
      * 里程碑条目（正常模式）：方块信息，内容从上到下依次为
      * 奖杯图标 / 名称 / x 天后（具体日期） / 关联任务（只读标签）。
      */
-    private renderMilestoneTile(container: HTMLElement, item: InboxItem, cond: OkrCondition): void {
+    private renderMilestoneTile(container: HTMLElement, item: InboxItem, cond: OkrCondition): HTMLElement {
         const tile = container.createDiv({ cls: 'okr-milestone-tile' });
 
         tile.createDiv({ cls: 'okr-milestone-tile-icon', text: '🏆' });
@@ -1148,6 +1152,7 @@ export class OkrTaskPlanView {
                 chip.createSpan({ text: child.title });
             }
         }
+        return tile;
     }
 
     /**
@@ -1737,17 +1742,6 @@ export class OkrTaskPlanView {
         const headMain = head.createDiv({ cls: 'task-plan-focus-head-main' });
         headMain.createDiv({ cls: 'task-plan-focus-title', text: item.title });
 
-        const milestones = (item.okr?.conditions ?? []).filter(c => c.type === 'milestone');
-        if (milestones.length > 0) {
-            const chips = headMain.createDiv({ cls: 'task-plan-focus-milestones' });
-            for (const cond of milestones) {
-                const rows = cond.items ?? [];
-                const doneCount = rows.length > 0 ? rows.filter(r => r.done).length : (cond.done ? 1 : 0);
-                const totalCount = rows.length > 0 ? rows.length : 1;
-                chips.createSpan({ cls: 'task-plan-focus-milestone', text: `${cond.title ?? ''} ${doneCount}/${totalCount}` });
-            }
-        }
-
         const latestDay = this.latestExecutionDayKeyForSubtree(item.id);
         headMain.createDiv({
             cls: 'task-plan-focus-latest',
@@ -1757,6 +1751,20 @@ export class OkrTaskPlanView {
         const removeBtn = head.createEl('button', { cls: 'task-plan-focus-remove-btn', text: '✕' });
         removeBtn.setAttribute('title', t('taskPlan.focusRemove'));
         removeBtn.addEventListener('click', () => { void this.removeFocusTask(item.id); });
+
+        // 里程碑目标：复用 OKR 选项卡里程碑卡片的样式（卡片 + 类型标签 + 方块方格）
+        const milestones = (item.okr?.conditions ?? []).filter(c => c.type === 'milestone');
+        if (milestones.length > 0) {
+            const msCard = box.createDiv({ cls: 'okr-entry-card okr-entry-milestone task-plan-focus-milestone-card' });
+            const msHead = msCard.createDiv({ cls: 'okr-entry-head' });
+            msHead.createSpan({ cls: 'okr-entry-type', text: t('okr.typeMilestone') });
+
+            const msGrid = msCard.createDiv({ cls: 'okr-milestone-grid' });
+            for (const cond of milestones) {
+                // 复用 OKR 选项卡的里程碑方块渲染（奖杯 / 名称 / 截止日期 / 关联任务标签）
+                this.renderMilestoneTile(msGrid, item, cond);
+            }
+        }
 
         // 子任务区：直接子任务，每行 = 名称 + 含后代总时长 + 最新进度
         const childrenByParent = new Map<string, InboxItem[]>();
@@ -1788,32 +1796,108 @@ export class OkrTaskPlanView {
 
         const subtasks = childrenByParent.get(item.id) ?? [];
         const body = box.createDiv({ cls: 'task-plan-focus-body' });
+        body.createDiv({ cls: 'task-plan-focus-section-title', text: t('taskPlan.focusProgressTitle') });
         if (subtasks.length === 0) {
             body.createDiv({ cls: 'task-plan-focus-no-subtask', text: t('taskPlan.focusNoSubtask') });
-            return;
         }
         for (const sub of subtasks) {
-            const row = body.createDiv({ cls: 'task-plan-focus-subtask' });
-            row.createDiv({ cls: 'task-plan-focus-subtask-name', text: sub.title });
-            row.createDiv({ cls: 'task-plan-focus-subtask-duration', text: formatDuration(subtreeMinutes(sub.id)) });
-            const deepest = this.deepestIncompleteDescendant(sub.id, childrenByParent);
-            row.createDiv({ cls: 'task-plan-focus-subtask-progress', text: deepest ? deepest.title : t('taskPlan.statusDone') });
+            const subStatus = sub.status ?? 'notStarted';
+            // 已完成 / 无未完成后代时右侧为空，左侧保持一半宽度
+            const target = subStatus === 'done'
+                ? undefined
+                : this.nearestIncompleteDescendant(sub.id, childrenByParent);
+            const row = body.createDiv({ cls: `task-plan-focus-subtask${target ? '' : ' is-solo'}` });
+
+            // 左侧：该子任务自身（名称 + 时长 + 状态）
+            const left = row.createDiv({ cls: 'task-plan-focus-subtask-side is-left' });
+            left.createDiv({ cls: 'task-plan-focus-subtask-name', text: sub.title });
+            left.createDiv({ cls: 'task-plan-focus-subtask-duration', text: formatDuration(subtreeMinutes(sub.id)) });
+            left.createDiv({ cls: `task-plan-focus-subtask-status is-${subStatus}`, text: this.taskStatusLabel(subStatus) });
+
+            if (!target) continue;
+
+            // 右侧：后代任务中遍历上最近的一条未完成任务
+            const targetStatus = target.status ?? 'notStarted';
+            const right = row.createDiv({ cls: 'task-plan-focus-subtask-side is-right' });
+            right.createDiv({ cls: 'task-plan-focus-subtask-descendant-label', text: t('taskPlan.focusDescendantTask') });
+            right.createDiv({ cls: 'task-plan-focus-subtask-name', text: target.title });
+            right.createDiv({ cls: 'task-plan-focus-subtask-duration', text: formatDuration(subtreeMinutes(target.id)) });
+            right.createDiv({ cls: `task-plan-focus-subtask-status is-${targetStatus}`, text: this.taskStatusLabel(targetStatus) });
         }
+
+        // 项目活跃度：按周聚合该任务整棵子树的执行时长（最近 8 周）柱状图
+        const activity = box.createDiv({ cls: 'task-plan-focus-activity' });
+        activity.createDiv({ cls: 'task-plan-focus-section-title', text: t('taskPlan.focusActivityTitle') });
+        const chartWrap = activity.createDiv({ cls: 'task-plan-focus-chart' });
+        this.renderActivityChart(chartWrap, item.id);
     }
 
-    /** 递归向下取最深层未完成的后代任务（用于子任务行的「最新进度」） */
-    private deepestIncompleteDescendant(taskId: string, childrenByParent: Map<string, InboxItem[]>): InboxItem | undefined {
-        let best: { item: InboxItem; depth: number } | undefined;
-        const walk = (id: string, depth: number) => {
-            for (const child of childrenByParent.get(id) ?? []) {
-                if ((child.status ?? 'notStarted') !== 'done') {
-                    if (!best || depth > best.depth) best = { item: child, depth };
+    /** 渲染项目活跃度柱状图：通过卡片机制（template → renderer → aggregate）按周聚合整棵子树的执行时长 */
+    private renderActivityChart(container: HTMLElement, rootId: string): void {
+        // 收集整棵子树的 id 集合
+        const ids = new Set<string>([rootId]);
+        const collect = (id: string) => {
+            for (const it of this.inboxData.items) {
+                if (!it.removed && it.parentId === id) {
+                    ids.add(it.id);
+                    collect(it.id);
                 }
-                walk(child.id, depth + 1);
             }
         };
-        walk(taskId, 0);
-        return best?.item;
+        collect(rootId);
+
+        // 卡片模板：stats 渲染器 + 执行记录按周时长聚合，最近 12 周连续占位、周号简写
+        const template: CardTemplate = {
+            id: 'focus-activity-chart',
+            name: t('taskPlan.focusActivityTitle'),
+            mode: 'chart',
+            renderer: 'stats',
+            source: {
+                dataSource: 'executions',
+                aggregation: 'by-week',
+                chart: 'bar',
+                params: { metric: 'duration', windowWeeks: 12, shortLabel: true },
+            },
+        };
+        const instance: CardInstance = {
+            id: `focus_activity_${rootId}`,
+            templateId: 'focus-activity-chart',
+            mode: 'chart',
+        };
+
+        // 数据提供者：执行记录缩小到当前任务子树范围，其余数据源透传
+        const provider = createDataProvider(
+            () => [],
+            () => this.getExecutions().filter(ex => ex.inboxId && ids.has(ex.inboxId)),
+            () => this.inboxData.items,
+        );
+
+        renderCardContent(container, instance, template, {
+            app: this.app,
+            save: this.save,
+            refresh: () => { void this.refresh(); },
+            provider,
+        });
+    }
+
+    /** 任务状态文案：已完成 / 进行中 / 暂停 / 未完成 */
+    private taskStatusLabel(status: TaskStatus): string {
+        if (status === 'done') return t('taskPlan.statusDone');
+        if (status === 'inProgress') return t('taskPlan.statusInProgress');
+        if (status === 'paused') return t('taskPlan.statusPaused');
+        return t('taskPlan.focusStatusUndone');
+    }
+
+    /** 后代任务中遍历上（逐层）最近的一条未完成任务（用于右侧进度） */
+    private nearestIncompleteDescendant(taskId: string, childrenByParent: Map<string, InboxItem[]>): InboxItem | undefined {
+        const queue: InboxItem[] = [...(childrenByParent.get(taskId) ?? [])];
+        let head = 0;
+        while (head < queue.length) {
+            const cur = queue[head++];
+            if ((cur.status ?? 'notStarted') !== 'done') return cur;
+            queue.push(...(childrenByParent.get(cur.id) ?? []));
+        }
+        return undefined;
     }
 
     /** 某任务整棵子树最近一次执行记录的日期键（用于「最近执行」） */

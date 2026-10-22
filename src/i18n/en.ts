@@ -164,6 +164,11 @@ export const en: I18nMessages = {
     'taskPlan.focusRemove': 'Remove from focus',
     'taskPlan.focusLatest': 'Last execution',
     'taskPlan.focusNoSubtask': 'No subtasks',
+    'taskPlan.focusProgressTitle': 'Current Task Progress',
+    'taskPlan.focusStatusUndone': 'Not done',
+    'taskPlan.focusDescendantTask': 'Descendant',
+    'taskPlan.focusActivityTitle': 'Project Activity',
+    'taskPlan.focusActivityMetric': 'Duration (min)',
 
     // OKR info
     'okr.title': 'OKR Info',

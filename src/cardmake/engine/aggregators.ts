@@ -16,7 +16,7 @@ import type {
     WordCloudSeries,
 } from '../../datatypes/chart';
 import { executionDuration, getEventStatus } from '../../datatypes/domain';
-import { makeDayKeyFromWeek } from '../../shared/plan-data';
+import { makeDayKeyFromWeek, getCurrentWeekKey, shiftWeekKey, parseWeekKey } from '../../shared/plan-data';
 
 /** 聚合结果：数字指标 + 可选图表序列 */
 export interface AggregationResult {
@@ -144,6 +144,40 @@ function aggregateEventCount(provider: DataProvider): AggregationResult {
 function aggregateExecutionsByDimension(provider: DataProvider, dimension: 'day' | 'week', source: CardSource): AggregationResult {
     const metric = (source.params?.metric as string) ?? 'count';
     const executions = provider.getExecutions();
+
+    // 周维度 + 窗口参数（windowWeeks）：按最近 N 周连续占位，无数据周为 0，标签可选简写（Wxx）
+    if (dimension === 'week' && typeof source.params?.windowWeeks === 'number') {
+        const windowWeeks = Math.max(1, source.params.windowWeeks);
+        const short = !!source.params.shortLabel;
+        const buckets = new Map<string, number>();
+        for (const ex of executions) {
+            if (!ex.weekKey) continue;
+            const val = metric === 'duration'
+                ? executionDuration(ex)
+                : 1;
+            buckets.set(ex.weekKey, (buckets.get(ex.weekKey) ?? 0) + val);
+        }
+
+        const weekKeys: string[] = [];
+        let cursor = getCurrentWeekKey();
+        for (let i = 0; i < windowWeeks; i++) {
+            weekKeys.unshift(cursor);
+            cursor = shiftWeekKey(cursor, -1);
+        }
+
+        const data: ChartDatum[] = weekKeys.map((wk) => {
+            const { week } = parseWeekKey(wk);
+            return {
+                label: short ? `W${String(week).padStart(2, '0')}` : wk,
+                value: Math.round(buckets.get(wk) ?? 0),
+            };
+        });
+
+        return {
+            stats: [{ label: '执行总量', value: data.reduce((s, d) => s + d.value, 0) }],
+            series: { data, metricLabel: metric === 'duration' ? '时长(分钟)' : '次数' },
+        };
+    }
 
     const buckets = new Map<string, number>();
     for (const ex of executions) {
