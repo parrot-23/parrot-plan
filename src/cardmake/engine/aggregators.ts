@@ -173,9 +173,17 @@ function aggregateExecutionsByDimension(provider: DataProvider, dimension: 'day'
             };
         });
 
+        // 坐标轴配置：由 source.params 控制（showAxes / yUnit），缺省不绘制坐标轴
+        const showAxes = !!source.params?.showAxes;
+        const yUnit: 'minutes' | 'hours' = source.params?.yUnit === 'hours' ? 'hours' : 'minutes';
+
         return {
             stats: [{ label: '执行总量', value: data.reduce((s, d) => s + d.value, 0) }],
-            series: { data, metricLabel: metric === 'duration' ? '时长(分钟)' : '次数' },
+            series: {
+                data,
+                metricLabel: metric === 'duration' ? '时长(分钟)' : '次数',
+                ...(showAxes ? { axes: { show: true, yUnit } } : {}),
+            },
         };
     }
 

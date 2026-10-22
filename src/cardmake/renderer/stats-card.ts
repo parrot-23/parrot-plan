@@ -60,7 +60,10 @@ export const statsCardRenderer: CardRenderer = {
         // 图表（模板声明了 chart 类型且有序列数据时绘制）
         if (source.chart && result.series) {
             const chartWrap = body.createDiv({ cls: 'wb-chart-wrap' });
-            renderChart(chartWrap, source.chart, result.series);
+            renderChart(chartWrap, source.chart, result.series, {
+                showAxes: result.series.axes?.show,
+                yAxisUnit: result.series.axes?.yUnit,
+            });
         }
     },
 };

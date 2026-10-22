@@ -14,6 +14,10 @@ import type {
 export interface ChartRenderOptions {
     width?: number;
     height?: number;
+    /** 是否绘制坐标轴（X 底部轴线 + Y 轴刻度线） */
+    showAxes?: boolean;
+    /** Y 轴刻度单位：minutes（分钟）/ hours（小时换算） */
+    yAxisUnit?: 'minutes' | 'hours';
 }
 
 /** 把图表序列渲染到容器 */
@@ -97,19 +101,29 @@ export function renderWordCloud(container: HTMLElement, series: WordCloudSeries)
 function renderBarChart(container: HTMLElement, data: ChartSeries['data'], options: ChartRenderOptions) {
     const width = options.width ?? 260;
     const height = options.height ?? 140;
-    const padLeft = 8;
     const padBottom = 20;
     const padTop = 8;
+    const showAxes = !!options.showAxes;
+    // 绘制坐标轴时左侧预留刻度与数值区域，否则沿用紧凑布局
+    const padLeft = showAxes ? 34 : 8;
+    const padRight = 8;
     const chartH = height - padTop - padBottom;
     const max = Math.max(...data.map((d) => d.value), 1);
-    const barGap = 4;
-    const barW = Math.max(2, (width - padLeft * 2 - barGap * (data.length - 1)) / data.length);
+    // 柱宽与间隔相等：plotWidth = n*barW + (n-1)*barW = (2n-1)*barW
+    const plotWidth = width - padLeft - padRight;
+    const barW = Math.max(2, plotWidth / (data.length * 2 - 1));
+    const step = barW;
 
     const svg = createChartSvg(container, width, height);
+
+    if (showAxes) {
+        drawBarAxes(svg, width, padLeft, padTop, chartH, max, options.yAxisUnit);
+    }
+
     for (let i = 0; i < data.length; i++) {
         const d = data[i];
         const h = (d.value / max) * chartH;
-        const x = padLeft + i * (barW + barGap);
+        const x = padLeft + i * (barW + step);
         const y = padTop + (chartH - h);
         const rect = svgEl('rect', {
             x: String(x),
@@ -132,6 +146,73 @@ function renderBarChart(container: HTMLElement, data: ChartSeries['data'], optio
         label.textContent = truncate(d.label, 6);
         svg.appendChild(label);
     }
+}
+
+/** 绘制柱状图坐标轴：X 底部轴线 + Y 轴左侧轴线 + 均分刻度线与数值标签 */
+function drawBarAxes(
+    svg: SVGSVGElement,
+    width: number,
+    padLeft: number,
+    padTop: number,
+    chartH: number,
+    max: number,
+    unit: 'minutes' | 'hours' | undefined,
+): void {
+    const baseY = padTop + chartH;
+
+    // X 轴底部轴线
+    const xAxis = svgEl('line', {
+        x1: String(padLeft),
+        y1: String(baseY),
+        x2: String(width - 8),
+        y2: String(baseY),
+    });
+    xAxis.setAttribute('class', 'wb-chart-axis');
+    svg.appendChild(xAxis);
+
+    // Y 轴左侧轴线
+    const yAxis = svgEl('line', {
+        x1: String(padLeft),
+        y1: String(padTop),
+        x2: String(padLeft),
+        y2: String(baseY),
+    });
+    yAxis.setAttribute('class', 'wb-chart-axis');
+    svg.appendChild(yAxis);
+
+    // Y 轴刻度：均分 4 段（0 / 1/3 / 2/3 / max）
+    const ticks = 4;
+    for (let i = 0; i < ticks; i++) {
+        const value = (max / (ticks - 1)) * i;
+        const y = baseY - (value / max) * chartH;
+
+        const tick = svgEl('line', {
+            x1: String(padLeft),
+            y1: String(y),
+            x2: String(padLeft - 3),
+            y2: String(y),
+        });
+        tick.setAttribute('class', 'wb-chart-tick');
+        svg.appendChild(tick);
+
+        const label = svgEl('text', {
+            x: String(padLeft - 5),
+            y: String(y + 3),
+            'text-anchor': 'end',
+        });
+        label.setAttribute('class', 'wb-chart-axis-label');
+        label.textContent = formatAxisValue(value, unit);
+        svg.appendChild(label);
+    }
+}
+
+/** 坐标轴数值格式化：hours 时换算为小时（保留 1 位小数） */
+function formatAxisValue(value: number, unit?: 'minutes' | 'hours'): string {
+    if (unit === 'hours') {
+        const hours = Math.round(value / 6) / 10;
+        return `${Number(hours.toFixed(1))}h`;
+    }
+    return String(Math.round(value));
 }
 
 /** 折线图 */

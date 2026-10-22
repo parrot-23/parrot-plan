@@ -44,6 +44,16 @@ export interface ChartSeries {
     data: ChartDatum[];
     /** 指标名（用于图例/标题） */
     metricLabel: string;
+    /** 坐标轴配置（由聚合器按 source.params 透传，供柱状图绘制坐标轴） */
+    axes?: ChartAxesConfig;
+}
+
+/** 图表坐标轴配置 */
+export interface ChartAxesConfig {
+    /** 是否绘制坐标轴（X 底部轴线 + Y 轴刻度线） */
+    show: boolean;
+    /** Y 轴刻度单位：minutes（分钟，原始时长）/ hours（小时换算） */
+    yUnit?: 'minutes' | 'hours';
 }
 
 /** 热力图数据点：某一天的活跃度（GitHub 贡献图风格） */

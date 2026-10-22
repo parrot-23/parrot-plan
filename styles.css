@@ -3579,16 +3579,12 @@
     margin-bottom: 2px;
 }
 
-/* 项目活跃度区块 + 柱状图自适应填满关注方框宽度 */
+/* 项目活跃度区块 */
 .task-plan-focus-activity {
     margin-top: 12px;
 }
 .task-plan-focus-chart {
     margin-top: 6px;
-}
-.task-plan-focus-chart .wb-chart-svg {
-    width: 100%;
-    height: auto;
 }
 
 /* 子任务行：整行一条白底，左右两块内容各占一半 */
@@ -9033,6 +9029,23 @@ button.swimlane-section-card-settings {
 }
 
 .wb-chart-label {
+    font-size: 9px;
+    fill: var(--text-muted);
+}
+
+.wb-chart-axis {
+    stroke: var(--text-faint);
+    stroke-width: 1;
+    shape-rendering: crispEdges;
+}
+
+.wb-chart-tick {
+    stroke: var(--text-faint);
+    stroke-width: 1;
+    shape-rendering: crispEdges;
+}
+
+.wb-chart-axis-label {
     font-size: 9px;
     fill: var(--text-muted);
 }

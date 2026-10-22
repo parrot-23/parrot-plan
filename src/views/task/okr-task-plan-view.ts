@@ -1856,7 +1856,7 @@ export class OkrTaskPlanView {
                 dataSource: 'executions',
                 aggregation: 'by-week',
                 chart: 'bar',
-                params: { metric: 'duration', windowWeeks: 12, shortLabel: true },
+                params: { metric: 'duration', windowWeeks: 12, shortLabel: true, showAxes: true, yUnit: 'hours' },
             },
         };
         const instance: CardInstance = {
