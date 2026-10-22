@@ -191,6 +191,8 @@ export class BaseRepo {
         // 兼容旧数据：确保「未分类」始终存在且位于首位
         ensureUncategorizedCategory(initialCategoryData);
         const initialInboxData = (savedData.inboxData ?? DEFAULT_INBOX_DATA) as InboxData;
+        // 兼容旧数据：确保关注任务列表字段始终存在
+        if (!Array.isArray(initialInboxData.focusTaskIds)) initialInboxData.focusTaskIds = [];
         // 兼容旧数据：把旧的 OKR 条件（duration / outcome）迁移为新类型
         for (const item of initialInboxData.items ?? []) {
             if (item.okr) {

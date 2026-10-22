@@ -515,6 +515,8 @@ export interface InboxData {
     weekGoalOnly?: boolean;
     /** 项目聚焦：仅显示该任务及其所有子任务（持久化，用于「按项目排布」） */
     projectFocusId?: string;
+    /** 关注任务 id 列表（持久化，用于「任务关注」选项卡的关注方框） */
+    focusTaskIds?: string[];
     /** 选中的板块 id（选中板块时，selectedId 同时指向所属项目） */
     selectedSectionId?: string;
     /** 选中的板块条目 id（选中条目时，同时选中其所属板块与项目） */

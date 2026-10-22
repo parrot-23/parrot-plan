@@ -9,6 +9,7 @@ import { renderTaskPanel, FilePathSuggest } from '../../shared/task-panel';
 import { TaskSearchModal } from '../../shared/task-search-modal';
 import { makePeriodKey } from '../../datatypes/card';
 import { RecordRepo } from '../../repos/record-repo';
+import { makeDayKeyFromWeek } from '../../shared/plan-data';
 import { t } from '../../i18n';
 
 /** 生成 OKR 条目 id */
@@ -175,9 +176,9 @@ export class OkrTaskPlanView {
                 await this.save();
             },
             () => {
-                // 在「任务总览」选项卡下点击任务面板条目选中任务时，自动切换到「当前任务」选项卡
+                // 在「执行情况」选项卡下点击任务面板条目选中任务时，自动切换到「当前任务」选项卡
                 if (
-                    this.rightTab === 'overview'
+                    this.rightTab === 'execution'
                     && this.inboxData.selectedId
                     && this.inboxData.selectedId !== prevSelectedId
                 ) {
@@ -248,11 +249,14 @@ export class OkrTaskPlanView {
                 this.renderSectionsArea(contentPanel);
             }
         } else if (this.rightTab === 'overview') {
-            // 「任务总览」选项卡：展示所有任务条目及其 OKR 进度、成果情况
-            this.renderAllTasksOverview(contentPanel);
+            // 「任务关注」选项卡：添加关注任务 + 关注任务方框列表
+            this.renderFocusTab(contentPanel);
         } else if (this.rightTab === 'basket') {
             // 「收集篮子」选项卡：左为任务名称 + 未处理数 + 收集篮子面板，右为板块信息
             this.renderBasketTab(contentPanel);
+        } else if (this.rightTab === 'execution') {
+            // 「执行情况」选项卡：展示所有任务条目及执行时长、OKR 进度、成果情况
+            this.renderAllTasksOverview(contentPanel);
         } else if (this.rightTab === 'okr') {
             // 「OKR」选项卡：OKR 进度方框（拆解型 / 周期型条目卡片）
             this.renderOkrBox(contentPanel);
@@ -1675,6 +1679,178 @@ export class OkrTaskPlanView {
         }
     }
 
+    /**
+     * 「任务关注」选项卡：右上角「添加任务关注」按钮 + 关注任务方框列表。
+     * 点击添加按钮时需先在左侧选中任务，选中的任务会生成一个关注方框，
+     * 用于查看该任务的里程碑目标与直接子任务的进度、活跃程度。
+     */
+    private renderFocusTab(container: HTMLElement): void {
+        const area = container.createDiv({ cls: 'task-plan-focus' });
+
+        const header = area.createDiv({ cls: 'task-plan-focus-header' });
+        const addBtn = header.createEl('button', { cls: 'task-plan-focus-add-btn', text: t('taskPlan.addFocus') });
+        addBtn.addEventListener('click', () => { void this.addFocusTask(); });
+
+        const list = area.createDiv({ cls: 'task-plan-focus-list' });
+        const focusIds = this.inboxData.focusTaskIds ?? [];
+        if (focusIds.length === 0) {
+            list.createDiv({ cls: 'task-plan-focus-empty', text: t('taskPlan.focusEmpty') });
+            return;
+        }
+        for (const id of focusIds) {
+            const item = this.inboxData.items.find(i => i.id === id && !i.removed);
+            if (!item) continue;
+            this.renderFocusBox(list, item);
+        }
+    }
+
+    /** 将当前选中任务加入关注列表 */
+    private async addFocusTask(): Promise<void> {
+        const item = this.inboxData.items.find(i => i.id === this.inboxData.selectedId && !i.removed);
+        if (!item) {
+            new Notice(t('taskPlan.noSelection'));
+            return;
+        }
+        const focusIds = this.inboxData.focusTaskIds ?? [];
+        if (focusIds.includes(item.id)) {
+            new Notice(t('taskPlan.focusAlready'));
+            return;
+        }
+        this.inboxData.focusTaskIds = [...focusIds, item.id];
+        await this.save();
+        await this.refresh();
+    }
+
+    /** 从关注列表移除任务 */
+    private async removeFocusTask(id: string): Promise<void> {
+        this.inboxData.focusTaskIds = (this.inboxData.focusTaskIds ?? []).filter(x => x !== id);
+        await this.save();
+        await this.refresh();
+    }
+
+    /** 渲染单个关注任务方框：标题 + 里程碑目标 + 最近执行时间 + 直接子任务进度列表 */
+    private renderFocusBox(container: HTMLElement, item: InboxItem): void {
+        const box = container.createDiv({ cls: 'task-plan-focus-box' });
+
+        // 头部：任务名称 + 里程碑目标 + 最近执行时间（右上角取消关注按钮）
+        const head = box.createDiv({ cls: 'task-plan-focus-head' });
+        const headMain = head.createDiv({ cls: 'task-plan-focus-head-main' });
+        headMain.createDiv({ cls: 'task-plan-focus-title', text: item.title });
+
+        const milestones = (item.okr?.conditions ?? []).filter(c => c.type === 'milestone');
+        if (milestones.length > 0) {
+            const chips = headMain.createDiv({ cls: 'task-plan-focus-milestones' });
+            for (const cond of milestones) {
+                const rows = cond.items ?? [];
+                const doneCount = rows.length > 0 ? rows.filter(r => r.done).length : (cond.done ? 1 : 0);
+                const totalCount = rows.length > 0 ? rows.length : 1;
+                chips.createSpan({ cls: 'task-plan-focus-milestone', text: `${cond.title ?? ''} ${doneCount}/${totalCount}` });
+            }
+        }
+
+        const latestDay = this.latestExecutionDayKeyForSubtree(item.id);
+        headMain.createDiv({
+            cls: 'task-plan-focus-latest',
+            text: `${t('taskPlan.focusLatest')}：${latestDay ? this.relativeDayText(latestDay) : t('taskPlan.emptyValue')}`,
+        });
+
+        const removeBtn = head.createEl('button', { cls: 'task-plan-focus-remove-btn', text: '✕' });
+        removeBtn.setAttribute('title', t('taskPlan.focusRemove'));
+        removeBtn.addEventListener('click', () => { void this.removeFocusTask(item.id); });
+
+        // 子任务区：直接子任务，每行 = 名称 + 含后代总时长 + 最新进度
+        const childrenByParent = new Map<string, InboxItem[]>();
+        for (const it of this.inboxData.items) {
+            if (it.removed || !it.parentId) continue;
+            const arr = childrenByParent.get(it.parentId) ?? [];
+            arr.push(it);
+            childrenByParent.set(it.parentId, arr);
+        }
+
+        const minutesByTask = new Map<string, number>();
+        for (const ex of this.getExecutions()) {
+            if (!ex.inboxId) continue;
+            minutesByTask.set(ex.inboxId, (minutesByTask.get(ex.inboxId) ?? 0) + executionDuration(ex));
+        }
+        const subtreeMinutes = (taskId: string): number => {
+            let total = minutesByTask.get(taskId) ?? 0;
+            for (const child of childrenByParent.get(taskId) ?? []) total += subtreeMinutes(child.id);
+            return total;
+        };
+        const formatDuration = (minutes: number): string => {
+            const total = Math.max(0, Math.round(minutes));
+            const hours = Math.floor(total / 60);
+            const mins = total % 60;
+            return hours > 0
+                ? t('taskPlan.durationHourMinute', { hours, minutes: mins })
+                : t('taskPlan.durationMinute', { minutes: mins });
+        };
+
+        const subtasks = childrenByParent.get(item.id) ?? [];
+        const body = box.createDiv({ cls: 'task-plan-focus-body' });
+        if (subtasks.length === 0) {
+            body.createDiv({ cls: 'task-plan-focus-no-subtask', text: t('taskPlan.focusNoSubtask') });
+            return;
+        }
+        for (const sub of subtasks) {
+            const row = body.createDiv({ cls: 'task-plan-focus-subtask' });
+            row.createDiv({ cls: 'task-plan-focus-subtask-name', text: sub.title });
+            row.createDiv({ cls: 'task-plan-focus-subtask-duration', text: formatDuration(subtreeMinutes(sub.id)) });
+            const deepest = this.deepestIncompleteDescendant(sub.id, childrenByParent);
+            row.createDiv({ cls: 'task-plan-focus-subtask-progress', text: deepest ? deepest.title : t('taskPlan.statusDone') });
+        }
+    }
+
+    /** 递归向下取最深层未完成的后代任务（用于子任务行的「最新进度」） */
+    private deepestIncompleteDescendant(taskId: string, childrenByParent: Map<string, InboxItem[]>): InboxItem | undefined {
+        let best: { item: InboxItem; depth: number } | undefined;
+        const walk = (id: string, depth: number) => {
+            for (const child of childrenByParent.get(id) ?? []) {
+                if ((child.status ?? 'notStarted') !== 'done') {
+                    if (!best || depth > best.depth) best = { item: child, depth };
+                }
+                walk(child.id, depth + 1);
+            }
+        };
+        walk(taskId, 0);
+        return best?.item;
+    }
+
+    /** 某任务整棵子树最近一次执行记录的日期键（用于「最近执行」） */
+    private latestExecutionDayKeyForSubtree(rootId: string): string | undefined {
+        const ids = new Set<string>([rootId]);
+        const collect = (id: string) => {
+            for (const it of this.inboxData.items) {
+                if (!it.removed && it.parentId === id) {
+                    ids.add(it.id);
+                    collect(it.id);
+                }
+            }
+        };
+        collect(rootId);
+
+        let latest: string | undefined;
+        for (const ex of this.getExecutions()) {
+            if (!ex.inboxId || !ids.has(ex.inboxId) || !ex.weekKey) continue;
+            const dayKey = makeDayKeyFromWeek(ex.weekKey, ex.day);
+            if (!latest || dayKey > latest) latest = dayKey;
+        }
+        return latest;
+    }
+
+    /** 日期键转为相对时间文案：今天 / 昨天 / X 天前 */
+    private relativeDayText(dayKey: string): string {
+        const [y, m, d] = dayKey.split('-').map(Number);
+        const date = new Date(y, (m ?? 1) - 1, d ?? 1);
+        const today = new Date();
+        date.setHours(0, 0, 0, 0);
+        today.setHours(0, 0, 0, 0);
+        const diff = Math.round((today.getTime() - date.getTime()) / 86400000);
+        if (diff <= 0) return t('today.todayBadge');
+        if (diff === 1) return t('today.yesterdayBadge');
+        return t('today.daysAgoBadge', { days: String(diff) });
+    }
+
     /** 当前任务面板是否选中了有效任务 */
     private hasSelectedTask(): boolean {
         const selectedId = this.inboxData.selectedId;
@@ -1689,7 +1865,7 @@ export class OkrTaskPlanView {
             : undefined;
 
         if (!item) {
-            // 未选中任务：「当前任务」选项卡下不展示内容（总览已归并至「任务总览」选项卡）
+            // 未选中任务：「当前任务」选项卡下不展示内容（总览已归并至「执行情况」选项卡）
             return;
         }
 

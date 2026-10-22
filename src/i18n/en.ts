@@ -127,7 +127,7 @@ export const en: I18nMessages = {
 
     // Task Plan view
     'taskPlan.noSelection': 'Select a task on the left',
-    'taskPlan.overviewTitle': 'Task Overview',
+    'taskPlan.overviewTitle': 'Task Focus',
     'taskPlan.overviewNoOkr': 'No OKR conditions',
     'taskPlan.detailTitle': 'Task Details',
     'taskPlan.editTitle': 'Edit title',
@@ -148,7 +148,7 @@ export const en: I18nMessages = {
     'taskPlan.habitTypeTaskDesc': 'For daily / weekly repetition',
     'taskPlan.habitTimePoint': 'Habit time',
     'taskPlan.tabCurrentTask': 'Current Task',
-    'taskPlan.tabOverview': 'Task Overview',
+    'taskPlan.tabOverview': 'Task Focus',
     'taskPlan.tabBasket': 'Inbox Basket',
     'taskPlan.tabExecution': 'Execution',
     'taskPlan.tabOkr': 'OKR',
@@ -158,6 +158,12 @@ export const en: I18nMessages = {
     'taskPlan.statsSelfDuration': 'Task duration',
     'taskPlan.durationHourMinute': '{hours} h {minutes} min',
     'taskPlan.durationMinute': '{minutes} min',
+    'taskPlan.addFocus': 'Add to Focus',
+    'taskPlan.focusEmpty': 'No focused tasks yet',
+    'taskPlan.focusAlready': 'Task already focused',
+    'taskPlan.focusRemove': 'Remove from focus',
+    'taskPlan.focusLatest': 'Last execution',
+    'taskPlan.focusNoSubtask': 'No subtasks',
 
     // OKR info
     'okr.title': 'OKR Info',

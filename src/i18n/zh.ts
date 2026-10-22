@@ -125,7 +125,7 @@ export const zh = {
 
     // 任务计划视图
     'taskPlan.noSelection': '请在左侧选择一个任务',
-    'taskPlan.overviewTitle': '任务总览',
+    'taskPlan.overviewTitle': '任务关注',
     'taskPlan.overviewNoOkr': '暂无 OKR 条件',
     'taskPlan.detailTitle': '任务详情',
     'taskPlan.editTitle': '编辑标题',
@@ -146,7 +146,7 @@ export const zh = {
     'taskPlan.habitTypeTaskDesc': '适合每天 / 每周重复',
     'taskPlan.habitTimePoint': '习惯时间点',
     'taskPlan.tabCurrentTask': '当前任务',
-    'taskPlan.tabOverview': '任务总览',
+    'taskPlan.tabOverview': '任务关注',
     'taskPlan.tabBasket': '收集篮子',
     'taskPlan.tabExecution': '执行情况',
     'taskPlan.tabOkr': 'OKR',
@@ -156,6 +156,12 @@ export const zh = {
     'taskPlan.statsSelfDuration': '任务执行时长',
     'taskPlan.durationHourMinute': '{hours} 小时 {minutes} 分钟',
     'taskPlan.durationMinute': '{minutes} 分钟',
+    'taskPlan.addFocus': '添加任务关注',
+    'taskPlan.focusEmpty': '尚未关注任何任务',
+    'taskPlan.focusAlready': '该任务已关注',
+    'taskPlan.focusRemove': '取消关注',
+    'taskPlan.focusLatest': '最近执行',
+    'taskPlan.focusNoSubtask': '暂无子任务',
 
     // OKR 信息
     'okr.title': 'OKR 信息',
