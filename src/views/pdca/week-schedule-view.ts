@@ -329,7 +329,7 @@ export class WeekScheduleView extends ItemView {
         // 行标题（最上方）
         container.createDiv({
             cls: 'time-plan-panel-title',
-            text: t('weekPanel.timePlanConfigTitle'),
+            text: t('weekPanel.timeBoxConfigTitle'),
         });
 
         // 配置（方案管理上方）
@@ -358,8 +358,8 @@ export class WeekScheduleView extends ItemView {
     private renderTimePlanCalendar(calendar: HTMLElement) {
         const body = calendar.createDiv({ cls: 'plan-scheme-body' });
 
-        // 右侧：时间轴日历
-        const calendarPanel = body.createDiv({ cls: 'plan-scheme-calendar' });
+        // 右侧：时间轴日历（time-box-grid：24 小时网格随可用高度压缩，避免溢出）
+        const calendarPanel = body.createDiv({ cls: 'plan-scheme-calendar time-box-grid' });
         const refs = renderWeekGrid(calendarPanel);
         this.renderTimePlanRangeLayer(refs.bodyRowInner);
 
@@ -493,7 +493,9 @@ export class WeekScheduleView extends ItemView {
                 if (!target.classList.contains('day-column') && !target.classList.contains('hour-cell')) return;
                 const rect = col.getBoundingClientRect();
                 const y = e.clientY - rect.top;
-                const startMinutes = Math.floor((y / 80) * 120 / 30) * 30;
+                // 以列高为基准把纵向位置换算成分钟数（网格高度随窗口自适应，不再按固定 80px 计算）
+                const minutesFromY = rect.height > 0 ? (y / rect.height) * 24 * 60 : 0;
+                const startMinutes = Math.max(0, Math.min(23 * 60 + 30, Math.floor(minutesFromY / 30) * 30));
                 new RangeEditModal(this.app, startMinutes, (start, end, sort) => {
                     this.planSchemeRepo().addRange(scheme.id, d, { id: `r_${Date.now()}`, start, end, sort });
                     void (async () => {
@@ -511,13 +513,13 @@ export class WeekScheduleView extends ItemView {
                 const cat = this.planCategoryData.categories.find(c => c.id === range.sort);
                 const rawColor = cat?.color ?? '#888888';
 
-                const top = (range.start / 120) * 80;
-                const height = ((range.end - range.start) / 120) * 80;
+                const top = (range.start / (24 * 60)) * 100;
+                const height = ((range.end - range.start) / (24 * 60)) * 100;
                 block.setCssProps({
                     '--range-color': rawColor,
                     '--range-bg': hexToTransparent(rawColor, 0.1),
-                    '--range-top': `${top}px`,
-                    '--range-height': `${height}px`,
+                    '--range-top': `${top}%`,
+                    '--range-height': `${height}%`,
                 });
 
                 block.onclick = (e) => {
@@ -569,7 +571,7 @@ export class WeekScheduleView extends ItemView {
                     : undefined;
                 marker.setCssProps({
                     '--habit-color': cat?.color ?? '#888888',
-                    '--habit-top': `${(minutes / 120) * 80}px`,
+                    '--habit-top': `${(minutes / (24 * 60)) * 100}%`,
                 });
                 marker.setText(ev.title);
             }
@@ -1266,12 +1268,12 @@ export class WeekScheduleView extends ItemView {
                 const rawColor = cat?.color ?? '#888888';
                 const afColor = this.hexToTransparent(rawColor, 0.5);
 
-                const top = (range.start / 120) * 80;
-                const height = ((range.end - range.start) / 120) * 80;
+                const top = (range.start / (24 * 60)) * 100;
+                const height = ((range.end - range.start) / (24 * 60)) * 100;
                 bgBlock.setCssProps({
                     '--range-color': afColor,
-                    '--range-top': `${top}px`,
-                    '--range-height': `${height}px`,
+                    '--range-top': `${top}%`,
+                    '--range-height': `${height}%`,
                 });
             }
 
@@ -1354,8 +1356,9 @@ export class WeekScheduleView extends ItemView {
         col.addEventListener('mousemove', (e) => {
             const rect = col.getBoundingClientRect();
             const y = e.clientY - rect.top;
-            // 固定 2 小时网格：每 120 分钟一段（与背景网格一致，80px = 2 小时）
-            const rangeStart = Math.floor((y / 80) * 120 / 120) * 120;
+            // 以列高为基准换算所在 2 小时区间（网格高度随窗口自适应）
+            const minutesFromY = rect.height > 0 ? (y / rect.height) * 24 * 60 : 0;
+            const rangeStart = Math.max(0, Math.min(22 * 60, Math.floor(minutesFromY / 120) * 120));
             if (rangeStart === currentRangeStart && tip) {
                 // 同一区间内移动：仅更新位置，避免重复重建
                 const tipRect = tip.getBoundingClientRect();
@@ -1454,7 +1457,7 @@ export class WeekScheduleView extends ItemView {
         if (!col) return;
 
         const line = col.createDiv({ cls: 'current-time-line' });
-        line.setCssProps({ '--line-top': `${(totalMinutes / 120) * 80}px` });
+        line.setCssProps({ '--line-top': `${(totalMinutes / (24 * 60)) * 100}%` });
 
         // 滚动到红线位置（居中显示）；若刷新前已有滚动位置，则保留原位置
         const scrollContainer = bodyRowInner.closest('.grid-body-row');
@@ -1463,7 +1466,7 @@ export class WeekScheduleView extends ItemView {
                 scrollContainer.scrollTop = this.savedScrollTop;
                 this.savedScrollTop = null;
             } else {
-                const lineTop = (totalMinutes / 120) * 80;
+                const lineTop = (totalMinutes / (24 * 60)) * (col.clientHeight || 24 * 60);
                 scrollContainer.scrollTop = Math.max(0, lineTop - scrollContainer.clientHeight / 2);
             }
         }
@@ -1538,7 +1541,7 @@ export class WeekScheduleView extends ItemView {
 
         // 时间计划按钮：激活后隐藏下方日历，改为显示时间计划方案弹窗里的日历功能点
         const timePlanBtn = toolbar.createEl('button', {
-            text: t('weekPanel.timePlan'),
+            text: t('weekPanel.timeBox'),
             cls: 'week-time-plan-btn',
         });
         timePlanBtn.toggleClass('is-active', this.timePlanActive);

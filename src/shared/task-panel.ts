@@ -336,7 +336,7 @@ export function renderTaskPanel(
             }
         }
 
-        titleRow.createSpan({ cls: 'inbox-item-title', text: item.title });
+        titleRow.createSpan({ cls: 'inbox-item-title', text: item.title, title: item.title });
 
         // 行末状态标记：使用 Obsidian 内置 Lucide 图标
         // 习惯型任务优先显示 rotate-cw-square，否则按任务状态显示对应图标

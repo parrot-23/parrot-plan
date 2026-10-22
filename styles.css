@@ -1367,11 +1367,16 @@
 }
 
 .inbox-item-title {
+    flex: 1 1 auto;
+    min-width: 0;
     font-size: 12px;
     font-weight: 500;
     color: var(--text-normal);
     margin-bottom: 2px;
-    word-break: break-word;
+    /* 任务名称固定单行显示，超出部分用省略号收敛，完整名称通过悬浮提示查看 */
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 /* 行末任务状态标记：仅显示图标，无背景框 */
@@ -1587,6 +1592,7 @@
 /* 分类按钮工具 */
 .inbox-category-dot {
     display: inline-block;
+    flex-shrink: 0;
     width: 8px;
     height: 8px;
     border-radius: 50%;
@@ -7349,6 +7355,30 @@ button.swimlane-section-card-exit {
 .week-calendar .plan-scheme-body {
     height: 100%;
     min-height: 0;
+}
+
+/* 时间盒日历：24 小时网格随可用高度等比压缩，保证整屏可见（不再固定 960px 而溢出） */
+.time-box-grid .grid-body-row {
+    overflow-y: hidden;
+}
+
+.time-box-grid .day-bodies,
+.time-box-grid .day-column {
+    min-height: 0;
+}
+
+.time-box-grid .time-column,
+.time-box-grid .day-column {
+    display: flex;
+    flex-direction: column;
+}
+
+.time-box-grid .time-cell.two-hour,
+.time-box-grid .hour-cell.two-hour {
+    flex: 1 1 0;
+    height: auto;
+    min-height: 0;
+    overflow: hidden;
 }
 
 /* 时间计划模式左侧面板：占据原任务面板位置，内容可滚动 */

@@ -107,8 +107,8 @@ export class TodayView {
     private recordRepo: RecordRepo;
     /** 进行中任务变化回调（开始/完成/中断时通知宿主刷新导航栏卡片） */
     private onRunningTaskChange?: () => void;
-    /** 右侧内容区当前选项卡：今日情况 / 当天任务 / 额外任务 / 本周情况 / 板块信息 */
-    private rightTab: 'today' | 'dayTasks' | 'extraTasks' | 'week' | 'sections' = 'today';
+    /** 右侧内容区当前选项卡：今日情况 / 当天任务 / 板块信息 / 额外任务 */
+    private rightTab: 'today' | 'dayTasks' | 'extraTasks' | 'sections' = 'today';
 
     constructor(
         app: App,
@@ -192,14 +192,13 @@ export class TodayView {
         this.renderRightTabContent(centerPanel);
     }
 
-    /** 右侧内容区选项卡行：今日情况 / 当天任务 / 额外任务 / 本周情况 / 板块信息 */
+    /** 右侧内容区选项卡行：今日情况 / 当天任务 / 板块信息 / 额外任务 */
     private renderRightTabs(panel: HTMLElement): void {
-        const tabs: { id: 'today' | 'dayTasks' | 'extraTasks' | 'week' | 'sections'; labelKey: Parameters<typeof t>[0] }[] = [
+        const tabs: { id: 'today' | 'dayTasks' | 'extraTasks' | 'sections'; labelKey: Parameters<typeof t>[0] }[] = [
             { id: 'today', labelKey: 'today.tabToday' },
             { id: 'dayTasks', labelKey: 'today.tabDayTasks' },
-            { id: 'extraTasks', labelKey: 'today.tabExtraTasks' },
-            { id: 'week', labelKey: 'today.tabWeek' },
             { id: 'sections', labelKey: 'today.tabSections' },
+            { id: 'extraTasks', labelKey: 'today.tabExtraTasks' },
         ];
         const row = panel.createDiv({ cls: 'today-right-tabs' });
         for (const tab of tabs) {
@@ -233,12 +232,6 @@ export class TodayView {
             // 当天任务：任务层级方框 + 任务详情方框
             this.renderHierarchyBox(panel);
             this.renderDetailBox(panel);
-            return;
-        }
-        if (this.rightTab === 'week') {
-            // 本周情况：本周各分类已执行时长 + 周目标卡片方框
-            this.renderWeekCategoryDurationBox(panel);
-            this.renderWeekGoalBox(panel);
             return;
         }
         if (this.rightTab === 'sections') {
@@ -1537,136 +1530,6 @@ export class TodayView {
                     ? t('today.habitTaskListTitle')
                     : t('today.taskListTitle'),
             });
-        }
-    }
-
-    /**
-     * 渲染「周目标」方框（「本周情况」选项卡）。
-     * 列出已分配到当前查看日期所在周的任务，卡片显示任务名 + 本周已分配时长 / 次数。
-     */
-    private renderWeekGoalBox(panel: HTMLElement) {
-        const { weekKey } = this.getViewDayInfo();
-
-        const box = panel.createDiv({ cls: 'today-week-goal-box' });
-        box.createDiv({ cls: 'today-week-goal-title', text: t('inbox.weekGoal') });
-
-        // 已分配到本周的未移除任务
-        const assignedItems = this.inboxData.items.filter(i =>
-            !i.removed && (i.assignedWeekKeys ?? []).includes(weekKey),
-        );
-        if (assignedItems.length === 0) {
-            box.createDiv({ cls: 'today-week-goal-empty', text: t('inbox.emptyWeekGoal') });
-            return;
-        }
-
-        const cardList = box.createDiv({ cls: 'week-goal-card-list' });
-        for (const item of assignedItems) {
-            const card = cardList.createDiv({ cls: 'week-goal-card' });
-
-            // 选中态高亮（与任务面板一致）
-            if (this.inboxData.selectedId === item.id) card.addClass('selected');
-
-            // 分类色点
-            if (item.categoryId) {
-                const cat = this.categoryData.categories.find(c => c.id === item.categoryId);
-                if (cat) {
-                    const dot = card.createSpan({ cls: 'inbox-category-dot' });
-                    dot.setCssProps({ '--dot-color': cat.color });
-                }
-            }
-
-            // 任务名称
-            card.createDiv({ cls: 'week-goal-card-title', text: item.title });
-
-            // 右上角：拥有的板块类型图标
-            if (item.sections && item.sections.length > 0) {
-                const iconsEl = card.createDiv({ cls: 'week-goal-card-section-icons' });
-                for (const section of item.sections) {
-                    const chip = iconsEl.createSpan({ cls: 'inbox-section-chip' });
-                    setIcon(chip, SECTION_TYPE_META[section.type].icon);
-                }
-            }
-
-            // 统计本周已分配的计划事件：时长（预估执行时长累加）与次数
-            let totalMinutes = 0;
-            let count = 0;
-            for (const ev of this.getEvents()) {
-                if (ev.inboxId === item.id && ev.weekKey === weekKey) {
-                    totalMinutes += Math.max(0, ev.estimatedMinutes ?? 0);
-                    count += 1;
-                }
-            }
-
-            const meta = card.createDiv({ cls: 'week-goal-card-meta' });
-            meta.createSpan({ cls: 'week-goal-card-assigned-label', text: t('inbox.weekGoalAssigned') });
-
-            const durationEl = meta.createSpan({ cls: 'week-goal-card-duration' });
-            durationEl.createSpan({ text: t('inbox.weekGoalDurationLabel') });
-            durationEl.createSpan({ cls: 'week-goal-card-value', text: formatDuration(totalMinutes) });
-
-            const countEl = meta.createSpan({ cls: 'week-goal-card-count' });
-            countEl.createSpan({ text: t('inbox.weekGoalCountLabel') });
-            countEl.createSpan({ cls: 'week-goal-card-value', text: `x${count}` });
-
-            // 点击选中/取消选中该任务
-            card.onclick = (e) => {
-                e.stopPropagation();
-                this.selectTaskItem(item);
-            };
-        }
-    }
-
-    /**
-     * 渲染「本周各分类已执行时长」方框（「本周情况」选项卡）。
-     * 按分类聚合当前查看日期所在周的执行记录时长，展示方式与「今日情况」一致。
-     */
-    private renderWeekCategoryDurationBox(panel: HTMLElement) {
-        const { weekKey } = this.getViewDayInfo();
-        const executions = this.getExecutions().filter(ex => ex.weekKey === weekKey);
-
-        // 按分类聚合执行时长（分钟）
-        const minutesByCat = new Map<string, number>();
-        for (const ex of executions) {
-            const item = ex.inboxId
-                ? this.inboxData.items.find(i => i.id === ex.inboxId && !i.removed)
-                : undefined;
-            const catId = item?.categoryId ?? UNCATEGORIZED_CATEGORY_ID;
-            const minutes = executionDuration(ex);
-            minutesByCat.set(catId, (minutesByCat.get(catId) ?? 0) + minutes);
-        }
-
-        const box = panel.createDiv({ cls: 'today-cat-duration-box' });
-        box.createDiv({ cls: 'today-cat-duration-title', text: t('today.weekCategoryDurationTitle') });
-
-        if (minutesByCat.size === 0) {
-            box.createDiv({ cls: 'today-cat-duration-empty', text: t('today.weekCategoryDurationEmpty') });
-            return;
-        }
-
-        // 按分类顺序排列，仅显示有时长的分类
-        const rows = this.categoryData.categories
-            .map(cat => ({ cat, minutes: minutesByCat.get(cat.id) ?? 0 }))
-            .filter(r => r.minutes > 0);
-
-        const chart = box.createDiv({ cls: 'today-cat-duration-chart' });
-        for (const { cat, minutes } of rows) {
-            const row = chart.createDiv({ cls: 'today-cat-duration-row' });
-            row.createDiv({ cls: 'today-cat-duration-label', text: cat.label });
-            // 用方块表示时长：每满 1 小时一个填满的方块，不足 1 小时的余数用部分填充的方块
-            const blocks = row.createDiv({ cls: 'today-cat-duration-blocks' });
-            const fullHours = Math.floor(minutes / 60);
-            const remainder = minutes % 60;
-            const blockCount = fullHours + (remainder > 0 ? 1 : 0);
-            for (let i = 0; i < blockCount; i++) {
-                const block = blocks.createDiv({ cls: 'today-cat-duration-block' });
-                block.setCssProps({ '--block-color': cat.color ?? '#888888' });
-                // 最后一个方块为不足 1 小时的余数时，按比例填充
-                const isPartial = remainder > 0 && i === blockCount - 1;
-                const fillPercent = isPartial ? Math.round((remainder / 60) * 100) : 100;
-                const fill = block.createDiv({ cls: 'today-cat-duration-block-fill' });
-                fill.setCssProps({ '--fill-width': `${fillPercent}%` });
-            }
-            row.createDiv({ cls: 'today-cat-duration-value', text: formatHours(minutes) });
         }
     }
 
