@@ -61,6 +61,7 @@ export const statsCardRenderer: CardRenderer = {
         if (source.chart && result.series) {
             const chartWrap = body.createDiv({ cls: 'wb-chart-wrap' });
             renderChart(chartWrap, source.chart, result.series, {
+                width: typeof source.params?.width === 'number' ? source.params.width : undefined,
                 showAxes: result.series.axes?.show,
                 yAxisUnit: result.series.axes?.yUnit,
             });

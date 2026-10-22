@@ -14,6 +14,13 @@ export type Execution = ExecutionRecord;
 /** 收集盒任务（复用任务面板的真实类型） */
 export type Task = InboxItem;
 
+/** 分类引用（供统计图表解析任务分类颜色） */
+export interface CategoryRef {
+    id: string;
+    label: string;
+    color?: string;
+}
+
 /** 数据提供者：统计图卡片通过它读取规范化的领域数据 */
 export interface DataProvider {
     /** 全部计划事件 */
@@ -22,6 +29,8 @@ export interface DataProvider {
     getExecutions(): Execution[];
     /** 全部收集盒任务（含已移除，供历史统计） */
     getTasks(): Task[];
+    /** 全部分类（含未分类），供解析任务分类颜色 */
+    getCategories?(): CategoryRef[];
 }
 
 /** 统计指标聚合结果：一组带标签的数值项 */
@@ -30,12 +39,24 @@ export interface StatItem {
     value: number;
 }
 
+/** 堆叠柱状图分段：柱内单个任务占用的时长，使用任务分类颜色 */
+export interface ChartSegment {
+    /** 任务名 */
+    label: string;
+    /** 占用时长 */
+    value: number;
+    /** 任务分类颜色 */
+    color?: string;
+}
+
 /** 图表数据点：一个维度值 + 一个数值 */
 export interface ChartDatum {
     /** 维度标签（如日期、周、分类名） */
     label: string;
     /** 数值 */
     value: number;
+    /** 堆叠分段（按任务拆分，从柱顶到柱底排序），存在时柱状图渲染为堆叠柱 */
+    segments?: ChartSegment[];
 }
 
 /** 图表数据集：一组数据点，供图表渲染器绘制 */

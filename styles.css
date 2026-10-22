@@ -3586,6 +3586,10 @@
 .task-plan-focus-chart {
     margin-top: 6px;
 }
+.task-plan-focus-chart .wb-chart-label,
+.task-plan-focus-chart .wb-chart-axis-label {
+    font-size: 14px;
+}
 
 /* 子任务行：整行一条白底，左右两块内容各占一半 */
 .task-plan-focus-subtask {

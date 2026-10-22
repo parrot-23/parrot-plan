@@ -1832,7 +1832,7 @@ export class OkrTaskPlanView {
         this.renderActivityChart(chartWrap, item.id);
     }
 
-    /** 渲染项目活跃度柱状图：通过卡片机制（template → renderer → aggregate）按周聚合整棵子树的执行时长 */
+    /** 渲染项目活跃度柱状图：通过卡片机制按周聚合整棵子树的执行时长，动态周数填满关注方框宽度 */
     private renderActivityChart(container: HTMLElement, rootId: string): void {
         // 收集整棵子树的 id 集合
         const ids = new Set<string>([rootId]);
@@ -1846,25 +1846,6 @@ export class OkrTaskPlanView {
         };
         collect(rootId);
 
-        // 卡片模板：stats 渲染器 + 执行记录按周时长聚合，最近 12 周连续占位、周号简写
-        const template: CardTemplate = {
-            id: 'focus-activity-chart',
-            name: t('taskPlan.focusActivityTitle'),
-            mode: 'chart',
-            renderer: 'stats',
-            source: {
-                dataSource: 'executions',
-                aggregation: 'by-week',
-                chart: 'bar',
-                params: { metric: 'duration', windowWeeks: 12, shortLabel: true, showAxes: true, yUnit: 'hours' },
-            },
-        };
-        const instance: CardInstance = {
-            id: `focus_activity_${rootId}`,
-            templateId: 'focus-activity-chart',
-            mode: 'chart',
-        };
-
         // 数据提供者：执行记录缩小到当前任务子树范围，其余数据源透传
         const provider = createDataProvider(
             () => [],
@@ -1872,12 +1853,52 @@ export class OkrTaskPlanView {
             () => this.inboxData.items,
         );
 
-        renderCardContent(container, instance, template, {
-            app: this.app,
-            save: this.save,
-            refresh: () => { void this.refresh(); },
-            provider,
-        });
+        // 按容器可用宽度动态计算周数（柱宽=间隔，每格约 32px），并据此渲染
+        const render = (width: number) => {
+            // 与 renderBarChart 的坐标轴边距保持一致：左侧刻度区 34、右侧 8
+            const plotWidth = Math.max(32, width - 34 - 8);
+            // 柱宽=间隔，每格（柱+间隔）约 32px，保证 14px 周号标签不重叠
+            const windowWeeks = Math.max(1, Math.min(104, Math.floor(plotWidth / 32) + 1));
+
+            const template: CardTemplate = {
+                id: 'focus-activity-chart',
+                name: t('taskPlan.focusActivityTitle'),
+                mode: 'chart',
+                renderer: 'stats',
+                source: {
+                    dataSource: 'executions',
+                    aggregation: 'by-week',
+                    chart: 'bar',
+                    params: {
+                        metric: 'duration',
+                        windowWeeks,
+                        shortLabel: true,
+                        showAxes: true,
+                        yUnit: 'hours',
+                        width,
+                    },
+                },
+            };
+            const instance: CardInstance = {
+                id: `focus_activity_${rootId}`,
+                templateId: 'focus-activity-chart',
+                mode: 'chart',
+            };
+
+            renderCardContent(container, instance, template, {
+                app: this.app,
+                save: this.save,
+                refresh: () => { void this.refresh(); },
+                provider,
+            });
+        };
+
+        // 容器刚创建时 clientWidth 为 0，等待一帧布局完成后再测量，失败则回退默认宽度
+        if (container.clientWidth > 0) {
+            render(container.clientWidth);
+        } else {
+            requestAnimationFrame(() => render(container.clientWidth || 360));
+        }
     }
 
     /** 任务状态文案：已完成 / 进行中 / 暂停 / 未完成 */

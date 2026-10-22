@@ -3,7 +3,7 @@
 
 import type { EventBlock, ExecutionRecord } from '../../datatypes/domain';
 import type { InboxItem } from '../../datatypes/domain';
-import type { DataProvider } from '../../datatypes/chart';
+import type { DataProvider, CategoryRef } from '../../datatypes/chart';
 
 /**
  * 构建数据提供者。
@@ -13,10 +13,12 @@ export function createDataProvider(
     getEvents: () => EventBlock[],
     getExecutions: () => ExecutionRecord[],
     getTasks: () => InboxItem[],
+    getCategories?: () => CategoryRef[],
 ): DataProvider {
     return {
         getEvents,
         getExecutions,
         getTasks,
+        getCategories,
     };
 }
