@@ -36,6 +36,8 @@ export interface RunningTask {
     dayKey: string;
     /** 用户填写的结束时间（当天分钟数，可选，旧数据无此字段） */
     end?: number;
+    /** 结束时间是否跨到次日（0 或省略=当天，1=次日） */
+    endDayOffset?: number;
     /** 实际开始时刻（Unix 毫秒时间戳，用于精确展示已执行时长；旧数据无此字段） */
     startedAt?: number;
 }
@@ -49,6 +51,8 @@ export interface ExecutionRecord {
     day: number;
     start: number;
     end: number;
+    /** 结束时间相对起始日的天数偏移（0 或省略=当天，1=次日），用于跨天记录 */
+    endDayOffset?: number;
     note?: string;
     /** 所属周键（如 2026-W40） */
     weekKey?: WeekKey;
@@ -57,6 +61,19 @@ export interface ExecutionRecord {
      * 此类记录关联原计划事件（eventId），但不改变原计划事件本身，也不使其状态变为「已执行」。
      */
     replaced?: boolean;
+}
+
+/**
+ * 执行记录的实际结束分钟数：以起始日为基准，
+ * 跨天记录（endDayOffset=1）的结束时间需加上 24 小时。
+ */
+export function executionEndMinutes(ex: ExecutionRecord): number {
+    return ex.end + (ex.endDayOffset ?? 0) * 24 * 60;
+}
+
+/** 执行记录的实际执行时长（分钟），跨天记录自动计入次日部分 */
+export function executionDuration(ex: ExecutionRecord): number {
+    return Math.max(0, executionEndMinutes(ex) - ex.start);
 }
 
 /** 任务类型：一次性任务 / 习惯型任务 */

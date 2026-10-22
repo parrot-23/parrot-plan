@@ -4,7 +4,7 @@ import { Modal, Notice, Setting, setIcon } from 'obsidian';
 import type { PlanCategoryData } from '../../shared/plan-category-manager';
 import type { InboxData, InboxItem, Section, ChecklistData, FileData, BasketItem, ImprovementEntry, OkrCondition, OkrConditionItem, OkrConditionType, OkrPeriod, OkrRecordCard, OkrRecordFieldType, ExecutionRecord, TaskType, TaskStatus } from '../../datatypes/domain';
 import type { InboxRepo } from '../../repos/inbox-repo';
-import { SECTION_TYPE_META, OKR_CONDITION_META, OKR_GROUP_META, OKR_PERIOD_META, OKR_RECORD_FIELD_META } from '../../datatypes/domain';
+import { SECTION_TYPE_META, OKR_CONDITION_META, OKR_GROUP_META, OKR_PERIOD_META, OKR_RECORD_FIELD_META, executionDuration } from '../../datatypes/domain';
 import { renderTaskPanel, FilePathSuggest } from '../../shared/task-panel';
 import { TaskSearchModal } from '../../shared/task-search-modal';
 import { makePeriodKey } from '../../datatypes/card';
@@ -1491,7 +1491,7 @@ export class OkrTaskPlanView {
         const minutesByTask = new Map<string, number>();
         for (const ex of this.getExecutions()) {
             if (!ex.inboxId) continue;
-            const minutes = Math.max(0, (ex.end ?? ex.start) - ex.start);
+            const minutes = executionDuration(ex);
             minutesByTask.set(ex.inboxId, (minutesByTask.get(ex.inboxId) ?? 0) + minutes);
         }
 

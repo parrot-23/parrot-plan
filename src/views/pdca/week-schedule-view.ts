@@ -16,6 +16,7 @@ import { t } from '../../i18n';
 import { log } from '../../shared/logger';
 import { EVENT_STATUS_EMOJI, EVENT_STATUS_LABEL_KEY } from '../../datatypes/domain';
 import type { EventBlock, ExecutionRecord, EventStatus } from '../../datatypes/domain';
+import { executionDuration, executionEndMinutes } from '../../datatypes/domain';
 import type { PdcaRepo } from '../../repos/pdca-repo';
 import type { InboxRepo } from '../../repos/inbox-repo';
 import type { CategoryRepo } from '../../repos/category-repo';
@@ -943,7 +944,7 @@ export class WeekScheduleView extends ItemView {
                 && ex.weekKey === ev.weekKey
                 && ex.day === ev.day
                 && (ex.eventId === ev.id || (ev.inboxId && ex.inboxId === ev.inboxId)))
-            .reduce((sum, ex) => sum + Math.max(0, ex.end - ex.start), 0);
+            .reduce((sum, ex) => sum + executionDuration(ex), 0);
 
         if (estMinutes === undefined || estMinutes === 0) return execMinutes > 0;
         return execMinutes >= estMinutes;
@@ -1319,7 +1320,7 @@ export class WeekScheduleView extends ItemView {
             // 区间内所有执行记录（按开始时间排序）
             const execs = this.executions
                 .filter(ex => ex.day === day && ex.weekKey === this.currentWeekKey
-                    && ex.start < rangeEnd && ex.end > rangeStart)
+                    && ex.start < rangeEnd && Math.min(24 * 60, executionEndMinutes(ex)) > rangeStart)
                 .sort((a, b) => a.start - b.start);
 
             // 单列容器：执行信息

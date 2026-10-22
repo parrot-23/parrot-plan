@@ -15,7 +15,7 @@ import type {
     FunnelSeries,
     WordCloudSeries,
 } from '../../datatypes/chart';
-import { getEventStatus } from '../../datatypes/domain';
+import { executionDuration, getEventStatus } from '../../datatypes/domain';
 import { makeDayKeyFromWeek } from '../../shared/plan-data';
 
 /** 聚合结果：数字指标 + 可选图表序列 */
@@ -149,7 +149,7 @@ function aggregateExecutionsByDimension(provider: DataProvider, dimension: 'day'
     for (const ex of executions) {
         const key = dimensionKey(ex, dimension);
         const val = metric === 'duration'
-            ? Math.max(0, (ex.end ?? ex.start) - ex.start)
+            ? executionDuration(ex)
             : 1;
         buckets.set(key, (buckets.get(key) ?? 0) + val);
     }
@@ -197,7 +197,7 @@ function aggregateExecutionsByCategory(provider: DataProvider, source: CardSourc
     const buckets = new Map<string, number>();
     for (const ex of provider.getExecutions()) {
         const cat = resolveExecutionCategory(ex, provider);
-        const val = metric === 'duration' ? Math.max(0, (ex.end ?? ex.start) - ex.start) : 1;
+        const val = metric === 'duration' ? executionDuration(ex) : 1;
         buckets.set(cat, (buckets.get(cat) ?? 0) + val);
     }
 
@@ -288,7 +288,7 @@ function aggregateActivityHeatmap(source: CardSource, provider: DataProvider): A
         if (visibleIds && ex.inboxId && !visibleIds.has(ex.inboxId)) continue;
         const dateKey = makeDayKeyFromWeek(ex.weekKey, ex.day);
         const val = metric === 'duration'
-            ? Math.max(0, (ex.end ?? ex.start) - ex.start)
+            ? executionDuration(ex)
             : 1;
         buckets.set(dateKey, (buckets.get(dateKey) ?? 0) + val);
     }
@@ -327,7 +327,7 @@ function aggregateExecutedTaskCount(provider: DataProvider): AggregationResult {
 function aggregateExecutionTotalDuration(provider: DataProvider): AggregationResult {
     let total = 0;
     for (const ex of provider.getExecutions()) {
-        total += Math.max(0, (ex.end ?? ex.start) - ex.start);
+        total += executionDuration(ex);
     }
     return { stats: [{ label: '执行总时长', value: total }] };
 }
@@ -350,7 +350,7 @@ function aggregateRadarOverview(provider: DataProvider): AggregationResult {
     let totalDuration = 0;
     for (const ex of executions) {
         if (ex.weekKey && ex.day) days.add(makeDayKeyFromWeek(ex.weekKey, ex.day));
-        totalDuration += Math.max(0, (ex.end ?? ex.start) - ex.start);
+        totalDuration += executionDuration(ex);
     }
 
     const categories = new Set<string>();
@@ -381,7 +381,7 @@ function aggregateScatterDuration(provider: DataProvider): AggregationResult {
         .filter((ex) => ex.start !== undefined)
         .map((ex) => ({
             x: ex.start,
-            y: Math.max(0, (ex.end ?? ex.start) - ex.start),
+            y: executionDuration(ex),
             label: ex.note ?? '',
         }));
 

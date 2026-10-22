@@ -8,6 +8,7 @@ import { SECTION_TYPE_META } from '../../datatypes/domain';
 import { getCurrentDayKey, getISOWeek, makeDayKey, makeDayKeyFromWeek, makeWeekKey } from '../../shared/plan-data';
 import type { DailyRange } from '../../shared/plan-data';
 import type { EventBlock, ExecutionRecord, RunningTask } from '../../datatypes/domain';
+import { executionDuration, executionEndMinutes } from '../../datatypes/domain';
 import { getWeekDays, t } from '../../i18n';
 import { EVENT_STATUS_EMOJI, EVENT_STATUS_LABEL_KEY, getEventStatus, type EventStatus } from '../../datatypes/domain';
 import type { PdcaRepo } from '../../repos/pdca-repo';
@@ -80,6 +81,8 @@ export class TodayView {
     private detailStart = 0;
     /** 「当天任务」详情中待执行的结束分钟（与起始/时长联动，可编辑） */
     private detailEnd = 30;
+    /** 「当天任务」详情中结束时间是否跨到次日（0=当天，1=次日） */
+    private detailEndDayOffset = 0;
     /** 上一次渲染详情时选中的任务 id（用于切换任务时重置待执行时间区间） */
     private lastDetailItemId?: string;
     /** 当前正在执行的事件 id（点击「进入执行」后设置，用于顶部执行卡片） */
@@ -341,7 +344,7 @@ export class TodayView {
                     && ex.weekKey === viewInfo.weekKey
                     && ex.day === viewInfo.day
                     && (ex.eventId === ev.id || (ev.inboxId && ex.inboxId === ev.inboxId)))
-                .reduce((sum, ex) => sum + Math.max(0, ex.end - ex.start), 0);
+                .reduce((sum, ex) => sum + executionDuration(ex), 0);
 
             const habitTime = this.getEventHabitTime(ev);
             this.renderTaskCard(list, {
@@ -403,7 +406,7 @@ export class TodayView {
                 : undefined;
 
             // 新增任务无预估时长，已执行时长取该条执行记录时长
-            const execMinutes = Math.max(0, ex.end - ex.start);
+            const execMinutes = executionDuration(ex);
 
             this.renderTaskCard(addedList, {
                 title: item?.title ?? t('today.statusAdded'),
@@ -534,7 +537,7 @@ export class TodayView {
                 && ex.weekKey === weekKey
                 && ex.day === day
                 && (ex.inboxId === inboxId || (!!ev && ex.eventId === ev.id)))
-            .reduce((sum, ex) => sum + Math.max(0, ex.end - ex.start), 0);
+            .reduce((sum, ex) => sum + executionDuration(ex), 0);
         return { estMinutes, execMinutes };
     }
 
@@ -1082,13 +1085,17 @@ export class TodayView {
         }
 
         // 时间区间：起始 / 结束 / 时长 三个输入框，改任一个联动更新其余
+        // 结束时间可能跨到次日，由 endDayOffset 记录偏移
+        const unplannedAbsoluteEnd = this.addUnplannedStart + this.addUnplannedDuration;
+        const unplannedDayOffset = Math.floor(unplannedAbsoluteEnd / (24 * 60));
         this.renderTimeRangeEditor(
             body,
             this.addUnplannedStart,
-            this.addUnplannedStart + this.addUnplannedDuration,
-            (start, end) => {
+            unplannedAbsoluteEnd - unplannedDayOffset * 24 * 60,
+            unplannedDayOffset,
+            (start, end, endDayOffset) => {
                 this.addUnplannedStart = start;
-                this.addUnplannedDuration = Math.max(5, end - start);
+                this.addUnplannedDuration = Math.max(5, end + endDayOffset * 24 * 60 - start);
                 void this.refresh();
             },
         );
@@ -1101,15 +1108,27 @@ export class TodayView {
      * 渲染时间区间编辑器：起始时间 / 结束时间 / 时长。
      * 起始、结束时间采用「习惯时间点」的小时 / 分钟下拉方式，时长采用「预估执行时长」的输入框方式。
      * 修改任一项时联动更新其余两项（以起始时间为锚点，结束 = 起始 + 时长）。
-     * onChange 回调返回规范化后的 (start, end)（分钟）。
+     * 支持跨天：结束时间早于起始时间时视为「次日」，endDayOffset 为 1，并在结束时间旁显示「次日」。
+     * onChange 回调返回规范化后的 (start, end, endDayOffset)，其中 end 为当天分钟数（0-1439）。
      */
     private renderTimeRangeEditor(
         container: HTMLElement,
         start: number,
         end: number,
-        onChange: (start: number, end: number) => void,
+        endDayOffset: number,
+        onChange: (start: number, end: number, endDayOffset: number) => void,
     ): void {
-        const clamp = (v: number) => Math.max(0, Math.min(24 * 60, Math.round(v)));
+        // 绝对结束分钟（以起始日为基准）：跨天时加上 24 小时
+        const absoluteEnd = end + endDayOffset * 24 * 60;
+        // 以起始时间为锚点，把绝对结束分钟拆成「当天分钟数 + 次日偏移」
+        const splitEnd = (absEnd: number, anchor: number): { end: number; offset: number } => {
+            const safe = Math.max(anchor + 5, Math.round(absEnd));
+            const offset = Math.floor(safe / (24 * 60));
+            return { end: safe - offset * 24 * 60, offset };
+        };
+        const normalized = splitEnd(absoluteEnd, start);
+        const isCrossDay = normalized.offset > 0;
+        const duration = Math.max(5, absoluteEnd - start);
 
         const editor = container.createDiv({ cls: 'today-time-editor' });
 
@@ -1137,7 +1156,7 @@ export class TodayView {
             }
             minuteSelect.value = `${minutes % 60}`;
 
-            const apply = () => onApply(clamp(Number(hourSelect.value) * 60 + Number(minuteSelect.value)));
+            const apply = () => onApply(Number(hourSelect.value) * 60 + Number(minuteSelect.value));
             hourSelect.onchange = apply;
             minuteSelect.onchange = apply;
         };
@@ -1148,26 +1167,35 @@ export class TodayView {
         const startField = rangeRow.createDiv({ cls: 'today-time-field' });
         startField.createDiv({ cls: 'today-time-field-label', text: t('today.startTime') });
         buildTimeSelects(startField, start, (value) => {
-            // 修改起始时间：保持时长不变，结束时间随之平移
-            const duration = Math.max(5, end - start);
-            onChange(value, clamp(value + duration));
+            // 修改起始时间：保持时长不变，结束时间随之平移（可能跨到次日）
+            const next = splitEnd(value + duration, value);
+            onChange(value, next.end, next.offset);
         });
 
         rangeRow.createSpan({ cls: 'today-time-arrow', text: '→' });
 
         const endField = rangeRow.createDiv({ cls: 'today-time-field' });
         endField.createDiv({ cls: 'today-time-field-label', text: t('today.endTime') });
-        buildTimeSelects(endField, end, (value) => {
-            // 修改结束时间：起始时间不变，时长随之变化
-            onChange(start, Math.max(start + 5, value));
+        buildTimeSelects(endField, normalized.end, (value) => {
+            // 修改结束时间：结束早于起始视为次日；相同则按最小 5 分钟处理
+            if (value > start) {
+                onChange(start, value, 0);
+            } else if (value < start) {
+                onChange(start, value, 1);
+            } else {
+                const next = splitEnd(start + 5, start);
+                onChange(start, next.end, next.offset);
+            }
         });
+        if (isCrossDay) {
+            endField.createSpan({ cls: 'today-time-next-day', text: t('today.crossDay') });
+        }
 
         // 第二行：时长（小时 / 分钟输入框，与「预估执行时长」一致）
         const durationRow = editor.createDiv({ cls: 'today-time-duration' });
         durationRow.createDiv({ cls: 'today-time-field-label', text: t('today.addUnplannedDuration') });
         const durationGroup = durationRow.createDiv({ cls: 'task-plan-habit-input-group' });
 
-        const duration = Math.max(0, end - start);
         const durHourInput = durationGroup.createEl('input', {
             cls: 'task-plan-habit-input',
             type: 'number',
@@ -1187,8 +1215,9 @@ export class TodayView {
         const applyDuration = () => {
             const hour = Math.max(0, Math.floor(Number(durHourInput.value)) || 0);
             const minute = Math.max(0, Math.floor(Number(durMinuteInput.value)) || 0);
-            // 修改时长：起始时间不变，结束时间随之变化
-            onChange(start, clamp(start + Math.max(5, hour * 60 + minute)));
+            // 修改时长：起始时间不变，结束时间随之变化（可能跨到次日）
+            const next = splitEnd(start + Math.max(5, hour * 60 + minute), start);
+            onChange(start, next.end, next.offset);
         };
         durHourInput.onchange = applyDuration;
         durMinuteInput.onchange = applyDuration;
@@ -1211,7 +1240,7 @@ export class TodayView {
                 ? this.inboxData.items.find(i => i.id === ex.inboxId && !i.removed)
                 : undefined;
             const catId = item?.categoryId ?? UNCATEGORIZED_CATEGORY_ID;
-            const minutes = Math.max(0, ex.end - ex.start);
+            const minutes = executionDuration(ex);
             minutesByCat.set(catId, (minutesByCat.get(catId) ?? 0) + minutes);
         }
 
@@ -1291,7 +1320,7 @@ export class TodayView {
         const minutesByTask = new Map<string, number>();
         for (const ex of executions) {
             const key = ex.inboxId ?? ex.eventId ?? ex.id;
-            const minutes = Math.max(0, ex.end - ex.start);
+            const minutes = executionDuration(ex);
             minutesByTask.set(key, (minutesByTask.get(key) ?? 0) + minutes);
         }
 
@@ -1421,7 +1450,7 @@ export class TodayView {
             // 时间范围
             row.createSpan({
                 cls: 'today-completed-time',
-                text: `${formatMinutes(ex.start)} - ${formatMinutes(ex.end)}`,
+                text: `${formatMinutes(ex.start)} - ${formatMinutes(ex.end)}${ex.endDayOffset ? ` ${t('today.crossDay')}` : ''}`,
             });
 
             // 分类色点
@@ -1440,7 +1469,7 @@ export class TodayView {
             // 时长
             row.createSpan({
                 cls: 'today-completed-duration',
-                text: t('check.detailDuration', { duration: formatHours(Math.max(0, ex.end - ex.start)) }),
+                text: t('check.detailDuration', { duration: formatHours(executionDuration(ex)) }),
             });
         }
     }
@@ -1602,7 +1631,7 @@ export class TodayView {
                 ? this.inboxData.items.find(i => i.id === ex.inboxId && !i.removed)
                 : undefined;
             const catId = item?.categoryId ?? UNCATEGORIZED_CATEGORY_ID;
-            const minutes = Math.max(0, ex.end - ex.start);
+            const minutes = executionDuration(ex);
             minutesByCat.set(catId, (minutesByCat.get(catId) ?? 0) + minutes);
         }
 
@@ -1818,7 +1847,7 @@ export class TodayView {
      * 在时间轴上以透明色块呈现，等待用户点击「完成」写入执行记录。
      * range 提供时以其时间区间为准（额外任务方框中填写的区间），否则取详情中编辑的时间。
      */
-    private startRunningTask(range?: { start: number; end: number }): void {
+    private startRunningTask(range?: { start: number; end: number; endDayOffset?: number }): void {
         const item = this.getSelectedItem();
         if (!item) return;
 
@@ -1829,6 +1858,7 @@ export class TodayView {
             start: range?.start ?? this.detailStart,
             dayKey,
             end: range?.end ?? this.detailEnd,
+            endDayOffset: range ? range.endDayOffset : this.detailEndDayOffset,
             startedAt: Date.now(),
         };
         // 写回插件数据源，随 saveAll 一起持久化
@@ -1880,7 +1910,8 @@ export class TodayView {
 
         const { day, weekKey } = this.getViewDayInfo();
         const start = this.detailStart;
-        const end = Math.min(24 * 60, this.detailEnd);
+        const end = this.detailEnd;
+        const endDayOffset = this.detailEndDayOffset;
 
         const execId = `exec_${Date.now()}`;
         this.pdcaRepo.addExecution({
@@ -1889,6 +1920,7 @@ export class TodayView {
             day,
             start,
             end,
+            endDayOffset: endDayOffset || undefined,
             weekKey,
         });
         // 完成后选中刚写入的执行记录，详情方框切换为「执行记录」样式（底部删除按钮）
@@ -1925,9 +1957,14 @@ export class TodayView {
         const { day, weekKey } = this.getViewDayInfo();
 
         // 完成时：若实际经过时间小于用户填写的时长，则按填写的结束时间；否则按实际完成时刻
-        const actualEnd = Math.max(running.start, nowMinutes);
-        const plannedEnd = typeof running.end === 'number' ? running.end : actualEnd;
-        const end = actualEnd < plannedEnd ? plannedEnd : actualEnd;
+        // 跨午夜时将「当前时刻」顺延到次日，避免 end 小于 start
+        const actualEnd = Math.max(running.start, nowMinutes < running.start ? nowMinutes + 24 * 60 : nowMinutes);
+        const plannedEnd = typeof running.end === 'number'
+            ? running.end + (running.endDayOffset ?? 0) * 24 * 60
+            : actualEnd;
+        const absoluteEnd = Math.max(actualEnd, plannedEnd);
+        const endDayOffset = Math.floor(absoluteEnd / (24 * 60));
+        const end = absoluteEnd - endDayOffset * 24 * 60;
 
         const execId = `exec_${Date.now()}`;
         this.pdcaRepo.addExecution({
@@ -1936,6 +1973,7 @@ export class TodayView {
             day,
             start: running.start,
             end,
+            endDayOffset: endDayOffset || undefined,
             weekKey,
         });
         const item = this.inboxData.items.find(i => i.id === running.inboxId && !i.removed);
@@ -1962,12 +2000,16 @@ export class TodayView {
         const nowMinutes = now.getHours() * 60 + now.getMinutes();
         const { day, weekKey } = this.getViewDayInfo();
 
+        // 跨午夜时将「当前时刻」顺延到次日，避免 end 小于 start
+        const absoluteEnd = Math.max(running.start, nowMinutes < running.start ? nowMinutes + 24 * 60 : nowMinutes);
+        const endDayOffset = Math.floor(absoluteEnd / (24 * 60));
         this.pdcaRepo.addExecution({
             id: `exec_${Date.now()}`,
             inboxId: running.inboxId,
             day,
             start: running.start,
-            end: Math.max(running.start, nowMinutes),
+            end: absoluteEnd - endDayOffset * 24 * 60,
+            endDayOffset: endDayOffset || undefined,
             weekKey,
         });
         const item = this.inboxData.items.find(i => i.id === running.inboxId && !i.removed);
@@ -2010,10 +2052,13 @@ export class TodayView {
         if (!item) return;
 
         const start = this.addUnplannedStart;
-        const end = Math.min(24 * 60, start + this.addUnplannedDuration);
+        // 结束时间可能跨到次日：拆成当天分钟数 + 次日偏移
+        const absoluteEnd = start + this.addUnplannedDuration;
+        const endDayOffset = Math.floor(absoluteEnd / (24 * 60));
+        const end = absoluteEnd - endDayOffset * 24 * 60;
         this.addUnplannedMode = false;
         this.rightTab = 'dayTasks';
-        this.startRunningTask({ start, end });
+        this.startRunningTask({ start, end, endDayOffset });
     }
 
     /** 确认新增非计划事件：用左侧选中任务生成一条执行记录 */
@@ -2023,7 +2068,10 @@ export class TodayView {
 
         const { day, weekKey } = this.getViewDayInfo();
         const start = this.addUnplannedStart;
-        const end = Math.min(24 * 60, start + this.addUnplannedDuration);
+        // 结束时间可能跨到次日：拆成当天分钟数 + 次日偏移
+        const absoluteEnd = start + this.addUnplannedDuration;
+        const endDayOffset = Math.floor(absoluteEnd / (24 * 60));
+        const end = absoluteEnd - endDayOffset * 24 * 60;
 
         const execId = `exec_${Date.now()}`;
         this.pdcaRepo.addExecution({
@@ -2032,6 +2080,7 @@ export class TodayView {
             day,
             start,
             end,
+            endDayOffset: endDayOffset || undefined,
             weekKey,
         });
         this.addUnplannedMode = false;
@@ -2179,11 +2228,14 @@ export class TodayView {
                 this.lastDetailItemId = item.id;
                 const now = this.nowMinutes();
                 this.detailStart = now;
-                this.detailEnd = Math.min(24 * 60, now + 30);
+                const absoluteEnd = now + 30;
+                this.detailEndDayOffset = absoluteEnd >= 24 * 60 ? 1 : 0;
+                this.detailEnd = absoluteEnd - this.detailEndDayOffset * 24 * 60;
             }
-            this.renderTimeRangeEditor(body, this.detailStart, this.detailEnd, (start, end) => {
+            this.renderTimeRangeEditor(body, this.detailStart, this.detailEnd, this.detailEndDayOffset, (start, end, endDayOffset) => {
                 this.detailStart = start;
                 this.detailEnd = end;
+                this.detailEndDayOffset = endDayOffset;
                 void this.refresh();
             });
         }
@@ -2248,7 +2300,11 @@ export class TodayView {
 
         const row = body.createDiv({ cls: 'today-detail-row' });
         row.createSpan({ cls: 'today-detail-label', text: `${t('today.timeRange')}:` });
-        row.createSpan({ text: `${formatMinutes(ex.start)} - ${formatMinutes(ex.end)}` });
+        // 跨天记录在结束时间后标注「次日」
+        const endLabel = ex.endDayOffset
+            ? `${formatMinutes(ex.end)} ${t('today.crossDay')}`
+            : formatMinutes(ex.end);
+        row.createSpan({ text: `${formatMinutes(ex.start)} - ${endLabel}` });
 
         // 延长到现在：仅当该记录是当天最近一条执行记录时显示，
         // 点击后把终点时间更新为当前时间（不早于起始时间）
@@ -2262,8 +2318,12 @@ export class TodayView {
                 void (async () => {
                     const now = new Date();
                     const nowMinutes = now.getHours() * 60 + now.getMinutes();
+                    // 跨午夜时顺延到次日，避免终点早于起点
+                    const absoluteEnd = Math.max(ex.start, nowMinutes < ex.start ? nowMinutes + 24 * 60 : nowMinutes);
+                    const endDayOffset = Math.floor(absoluteEnd / (24 * 60));
                     this.pdcaRepo.updateExecution(ex.id, {
-                        end: Math.max(ex.start, Math.min(1440, nowMinutes)),
+                        end: absoluteEnd - endDayOffset * 24 * 60,
+                        endDayOffset: endDayOffset || undefined,
                     });
                     await this.save();
                     await this.refresh();
@@ -2271,7 +2331,7 @@ export class TodayView {
             };
         }
 
-        // 时长（可编辑）：修改后按 start + 时长 重算 end，并保存刷新
+        // 时长（可编辑）：修改后按 start + 时长 重算 end（可能跨到次日），并保存刷新
         const durationRow = body.createDiv({ cls: 'today-detail-row' });
         durationRow.createSpan({ cls: 'today-detail-label', text: `${t('today.addUnplannedDuration')}:` });
         const durationInput = durationRow.createEl('input', {
@@ -2279,17 +2339,22 @@ export class TodayView {
             type: 'number',
             attr: { min: '5', step: '5' },
         });
-        durationInput.value = String(Math.max(0, ex.end - ex.start));
+        durationInput.value = String(executionDuration(ex));
         durationInput.onchange = () => {
             void (async () => {
                 const raw = durationInput.value.trim();
                 const minutes = Math.max(5, Math.floor(Number(raw)));
                 if (!Number.isFinite(minutes)) {
-                    durationInput.value = String(Math.max(0, ex.end - ex.start));
+                    durationInput.value = String(executionDuration(ex));
                     return;
                 }
                 // 原地修改，保持数组引用不变（插件持有同一引用）
-                this.pdcaRepo.updateExecution(ex.id, { end: Math.min(1440, ex.start + minutes) });
+                const absoluteEnd = ex.start + minutes;
+                const endDayOffset = Math.floor(absoluteEnd / (24 * 60));
+                this.pdcaRepo.updateExecution(ex.id, {
+                    end: absoluteEnd - endDayOffset * 24 * 60,
+                    endDayOffset: endDayOffset || undefined,
+                });
                 await this.save();
                 await this.refresh();
             })();
@@ -2325,7 +2390,7 @@ export class TodayView {
         // 以起始时间最晚者为准（相同则取结束时间更晚者）
         let latest = dayExecs[0];
         for (const e of dayExecs) {
-            if (e.start > latest.start || (e.start === latest.start && e.end > latest.end)) {
+            if (e.start > latest.start || (e.start === latest.start && executionEndMinutes(e) > executionEndMinutes(latest))) {
                 latest = e;
             }
         }
@@ -2601,7 +2666,7 @@ export class TodayView {
                 : undefined;
 
             // 按小时拆段：每段落在对应的小时格子内
-            for (const seg of this.splitByHour(ex.start, ex.end)) {
+            for (const seg of this.splitByHour(ex.start, Math.min(24 * 60, executionEndMinutes(ex)))) {
                 const card = col.createDiv({ cls: 'event-card event-card-exec today-event-card' });
                 card.setCssProps({
                     '--card-top': `${seg.hour * hourHeight}px`,

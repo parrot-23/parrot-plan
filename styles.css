@@ -1907,14 +1907,35 @@
     border-color: #2563eb;
 }
 
-/* 一级标签行右侧：当前二级视图标题 */
+/* 一级标签行右侧：当前一级视图下的全部二级视图名称 */
 .parrot-plan-nav-secondary-title {
-    color: var(--text-normal);
-    font-size: 16px;
-    font-weight: 700;
+    display: flex;
+    align-items: baseline;
+    gap: 24px;
+    margin-left: 10px;
     padding: 0 4px;
     white-space: nowrap;
     border-left: 1px solid var(--background-modifier-border);
+}
+
+.parrot-plan-nav-secondary-title-item {
+    color: var(--text-muted);
+    font-size: 14px;
+    font-weight: 400;
+}
+
+.parrot-plan-nav-secondary-title-item.is-clickable {
+    cursor: pointer;
+}
+
+.parrot-plan-nav-secondary-title-item.is-clickable:hover {
+    color: var(--text-normal);
+}
+
+.parrot-plan-nav-secondary-title-item.is-current {
+    color: var(--text-normal);
+    font-size: 16px;
+    font-weight: 700;
 }
 
 .parrot-plan-nav-btn {
@@ -5318,6 +5339,17 @@
     color: var(--text-faint);
     font-size: 15px;
     line-height: 1;
+}
+
+/* 结束时间跨到次日时的时间标注 */
+.today-time-next-day {
+    align-self: flex-start;
+    padding: 1px 5px;
+    border-radius: 4px;
+    font-size: 10px;
+    line-height: 1.4;
+    color: var(--text-accent);
+    background: var(--background-modifier-hover);
 }
 
 .today-time-duration {

@@ -285,6 +285,7 @@ export const zh = {
     'today.extendToNow': '延长到现在',
     'today.startTime': '起始时间',
     'today.endTime': '结束时间',
+    'today.crossDay': '次日',
     'today.allDay': '全天',
     'today.complete': '完成执行计划任务',
     'today.execUnplanned': '执行非计划任务',

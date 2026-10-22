@@ -291,5 +291,7 @@ function parseRunningTask(raw: unknown): RunningTask | undefined {
     const task: RunningTask = { inboxId: r.inboxId, start: r.start, dayKey: r.dayKey };
     // 兼容旧数据：end 为可选字段
     if (typeof r.end === 'number') task.end = r.end;
+    // 兼容旧数据：endDayOffset 为可选字段（跨天记录）
+    if (typeof r.endDayOffset === 'number') task.endDayOffset = r.endDayOffset;
     return task;
 }

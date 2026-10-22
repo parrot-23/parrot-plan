@@ -287,6 +287,7 @@ export const en: I18nMessages = {
     'today.extendToNow': 'Extend to now',
     'today.startTime': 'Start time',
     'today.endTime': 'End time',
+    'today.crossDay': 'next day',
     'today.allDay': 'All day',
     'today.complete': 'Complete Planned Task',
     'today.execUnplanned': 'Execute Unplanned Task',

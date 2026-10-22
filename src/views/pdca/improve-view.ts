@@ -3,7 +3,7 @@ import { Notice } from 'obsidian';
 
 import type { PlanCategoryData } from '../../shared/plan-category-manager';
 import type { InboxData, EventBlock, ExecutionRecord, ImprovementItem, ImprovementEntry } from '../../datatypes/domain';
-import { getEventStatus } from '../../datatypes/domain';
+import { executionDuration, getEventStatus } from '../../datatypes/domain';
 import type { PdcaRepo } from '../../repos/pdca-repo';
 import type { InboxRepo } from '../../repos/inbox-repo';
 import {
@@ -222,7 +222,7 @@ export class ImproveView {
             );
             const execs = weekExecs.filter(ex => ex.inboxId === item.id);
             const execCount = execs.length;
-            const execMinutes = execs.reduce((s, ex) => s + Math.max(0, ex.end - ex.start), 0);
+            const execMinutes = execs.reduce((s, ex) => s + executionDuration(ex), 0);
 
             // 第一行：分类色点 + 任务名 + 完成程度 %
             const line1 = row.createDiv({ cls: 'improve-week-task-line1' });

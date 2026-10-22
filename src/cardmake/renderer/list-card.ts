@@ -4,6 +4,7 @@
 // - 任务时长：行内搜索已有任务，选中后末尾显示该任务的实际执行时长（xh）。
 import type { CardRenderer, CardRenderContext } from '../../datatypes/renderer';
 import type { TimelogRow, TimelogRowKind } from '../../datatypes/card';
+import { executionDuration } from '../../datatypes/domain';
 import { t } from '../../i18n';
 
 /** 把分钟数格式化为小时（如 90 → 1.5h，60 → 1h） */
@@ -13,12 +14,12 @@ function formatHours(minutes: number): string {
     return `${text}h`;
 }
 
-/** 计算某任务的实际执行总时长（分钟）：累加该任务所有执行记录的 end - start */
+/** 计算某任务的实际执行总时长（分钟）：累加该任务所有执行记录的时长（含跨天） */
 function taskDurationMinutes(taskId: string, ctx: CardRenderContext): number {
     let total = 0;
     for (const ex of ctx.provider.getExecutions()) {
         if (ex.inboxId !== taskId) continue;
-        total += Math.max(0, (ex.end ?? ex.start) - ex.start);
+        total += executionDuration(ex);
     }
     return total;
 }

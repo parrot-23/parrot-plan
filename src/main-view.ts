@@ -312,9 +312,9 @@ export class MainView extends ItemView {
     /** 剧本模式关闭时需要隐藏的二级视图 */
     private static readonly SCRIPT_MODE_TABS: NavTab[] = ['scene', 'scriptManage'];
 
-    /** 当前「预览」一级视图下应展示的二级视图（按剧本模式开关过滤） */
-    private visibleSecondaryTabs(): { id: NavTab; labelKey: Parameters<typeof t>[0] }[] {
-        const tabs = SECONDARY_TABS[this.previewPrimary];
+    /** 指定一级视图下应展示的二级视图（按剧本模式开关过滤），默认取当前「预览」的一级视图 */
+    private visibleSecondaryTabs(primary: PrimaryView = this.previewPrimary): { id: NavTab; labelKey: Parameters<typeof t>[0] }[] {
+        const tabs = SECONDARY_TABS[primary];
         if (this.isScriptModeEnabled()) return tabs;
         return tabs.filter(tab => !MainView.SCRIPT_MODE_TABS.includes(tab.id));
     }
@@ -544,17 +544,41 @@ export class MainView extends ItemView {
         await this.renderContent();
     }
 
-    /** 更新一级标签行右侧的「当前二级视图」标题 */
+    /**
+     * 更新一级标签行右侧的二级视图标题：
+     * 列出当前一级视图下的全部二级视图名称，当前页面加粗显示，其余缩小且不加粗。
+     */
     private renderSecondaryTitle() {
-        if (!this.secondaryTitleEl) return;
-        let label = '';
-        if (this.activeTab === 'workbench') {
-            label = this.workbenchView.getActiveLayoutName();
-        } else {
-            const tab = SECONDARY_TABS[this.activePrimary]?.find(t => t.id === this.activeTab);
-            if (tab) label = t(tab.labelKey);
+        const el = this.secondaryTitleEl;
+        if (!el) return;
+        el.empty();
+
+        // 工作台：二级视图名称即当前激活布局的名称
+        if (this.activePrimary === 'workbench') {
+            el.createSpan({
+                cls: 'parrot-plan-nav-secondary-title-item is-current',
+                text: this.workbenchView.getActiveLayoutName(),
+            });
+            return;
         }
-        this.secondaryTitleEl.setText(label);
+
+        for (const tab of this.visibleSecondaryTabs(this.activePrimary)) {
+            const isCurrent = tab.id === this.activeTab;
+            const item = el.createSpan({
+                cls: `parrot-plan-nav-secondary-title-item${isCurrent ? ' is-current' : ' is-clickable'}`,
+                text: t(tab.labelKey),
+            });
+            // 非当前页面的二级视图名称可点击，点击后切换到对应二级视图
+            if (!isCurrent) {
+                item.onclick = () => {
+                    this.activeTab = tab.id;
+                    this.lastTabByPrimary[this.activePrimary] = tab.id;
+                    this.previewPrimary = this.activePrimary;
+                    this.renderSecondaryTabs();
+                    void this.renderContent();
+                };
+            }
+        }
     }
 
     /** 根据当前 tab 渲染内容区 */

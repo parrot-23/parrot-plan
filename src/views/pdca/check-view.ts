@@ -2,6 +2,7 @@ import type { App } from 'obsidian';
 
 import type { PlanCategoryData } from '../../shared/plan-category-manager';
 import type { InboxData, EventBlock, ExecutionRecord } from '../../datatypes/domain';
+import { executionDuration, executionEndMinutes } from '../../datatypes/domain';
 import type { DailyRange } from '../../shared/plan-data';
 import {
     getCurrentWeekKey,
@@ -150,7 +151,7 @@ export class CheckView {
                 // 时间
                 row.createSpan({
                     cls: 'check-detail-time',
-                    text: `${formatMinutes(ex.start)} - ${formatMinutes(ex.end)}`,
+                    text: `${formatMinutes(ex.start)} - ${formatMinutes(ex.end)}${ex.endDayOffset ? ` ${t('today.crossDay')}` : ''}`,
                 });
 
                 // 分类色点
@@ -169,7 +170,7 @@ export class CheckView {
                 // 时长
                 row.createSpan({
                     cls: 'check-detail-duration',
-                    text: t('check.detailDuration', { duration: formatHours(Math.max(0, ex.end - ex.start)) }),
+                    text: t('check.detailDuration', { duration: formatHours(executionDuration(ex)) }),
                 });
             }
         }
@@ -208,7 +209,7 @@ export class CheckView {
                     const item = ex.inboxId
                         ? this.inboxData.items.find(i => i.id === ex.inboxId && !i.removed)
                         : undefined;
-                    return { start: ex.start, end: ex.end, categoryId: item?.categoryId };
+                    return { start: ex.start, end: Math.min(24 * 60, executionEndMinutes(ex)), categoryId: item?.categoryId };
                 }));
         }
         this.renderDistributionChart(body, t('check.detailExecChartTitle'), blocksByDay);
@@ -366,7 +367,7 @@ export class CheckView {
                     const item = ex.inboxId
                         ? this.inboxData.items.find(i => i.id === ex.inboxId && !i.removed)
                         : undefined;
-                    return { categoryId: item?.categoryId, minutes: Math.max(0, ex.end - ex.start) };
+                    return { categoryId: item?.categoryId, minutes: executionDuration(ex) };
                 }),
         );
 
@@ -378,7 +379,7 @@ export class CheckView {
                     const item = ex.inboxId
                         ? this.inboxData.items.find(i => i.id === ex.inboxId && !i.removed)
                         : undefined;
-                    return { categoryId: item?.categoryId, minutes: Math.max(0, ex.end - ex.start) };
+                    return { categoryId: item?.categoryId, minutes: executionDuration(ex) };
                 }),
         );
 
@@ -436,7 +437,7 @@ export class CheckView {
                     const item = ex.inboxId
                         ? this.inboxData.items.find(i => i.id === ex.inboxId && !i.removed)
                         : undefined;
-                    return { categoryId: item?.categoryId, minutes: Math.max(0, ex.end - ex.start) };
+                    return { categoryId: item?.categoryId, minutes: executionDuration(ex) };
                 }),
         );
 
@@ -513,7 +514,7 @@ export class CheckView {
                     const item = ex.inboxId
                         ? this.inboxData.items.find(i => i.id === ex.inboxId && !i.removed)
                         : undefined;
-                    return { categoryId: item?.categoryId, minutes: Math.max(0, ex.end - ex.start) };
+                    return { categoryId: item?.categoryId, minutes: executionDuration(ex) };
                 });
             const actualMap = this.aggregateByCategory(actualEntries);
 
